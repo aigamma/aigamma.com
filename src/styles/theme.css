@@ -1,0 +1,40 @@
+:root {
+  --bg-primary: #0d0f13;
+  --bg-card: #141820;
+  --bg-card-border: #1e2230;
+  --text-primary: #e0e0e0;
+  --text-secondary: #8a8f9c;
+  --accent-blue: #4a9eff;
+  --accent-green: #2ecc71;
+  --accent-amber: #f0a030;
+  --accent-coral: #d85a30;
+}
+
+* {
+  margin: 0;
+  padding: 0;
+  box-sizing: border-box;
+}
+
+body {
+  background-color: var(--bg-primary);
+  color: var(--text-primary);
+  font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+  font-size: 15px;
+  line-height: 1.5;
+}
+
+.card {
+  background-color: var(--bg-card);
+  border: 1px solid var(--bg-card-border);
+  border-radius: 6px;
+  padding: 1rem;
+}
+
+.text-muted {
+  color: var(--text-secondary);
+}
+
+.data-value {
+  font-family: 'Courier New', monospace;
+}
