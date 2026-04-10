@@ -1,6 +1,4 @@
-import createPlotlyComponent from 'react-plotly.js/factory';
-import * as Plotly from 'plotly.js-dist-min';
-const Plot = createPlotlyComponent(Plotly.default || Plotly);
+import { useEffect, useRef } from 'react';
 
 const PLOTLY_LAYOUT = {
   paper_bgcolor: 'transparent',
@@ -39,7 +37,6 @@ function buildSmileTraces(contracts, spotPrice) {
     .filter((c) => c.contract_type === 'put' && c.strike_price < spotPrice)
     .sort((a, b) => a.strike_price - b.strike_price);
 
-  // Find ATM: closest strike to spot for each type, pick the one with higher OI
   const atmCandidates = contracts
     .filter((c) => Math.abs(c.strike_price - spotPrice) <= 5)
     .sort((a, b) => Math.abs(a.strike_price - spotPrice) - Math.abs(b.strike_price - spotPrice));
@@ -81,29 +78,54 @@ function buildSmileTraces(contracts, spotPrice) {
 }
 
 export default function VolSmile({ contracts, spotPrice, expiration }) {
+  const chartRef = useRef(null);
+  const plotlyLoaded = useRef(false);
+
+  useEffect(() => {
+    // Load Plotly from CDN if not already loaded
+    if (window.Plotly) {
+      plotlyLoaded.current = true;
+      return;
+    }
+
+    const script = document.createElement('script');
+    script.src = 'https://cdn.plot.ly/plotly-2.35.2.min.js';
+    script.onload = () => {
+      plotlyLoaded.current = true;
+      renderChart();
+    };
+    document.head.appendChild(script);
+  }, []);
+
+  useEffect(() => {
+    renderChart();
+  }, [contracts, spotPrice, expiration]);
+
+  function renderChart() {
+    if (!window.Plotly || !chartRef.current || !contracts || contracts.length === 0) return;
+
+    const traces = buildSmileTraces(contracts, spotPrice);
+    const layout = {
+      ...PLOTLY_LAYOUT,
+      title: {
+        text: `SPY Volatility Smile — ${expiration || 'Latest'}`,
+        font: { color: '#e0e0e0', size: 14, family: 'Courier New, monospace' },
+      },
+    };
+
+    window.Plotly.newPlot(chartRef.current, traces, layout, {
+      responsive: true,
+      displayModeBar: false,
+    });
+  }
+
   if (!contracts || contracts.length === 0) {
     return <div className="card text-muted">No contract data available.</div>;
   }
 
-  const traces = buildSmileTraces(contracts, spotPrice);
-
-  const layout = {
-    ...PLOTLY_LAYOUT,
-    title: {
-      text: `SPY Volatility Smile — ${expiration || 'Latest'}`,
-      font: { color: '#e0e0e0', size: 14, family: 'Courier New, monospace' },
-    },
-  };
-
   return (
     <div className="card">
-      <Plot
-        data={traces}
-        layout={layout}
-        config={{ responsive: true, displayModeBar: false }}
-        useResizeHandler
-        style={{ width: '100%', height: '500px' }}
-      />
+      <div ref={chartRef} style={{ width: '100%', height: '500px' }} />
     </div>
   );
 }
