@@ -27,7 +27,24 @@ export default async function handler(request) {
   try {
     // Determine which snapshot to fetch
     const snapshotType = date ? 'daily' : 'intraday';
-    const capturedAt = date || new Date().toISOString().split('T')[0];
+    let capturedAt = date || null;
+
+    // If no date specified, find the most recent date with data
+    if (!capturedAt) {
+      const latestParams = new URLSearchParams({
+        underlying: `eq.${underlying}`,
+        snapshot_type: `eq.${snapshotType}`,
+        select: 'captured_at',
+        order: 'captured_at.desc',
+        limit: '1',
+      });
+      const latestRes = await fetch(
+        `${supabaseUrl}/rest/v1/snapshots?${latestParams}`,
+        { headers }
+      );
+      const latestRows = await latestRes.json();
+      capturedAt = latestRows.length > 0 ? latestRows[0].captured_at : new Date().toISOString().split('T')[0];
+    }
 
     // Fetch snapshots
     const snapshotParams = new URLSearchParams({
