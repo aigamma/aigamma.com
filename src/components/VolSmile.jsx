@@ -1,6 +1,6 @@
 import createPlotlyComponent from 'react-plotly.js/factory';
-import Plotly from 'plotly.js-dist-min';
-const Plot = createPlotlyComponent(Plotly);
+import * as Plotly from 'plotly.js-dist-min';
+const Plot = createPlotlyComponent(Plotly.default || Plotly);
 
 const PLOTLY_LAYOUT = {
   paper_bgcolor: 'transparent',
