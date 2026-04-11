@@ -24,6 +24,30 @@ function formatFreshness(isoString) {
   return `${et} ET`;
 }
 
+function classifyGammaRegime(levels, spotPrice) {
+  if (!levels || spotPrice == null) return null;
+  const netGex = levels.net_gamma_notional;
+  const zeroGamma = levels.zero_gamma_level;
+  if (netGex == null) return null;
+
+  if (zeroGamma != null) {
+    const distancePct = Math.abs(spotPrice - zeroGamma) / spotPrice;
+    if (distancePct < 0.002) {
+      return { label: 'NEAR FLIP', tone: 'amber', hint: 'spot within 20 bps of zero gamma' };
+    }
+  }
+  if (netGex >= 0) {
+    return { label: 'POSITIVE GAMMA', tone: 'green', hint: 'dealers dampen moves' };
+  }
+  return { label: 'NEGATIVE GAMMA', tone: 'coral', hint: 'dealers amplify moves' };
+}
+
+const REGIME_COLORS = {
+  green: 'var(--accent-green)',
+  coral: 'var(--accent-coral)',
+  amber: 'var(--accent-amber)',
+};
+
 export default function App() {
   const [selectedExpiration, setSelectedExpiration] = useState(null);
   const { data, loading, error } = useOptionsData({
@@ -42,6 +66,7 @@ export default function App() {
 
   const freshness = data ? formatFreshness(data.capturedAt) : null;
   const isSynthetic = data && data.source === 'synthetic';
+  const regime = data ? classifyGammaRegime(data.levels, data.spotPrice) : null;
 
   return (
     <div style={{ maxWidth: '1100px', margin: '0 auto', padding: '1.5rem' }}>
@@ -55,18 +80,39 @@ export default function App() {
           marginBottom: '1rem',
         }}
       >
-        <h1
-          style={{
-            fontFamily: 'Courier New, monospace',
-            fontSize: '1.2rem',
-            fontWeight: 400,
-            color: 'var(--text-secondary)',
-            letterSpacing: '0.08em',
-            textTransform: 'uppercase',
-          }}
-        >
-          aigamma.dev
-        </h1>
+        <div style={{ display: 'flex', alignItems: 'baseline', gap: '0.75rem', flexWrap: 'wrap' }}>
+          <h1
+            style={{
+              fontFamily: 'Courier New, monospace',
+              fontSize: '1.2rem',
+              fontWeight: 400,
+              color: 'var(--text-secondary)',
+              letterSpacing: '0.08em',
+              textTransform: 'uppercase',
+              margin: 0,
+            }}
+          >
+            aigamma.dev
+          </h1>
+          {regime && (
+            <span
+              title={regime.hint}
+              style={{
+                fontFamily: 'Courier New, monospace',
+                fontSize: '0.72rem',
+                padding: '0.2rem 0.55rem',
+                border: `1px solid ${REGIME_COLORS[regime.tone]}`,
+                color: REGIME_COLORS[regime.tone],
+                borderRadius: '3px',
+                letterSpacing: '0.08em',
+                textTransform: 'uppercase',
+                whiteSpace: 'nowrap',
+              }}
+            >
+              {regime.label}
+            </span>
+          )}
+        </div>
 
         <div
           style={{

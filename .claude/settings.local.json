@@ -6,7 +6,9 @@
       "mcp__claude_ai_n8n__get_node_types",
       "mcp__claude_ai_n8n__validate_workflow",
       "mcp__claude_ai_n8n__update_workflow",
-      "Bash(npm run:*)"
+      "Bash(npm run:*)",
+      "Bash(git commit:*)",
+      "Bash(rm .git/COMMIT_MSG.txt)"
     ]
   },
   "model": "opus",

@@ -32,6 +32,14 @@ function formatRatio(value) {
   return value.toFixed(2);
 }
 
+function distanceSub(level, spot) {
+  if (level == null || spot == null) return null;
+  const dollar = level - spot;
+  const pct = (dollar / spot) * 100;
+  const sign = dollar >= 0 ? '+' : '';
+  return `${sign}${dollar.toFixed(2)}  ·  ${sign}${pct.toFixed(2)}%`;
+}
+
 function daysToExpiration(expirationDate, capturedAt) {
   if (!expirationDate || !capturedAt) return null;
   const target = new Date(`${expirationDate}T16:00:00-04:00`).getTime();
@@ -113,10 +121,11 @@ export default function LevelsPanel({ levels, spotPrice, expirationMetrics, sele
         : 'var(--accent-coral)'
       : undefined;
 
-  const maxPainSub =
-    levels.max_pain_strike != null && spotPrice != null
-      ? `${((levels.max_pain_strike - spotPrice) / spotPrice * 100).toFixed(2)}% vs spot`
-      : null;
+  const callWallSub = distanceSub(levels.call_wall, spotPrice);
+  const putWallSub = distanceSub(levels.put_wall, spotPrice);
+  const absGammaSub = distanceSub(levels.abs_gamma_strike, spotPrice);
+  const zeroGammaSub = distanceSub(levels.zero_gamma_level, spotPrice);
+  const maxPainSub = distanceSub(levels.max_pain_strike, spotPrice);
 
   const pcrOiColor =
     levels.put_call_ratio_oi == null
@@ -151,9 +160,11 @@ export default function LevelsPanel({ levels, spotPrice, expirationMetrics, sele
 
   const dte = relevantMetric ? daysToExpiration(relevantMetric.expiration_date, capturedAt) : null;
   const expMoveDollar = relevantMetric ? expectedMoveDollar(spotPrice, relevantMetric.atm_iv, dte) : null;
+  const expMoveLow = expMoveDollar != null && spotPrice != null ? spotPrice - expMoveDollar : null;
+  const expMoveHigh = expMoveDollar != null && spotPrice != null ? spotPrice + expMoveDollar : null;
   const expMoveSub =
-    expMoveDollar != null && spotPrice != null
-      ? `±${((expMoveDollar / spotPrice) * 100).toFixed(2)}%  ·  ${dte != null ? dte.toFixed(1) : '—'}d`
+    expMoveLow != null && expMoveHigh != null
+      ? `${expMoveLow.toFixed(2)} – ${expMoveHigh.toFixed(2)}  ·  ${dte != null ? dte.toFixed(1) : '—'}d`
       : null;
 
   const hasFlowRow =
@@ -172,16 +183,36 @@ export default function LevelsPanel({ levels, spotPrice, expirationMetrics, sele
         }}
       >
         <Stat label="Spot" value={formatCurrency(spotPrice)} accent="var(--accent-blue)" />
-        <Stat label="Call Wall" value={formatStrike(levels.call_wall)} accent="var(--accent-green)" />
-        <Stat label="Put Wall" value={formatStrike(levels.put_wall)} accent="var(--accent-coral)" />
+        <Stat
+          label="Call Wall"
+          value={formatStrike(levels.call_wall)}
+          accent="var(--accent-green)"
+          sub={callWallSub}
+        />
+        <Stat
+          label="Put Wall"
+          value={formatStrike(levels.put_wall)}
+          accent="var(--accent-coral)"
+          sub={putWallSub}
+        />
         <Stat
           label="Max Pain"
           value={formatStrike(levels.max_pain_strike)}
           accent="#c586c0"
           sub={maxPainSub}
         />
-        <Stat label="Abs Gamma" value={formatStrike(levels.abs_gamma_strike)} accent="var(--accent-amber)" />
-        <Stat label="Zero Gamma" value={formatStrike(levels.zero_gamma_level)} accent={zeroGammaColor} />
+        <Stat
+          label="Abs Gamma"
+          value={formatStrike(levels.abs_gamma_strike)}
+          accent="var(--accent-amber)"
+          sub={absGammaSub}
+        />
+        <Stat
+          label="Zero Gamma"
+          value={formatStrike(levels.zero_gamma_level)}
+          accent={zeroGammaColor}
+          sub={zeroGammaSub}
+        />
         <Stat label="Net GEX ($)" value={formatGamma(levels.net_gamma_notional)} accent={netGammaColor} />
         <Stat label="Gamma Tilt" value={formatTilt(levels.gamma_tilt)} />
       </div>
