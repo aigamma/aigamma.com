@@ -1,0 +1,12 @@
+{
+  "permissions": {
+    "allow": [
+      "mcp__claude_ai_Supabase__execute_sql",
+      "mcp__claude_ai_n8n__search_nodes",
+      "mcp__claude_ai_n8n__get_node_types",
+      "mcp__claude_ai_n8n__validate_workflow",
+      "mcp__claude_ai_n8n__update_workflow",
+      "Bash(npm run:*)"
+    ]
+  }
+}

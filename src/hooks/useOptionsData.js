@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
 
-export default function useOptionsData(underlying = 'SPY', expiration = null) {
+export default function useOptionsData({ underlying = 'SPY', snapshotType = 'intraday', expiration = null, tradingDate = null } = {}) {
   const [data, setData] = useState(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
@@ -13,12 +13,14 @@ export default function useOptionsData(underlying = 'SPY', expiration = null) {
       setError(null);
 
       try {
-        const params = new URLSearchParams({ underlying });
+        const params = new URLSearchParams({ underlying, snapshot_type: snapshotType });
         if (expiration) params.set('expiration', expiration);
+        if (tradingDate) params.set('date', tradingDate);
 
         const response = await fetch(`/api/data?${params}`);
         if (!response.ok) {
-          throw new Error(`API returned ${response.status}: ${response.statusText}`);
+          const text = await response.text();
+          throw new Error(`API ${response.status}: ${text}`);
         }
 
         const json = await response.json();
@@ -37,8 +39,10 @@ export default function useOptionsData(underlying = 'SPY', expiration = null) {
     }
 
     fetchData();
-    return () => { cancelled = true; };
-  }, [underlying, expiration]);
+    return () => {
+      cancelled = true;
+    };
+  }, [underlying, snapshotType, expiration, tradingDate]);
 
   return { data, loading, error };
 }

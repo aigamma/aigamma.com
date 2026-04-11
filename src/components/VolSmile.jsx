@@ -37,8 +37,10 @@ function buildSmileTraces(contracts, spotPrice) {
     .filter((c) => c.contract_type === 'put' && c.strike_price < spotPrice)
     .sort((a, b) => a.strike_price - b.strike_price);
 
+  // ATM window: within 1% of spot, spot-relative so it scales across underlyings and strike grids
+  const atmWindow = Math.max(spotPrice * 0.01, 1);
   const atmCandidates = contracts
-    .filter((c) => Math.abs(c.strike_price - spotPrice) <= 5)
+    .filter((c) => Math.abs(c.strike_price - spotPrice) <= atmWindow)
     .sort((a, b) => Math.abs(a.strike_price - spotPrice) - Math.abs(b.strike_price - spotPrice));
   const atm = atmCandidates.length > 0 ? atmCandidates[0] : null;
 
