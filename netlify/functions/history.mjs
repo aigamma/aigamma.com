@@ -54,7 +54,7 @@ export default async function handler(request) {
     const levelsParams = new URLSearchParams({
       run_id: `in.(${runIds.join(',')})`,
       select:
-        'run_id,net_gamma_notional,call_wall_strike,put_wall_strike,zero_gamma_level,max_pain_strike,put_call_ratio_oi,put_call_ratio_volume,net_vanna_notional,net_charm_notional,gamma_tilt',
+        'run_id,net_gamma_notional,call_wall_strike,put_wall_strike,volatility_flip,max_pain_strike,put_call_ratio_oi,put_call_ratio_volume,net_vanna_notional,net_charm_notional,gamma_tilt',
     });
     const levelsRes = await fetch(`${supabaseUrl}/rest/v1/computed_levels?${levelsParams}`, { headers });
     if (!levelsRes.ok) throw new Error(`computed_levels query failed: ${levelsRes.status}`);
@@ -74,7 +74,7 @@ export default async function handler(request) {
         netGamma: toNum(l.net_gamma_notional),
         callWall: toNum(l.call_wall_strike),
         putWall: toNum(l.put_wall_strike),
-        zeroGamma: toNum(l.zero_gamma_level),
+        volFlip: toNum(l.volatility_flip),
         maxPain: toNum(l.max_pain_strike),
         pcrOi: toNum(l.put_call_ratio_oi),
         pcrVolume: toNum(l.put_call_ratio_volume),

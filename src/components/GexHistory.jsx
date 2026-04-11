@@ -117,7 +117,7 @@ export default function GexHistory({ lookback = '24h' }) {
       const refs = [
         { y: lastWithWalls.callWall, color: '#2ecc71', label: 'CW' },
         { y: lastWithWalls.putWall, color: '#d85a30', label: 'PW' },
-        { y: lastWithWalls.zeroGamma, color: '#a0a6b4', label: 'ZG' },
+        { y: lastWithWalls.volFlip, color: '#a0a6b4', label: 'VF' },
         { y: lastWithWalls.maxPain, color: '#c586c0', label: 'MP' },
       ];
       for (const r of refs) {

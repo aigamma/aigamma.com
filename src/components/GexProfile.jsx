@@ -127,7 +127,7 @@ export default function GexProfile({ contracts, spotPrice, levels }) {
       push(refLine(levels.call_wall, '#2ecc71', 'CW'));
       push(refLine(levels.put_wall, '#d85a30', 'PW'));
       push(refLine(levels.abs_gamma_strike, '#f0a030', 'AG'));
-      push(refLine(levels.zero_gamma_level, '#a0a6b4', 'ZG'));
+      push(refLine(levels.volatility_flip, '#a0a6b4', 'VF'));
     }
 
     const layout = {

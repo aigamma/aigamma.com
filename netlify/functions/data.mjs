@@ -128,7 +128,7 @@ export default async function handler(request) {
           call_wall: toNum(levelsRows[0].call_wall_strike),
           put_wall: toNum(levelsRows[0].put_wall_strike),
           abs_gamma_strike: toNum(levelsRows[0].abs_gamma_strike),
-          zero_gamma_level: toNum(levelsRows[0].zero_gamma_level),
+          volatility_flip: toNum(levelsRows[0].volatility_flip),
           net_gamma_notional: toNum(levelsRows[0].net_gamma_notional),
           gamma_tilt: toNum(levelsRows[0].gamma_tilt),
           max_pain_strike: toNum(levelsRows[0].max_pain_strike),

@@ -30,13 +30,13 @@ function formatFreshness(isoString) {
 function classifyGammaRegime(levels, spotPrice) {
   if (!levels || spotPrice == null) return null;
   const netGex = levels.net_gamma_notional;
-  const zeroGamma = levels.zero_gamma_level;
+  const volFlip = levels.volatility_flip;
   if (netGex == null) return null;
 
-  if (zeroGamma != null) {
-    const distancePct = Math.abs(spotPrice - zeroGamma) / spotPrice;
+  if (volFlip != null) {
+    const distancePct = Math.abs(spotPrice - volFlip) / spotPrice;
     if (distancePct < 0.002) {
-      return { label: 'NEAR FLIP', tone: 'amber', hint: 'spot within 20 bps of zero gamma' };
+      return { label: 'NEAR FLIP', tone: 'amber', hint: 'spot within 20 bps of vol flip' };
     }
   }
   if (netGex >= 0) {

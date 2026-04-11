@@ -114,9 +114,9 @@ export default function LevelsPanel({ levels, spotPrice, expirationMetrics, sele
         ? 'var(--accent-green)'
         : 'var(--accent-coral)';
 
-  const zeroGammaColor =
-    levels.zero_gamma_level != null && spotPrice != null
-      ? spotPrice >= levels.zero_gamma_level
+  const volFlipColor =
+    levels.volatility_flip != null && spotPrice != null
+      ? spotPrice >= levels.volatility_flip
         ? 'var(--accent-green)'
         : 'var(--accent-coral)'
       : undefined;
@@ -124,7 +124,7 @@ export default function LevelsPanel({ levels, spotPrice, expirationMetrics, sele
   const callWallSub = distanceSub(levels.call_wall, spotPrice);
   const putWallSub = distanceSub(levels.put_wall, spotPrice);
   const absGammaSub = distanceSub(levels.abs_gamma_strike, spotPrice);
-  const zeroGammaSub = distanceSub(levels.zero_gamma_level, spotPrice);
+  const volFlipSub = distanceSub(levels.volatility_flip, spotPrice);
   const maxPainSub = distanceSub(levels.max_pain_strike, spotPrice);
 
   const pcrOiColor =
@@ -208,10 +208,10 @@ export default function LevelsPanel({ levels, spotPrice, expirationMetrics, sele
           sub={absGammaSub}
         />
         <Stat
-          label="Zero Gamma"
-          value={formatStrike(levels.zero_gamma_level)}
-          accent={zeroGammaColor}
-          sub={zeroGammaSub}
+          label="Vol Flip"
+          value={formatStrike(levels.volatility_flip)}
+          accent={volFlipColor}
+          sub={volFlipSub}
         />
         <Stat label="Net GEX ($)" value={formatGamma(levels.net_gamma_notional)} accent={netGammaColor} />
         <Stat label="Gamma Tilt" value={formatTilt(levels.gamma_tilt)} />

@@ -6,7 +6,7 @@ Open-source volatility dashboard for equity options, built with React, Plotly, a
 
 ## What This Is
 
-A quantitative finance platform that visualizes gamma exposure, implied volatility structure, and dealer positioning for US equity options. The dashboard consumes 15-minute delayed options chain snapshots, updates 5 minutes (in prototype phase but will update every minute after further steps and paying for an n8n cloud upgrade), computes GEX per strike, derives key levels (Call Wall, Put Wall, Absolute Gamma Strike, Zero Gamma Level), and renders interactive Plotly charts on a dark-themed interface.
+A quantitative finance platform that visualizes gamma exposure, implied volatility structure, and dealer positioning for US equity options. The dashboard consumes 15-minute delayed options chain snapshots, updates 5 minutes (in prototype phase but will update every minute after further steps and paying for an n8n cloud upgrade), computes GEX per strike, derives key levels (Call Wall, Put Wall, Absolute Gamma Strike, Volatility Flip), and renders interactive Plotly charts on a dark-themed interface.
 
 This project independently reconstructs the category of tooling offered by institutional derivatives analytics platforms, using publicly available delayed data and serverless infrastructure.
 
@@ -31,7 +31,7 @@ Key levels derived from the GEX profile:
 - **Call Wall**: Strike with highest positive call gamma notional
 - **Put Wall**: Strike with highest negative put gamma notional
 - **Absolute Gamma Strike**: Strike with highest total absolute gamma (strongest pinning effect)
-- **Zero Gamma Level**: Interpolated price where net gamma crosses zero (volatility regime boundary)
+- **Volatility Flip**: Interpolated net-GEX zero crossing where the absolute exposure on both sides is largest — the structurally dominant regime boundary between positive and negative dealer gamma
 
 ## Stack
 
