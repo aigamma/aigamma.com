@@ -1,4 +1,5 @@
 import { useEffect, useRef } from 'react';
+import usePlotly from '../hooks/usePlotly';
 
 const PLOTLY_LAYOUT = {
   paper_bgcolor: 'transparent',
@@ -81,30 +82,10 @@ function buildSmileTraces(contracts, spotPrice) {
 
 export default function VolSmile({ contracts, spotPrice, expiration }) {
   const chartRef = useRef(null);
-  const plotlyLoaded = useRef(false);
+  const Plotly = usePlotly();
 
   useEffect(() => {
-    // Load Plotly from CDN if not already loaded
-    if (window.Plotly) {
-      plotlyLoaded.current = true;
-      return;
-    }
-
-    const script = document.createElement('script');
-    script.src = 'https://cdn.plot.ly/plotly-2.35.2.min.js';
-    script.onload = () => {
-      plotlyLoaded.current = true;
-      renderChart();
-    };
-    document.head.appendChild(script);
-  }, []);
-
-  useEffect(() => {
-    renderChart();
-  }, [contracts, spotPrice, expiration]);
-
-  function renderChart() {
-    if (!window.Plotly || !chartRef.current || !contracts || contracts.length === 0) return;
+    if (!Plotly || !chartRef.current || !contracts || contracts.length === 0) return;
 
     const traces = buildSmileTraces(contracts, spotPrice);
     const layout = {
@@ -115,11 +96,11 @@ export default function VolSmile({ contracts, spotPrice, expiration }) {
       },
     };
 
-    window.Plotly.newPlot(chartRef.current, traces, layout, {
+    Plotly.newPlot(chartRef.current, traces, layout, {
       responsive: true,
       displayModeBar: false,
     });
-  }
+  }, [Plotly, contracts, spotPrice, expiration]);
 
   if (!contracts || contracts.length === 0) {
     return <div className="card text-muted">No contract data available.</div>;

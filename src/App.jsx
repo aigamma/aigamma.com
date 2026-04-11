@@ -2,6 +2,8 @@ import { useMemo, useState } from 'react';
 import './styles/theme.css';
 import VolSmile from './components/VolSmile';
 import LevelsPanel from './components/LevelsPanel';
+import GexProfile from './components/GexProfile';
+import TermStructure from './components/TermStructure';
 import useOptionsData from './hooks/useOptionsData';
 
 function formatFreshness(isoString) {
@@ -24,23 +26,16 @@ export default function App() {
   const { data, loading, error } = useOptionsData({
     underlying: 'SPY',
     snapshotType: 'intraday',
-    expiration: selectedExpiration,
   });
-
-  const filteredContracts = useMemo(() => {
-    if (!data || !data.contracts) return [];
-    if (!selectedExpiration) {
-      // No expiration selected — default to showing the nearest one so the smile isn't a tangle
-      if (data.expirations && data.expirations.length > 0) {
-        const first = data.expirations[0];
-        return data.contracts.filter((c) => c.expiration_date === first);
-      }
-    }
-    return data.contracts;
-  }, [data, selectedExpiration]);
 
   const displayExpiration =
     selectedExpiration || (data && data.expirations && data.expirations[0]) || null;
+
+  const filteredContracts = useMemo(() => {
+    if (!data || !data.contracts) return [];
+    if (!displayExpiration) return data.contracts;
+    return data.contracts.filter((c) => c.expiration_date === displayExpiration);
+  }, [data, displayExpiration]);
 
   const freshness = data ? formatFreshness(data.capturedAt) : null;
   const isSynthetic = data && data.source === 'synthetic';
@@ -117,6 +112,17 @@ export default function App() {
             spotPrice={data.spotPrice}
             expirationMetrics={data.expirationMetrics}
             selectedExpiration={displayExpiration}
+          />
+
+          <GexProfile
+            contracts={data.contracts}
+            spotPrice={data.spotPrice}
+            levels={data.levels}
+          />
+
+          <TermStructure
+            expirationMetrics={data.expirationMetrics}
+            capturedAt={data.capturedAt}
           />
 
           {data.expirations && data.expirations.length > 1 && (
