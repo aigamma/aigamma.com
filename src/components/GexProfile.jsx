@@ -124,6 +124,10 @@ export default function GexProfile({ contracts, spotPrice, levels }) {
       title: plotlyTitle('Gamma Exposure Profile (all expirations)'),
       shapes,
       annotations,
+      // Re-assert backgrounds after the spread so no earlier property can
+      // shadow them at runtime. Defensive against upstream layout merges.
+      paper_bgcolor: PLOTLY_COLORS.paper,
+      plot_bgcolor: PLOTLY_COLORS.plot,
     };
 
     Plotly.newPlot(chartRef.current, traces, layout, {
