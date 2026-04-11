@@ -38,3 +38,13 @@ body {
 .data-value {
   font-family: 'Courier New', monospace;
 }
+
+/* Plotly renders its plot-area background as an SVG <rect class="bg">
+   inside .main-svg. plot_bgcolor, shape layers, and transparent overrides
+   all failed to stick for the GEX and Exposure bar charts, so force the
+   dark fill at the SVG level with !important to outrank any inline or
+   runtime paint that Plotly applies internally. */
+.gex-chart .plot-container .plot .main-svg .bg,
+.exposure-chart .plot-container .plot .main-svg .bg {
+  fill: #141820 !important;
+}

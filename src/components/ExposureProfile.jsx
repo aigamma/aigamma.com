@@ -134,23 +134,7 @@ export default function ExposureProfile({ contracts, spotPrice, levels }) {
       },
     ];
 
-    // Background rect forces the plot area dark even when plot_bgcolor gets
-    // shadowed at runtime. xref/yref 'paper' covers the full plot region and
-    // layer 'below' keeps it behind bars, reference lines, and annotations.
-    const shapes = [
-      {
-        type: 'rect',
-        xref: 'paper',
-        yref: 'paper',
-        x0: 0,
-        y0: 0,
-        x1: 1,
-        y1: 1,
-        fillcolor: PLOTLY_COLORS.plot,
-        line: { width: 0 },
-        layer: 'below',
-      },
-    ];
+    const shapes = [];
     const annotations = [];
     const push = (entry) => {
       if (!entry || entry.shape.x0 == null) return;
@@ -168,11 +152,6 @@ export default function ExposureProfile({ contracts, spotPrice, levels }) {
       title: plotlyTitle('Dealer Exposure Profile — Vanna & Charm'),
       shapes,
       annotations,
-      // plot_bgcolor is deliberately transparent so Plotly's internal
-      // plot-area fill does not paint over the dark rect shape at
-      // layer 'below' — that rect is what provides the dark background.
-      paper_bgcolor: PLOTLY_COLORS.paper,
-      plot_bgcolor: 'rgba(0,0,0,0)',
     };
 
     Plotly.newPlot(chartRef.current, traces, layout, {
@@ -201,7 +180,11 @@ export default function ExposureProfile({ contracts, spotPrice, levels }) {
 
   return (
     <div className="card" style={{ marginBottom: '1rem' }}>
-      <div ref={chartRef} style={{ width: '100%', height: '520px' }} />
+      <div
+        ref={chartRef}
+        className="exposure-chart"
+        style={{ width: '100%', height: '520px' }}
+      />
     </div>
   );
 }
