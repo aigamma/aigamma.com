@@ -2,17 +2,21 @@ import { useEffect, useMemo, useRef, useState } from 'react';
 import usePlotly from '../hooks/usePlotly';
 import { sviTotalVariance } from '../lib/svi';
 
-// Log-moneyness grid bounds. ±12% spans the skew-visible region for SPY-like
-// slices; anything wider runs past the short-tenor calibration window and into
-// unreliable SVI extrapolation territory. Step size is the spec: 0.01 moneyness.
-const MONEYNESS_MIN = -0.12;
-const MONEYNESS_MAX = 0.12;
-const MONEYNESS_STEP = 0.01;
+// Strike grid is spot-relative ±12% so the surface lines up across expirations
+// regardless of the absolute strike ladder at any given tenor. 12% is wider than
+// the SVI calibration window (5 ATM sigmas * sqrt(T)) on the shortest tenor so
+// the grid extends into SVI-clamped territory at the edges where we render gaps.
+const STRIKE_WINDOW_PCT = 0.12;
 
 // Hard IV clamp on grid cells — protects against short-tenor SVI extrapolation
-// producing nonsense wings. Cells outside this band are rendered as gaps.
+// producing nonsense wings. Cells outside this band become null gaps.
 const IV_CLAMP_MIN = 0.03;
 const IV_CLAMP_MAX = 1.2;
+
+// Log z-axis tick stops expressed as raw IV% values. Plotly's log-type axis
+// takes raw values and computes log10 positions internally, so passing a human
+// ladder here gives us perceptually-even tick spacing with trader-friendly labels.
+const LOG_IV_TICKVALS = [5, 8, 12, 16, 20, 25, 30, 40, 55, 75, 100];
 
 const BASE_LAYOUT_3D = {
   paper_bgcolor: 'transparent',
@@ -21,10 +25,9 @@ const BASE_LAYOUT_3D = {
   scene: {
     bgcolor: '#141820',
     xaxis: {
-      title: { text: 'log-moneyness ln(K/S)', font: { color: '#8a8f9c', size: 10 } },
+      title: { text: 'strike', font: { color: '#8a8f9c', size: 10 } },
       gridcolor: '#1e2230',
-      zerolinecolor: '#4a9eff',
-      zerolinewidth: 2,
+      zerolinecolor: '#2a3040',
       tickfont: { color: '#8a8f9c', size: 9 },
       backgroundcolor: '#141820',
       showbackground: true,
@@ -38,23 +41,36 @@ const BASE_LAYOUT_3D = {
       showbackground: true,
     },
     zaxis: {
-      title: { text: 'ln(IV²)', font: { color: '#8a8f9c', size: 10 } },
+      type: 'log',
+      title: { text: 'implied volatility (%)', font: { color: '#8a8f9c', size: 10 } },
       gridcolor: '#1e2230',
-      zerolinecolor: '#2a3040',
+      zerolinecolor: '#4a9eff',
+      zerolinewidth: 1.5,
       tickfont: { color: '#8a8f9c', size: 9 },
       backgroundcolor: '#141820',
       showbackground: true,
+      tickmode: 'array',
+      tickvals: LOG_IV_TICKVALS,
+      ticktext: LOG_IV_TICKVALS.map((v) => `${v}%`),
     },
-    camera: { eye: { x: 1.6, y: -1.8, z: 0.85 } },
-    aspectratio: { x: 1.35, y: 1.0, z: 0.75 },
+    camera: { eye: { x: 1.55, y: -1.85, z: 0.85 } },
+    aspectmode: 'manual',
+    aspectratio: { x: 1.4, y: 1.0, z: 0.85 },
   },
 };
 
-function buildMoneynessGrid() {
+// Build a spot-relative strike grid. Step is chosen so the grid has ~120 points
+// across the ±12% window regardless of underlying price — this avoids over- or
+// under-resolving the surface for cheap vs expensive underlyings.
+function buildStrikeGrid(spotPrice) {
+  const lo = spotPrice * (1 - STRIKE_WINDOW_PCT);
+  const hi = spotPrice * (1 + STRIKE_WINDOW_PCT);
+  const targetCount = 121;
+  const rawStep = (hi - lo) / (targetCount - 1);
+  const step = Math.max(rawStep, spotPrice * 1e-4);
   const grid = [];
-  const steps = Math.round((MONEYNESS_MAX - MONEYNESS_MIN) / MONEYNESS_STEP);
-  for (let i = 0; i <= steps; i++) {
-    grid.push(Number((MONEYNESS_MIN + i * MONEYNESS_STEP).toFixed(4)));
+  for (let i = 0; i < targetCount; i++) {
+    grid.push(Number((lo + i * step).toFixed(2)));
   }
   return grid;
 }
@@ -100,77 +116,90 @@ function buildSviSurface(sortedFits, spotPrice) {
   const minDte = Math.max(Math.floor(sortedFits[0].dte), 1);
   const maxDte = Math.max(Math.ceil(sortedFits[sortedFits.length - 1].dte), minDte + 1);
 
-  const kGrid = buildMoneynessGrid();
+  const strikeGrid = buildStrikeGrid(spotPrice);
   const dteGrid = [];
   for (let d = minDte; d <= maxDte; d++) dteGrid.push(d);
 
   const z = [];
+  const surfaceColor = [];
   const customdata = [];
   for (const dte of dteGrid) {
     const zRow = [];
+    const cRow = [];
     const cdRow = [];
     const Tyear = dte / 365;
-    for (const k of kGrid) {
+    for (const strike of strikeGrid) {
+      const k = Math.log(strike / spotPrice);
       const w = interpolateTotalVariance(k, dte, sortedFits);
       if (w == null || !(w > 0) || !(Tyear > 0)) {
         zRow.push(null);
+        cRow.push(null);
         cdRow.push([null, null]);
         continue;
       }
-      const ivSq = w / Tyear;
-      const iv = Math.sqrt(ivSq);
+      const iv = Math.sqrt(w / Tyear);
       if (iv < IV_CLAMP_MIN || iv > IV_CLAMP_MAX) {
         zRow.push(null);
+        cRow.push(null);
         cdRow.push([null, null]);
         continue;
       }
-      const K = spotPrice * Math.exp(k);
-      zRow.push(Math.log(ivSq));
-      cdRow.push([K, iv * 100]);
+      const ivPct = iv * 100;
+      zRow.push(ivPct);
+      // Colorscale uses log10(iv) so color distance matches the log z axis
+      // visually — a 20%→40% step looks the same perceptual jump as 40%→80%.
+      cRow.push(Math.log10(ivPct));
+      cdRow.push([k, ivPct]);
     }
     z.push(zRow);
+    surfaceColor.push(cRow);
     customdata.push(cdRow);
   }
 
-  return { kGrid, dteGrid, z, customdata };
+  return { strikeGrid, dteGrid, z, surfaceColor, customdata };
 }
 
 function buildRawScatter(contracts, spotPrice, capturedAtMs) {
   if (!contracts || contracts.length === 0) return null;
+  const minStrike = spotPrice * (1 - STRIKE_WINDOW_PCT - 0.02);
+  const maxStrike = spotPrice * (1 + STRIKE_WINDOW_PCT + 0.02);
   const x = [];
   const y = [];
   const z = [];
+  const color = [];
   const customdata = [];
   for (const c of contracts) {
     const iv = c.implied_volatility;
-    if (!iv || iv <= 0.01 || iv > 2.5) continue;
+    if (!iv || iv <= IV_CLAMP_MIN || iv > IV_CLAMP_MAX) continue;
     if (!c.strike_price || !c.expiration_date) continue;
     const otm =
       (c.contract_type === 'call' && c.strike_price >= spotPrice) ||
       (c.contract_type === 'put' && c.strike_price <= spotPrice);
     if (!otm) continue;
-    const k = Math.log(c.strike_price / spotPrice);
-    if (k < MONEYNESS_MIN - 0.02 || k > MONEYNESS_MAX + 0.02) continue;
+    if (c.strike_price < minStrike || c.strike_price > maxStrike) continue;
     const expMs = new Date(`${c.expiration_date}T20:00:00Z`).getTime();
     const dte = Math.max((expMs - capturedAtMs) / 86400000, 0);
-    x.push(k);
+    const ivPct = iv * 100;
+    x.push(c.strike_price);
     y.push(dte);
-    z.push(Math.log(iv * iv));
-    customdata.push([c.strike_price, c.expiration_date, iv * 100]);
+    z.push(ivPct);
+    color.push(Math.log10(ivPct));
+    customdata.push([Math.log(c.strike_price / spotPrice), c.expiration_date, ivPct]);
   }
   if (x.length === 0) return null;
-  return { x, y, z, customdata };
+  return { x, y, z, color, customdata };
 }
 
-function atmRidge(sortedFits) {
+function atmRidge(sortedFits, spotPrice) {
   const out = { x: [], y: [], z: [] };
   for (const fit of sortedFits) {
     const w = sviTotalVariance(fit.params, 0);
     if (!(w > 0) || !(fit.T > 0)) continue;
-    const ivSq = w / fit.T;
-    out.x.push(0);
+    const iv = Math.sqrt(w / fit.T);
+    if (iv < IV_CLAMP_MIN || iv > IV_CLAMP_MAX) continue;
+    out.x.push(spotPrice);
     out.y.push(fit.dte);
-    out.z.push(Math.log(ivSq));
+    out.z.push(iv * 100);
   }
   return out;
 }
@@ -183,29 +212,36 @@ function atmIvReference(sortedFits) {
   return Math.sqrt(w0 / near.T);
 }
 
-function computeZRange(surface, scatter) {
-  let zMin = Infinity;
-  let zMax = -Infinity;
+// Compute the colorscale range in log10(iv%) space so the diverging palette is
+// anchored at the nearest-tenor ATM vol and the half-range equals the largest
+// perceptual distance from that center across all visible cells.
+function computeColorRange(surface, scatter, atmIv) {
+  let cMin = Infinity;
+  let cMax = -Infinity;
   if (surface) {
-    for (const row of surface.z) {
+    for (const row of surface.surfaceColor) {
       for (const v of row) {
         if (v != null && Number.isFinite(v)) {
-          if (v < zMin) zMin = v;
-          if (v > zMax) zMax = v;
+          if (v < cMin) cMin = v;
+          if (v > cMax) cMax = v;
         }
       }
     }
   }
   if (scatter) {
-    for (const v of scatter.z) {
+    for (const v of scatter.color) {
       if (v != null && Number.isFinite(v)) {
-        if (v < zMin) zMin = v;
-        if (v > zMax) zMax = v;
+        if (v < cMin) cMin = v;
+        if (v > cMax) cMax = v;
       }
     }
   }
-  if (!Number.isFinite(zMin) || !Number.isFinite(zMax)) return null;
-  return { zMin, zMax };
+  if (!Number.isFinite(cMin) || !Number.isFinite(cMax)) {
+    return { cMid: 1.3, cMin: 1, cMax: 1.6 }; // ~20% default
+  }
+  const cMid = atmIv != null ? Math.log10(atmIv * 100) : (cMin + cMax) / 2;
+  const halfRange = Math.max(Math.abs(cMax - cMid), Math.abs(cMin - cMid), 0.05);
+  return { cMid, cMin: cMid - halfRange, cMax: cMid + halfRange };
 }
 
 export default function VolSurface3D({ contracts, spotPrice, capturedAt, fits, sviSource }) {
@@ -241,40 +277,20 @@ export default function VolSurface3D({ contracts, spotPrice, capturedAt, fits, s
     if (!Plotly || !chartRef.current || !spotPrice) return;
 
     const traces = [];
-    const zRange = computeZRange(
+    const { cMid, cMin, cMax } = computeColorRange(
       effectiveMode === 'svi' ? sviSurface : null,
-      effectiveMode === 'raw' ? rawScatter : null
+      effectiveMode === 'raw' ? rawScatter : null,
+      atmIv
     );
 
-    const zMidAtm = atmIv != null ? Math.log(atmIv * atmIv) : null;
-    let cMid;
-    let halfRange;
-    if (zRange) {
-      if (zMidAtm != null) {
-        cMid = zMidAtm;
-        halfRange = Math.max(
-          Math.abs(zRange.zMax - zMidAtm),
-          Math.abs(zRange.zMin - zMidAtm),
-          0.1
-        );
-      } else {
-        cMid = (zRange.zMax + zRange.zMin) / 2;
-        halfRange = Math.max((zRange.zMax - zRange.zMin) / 2, 0.1);
-      }
-    } else {
-      cMid = 0;
-      halfRange = 1;
-    }
-    const cMin = cMid - halfRange;
-    const cMax = cMid + halfRange;
-
     if (effectiveMode === 'svi' && sviSurface) {
-      const { kGrid, dteGrid, z, customdata } = sviSurface;
+      const { strikeGrid, dteGrid, z, surfaceColor, customdata } = sviSurface;
       traces.push({
         type: 'surface',
-        x: kGrid,
+        x: strikeGrid,
         y: dteGrid,
         z,
+        surfacecolor: surfaceColor,
         customdata,
         colorscale: 'RdBu',
         reversescale: true,
@@ -293,7 +309,7 @@ export default function VolSurface3D({ contracts, spotPrice, capturedAt, fits, s
           },
         },
         colorbar: {
-          title: { text: 'ln(IV²)', font: { color: '#8a8f9c', size: 10 } },
+          title: { text: 'log₁₀ IV%', font: { color: '#8a8f9c', size: 10 } },
           tickfont: { color: '#8a8f9c', size: 9 },
           len: 0.65,
           thickness: 10,
@@ -301,16 +317,15 @@ export default function VolSurface3D({ contracts, spotPrice, capturedAt, fits, s
           outlinecolor: '#2a3040',
         },
         hovertemplate:
-          'moneyness %{x:.3f}<br>' +
+          'strike %{x:.2f}<br>' +
           'DTE %{y:.0f}d<br>' +
-          'strike %{customdata[0]:.2f}<br>' +
-          'IV %{customdata[1]:.2f}%<br>' +
-          'ln(IV²) %{z:.3f}' +
+          'moneyness %{customdata[0]:.3f}<br>' +
+          'IV %{customdata[1]:.2f}%' +
           '<extra></extra>',
         name: 'SVI surface',
       });
 
-      const ridge = atmRidge(sortedFits);
+      const ridge = atmRidge(sortedFits, spotPrice);
       if (ridge.x.length >= 1) {
         traces.push({
           type: 'scatter3d',
@@ -321,12 +336,13 @@ export default function VolSurface3D({ contracts, spotPrice, capturedAt, fits, s
           line: { color: '#f0a030', width: 5 },
           marker: { color: '#f0a030', size: 5, symbol: 'diamond' },
           name: 'ATM ridge',
-          hovertemplate: 'ATM · DTE %{y:.0f}d<br>ln(IV²) %{z:.3f}<extra></extra>',
+          hovertemplate:
+            'ATM · strike %{x:.2f}<br>DTE %{y:.0f}d<br>IV %{z:.2f}%<extra></extra>',
           showlegend: false,
         });
       }
     } else if (rawScatter) {
-      const { x, y, z, customdata } = rawScatter;
+      const { x, y, z, color, customdata } = rawScatter;
       traces.push({
         type: 'scatter3d',
         mode: 'markers',
@@ -336,7 +352,7 @@ export default function VolSurface3D({ contracts, spotPrice, capturedAt, fits, s
         customdata,
         marker: {
           size: 3.2,
-          color: z,
+          color,
           colorscale: 'RdBu',
           reversescale: true,
           cmid: cMid,
@@ -345,7 +361,7 @@ export default function VolSurface3D({ contracts, spotPrice, capturedAt, fits, s
           showscale: true,
           opacity: 0.85,
           colorbar: {
-            title: { text: 'ln(IV²)', font: { color: '#8a8f9c', size: 10 } },
+            title: { text: 'log₁₀ IV%', font: { color: '#8a8f9c', size: 10 } },
             tickfont: { color: '#8a8f9c', size: 9 },
             len: 0.65,
             thickness: 10,
@@ -354,12 +370,11 @@ export default function VolSurface3D({ contracts, spotPrice, capturedAt, fits, s
           },
         },
         hovertemplate:
-          'moneyness %{x:.3f}<br>' +
+          'strike %{x:.2f}<br>' +
           'DTE %{y:.0f}d<br>' +
-          'strike %{customdata[0]:.2f}<br>' +
+          'moneyness %{customdata[0]:.3f}<br>' +
           'exp %{customdata[1]}<br>' +
-          'IV %{customdata[2]:.2f}%<br>' +
-          'ln(IV²) %{z:.3f}' +
+          'IV %{customdata[2]:.2f}%' +
           '<extra></extra>',
         name: 'raw IV scatter',
       });
@@ -411,7 +426,7 @@ export default function VolSurface3D({ contracts, spotPrice, capturedAt, fits, s
           }}
         >
           {effectiveMode === 'svi' && hasSviFits
-            ? `SVI interpolation · ${sortedFits.length} expiration${sortedFits.length === 1 ? '' : 's'}${sviSource ? ` · ${sviSource}` : ''} · ${MONEYNESS_STEP.toFixed(2)} k × 1 DTE grid`
+            ? `SVI interpolation · ${sortedFits.length} expiration${sortedFits.length === 1 ? '' : 's'}${sviSource ? ` · ${sviSource}` : ''} · strike × DTE × log IV`
             : hasSviFits
               ? 'Raw IV scatter — toggle to see SVI fit'
               : 'Raw IV scatter — SVI fits unavailable for this run'}
