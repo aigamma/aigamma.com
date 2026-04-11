@@ -335,12 +335,16 @@ function prepareSamples({ contracts, spotPrice, T, forward, maxAbsK = 0.6 }) {
       (c.contract_type === 'put' && c.strike_price <= F);
     if (existing && !preferOtm) continue;
     const vega = bsVegaAt(spotPrice, c.strike_price, T, iv);
+    // Zero-vega strikes are either too deep OTM to price or have a degenerate
+    // tenor — either way the IV is noise. Skipping is cleaner than masking
+    // with a 1e-8 floor that pretends to carry information it does not have.
+    if (vega <= 0) continue;
     byStrike.set(c.strike_price, {
       k,
       w: iv * iv * T,
       strike: c.strike_price,
       iv,
-      weight: Math.max(vega, 1e-8),
+      weight: vega,
     });
   }
   const samples = Array.from(byStrike.values()).sort((a, b) => a.k - b.k);

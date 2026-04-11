@@ -246,7 +246,7 @@ function computeColorRange(surface, scatter, atmIv) {
 
 export default function VolSurface3D({ contracts, spotPrice, capturedAt, fits, sviSource }) {
   const chartRef = useRef(null);
-  const Plotly = usePlotly();
+  const { plotly: Plotly, error: plotlyError } = usePlotly();
   const [mode, setMode] = useState('svi');
 
   const capturedAtMs = useMemo(
@@ -397,6 +397,16 @@ export default function VolSurface3D({ contracts, spotPrice, capturedAt, fits, s
     });
   }, [Plotly, effectiveMode, sviSurface, rawScatter, spotPrice, atmIv, sortedFits, hasSviFits]);
 
+  if (plotlyError) {
+    return (
+      <div
+        className="card"
+        style={{ padding: '1rem', marginBottom: '1rem', color: 'var(--accent-coral)' }}
+      >
+        Volatility surface unavailable — Plotly failed to load ({plotlyError}).
+      </div>
+    );
+  }
   if (!contracts || contracts.length === 0 || !spotPrice) {
     return (
       <div className="card text-muted" style={{ padding: '1rem', marginBottom: '1rem' }}>

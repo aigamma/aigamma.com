@@ -56,7 +56,7 @@ function windowDensity({ strikes, values }, spotPrice) {
 
 export default function RiskNeutralDensity({ fits, spotPrice, capturedAt }) {
   const chartRef = useRef(null);
-  const Plotly = usePlotly();
+  const { plotly: Plotly, error: plotlyError } = usePlotly();
   const [showLognormal, setShowLognormal] = useState(true);
 
   const sortedExps = useMemo(() => {
@@ -163,6 +163,16 @@ export default function RiskNeutralDensity({ fits, spotPrice, capturedAt }) {
     });
   }, [Plotly, sortedExps, spotPrice, showLognormal]);
 
+  if (plotlyError) {
+    return (
+      <div
+        className="card"
+        style={{ padding: '1rem', marginBottom: '1rem', color: 'var(--accent-coral)' }}
+      >
+        Risk-neutral density unavailable — Plotly failed to load ({plotlyError}).
+      </div>
+    );
+  }
   if (!sortedExps || sortedExps.length === 0) {
     return (
       <div className="card text-muted" style={{ padding: '1rem', marginBottom: '1rem' }}>

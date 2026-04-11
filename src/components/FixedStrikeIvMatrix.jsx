@@ -65,7 +65,7 @@ function offsetLabel(offset) {
 
 export default function FixedStrikeIvMatrix({ contracts, spotPrice, expirations, capturedAt }) {
   const chartRef = useRef(null);
-  const Plotly = usePlotly();
+  const { plotly: Plotly, error: plotlyError } = usePlotly();
 
   const matrix = useMemo(() => {
     if (!contracts || contracts.length === 0 || !spotPrice || !expirations || expirations.length === 0) {
@@ -158,6 +158,16 @@ export default function FixedStrikeIvMatrix({ contracts, spotPrice, expirations,
     });
   }, [Plotly, matrix]);
 
+  if (plotlyError) {
+    return (
+      <div
+        className="card"
+        style={{ padding: '1rem', marginBottom: '1rem', color: 'var(--accent-coral)' }}
+      >
+        Fixed-strike IV matrix unavailable — Plotly failed to load ({plotlyError}).
+      </div>
+    );
+  }
   if (!matrix) {
     return (
       <div className="card text-muted" style={{ padding: '1rem', marginBottom: '1rem' }}>

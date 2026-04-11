@@ -110,7 +110,7 @@ function buildSviCurve(sviFit, spotPrice, contracts) {
 
 export default function VolSmile({ contracts, spotPrice, expiration, sviFit }) {
   const chartRef = useRef(null);
-  const Plotly = usePlotly();
+  const { plotly: Plotly, error: plotlyError } = usePlotly();
   const [showSvi, setShowSvi] = useState(true);
 
   const sviCurve = useMemo(() => buildSviCurve(sviFit, spotPrice, contracts), [sviFit, spotPrice, contracts]);
@@ -144,6 +144,16 @@ export default function VolSmile({ contracts, spotPrice, expiration, sviFit }) {
     });
   }, [Plotly, contracts, spotPrice, expiration, showSvi, sviCurve]);
 
+  if (plotlyError) {
+    return (
+      <div
+        className="card"
+        style={{ padding: '1rem', marginBottom: '1rem', color: 'var(--accent-coral)' }}
+      >
+        Volatility smile unavailable — Plotly failed to load ({plotlyError}).
+      </div>
+    );
+  }
   if (!contracts || contracts.length === 0) {
     return <div className="card text-muted">No contract data available.</div>;
   }

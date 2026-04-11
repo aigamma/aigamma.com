@@ -69,7 +69,7 @@ function refLine(y, color, label) {
 
 export default function GexHistory({ lookback = '24h' }) {
   const chartRef = useRef(null);
-  const Plotly = usePlotly();
+  const { plotly: Plotly, error: plotlyError } = usePlotly();
   const { data, loading, error } = useHistoryData({ lookback });
 
   const points = useMemo(() => {
@@ -144,6 +144,16 @@ export default function GexHistory({ lookback = '24h' }) {
     });
   }, [Plotly, points, lookback]);
 
+  if (plotlyError) {
+    return (
+      <div
+        className="card"
+        style={{ padding: '1rem', marginBottom: '1rem', color: 'var(--accent-coral)' }}
+      >
+        Intraday history unavailable — Plotly failed to load ({plotlyError}).
+      </div>
+    );
+  }
   if (loading) {
     return (
       <div className="card text-muted" style={{ padding: '1rem', marginBottom: '1rem' }}>

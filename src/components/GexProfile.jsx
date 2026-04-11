@@ -78,7 +78,7 @@ function refLine(x, color, label) {
 
 export default function GexProfile({ contracts, spotPrice, levels }) {
   const chartRef = useRef(null);
-  const Plotly = usePlotly();
+  const { plotly: Plotly, error: plotlyError } = usePlotly();
 
   const gexData = useMemo(() => {
     if (!contracts || contracts.length === 0 || !spotPrice) return null;
@@ -146,6 +146,16 @@ export default function GexProfile({ contracts, spotPrice, levels }) {
     });
   }, [Plotly, gexData, spotPrice, levels]);
 
+  if (plotlyError) {
+    return (
+      <div
+        className="card"
+        style={{ padding: '1rem', marginBottom: '1rem', color: 'var(--accent-coral)' }}
+      >
+        Gamma exposure profile unavailable — Plotly failed to load ({plotlyError}).
+      </div>
+    );
+  }
   if (!contracts || contracts.length === 0) {
     return <div className="card text-muted">No GEX data available.</div>;
   }

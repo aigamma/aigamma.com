@@ -94,7 +94,7 @@ function refLine(x, color, label, yref) {
 
 export default function ExposureProfile({ contracts, spotPrice, levels }) {
   const chartRef = useRef(null);
-  const Plotly = usePlotly();
+  const { plotly: Plotly, error: plotlyError } = usePlotly();
 
   const rows = useMemo(() => {
     if (!contracts || contracts.length === 0 || !spotPrice) return null;
@@ -179,6 +179,16 @@ export default function ExposureProfile({ contracts, spotPrice, levels }) {
     });
   }, [Plotly, rows, spotPrice, levels]);
 
+  if (plotlyError) {
+    return (
+      <div
+        className="card"
+        style={{ padding: '1rem', marginBottom: '1rem', color: 'var(--accent-coral)' }}
+      >
+        Exposure profile unavailable — Plotly failed to load ({plotlyError}).
+      </div>
+    );
+  }
   if (!rows) {
     return (
       <div className="card text-muted" style={{ padding: '1rem', marginBottom: '1rem' }}>

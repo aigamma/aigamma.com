@@ -49,7 +49,7 @@ function daysBetween(isoDate, referenceMs) {
 
 export default function TermStructure({ expirationMetrics, capturedAt }) {
   const chartRef = useRef(null);
-  const Plotly = usePlotly();
+  const { plotly: Plotly, error: plotlyError } = usePlotly();
 
   const rows = useMemo(() => {
     if (!expirationMetrics || expirationMetrics.length === 0 || !capturedAt) return [];
@@ -110,6 +110,16 @@ export default function TermStructure({ expirationMetrics, capturedAt }) {
     });
   }, [Plotly, rows]);
 
+  if (plotlyError) {
+    return (
+      <div
+        className="card"
+        style={{ padding: '1rem', marginBottom: '1rem', color: 'var(--accent-coral)' }}
+      >
+        Term structure unavailable — Plotly failed to load ({plotlyError}).
+      </div>
+    );
+  }
   if (!expirationMetrics || expirationMetrics.length < 2) {
     return null;
   }

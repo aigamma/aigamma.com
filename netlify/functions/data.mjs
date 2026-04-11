@@ -8,6 +8,22 @@
 //   date          — YYYY-MM-DD trading date filter (optional; without it, returns most recent run)
 //   expiration    — YYYY-MM-DD expiration filter on contracts (optional; without it, returns all expirations in the run)
 
+// Per-request Supabase timeout. Kept well under the 30s Netlify function ceiling
+// so a hung query fails fast and surfaces as a 502 rather than stalling the
+// whole function until the platform kills it.
+const SUPABASE_TIMEOUT_MS = 8000;
+
+async function fetchWithTimeout(url, options, label) {
+  try {
+    return await fetch(url, { ...options, signal: AbortSignal.timeout(SUPABASE_TIMEOUT_MS) });
+  } catch (err) {
+    if (err?.name === 'TimeoutError' || err?.name === 'AbortError') {
+      throw new Error(`${label} timed out after ${SUPABASE_TIMEOUT_MS}ms`);
+    }
+    throw err;
+  }
+}
+
 export default async function handler(request) {
   const url = new URL(request.url);
   const underlying = url.searchParams.get('underlying') || 'SPY';
@@ -37,7 +53,11 @@ export default async function handler(request) {
     });
     if (tradingDate) runParams.set('trading_date', `eq.${tradingDate}`);
 
-    const runRes = await fetch(`${supabaseUrl}/rest/v1/ingest_runs?${runParams}`, { headers });
+    const runRes = await fetchWithTimeout(
+      `${supabaseUrl}/rest/v1/ingest_runs?${runParams}`,
+      { headers },
+      'ingest_runs'
+    );
     if (!runRes.ok) {
       throw new Error(`ingest_runs query failed: ${runRes.status}`);
     }
@@ -57,15 +77,21 @@ export default async function handler(request) {
     if (expirationFilter) snapParams.set('expiration_date', `eq.${expirationFilter}`);
 
     const [snapRes, levelsRes, expMetricsRes, sviRes] = await Promise.all([
-      fetch(`${supabaseUrl}/rest/v1/snapshots?${snapParams}`, { headers }),
-      fetch(`${supabaseUrl}/rest/v1/computed_levels?run_id=eq.${run.id}`, { headers }),
-      fetch(
-        `${supabaseUrl}/rest/v1/expiration_metrics?run_id=eq.${run.id}&order=expiration_date.asc`,
-        { headers }
+      fetchWithTimeout(`${supabaseUrl}/rest/v1/snapshots?${snapParams}`, { headers }, 'snapshots'),
+      fetchWithTimeout(
+        `${supabaseUrl}/rest/v1/computed_levels?run_id=eq.${run.id}`,
+        { headers },
+        'computed_levels'
       ),
-      fetch(
+      fetchWithTimeout(
+        `${supabaseUrl}/rest/v1/expiration_metrics?run_id=eq.${run.id}&order=expiration_date.asc`,
+        { headers },
+        'expiration_metrics'
+      ),
+      fetchWithTimeout(
         `${supabaseUrl}/rest/v1/svi_fits?run_id=eq.${run.id}&order=expiration_date.asc`,
-        { headers }
+        { headers },
+        'svi_fits'
       ),
     ]);
 
