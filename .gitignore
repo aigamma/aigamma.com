@@ -28,3 +28,4 @@ dist-ssr
 
 #Blocked files
 n8n/workflow.mjs
+tmp/
