@@ -168,10 +168,11 @@ export default function ExposureProfile({ contracts, spotPrice, levels }) {
       title: plotlyTitle('Dealer Exposure Profile — Vanna & Charm'),
       shapes,
       annotations,
-      // Re-assert backgrounds after the spread so no earlier property can
-      // shadow them at runtime. Defensive against upstream layout merges.
+      // plot_bgcolor is deliberately transparent so Plotly's internal
+      // plot-area fill does not paint over the dark rect shape at
+      // layer 'below' — that rect is what provides the dark background.
       paper_bgcolor: PLOTLY_COLORS.paper,
-      plot_bgcolor: PLOTLY_COLORS.plot,
+      plot_bgcolor: 'rgba(0,0,0,0)',
     };
 
     Plotly.newPlot(chartRef.current, traces, layout, {
