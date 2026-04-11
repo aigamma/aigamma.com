@@ -103,7 +103,23 @@ export default function GexProfile({ contracts, spotPrice, levels }) {
       },
     ];
 
-    const shapes = [];
+    // Background rect forces the plot area dark even when plot_bgcolor gets
+    // shadowed at runtime. xref/yref 'paper' covers the full plot region and
+    // layer 'below' keeps it behind bars, reference lines, and annotations.
+    const shapes = [
+      {
+        type: 'rect',
+        xref: 'paper',
+        yref: 'paper',
+        x0: 0,
+        y0: 0,
+        x1: 1,
+        y1: 1,
+        fillcolor: PLOTLY_COLORS.plot,
+        line: { width: 0 },
+        layer: 'below',
+      },
+    ];
     const annotations = [];
     const push = (entry) => {
       if (entry == null || entry.shape.x0 == null) return;
