@@ -84,6 +84,8 @@ export default async function handler(request) {
       gamma: toNum(c.gamma),
       theta: toNum(c.theta),
       vega: toNum(c.vega),
+      vanna: toNum(c.vanna),
+      charm: toNum(c.charm),
       open_interest: c.open_interest,
       volume: c.volume,
       close_price: toNum(c.close_price),
@@ -97,6 +99,15 @@ export default async function handler(request) {
           zero_gamma_level: toNum(levelsRows[0].zero_gamma_level),
           net_gamma_notional: toNum(levelsRows[0].net_gamma_notional),
           gamma_tilt: toNum(levelsRows[0].gamma_tilt),
+          max_pain_strike: toNum(levelsRows[0].max_pain_strike),
+          put_call_ratio_oi: toNum(levelsRows[0].put_call_ratio_oi),
+          put_call_ratio_volume: toNum(levelsRows[0].put_call_ratio_volume),
+          total_call_oi: levelsRows[0].total_call_oi,
+          total_put_oi: levelsRows[0].total_put_oi,
+          total_call_volume: levelsRows[0].total_call_volume,
+          total_put_volume: levelsRows[0].total_put_volume,
+          net_vanna_notional: toNum(levelsRows[0].net_vanna_notional),
+          net_charm_notional: toNum(levelsRows[0].net_charm_notional),
         }
       : null;
 
@@ -107,6 +118,7 @@ export default async function handler(request) {
       put_25d_iv: toNum(m.put_25d_iv),
       call_25d_iv: toNum(m.call_25d_iv),
       skew_25d_rr: toNum(m.skew_25d_rr),
+      max_pain_strike: toNum(m.max_pain_strike),
       contract_count: m.contract_count,
     }));
 

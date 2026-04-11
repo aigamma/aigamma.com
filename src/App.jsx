@@ -4,6 +4,9 @@ import VolSmile from './components/VolSmile';
 import LevelsPanel from './components/LevelsPanel';
 import GexProfile from './components/GexProfile';
 import TermStructure from './components/TermStructure';
+import GexHistory from './components/GexHistory';
+import ExposureProfile from './components/ExposureProfile';
+import FixedStrikeIvMatrix from './components/FixedStrikeIvMatrix';
 import useOptionsData from './hooks/useOptionsData';
 
 function formatFreshness(isoString) {
@@ -112,12 +115,28 @@ export default function App() {
             spotPrice={data.spotPrice}
             expirationMetrics={data.expirationMetrics}
             selectedExpiration={displayExpiration}
+            capturedAt={data.capturedAt}
           />
+
+          <GexHistory lookback="24h" />
 
           <GexProfile
             contracts={data.contracts}
             spotPrice={data.spotPrice}
             levels={data.levels}
+          />
+
+          <ExposureProfile
+            contracts={data.contracts}
+            spotPrice={data.spotPrice}
+            levels={data.levels}
+          />
+
+          <FixedStrikeIvMatrix
+            contracts={data.contracts}
+            spotPrice={data.spotPrice}
+            expirations={data.expirations}
+            capturedAt={data.capturedAt}
           />
 
           <TermStructure

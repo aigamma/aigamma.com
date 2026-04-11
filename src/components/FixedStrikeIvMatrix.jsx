@@ -1,0 +1,174 @@
+import { useEffect, useMemo, useRef } from 'react';
+import usePlotly from '../hooks/usePlotly';
+
+const OFFSETS = [-0.05, -0.04, -0.03, -0.02, -0.01, 0, 0.01, 0.02, 0.03, 0.04, 0.05];
+
+const BASE_LAYOUT = {
+  paper_bgcolor: 'transparent',
+  plot_bgcolor: '#141820',
+  font: { family: 'Courier New, monospace', color: '#e0e0e0', size: 12 },
+  margin: { t: 40, r: 40, b: 60, l: 110 },
+  xaxis: {
+    title: { text: 'Expiration', font: { color: '#8a8f9c' } },
+    gridcolor: '#1e2230',
+    tickfont: { color: '#8a8f9c' },
+    side: 'bottom',
+    type: 'category',
+  },
+  yaxis: {
+    title: { text: 'Strike offset vs spot', font: { color: '#8a8f9c' } },
+    gridcolor: '#1e2230',
+    tickfont: { color: '#8a8f9c' },
+    type: 'category',
+    autorange: 'reversed',
+  },
+};
+
+function daysBetween(expirationDate, capturedAt) {
+  if (!expirationDate || !capturedAt) return null;
+  const target = new Date(`${expirationDate}T16:00:00-04:00`).getTime();
+  const ref = new Date(capturedAt).getTime();
+  if (Number.isNaN(target) || Number.isNaN(ref)) return null;
+  return Math.max(0, Math.round(((target - ref) / 86400000) * 10) / 10);
+}
+
+function interpolateIv(contracts, targetStrike, preferCall) {
+  const filtered = contracts
+    .filter((c) => c.contract_type === (preferCall ? 'call' : 'put') && c.implied_volatility != null)
+    .sort((a, b) => a.strike_price - b.strike_price);
+  if (filtered.length === 0) return null;
+
+  let lower = null;
+  let upper = null;
+  for (const c of filtered) {
+    if (c.strike_price <= targetStrike) lower = c;
+    if (c.strike_price >= targetStrike) {
+      upper = c;
+      break;
+    }
+  }
+  if (lower && upper && lower.strike_price === upper.strike_price) return upper.implied_volatility;
+  if (lower && upper) {
+    const w = (targetStrike - lower.strike_price) / (upper.strike_price - lower.strike_price);
+    return lower.implied_volatility * (1 - w) + upper.implied_volatility * w;
+  }
+  if (upper) return upper.implied_volatility;
+  if (lower) return lower.implied_volatility;
+  return null;
+}
+
+function offsetLabel(offset) {
+  if (offset === 0) return 'ATM';
+  const sign = offset > 0 ? '+' : '';
+  return `${sign}${(offset * 100).toFixed(0)}%`;
+}
+
+export default function FixedStrikeIvMatrix({ contracts, spotPrice, expirations, capturedAt }) {
+  const chartRef = useRef(null);
+  const Plotly = usePlotly();
+
+  const matrix = useMemo(() => {
+    if (!contracts || contracts.length === 0 || !spotPrice || !expirations || expirations.length === 0) {
+      return null;
+    }
+    const byExp = new Map();
+    for (const c of contracts) {
+      if (!c.expiration_date) continue;
+      if (!byExp.has(c.expiration_date)) byExp.set(c.expiration_date, []);
+      byExp.get(c.expiration_date).push(c);
+    }
+
+    const sortedExps = [...expirations].sort();
+    const xLabels = sortedExps.map((exp) => {
+      const dte = daysBetween(exp, capturedAt);
+      return dte != null ? `${exp}\n${dte.toFixed(0)}d` : exp;
+    });
+    const yLabels = OFFSETS.map(offsetLabel);
+
+    const z = OFFSETS.map(() => []);
+    const textCells = OFFSETS.map(() => []);
+
+    for (let col = 0; col < sortedExps.length; col++) {
+      const expContracts = byExp.get(sortedExps[col]) || [];
+      for (let row = 0; row < OFFSETS.length; row++) {
+        const offset = OFFSETS[row];
+        const targetStrike = spotPrice * (1 + offset);
+        const preferCall = offset > 0;
+        const iv = interpolateIv(expContracts, targetStrike, preferCall);
+        const neutralIv =
+          iv == null && offset === 0
+            ? interpolateIv(expContracts, targetStrike, false) || interpolateIv(expContracts, targetStrike, true)
+            : iv;
+        const finalIv = iv != null ? iv : neutralIv;
+        z[row].push(finalIv != null ? finalIv * 100 : null);
+        textCells[row].push(finalIv != null ? `${(finalIv * 100).toFixed(2)}%` : '—');
+      }
+    }
+
+    return { xLabels, yLabels, z, textCells };
+  }, [contracts, spotPrice, expirations, capturedAt]);
+
+  useEffect(() => {
+    if (!Plotly || !chartRef.current || !matrix) return;
+
+    const allValues = matrix.z.flat().filter((v) => v != null);
+    if (allValues.length === 0) return;
+    const zMin = Math.min(...allValues);
+    const zMax = Math.max(...allValues);
+
+    const trace = {
+      type: 'heatmap',
+      z: matrix.z,
+      x: matrix.xLabels,
+      y: matrix.yLabels,
+      text: matrix.textCells,
+      texttemplate: '%{text}',
+      textfont: { family: 'Courier New, monospace', size: 11, color: '#0f1319' },
+      colorscale: [
+        [0, '#6ee7b7'],
+        [0.5, '#fef3c7'],
+        [1, '#fb7185'],
+      ],
+      zmin: zMin,
+      zmax: zMax,
+      hoverongaps: false,
+      hovertemplate: '%{x}<br>Offset %{y}<br>IV %{text}<extra></extra>',
+      xgap: 2,
+      ygap: 2,
+      colorbar: {
+        title: { text: 'IV %', font: { color: '#8a8f9c' } },
+        tickfont: { color: '#8a8f9c' },
+        thickness: 14,
+        len: 0.9,
+        outlinewidth: 0,
+      },
+    };
+
+    const layout = {
+      ...BASE_LAYOUT,
+      title: {
+        text: 'Fixed-Strike IV Matrix (OTM skew per expiration)',
+        font: { color: '#e0e0e0', size: 14, family: 'Courier New, monospace' },
+      },
+    };
+
+    Plotly.newPlot(chartRef.current, [trace], layout, {
+      responsive: true,
+      displayModeBar: false,
+    });
+  }, [Plotly, matrix]);
+
+  if (!matrix) {
+    return (
+      <div className="card text-muted" style={{ padding: '1rem', marginBottom: '1rem' }}>
+        Fixed-strike IV matrix unavailable.
+      </div>
+    );
+  }
+
+  return (
+    <div className="card" style={{ marginBottom: '1rem' }}>
+      <div ref={chartRef} style={{ width: '100%', height: '400px' }} />
+    </div>
+  );
+}

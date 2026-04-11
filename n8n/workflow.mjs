@@ -1,15 +1,48 @@
-import { workflow, node, trigger } from '@n8n/workflow-sdk';
+import { workflow, node, trigger, newCredential, expr } from '@n8n/workflow-sdk';
 
-const FETCH_AND_COMPUTE_JS = `
-const MASSIVE_BASE = 'https://api.massive.com';
+const SUPABASE_URL = 'https://tbxhvpoyyyhbvoyefggu.supabase.co';
+
+const MARKET_HOURS_FILTER_JS = `
+const now = new Date();
+const etString = now.toLocaleString('en-US', { timeZone: 'America/New_York' });
+const et = new Date(etString);
+const day = et.getDay();
+const hours = et.getHours();
+const minutes = et.getMinutes();
+const timeDecimal = hours + minutes / 60;
+const mode = $execution && $execution.mode ? $execution.mode : 'trigger';
+const isScheduled = mode === 'trigger' || mode === 'production';
+if (isScheduled) {
+  if (day === 0 || day === 6) return [];
+  if (timeDecimal < 9.5 || timeDecimal > 16.25) return [];
+}
+return [{ json: { timestamp: now.toISOString(), etTime: etString, underlying: 'SPY', mode, bypass: !isScheduled } }];
+`;
+
+const COMPUTE_TARGETS_JS = `
 const UNDERLYING = $input.first().json.underlying;
 const startedAt = Date.now();
 const capturedAtDate = new Date();
+const capturedAtIso = capturedAtDate.toISOString();
 const tradingDate = capturedAtDate.toLocaleDateString('en-CA', { timeZone: 'America/New_York' });
-const apiKey = '4bWOQKzd3I0WmTJzW39z0hF8K0Cls46O';
 
-const RISK_FREE_RATE = 0.045;
-const DIVIDEND_YIELD = 0.0;
+const US_MARKET_HOLIDAYS = new Set([
+  '2026-01-01','2026-01-19','2026-02-16','2026-04-03','2026-05-25','2026-06-19','2026-07-03','2026-09-07','2026-11-26','2026-12-25',
+  '2027-01-01','2027-01-18','2027-02-15','2027-03-26','2027-05-31','2027-06-18','2027-07-05','2027-09-06','2027-11-25','2027-12-24',
+  '2028-01-17','2028-02-21','2028-04-14','2028-05-29','2028-06-19','2028-07-04','2028-09-04','2028-11-23','2028-12-25'
+]);
+
+function ymd(d) { return d.toISOString().split('T')[0]; }
+
+function adjustForHoliday(dateStr) {
+  let d = new Date(dateStr + 'T12:00:00Z');
+  for (let i = 0; i < 5; i++) {
+    const s = ymd(d);
+    if (!US_MARKET_HOLIDAYS.has(s)) return s;
+    d = new Date(d.getTime() - 86400000);
+  }
+  return ymd(d);
+}
 
 function thirdFriday(year, month) {
   const first = new Date(Date.UTC(year, month, 1));
@@ -17,6 +50,61 @@ function thirdFriday(year, month) {
   const firstFridayDate = 1 + ((5 - firstDow + 7) % 7);
   return new Date(Date.UTC(year, month, firstFridayDate + 14));
 }
+
+const todayET = new Date(tradingDate + 'T12:00:00Z');
+const targets = new Set();
+
+const dow = todayET.getUTCDay();
+const daysToFriday = (5 - dow + 7) % 7;
+const frontWeekly = new Date(todayET.getTime() + (daysToFriday || 7) * 86400000);
+targets.add(adjustForHoliday(ymd(frontWeekly)));
+
+let monthly1 = thirdFriday(todayET.getUTCFullYear(), todayET.getUTCMonth());
+if (monthly1 <= todayET) {
+  monthly1 = thirdFriday(todayET.getUTCFullYear(), todayET.getUTCMonth() + 1);
+}
+targets.add(adjustForHoliday(ymd(monthly1)));
+
+const monthly2 = thirdFriday(monthly1.getUTCFullYear(), monthly1.getUTCMonth() + 1);
+targets.add(adjustForHoliday(ymd(monthly2)));
+
+const quarterlyMonths = new Set([2, 5, 8, 11]);
+let quarterly = null;
+for (let i = 1; i <= 12; i++) {
+  const totalMonths = monthly2.getUTCMonth() + i;
+  const y = monthly2.getUTCFullYear() + Math.floor(totalMonths / 12);
+  const m = totalMonths % 12;
+  if (quarterlyMonths.has(m)) {
+    quarterly = thirdFriday(y, m);
+    break;
+  }
+}
+if (quarterly) targets.add(adjustForHoliday(ymd(quarterly)));
+
+return [...targets].sort().map((exp) => ({
+  json: {
+    underlying: UNDERLYING,
+    expiration: exp,
+    captured_at: capturedAtIso,
+    trading_date: tradingDate,
+    started_at: startedAt,
+    fetch_url: 'https://api.massive.com/v3/snapshot/options/' + UNDERLYING + '?limit=250&expiration_date=' + exp,
+  },
+}));
+`;
+
+const COMPUTE_GEX_JS = `
+const targetsNode = $('Compute Targets').all();
+if (targetsNode.length === 0) return [];
+const first = targetsNode[0].json;
+const UNDERLYING = first.underlying;
+const capturedAtIso = first.captured_at;
+const tradingDate = first.trading_date;
+const startedAt = first.started_at;
+const capturedAtMs = new Date(capturedAtIso).getTime();
+
+const RISK_FREE_RATE = 0.045;
+const DIVIDEND_YIELD = 0.0;
 
 function normPdf(x) {
   return Math.exp(-0.5 * x * x) / Math.sqrt(2 * Math.PI);
@@ -40,12 +128,7 @@ function bsVannaCharm(S, K, tau, sigma, r, q, isCall) {
   const eMinusQTau = Math.exp(-q * tau);
   const vanna = -eMinusQTau * nPrimeD1 * (d2 / sigma);
   const charmCore = eMinusQTau * nPrimeD1 * ((2 * (r - q) * tau - d2 * sigma * sqrtTau) / (2 * tau * sigma * sqrtTau));
-  const charmCall = -charmCore;
-  const charmPut = -charmCore;
-  return {
-    vanna: vanna / 100,
-    charm: (isCall ? charmCall : charmPut) / 365,
-  };
+  return { vanna: vanna / 100, charm: (-charmCore) / 365 };
 }
 
 function computeMaxPain(contracts) {
@@ -66,114 +149,41 @@ function computeMaxPain(contracts) {
         totalPain += Math.max(c.strike - candidate, 0) * oi * 100;
       }
     }
-    if (totalPain < minPain) {
-      minPain = totalPain;
-      maxPainStrike = candidate;
-    }
+    if (totalPain < minPain) { minPain = totalPain; maxPainStrike = candidate; }
   }
   return maxPainStrike;
 }
 
-const todayET = new Date(tradingDate + 'T12:00:00Z');
-const targets = new Set();
-
-const dow = todayET.getUTCDay();
-const daysToFriday = (5 - dow + 7) % 7;
-const frontWeekly = new Date(todayET.getTime() + (daysToFriday || 7) * 86400000);
-targets.add(frontWeekly.toISOString().split('T')[0]);
-
-let monthly1 = thirdFriday(todayET.getUTCFullYear(), todayET.getUTCMonth());
-if (monthly1 <= todayET) {
-  monthly1 = thirdFriday(todayET.getUTCFullYear(), todayET.getUTCMonth() + 1);
-}
-targets.add(monthly1.toISOString().split('T')[0]);
-
-const monthly2 = thirdFriday(monthly1.getUTCFullYear(), monthly1.getUTCMonth() + 1);
-targets.add(monthly2.toISOString().split('T')[0]);
-
-const quarterlyMonths = new Set([2, 5, 8, 11]);
-let quarterly = null;
-for (let i = 1; i <= 12; i++) {
-  const totalMonths = monthly2.getUTCMonth() + i;
-  const y = monthly2.getUTCFullYear() + Math.floor(totalMonths / 12);
-  const m = totalMonths % 12;
-  if (quarterlyMonths.has(m)) {
-    quarterly = thirdFriday(y, m);
-    break;
-  }
-}
-if (quarterly) targets.add(quarterly.toISOString().split('T')[0]);
-
-const targetExpirations = [...targets].sort();
-
-let allContracts = [];
+const pages = $input.all();
+const allRaw = [];
 let spotPrice = null;
-const resolvedExpirations = [];
-
-async function fetchExpiration(expStr) {
-  let url = MASSIVE_BASE + '/v3/snapshot/options/' + UNDERLYING + '?apiKey=' + apiKey + '&limit=250&expiration_date=' + expStr;
-  let fetched = 0;
-  while (url) {
-    const response = await this.helpers.httpRequest({ method: 'GET', url: url, json: true });
-    if (response.results && response.results.length > 0) {
-      allContracts = allContracts.concat(response.results);
-      fetched += response.results.length;
-      if (!spotPrice) {
-        for (const r of response.results) {
-          if (r.underlying_asset && r.underlying_asset.price) {
-            spotPrice = r.underlying_asset.price;
-            break;
-          }
-        }
+for (const p of pages) {
+  const body = p.json;
+  if (body && Array.isArray(body.results)) {
+    for (const r of body.results) allRaw.push(r);
+    if (!spotPrice) {
+      for (const r of body.results) {
+        if (r.underlying_asset && r.underlying_asset.price) { spotPrice = r.underlying_asset.price; break; }
       }
     }
-    url = response.next_url ? response.next_url + '&apiKey=' + apiKey : null;
   }
-  return fetched;
 }
 
-const boundFetch = fetchExpiration.bind(this);
-
-for (const exp of targetExpirations) {
-  const fetched = await boundFetch(exp);
-  if (fetched > 0) {
-    resolvedExpirations.push(exp);
-    continue;
-  }
-  const target = new Date(exp + 'T12:00:00Z');
-  let resolved = null;
-  for (let back = 1; back <= 3; back++) {
-    const cand = new Date(target.getTime() - back * 86400000);
-    const candStr = cand.toISOString().split('T')[0];
-    if (resolvedExpirations.indexOf(candStr) !== -1) continue;
-    const got = await boundFetch(candStr);
-    if (got > 0) { resolved = candStr; break; }
-  }
-  if (resolved) resolvedExpirations.push(resolved);
-}
-
-if (!spotPrice && allContracts.length > 0) {
+if (!spotPrice && allRaw.length > 0) {
   let closestDelta = Infinity;
-  for (const r of allContracts) {
+  for (const r of allRaw) {
     if (r.details && r.details.contract_type === 'call' && r.greeks && typeof r.greeks.delta === 'number') {
       const dist = Math.abs(r.greeks.delta - 0.5);
-      if (dist < closestDelta) {
-        closestDelta = dist;
-        spotPrice = r.details.strike_price;
-      }
+      if (dist < closestDelta) { closestDelta = dist; spotPrice = r.details.strike_price; }
     }
   }
 }
 
-if (allContracts.length === 0 || !spotPrice) {
-  return [];
-}
+if (allRaw.length === 0 || !spotPrice) return [];
 
-const capturedAtMs = capturedAtDate.getTime();
-
-const contracts = allContracts
-  .filter(r => r.details && r.greeks && r.implied_volatility > 0.001)
-  .map(r => {
+const contracts = allRaw
+  .filter((r) => r.details && r.greeks && r.implied_volatility > 0.001)
+  .map((r) => {
     const exp = r.details.expiration_date;
     const strike = r.details.strike_price;
     const iv = r.implied_volatility;
@@ -182,7 +192,7 @@ const contracts = allContracts
     const { vanna, charm } = bsVannaCharm(spotPrice, strike, tau, iv, RISK_FREE_RATE, DIVIDEND_YIELD, isCall);
     return {
       expiration_date: exp,
-      strike: strike,
+      strike,
       contract_type: r.details.contract_type,
       implied_volatility: iv != null ? iv : null,
       delta: r.greeks.delta != null ? r.greeks.delta : null,
@@ -241,10 +251,7 @@ for (let i = 1; i < netGexArray.length; i++) {
 }
 
 let totalCallGamma = 0, totalPutGamma = 0;
-for (const K of strikes) {
-  totalCallGamma += gexByStrike[K].callGex;
-  totalPutGamma += gexByStrike[K].putGex;
-}
+for (const K of strikes) { totalCallGamma += gexByStrike[K].callGex; totalPutGamma += gexByStrike[K].putGex; }
 const gammaTilt = totalPutGamma > 0 ? totalCallGamma / totalPutGamma : null;
 
 let totalCallOi = 0, totalPutOi = 0, totalCallVolume = 0, totalPutVolume = 0;
@@ -252,13 +259,8 @@ let netVannaNotional = 0, netCharmNotional = 0;
 for (const c of contracts) {
   const oi = c.open_interest || 0;
   const vol = c.volume || 0;
-  if (c.contract_type === 'call') {
-    totalCallOi += oi;
-    totalCallVolume += vol;
-  } else {
-    totalPutOi += oi;
-    totalPutVolume += vol;
-  }
+  if (c.contract_type === 'call') { totalCallOi += oi; totalCallVolume += vol; }
+  else { totalPutOi += oi; totalPutVolume += vol; }
   if (c.vanna != null) {
     const vannaContrib = c.vanna * oi * 100 * spotPrice;
     netVannaNotional += c.contract_type === 'call' ? vannaContrib : -vannaContrib;
@@ -284,17 +286,17 @@ const expirationMetrics = [];
 for (const exp of Object.keys(contractsByExp)) {
   const expContracts = contractsByExp[exp];
   const atmCandidates = expContracts
-    .filter(c => Math.abs(c.strike - spotPrice) <= atmWindow)
+    .filter((c) => Math.abs(c.strike - spotPrice) <= atmWindow)
     .sort((a, b) => Math.abs(a.strike - spotPrice) - Math.abs(b.strike - spotPrice));
-  const atmContract = atmCandidates.find(c => c.contract_type === 'call') || atmCandidates[0] || null;
+  const atmContract = atmCandidates.find((c) => c.contract_type === 'call') || atmCandidates[0] || null;
   const atmIv = atmContract ? atmContract.implied_volatility : null;
   const atmStrike = atmContract ? atmContract.strike : null;
 
   const call25d = expContracts
-    .filter(c => c.contract_type === 'call' && c.delta > 0.15 && c.delta < 0.35)
+    .filter((c) => c.contract_type === 'call' && c.delta > 0.15 && c.delta < 0.35)
     .sort((a, b) => Math.abs(a.delta - 0.25) - Math.abs(b.delta - 0.25))[0];
   const put25d = expContracts
-    .filter(c => c.contract_type === 'put' && c.delta < -0.15 && c.delta > -0.35)
+    .filter((c) => c.contract_type === 'put' && c.delta < -0.15 && c.delta > -0.35)
     .sort((a, b) => Math.abs(Math.abs(a.delta) - 0.25) - Math.abs(Math.abs(b.delta) - 0.25))[0];
   const put25dIv = put25d ? put25d.implied_volatility : null;
   const call25dIv = call25d ? call25d.implied_volatility : null;
@@ -315,7 +317,7 @@ for (const exp of Object.keys(contractsByExp)) {
 
 const run = {
   underlying: UNDERLYING,
-  captured_at: capturedAtDate.toISOString(),
+  captured_at: capturedAtIso,
   trading_date: tradingDate,
   snapshot_type: 'intraday',
   spot_price: spotPrice,
@@ -347,57 +349,19 @@ const computedLevels = {
 return [{ json: { run, contracts, computedLevels, expirationMetrics } }];
 `;
 
-const MARKET_HOURS_FILTER_JS = `
-const now = new Date();
-const etString = now.toLocaleString('en-US', { timeZone: 'America/New_York' });
-const et = new Date(etString);
-const day = et.getDay();
-const hours = et.getHours();
-const minutes = et.getMinutes();
-const timeDecimal = hours + minutes / 60;
-const mode = $execution && $execution.mode ? $execution.mode : 'trigger';
-const isScheduled = mode === 'trigger' || mode === 'production';
-if (isScheduled) {
-  if (day === 0 || day === 6) return [];
-  if (timeDecimal < 9.5 || timeDecimal > 16.25) return [];
-}
-return [{ json: { timestamp: now.toISOString(), etTime: etString, underlying: 'SPY', mode, bypass: !isScheduled } }];
-`;
-
-const SUPABASE_URL = 'https://tbxhvpoyyyhbvoyefggu.supabase.co';
-const SUPABASE_ANON = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InRieGh2cG95eXloYnZveWVmZ2d1Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzU3MDc4MzcsImV4cCI6MjA5MTI4MzgzN30.9yA9J5fvWHCiY1nEO8sEEQk7Ymsq6cYU_tRUP8vq0FI';
-
-const supabaseHeadersRepresentation = {
-  parameters: [
-    { name: 'Content-Type', value: 'application/json' },
-    { name: 'apikey', value: SUPABASE_ANON },
-    { name: 'Authorization', value: 'Bearer ' + SUPABASE_ANON },
-    { name: 'Prefer', value: 'return=representation' },
-  ],
-};
-
-const supabaseHeadersMinimal = {
-  parameters: [
-    { name: 'Content-Type', value: 'application/json' },
-    { name: 'apikey', value: SUPABASE_ANON },
-    { name: 'Authorization', value: 'Bearer ' + SUPABASE_ANON },
-    { name: 'Prefer', value: 'return=minimal' },
-  ],
-};
-
 const scheduleTrigger = trigger({
   type: 'n8n-nodes-base.scheduleTrigger',
   version: 1.3,
   config: {
     name: 'Every 5 Minutes Market Hours',
-    position: [-880, 120],
+    position: [-1100, 120],
     parameters: {
       rule: {
         interval: [{ field: 'cronExpression', expression: '*/5 13-21 * * 1-5' }],
       },
     },
   },
-  output: [{ timestamp: '2026-04-11T13:00:00.000Z' }],
+  output: [{ timestamp: '2026-04-13T13:00:00.000Z' }],
 });
 
 const marketHoursFilter = node({
@@ -405,61 +369,117 @@ const marketHoursFilter = node({
   version: 2,
   config: {
     name: 'Market Hours Filter',
-    position: [-660, 120],
+    position: [-880, 120],
     parameters: {
       mode: 'runOnceForAllItems',
       language: 'javaScript',
       jsCode: MARKET_HOURS_FILTER_JS,
     },
   },
-  output: [{ timestamp: '2026-04-11T13:00:00.000Z', etTime: 'Apr 11 9:00 AM', underlying: 'SPY', mode: 'trigger', bypass: false }],
+  output: [{ timestamp: '2026-04-13T13:00:00.000Z', etTime: 'Apr 13 9:00 AM', underlying: 'SPY', mode: 'trigger', bypass: false }],
 });
 
-const fetchAndCompute = node({
+const computeTargets = node({
   type: 'n8n-nodes-base.code',
   version: 2,
   config: {
-    name: 'Fetch Chain & Compute GEX',
-    position: [-440, 120],
+    name: 'Compute Targets',
+    position: [-660, 120],
     parameters: {
       mode: 'runOnceForAllItems',
       language: 'javaScript',
-      jsCode: FETCH_AND_COMPUTE_JS,
+      jsCode: COMPUTE_TARGETS_JS,
     },
   },
-  output: [{
-    run: {
-      underlying: 'SPY',
-      captured_at: '2026-04-11T13:00:00.000Z',
-      trading_date: '2026-04-11',
-      snapshot_type: 'intraday',
-      spot_price: 675.0,
-      contract_count: 1160,
-      expiration_count: 3,
-      source: 'massive',
-      status: 'success',
-      duration_ms: 12500,
+  output: [
+    { underlying: 'SPY', expiration: '2026-04-17', captured_at: '2026-04-13T13:00:00.000Z', trading_date: '2026-04-13', started_at: 1744548000000, fetch_url: 'https://api.massive.com/v3/snapshot/options/SPY?limit=250&expiration_date=2026-04-17' },
+    { underlying: 'SPY', expiration: '2026-05-15', captured_at: '2026-04-13T13:00:00.000Z', trading_date: '2026-04-13', started_at: 1744548000000, fetch_url: 'https://api.massive.com/v3/snapshot/options/SPY?limit=250&expiration_date=2026-05-15' },
+    { underlying: 'SPY', expiration: '2026-06-18', captured_at: '2026-04-13T13:00:00.000Z', trading_date: '2026-04-13', started_at: 1744548000000, fetch_url: 'https://api.massive.com/v3/snapshot/options/SPY?limit=250&expiration_date=2026-06-18' },
+    { underlying: 'SPY', expiration: '2026-09-18', captured_at: '2026-04-13T13:00:00.000Z', trading_date: '2026-04-13', started_at: 1744548000000, fetch_url: 'https://api.massive.com/v3/snapshot/options/SPY?limit=250&expiration_date=2026-09-18' },
+  ],
+});
+
+const fetchChain = node({
+  type: 'n8n-nodes-base.httpRequest',
+  version: 4.4,
+  config: {
+    name: 'Fetch Chain',
+    position: [-440, 120],
+    parameters: {
+      method: 'GET',
+      url: expr('{{ $json.fetch_url }}'),
+      authentication: 'genericCredentialType',
+      genericAuthType: 'httpQueryAuth',
+      options: {
+        pagination: {
+          pagination: {
+            paginationMode: 'responseContainsNextURL',
+            nextURL: expr('{{ $response.body.next_url }}'),
+            paginationCompleteWhen: 'other',
+            completeExpression: expr('{{ !$response.body.next_url }}'),
+            limitPagesFetched: true,
+            maxRequests: 20,
+          },
+        },
+      },
     },
-    contracts: [{ expiration_date: '2026-04-17', strike: 675, contract_type: 'call', implied_volatility: 0.147, delta: 0.5, gamma: 0.02, vanna: 0.001, charm: -0.0001, open_interest: 1000, volume: 500 }],
-    computedLevels: {
-      net_gamma_notional: -488800000,
-      call_wall_strike: 685,
-      put_wall_strike: 665,
-      abs_gamma_strike: 670,
-      zero_gamma_level: 675.72,
-      gamma_tilt: 0.921,
-      max_pain_strike: 670,
-      put_call_ratio_oi: 1.15,
-      put_call_ratio_volume: 0.95,
-      total_call_oi: 500000,
-      total_put_oi: 575000,
-      total_call_volume: 100000,
-      total_put_volume: 95000,
-      net_vanna_notional: 12500000,
-      net_charm_notional: -3200000,
+    credentials: {
+      httpQueryAuth: newCredential('Massive API Query Auth'),
     },
-    expirationMetrics: [{ expiration_date: '2026-04-17', atm_iv: 0.147, atm_strike: 675, put_25d_iv: 0.17, call_25d_iv: 0.126, skew_25d_rr: -0.044, max_pain_strike: 670, contract_count: 450 }],
-  }],
+  },
+  output: [
+    { status: 'OK', request_id: 'abc', results: [{ details: { contract_type: 'call', strike_price: 680, expiration_date: '2026-04-17' }, greeks: { delta: 0.5, gamma: 0.02, theta: -0.1, vega: 0.3 }, implied_volatility: 0.15, open_interest: 1000, day: { volume: 500, close: 3.5 }, underlying_asset: { price: 680 } }], next_url: null },
+  ],
+});
+
+const computeGex = node({
+  type: 'n8n-nodes-base.code',
+  version: 2,
+  config: {
+    name: 'Compute GEX',
+    position: [-220, 120],
+    executeOnce: true,
+    parameters: {
+      mode: 'runOnceForAllItems',
+      language: 'javaScript',
+      jsCode: COMPUTE_GEX_JS,
+    },
+  },
+  output: [
+    {
+      run: {
+        underlying: 'SPY',
+        captured_at: '2026-04-13T13:00:00.000Z',
+        trading_date: '2026-04-13',
+        snapshot_type: 'intraday',
+        spot_price: 680,
+        contract_count: 1160,
+        expiration_count: 4,
+        source: 'massive',
+        status: 'success',
+        duration_ms: 12500,
+      },
+      contracts: [{ expiration_date: '2026-04-17', strike: 680, contract_type: 'call', implied_volatility: 0.15, delta: 0.5, gamma: 0.02, vanna: 0.001, charm: -0.0001, open_interest: 1000, volume: 500 }],
+      computedLevels: {
+        net_gamma_notional: -488800000,
+        call_wall_strike: 685,
+        put_wall_strike: 665,
+        abs_gamma_strike: 670,
+        zero_gamma_level: 675.72,
+        gamma_tilt: 0.921,
+        max_pain_strike: 669,
+        put_call_ratio_oi: 3.2,
+        put_call_ratio_volume: 2.1,
+        total_call_oi: 500000,
+        total_put_oi: 1600000,
+        total_call_volume: 100000,
+        total_put_volume: 210000,
+        net_vanna_notional: 1896872097.43,
+        net_charm_notional: -1378026551.89,
+      },
+      expirationMetrics: [{ expiration_date: '2026-04-17', atm_iv: 0.15, atm_strike: 680, put_25d_iv: 0.17, call_25d_iv: 0.13, skew_25d_rr: -0.04, max_pain_strike: 669, contract_count: 450 }],
+    },
+  ],
 });
 
 const insertRunHeader = node({
@@ -467,20 +487,30 @@ const insertRunHeader = node({
   version: 4.4,
   config: {
     name: 'Insert Run Header',
-    position: [-220, 120],
+    position: [0, 120],
     parameters: {
       method: 'POST',
       url: SUPABASE_URL + '/rest/v1/ingest_runs',
+      authentication: 'genericCredentialType',
+      genericAuthType: 'httpCustomAuth',
       sendHeaders: true,
       specifyHeaders: 'keypair',
-      headerParameters: supabaseHeadersRepresentation,
+      headerParameters: {
+        parameters: [
+          { name: 'Content-Type', value: 'application/json' },
+          { name: 'Prefer', value: 'return=representation' },
+        ],
+      },
       sendBody: true,
       specifyBody: 'json',
       contentType: 'json',
-      jsonBody: '={{ JSON.stringify([$json.run]) }}',
+      jsonBody: expr('{{ JSON.stringify([$json.run]) }}'),
+    },
+    credentials: {
+      httpCustomAuth: newCredential('Supabase Service Role'),
     },
   },
-  output: [{ id: 9, underlying: 'SPY', captured_at: '2026-04-11T13:00:00.000Z' }],
+  output: [{ id: 12, underlying: 'SPY', captured_at: '2026-04-13T13:00:00.000Z' }],
 });
 
 const insertSnapshots = node({
@@ -488,17 +518,27 @@ const insertSnapshots = node({
   version: 4.4,
   config: {
     name: 'Insert Snapshots',
-    position: [0, 0],
+    position: [220, 0],
     parameters: {
       method: 'POST',
       url: SUPABASE_URL + '/rest/v1/snapshots',
+      authentication: 'genericCredentialType',
+      genericAuthType: 'httpCustomAuth',
       sendHeaders: true,
       specifyHeaders: 'keypair',
-      headerParameters: supabaseHeadersMinimal,
+      headerParameters: {
+        parameters: [
+          { name: 'Content-Type', value: 'application/json' },
+          { name: 'Prefer', value: 'return=minimal' },
+        ],
+      },
       sendBody: true,
       specifyBody: 'json',
       contentType: 'json',
-      jsonBody: '={{ JSON.stringify($("Fetch Chain & Compute GEX").item.json.contracts.map(c => Object.assign({}, c, { run_id: $json.id }))) }}',
+      jsonBody: expr('{{ JSON.stringify($("Compute GEX").item.json.contracts.map(c => Object.assign({}, c, { run_id: $json.id }))) }}'),
+    },
+    credentials: {
+      httpCustomAuth: newCredential('Supabase Service Role'),
     },
   },
   output: [{}],
@@ -509,17 +549,27 @@ const insertComputedLevels = node({
   version: 4.4,
   config: {
     name: 'Insert Computed Levels',
-    position: [0, 240],
+    position: [220, 240],
     parameters: {
       method: 'POST',
       url: SUPABASE_URL + '/rest/v1/computed_levels',
+      authentication: 'genericCredentialType',
+      genericAuthType: 'httpCustomAuth',
       sendHeaders: true,
       specifyHeaders: 'keypair',
-      headerParameters: supabaseHeadersMinimal,
+      headerParameters: {
+        parameters: [
+          { name: 'Content-Type', value: 'application/json' },
+          { name: 'Prefer', value: 'return=minimal' },
+        ],
+      },
       sendBody: true,
       specifyBody: 'json',
       contentType: 'json',
-      jsonBody: '={{ JSON.stringify([Object.assign({}, $("Fetch Chain & Compute GEX").item.json.computedLevels, { run_id: $json.id })]) }}',
+      jsonBody: expr('{{ JSON.stringify([Object.assign({}, $("Compute GEX").item.json.computedLevels, { run_id: $json.id })]) }}'),
+    },
+    credentials: {
+      httpCustomAuth: newCredential('Supabase Service Role'),
     },
   },
   output: [{}],
@@ -530,17 +580,27 @@ const insertExpirationMetrics = node({
   version: 4.4,
   config: {
     name: 'Insert Expiration Metrics',
-    position: [0, 480],
+    position: [220, 480],
     parameters: {
       method: 'POST',
       url: SUPABASE_URL + '/rest/v1/expiration_metrics',
+      authentication: 'genericCredentialType',
+      genericAuthType: 'httpCustomAuth',
       sendHeaders: true,
       specifyHeaders: 'keypair',
-      headerParameters: supabaseHeadersMinimal,
+      headerParameters: {
+        parameters: [
+          { name: 'Content-Type', value: 'application/json' },
+          { name: 'Prefer', value: 'return=minimal' },
+        ],
+      },
       sendBody: true,
       specifyBody: 'json',
       contentType: 'json',
-      jsonBody: '={{ JSON.stringify($("Fetch Chain & Compute GEX").item.json.expirationMetrics.map(m => Object.assign({}, m, { run_id: $json.id }))) }}',
+      jsonBody: expr('{{ JSON.stringify($("Compute GEX").item.json.expirationMetrics.map(m => Object.assign({}, m, { run_id: $json.id }))) }}'),
+    },
+    credentials: {
+      httpCustomAuth: newCredential('Supabase Service Role'),
     },
   },
   output: [{}],
@@ -549,7 +609,9 @@ const insertExpirationMetrics = node({
 export default workflow('4Zi5sMgglxspjh53', 'aigammadev')
   .add(scheduleTrigger)
   .to(marketHoursFilter)
-  .to(fetchAndCompute)
+  .to(computeTargets)
+  .to(fetchChain)
+  .to(computeGex)
   .to(insertRunHeader)
   .to(insertSnapshots)
   .add(insertRunHeader)
