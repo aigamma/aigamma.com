@@ -73,30 +73,46 @@ function symlogTicks(rawValues, C) {
 }
 
 function refLine(x, color, label, bottom = false) {
+  const yPos = bottom ? -0.06 : 1.04;
+  // Monospace size-12 ≈ 7.5px per char; add padding for the box
+  const halfW = (label.length * 7.5 + 14) / 2;
   return {
-    shape: {
-      type: 'line',
-      x0: x,
-      x1: x,
-      yref: 'paper',
-      y0: 0,
-      y1: 1,
-      line: { color, width: 1.5, dash: 'dash' },
-    },
+    shapes: [
+      {
+        type: 'line',
+        x0: x,
+        x1: x,
+        yref: 'paper',
+        y0: 0,
+        y1: 1,
+        line: { color, width: 1.5, dash: 'dash' },
+      },
+      {
+        type: 'rect',
+        xref: 'x',
+        yref: 'paper',
+        xsizemode: 'pixel',
+        ysizemode: 'pixel',
+        xanchor: x,
+        yanchor: yPos,
+        x0: -halfW,
+        x1: halfW,
+        y0: -10,
+        y1: 10,
+        fillcolor: '#10131A',
+        line: { color, width: 1.5 },
+        layer: 'above',
+      },
+    ],
     annotation: {
       x,
       xref: 'x',
-      y: bottom ? -0.07 : 1.02,
+      y: yPos,
       yref: 'paper',
-      yanchor: bottom ? 'top' : 'bottom',
-      text: `<b> ${label} </b>`,
+      yanchor: 'middle',
+      text: `<b>${label}</b>`,
       showarrow: false,
       font: { ...PLOTLY_FONTS.axisTitle, color, size: 12 },
-      bordercolor: color,
-      borderwidth: 1.5,
-      borderpad: 3,
-      bgcolor: 'rgba(16,19,26,1)',
-      opacity: 1,
     },
   };
 }
@@ -153,8 +169,8 @@ export default function GexProfile({ contracts, spotPrice, levels }) {
     const shapes = [];
     const annotations = [];
     const push = (entry) => {
-      if (entry == null || entry.shape.x0 == null) return;
-      shapes.push(entry.shape);
+      if (entry == null || entry.shapes[0].x0 == null) return;
+      shapes.push(...entry.shapes);
       annotations.push(entry.annotation);
     };
 
@@ -182,22 +198,6 @@ export default function GexProfile({ contracts, spotPrice, levels }) {
     Plotly.newPlot(chartRef.current, traces, layout, {
       responsive: true,
       displayModeBar: false,
-    }).then(() => {
-      requestAnimationFrame(() => {
-        const el = chartRef.current;
-        if (!el) return;
-        // Plotly sets fill via element.style, not the fill attribute —
-        // override the same way so inline style wins.
-        el.querySelectorAll('.annotation rect').forEach((r) => {
-          r.style.fill = '#10131A';
-        });
-        // Fallback: catch any remaining white-filled rects
-        el.querySelectorAll('rect').forEach((r) => {
-          if (r.style.fill === 'rgb(255, 255, 255)') {
-            r.style.fill = '#10131A';
-          }
-        });
-      });
     });
   }, [Plotly, gexData, spotPrice, levels]);
 
