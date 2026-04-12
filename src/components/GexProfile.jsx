@@ -11,7 +11,7 @@ import {
 
 const PLOTLY_LAYOUT_BASE = {
   ...PLOTLY_BASE_LAYOUT_2D,
-  margin: { t: 40, r: 30, b: 60, l: 80 },
+  margin: { t: 55, r: 30, b: 70, l: 80 },
   xaxis: plotlyAxis('', { title: '' }),
   yaxis: plotlyAxis('Gamma Exposure ($ notional)', {
     zerolinewidth: 2,
@@ -86,12 +86,16 @@ function refLine(x, color, label, bottom = false) {
     annotation: {
       x,
       xref: 'x',
-      y: bottom ? -0.12 : 1,
+      y: bottom ? -0.07 : 1.06,
       yref: 'paper',
       yanchor: bottom ? 'top' : 'bottom',
-      text: label,
+      text: `<b>${label}</b>`,
       showarrow: false,
-      font: { ...PLOTLY_FONTS.axisTitle, color },
+      font: { ...PLOTLY_FONTS.axisTitle, color, size: 12 },
+      bordercolor: color,
+      borderwidth: 1,
+      borderpad: 2,
+      bgcolor: 'rgba(20,24,32,0.85)',
     },
   };
 }
