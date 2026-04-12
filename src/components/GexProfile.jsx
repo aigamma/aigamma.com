@@ -12,7 +12,7 @@ import {
 const PLOTLY_LAYOUT_BASE = {
   ...PLOTLY_BASE_LAYOUT_2D,
   margin: { t: 40, r: 30, b: 60, l: 80 },
-  xaxis: plotlyAxis('Strike Price'),
+  xaxis: plotlyAxis('', { title: '' }),
   yaxis: plotlyAxis('Gamma Exposure ($ notional)', {
     zerolinewidth: 2,
     tickformat: '.2s',
@@ -157,7 +157,7 @@ export default function GexProfile({ contracts, spotPrice, levels }) {
     if (levels) {
       push(refLine(levels.call_wall, PLOTLY_COLORS.positive, 'CW'));
       push(refLine(levels.put_wall, PLOTLY_COLORS.negative, 'PW'));
-      push(refLine(levels.volatility_flip, PLOTLY_COLORS.axisText, 'Flip', true));
+      push(refLine(levels.volatility_flip, PLOTLY_COLORS.highlight, 'FLIP', true));
     }
 
     const layout = {
