@@ -72,7 +72,7 @@ function symlogTicks(rawValues, C) {
   return { tickvals, ticktext };
 }
 
-function refLine(x, color, label) {
+function refLine(x, color, label, bottom = false) {
   return {
     shape: {
       type: 'line',
@@ -86,9 +86,9 @@ function refLine(x, color, label) {
     annotation: {
       x,
       xref: 'x',
-      y: 1,
+      y: bottom ? 0 : 1,
       yref: 'paper',
-      yanchor: 'bottom',
+      yanchor: bottom ? 'top' : 'bottom',
       text: label,
       showarrow: false,
       font: { ...PLOTLY_FONTS.axisTitle, color },
@@ -157,7 +157,7 @@ export default function GexProfile({ contracts, spotPrice, levels }) {
     if (levels) {
       push(refLine(levels.call_wall, PLOTLY_COLORS.positive, 'CW'));
       push(refLine(levels.put_wall, PLOTLY_COLORS.negative, 'PW'));
-      push(refLine(levels.volatility_flip, PLOTLY_COLORS.axisText, 'Flip'));
+      push(refLine(levels.volatility_flip, PLOTLY_COLORS.axisText, 'Flip', true));
     }
 
     const layout = {
