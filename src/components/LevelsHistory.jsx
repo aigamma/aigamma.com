@@ -14,9 +14,9 @@ const COLOR_VOL_FLIP = '#f0a030';
 const PLOTLY_LAYOUT_BASE = {
   ...PLOTLY_BASE_LAYOUT_2D,
   margin: { t: 40, r: 30, b: 60, l: 80 },
-  xaxis: plotlyAxis('Captured At', {
+  xaxis: plotlyAxis('Trading Date', {
     type: 'date',
-    tickformat: '%b %d\n%H:%M',
+    tickformat: '%b %d',
   }),
   yaxis: plotlyAxis('Price', {
     tickformat: ',.2f',
@@ -25,7 +25,11 @@ const PLOTLY_LAYOUT_BASE = {
   hovermode: 'x unified',
 };
 
-export default function LevelsHistory({ underlying = 'SPX', snapshotType = 'intraday' }) {
+export default function LevelsHistory({
+  underlying = 'SPX',
+  snapshotType = 'intraday',
+  lookback = 30,
+}) {
   const chartRef = useRef(null);
   const { plotly: Plotly, error: plotlyError } = usePlotly();
 
@@ -43,6 +47,7 @@ export default function LevelsHistory({ underlying = 'SPX', snapshotType = 'intr
         const params = new URLSearchParams({
           underlying,
           snapshot_type: snapshotType,
+          lookback: String(lookback),
         });
         const res = await fetch(`/api/levels-history?${params}`);
         if (!res.ok) {
@@ -62,11 +67,11 @@ export default function LevelsHistory({ underlying = 'SPX', snapshotType = 'intr
     return () => {
       cancelled = true;
     };
-  }, [underlying, snapshotType]);
+  }, [underlying, snapshotType, lookback]);
 
   const series = useMemo(() => {
     if (!history || !Array.isArray(history.points) || history.points.length === 0) return null;
-    const x = history.points.map((p) => p.captured_at);
+    const x = history.points.map((p) => p.trading_date);
     return {
       x,
       callWall: history.points.map((p) => p.call_wall_strike),
