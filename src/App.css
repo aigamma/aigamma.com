@@ -161,6 +161,11 @@
   }
 }
 
+/* Plotly annotation label backgrounds — force dark fill */
+.annotation rect {
+  fill: #10131A !important;
+}
+
 .ticks {
   position: relative;
   width: 100%;
