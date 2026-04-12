@@ -7,9 +7,9 @@ import {
 } from '../lib/plotlyTheme';
 
 const COLOR_CALL_WALL = '#4a9eff';
-const COLOR_PUT_WALL = '#d85a30';
+const COLOR_PUT_WALL = '#e74c3c';
 const COLOR_SPOT = '#2ecc71';
-const COLOR_VOL_FLIP = '#f0a030';
+const COLOR_VOL_FLIP = '#f1c40f';
 
 const PLOTLY_LAYOUT_BASE = {
   ...PLOTLY_BASE_LAYOUT_2D,

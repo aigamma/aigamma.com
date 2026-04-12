@@ -11,10 +11,10 @@ export const PLOTLY_COLORS = {
   titleText: '#e0e0e0',
   axisText: '#8a8f9c',
   primary: '#4a9eff',
-  secondary: '#d85a30',
-  highlight: '#f0a030',
+  secondary: '#e74c3c',
+  highlight: '#f1c40f',
   positive: '#2ecc71',
-  negative: '#d85a30',
+  negative: '#e74c3c',
 };
 
 export const PLOTLY_FONT_FAMILY = 'Courier New, monospace';
