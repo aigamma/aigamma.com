@@ -78,7 +78,18 @@ export default async function handler(request) {
     });
     if (expirationFilter) snapParams.set('expiration_date', `eq.${expirationFilter}`);
 
-    const [levelsRes, expMetricsRes, sviRes] = await Promise.all([
+    const prevCloseParamsStr = run.trading_date
+      ? new URLSearchParams({
+          underlying: `eq.${underlying}`,
+          snapshot_type: `eq.${snapshotType}`,
+          trading_date: `lt.${run.trading_date}`,
+          order: 'captured_at.desc',
+          limit: '1',
+          select: 'spot_price',
+        }).toString()
+      : null;
+
+    const [levelsRes, expMetricsRes, sviRes, prevCloseRes] = await Promise.all([
       fetchWithTimeout(
         `${supabaseUrl}/rest/v1/computed_levels?run_id=eq.${run.id}`,
         { headers },
@@ -94,11 +105,19 @@ export default async function handler(request) {
         { headers },
         'svi_fits'
       ),
+      prevCloseParamsStr
+        ? fetchWithTimeout(
+            `${supabaseUrl}/rest/v1/ingest_runs?${prevCloseParamsStr}`,
+            { headers },
+            'prev_close'
+          )
+        : Promise.resolve(null),
     ]);
 
     if (!levelsRes.ok) throw new Error(`computed_levels query failed: ${levelsRes.status}`);
     if (!expMetricsRes.ok) throw new Error(`expiration_metrics query failed: ${expMetricsRes.status}`);
     if (!sviRes.ok) throw new Error(`svi_fits query failed: ${sviRes.status}`);
+    if (prevCloseRes && !prevCloseRes.ok) throw new Error(`prev_close query failed: ${prevCloseRes.status}`);
 
     // Page through snapshots via Range header. PostgREST/Supabase caps single
     // responses (default 1000 rows), and run 19 has 9k+ contracts — fetching a
@@ -122,11 +141,16 @@ export default async function handler(request) {
       if (page.length < PAGE_SIZE) break;
     }
 
-    const [levelsRows, expMetricsRows, sviRows] = await Promise.all([
+    const [levelsRows, expMetricsRows, sviRows, prevCloseRows] = await Promise.all([
       levelsRes.json(),
       expMetricsRes.json(),
       sviRes.json(),
+      prevCloseRes ? prevCloseRes.json() : Promise.resolve([]),
     ]);
+
+    const prevClose = Array.isArray(prevCloseRows) && prevCloseRows.length > 0
+      ? toNum(prevCloseRows[0].spot_price)
+      : null;
 
     const contracts = contractRows.map((c) => ({
       expiration_date: c.expiration_date,
@@ -196,6 +220,7 @@ export default async function handler(request) {
     const payload = {
       underlying: run.underlying,
       spotPrice: toNum(run.spot_price),
+      prevClose,
       capturedAt: run.captured_at,
       tradingDate: run.trading_date,
       snapshotType: run.snapshot_type,

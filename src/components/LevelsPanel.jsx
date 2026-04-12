@@ -40,6 +40,14 @@ function distanceSub(level, spot) {
   return `${sign}${dollar.toFixed(2)}  ·  ${sign}${pct.toFixed(2)}%`;
 }
 
+function spotDeltaSub(spot, prevClose) {
+  if (spot == null || prevClose == null || prevClose === 0) return null;
+  const dollar = spot - prevClose;
+  const pct = (dollar / prevClose) * 100;
+  const sign = dollar >= 0 ? '+' : '';
+  return `${sign}${dollar.toFixed(2)}  ·  ${sign}${pct.toFixed(2)}%`;
+}
+
 function daysToExpiration(expirationDate, capturedAt) {
   if (!expirationDate || !capturedAt) return null;
   const target = new Date(`${expirationDate}T16:00:00-04:00`).getTime();
@@ -105,7 +113,7 @@ const ROW_GRID = {
   gap: '1rem',
 };
 
-export default function LevelsPanel({ levels, spotPrice, expirationMetrics, selectedExpiration, capturedAt }) {
+export default function LevelsPanel({ levels, spotPrice, prevClose, expirationMetrics, selectedExpiration, capturedAt }) {
   if (!levels) {
     return (
       <div className="card text-muted" style={{ marginBottom: '1rem' }}>
@@ -148,7 +156,7 @@ export default function LevelsPanel({ levels, spotPrice, expirationMetrics, sele
           accent="var(--accent-amber)"
           sub={volFlipSub}
         />
-        <Stat label="Spot" value={formatInteger(spotPrice)} accent="var(--accent-blue)" />
+        <Stat label="Spot" value={formatInteger(spotPrice)} accent="var(--accent-blue)" sub={spotDeltaSub(spotPrice, prevClose)} />
         <Stat
           label="Largest Gamma"
           value={formatInteger(levels.abs_gamma_strike)}

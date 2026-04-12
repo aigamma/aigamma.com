@@ -105,7 +105,7 @@ export default function App() {
               margin: 0,
             }}
           >
-            aigamma.dev
+            aigamma.com
           </h1>
           {regime && (
             <span
@@ -172,6 +172,7 @@ export default function App() {
           <LevelsPanel
             levels={data.levels}
             spotPrice={data.spotPrice}
+            prevClose={data.prevClose}
             expirationMetrics={data.expirationMetrics}
             selectedExpiration={displayExpiration}
             capturedAt={data.capturedAt}
