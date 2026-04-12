@@ -95,7 +95,7 @@ function refLine(x, color, label, bottom = false) {
       bordercolor: color,
       borderwidth: 1,
       borderpad: 2,
-      bgcolor: '#141820',
+      bgcolor: '#10131A',
     },
   };
 }
