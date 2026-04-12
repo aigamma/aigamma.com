@@ -216,7 +216,7 @@ const volFlipSub = distanceSub(levels.volatility_flip, spotPrice);
                   padding: '0.35rem 0.5rem',
                   fontFamily: 'Courier New, monospace',
                   fontSize: '0.85rem',
-                  width: '100%',
+                  width: '75%',
                 }}
               >
                 {(expirations || []).map((exp) => (
