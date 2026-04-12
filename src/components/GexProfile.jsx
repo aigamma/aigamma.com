@@ -124,14 +124,13 @@ export default function GexProfile({ contracts, spotPrice, levels }) {
       title: plotlyTitle('Gamma Exposure Profile (all expirations)'),
       shapes,
       annotations,
+      paper_bgcolor: 'rgba(0,0,0,0)',
+      plot_bgcolor: 'rgba(0,0,0,0)',
     };
 
     Plotly.newPlot(chartRef.current, traces, layout, {
       responsive: true,
       displayModeBar: false,
-    }).then(() => {
-      const bg = chartRef.current?.querySelector('.bglayer .bg');
-      if (bg) bg.setAttribute('fill', '#141820');
     });
   }, [Plotly, gexData, spotPrice, levels]);
 
@@ -153,7 +152,7 @@ export default function GexProfile({ contracts, spotPrice, levels }) {
     <div className="card" style={{ marginBottom: '1rem' }}>
       <div
         ref={chartRef}
-        style={{ width: '100%', height: '420px' }}
+        style={{ width: '100%', height: '420px', backgroundColor: '#141820' }}
       />
     </div>
   );
