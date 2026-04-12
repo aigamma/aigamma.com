@@ -155,8 +155,6 @@ export default function App() {
         </div>
       </header>
 
-      <LevelsHistory underlying="SPX" snapshotType="intraday" />
-
       {loading && (
         <div className="card text-muted" style={{ padding: '2rem', textAlign: 'center' }}>
           Loading options data...
@@ -265,6 +263,8 @@ export default function App() {
           />
         </>
       )}
+
+      <LevelsHistory underlying="SPX" snapshotType="intraday" />
     </div>
   );
 }
