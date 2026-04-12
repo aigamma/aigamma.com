@@ -138,6 +138,8 @@ export default function RiskNeutralDensity({ fits, spotPrice, capturedAt }) {
           font: { ...PLOTLY_FONTS.axisTitle, color: PLOTLY_COLORS.primary },
         },
       ],
+      paper_bgcolor: 'rgba(0,0,0,0)',
+      plot_bgcolor: 'rgba(0,0,0,0)',
     };
 
     Plotly.newPlot(chartRef.current, traces, layout, {
@@ -206,7 +208,7 @@ export default function RiskNeutralDensity({ fits, spotPrice, capturedAt }) {
           Lognormal reference
         </label>
       </div>
-      <div ref={chartRef} style={{ width: '100%', height: '420px' }} />
+      <div ref={chartRef} style={{ width: '100%', height: '420px', backgroundColor: '#141820' }} />
     </div>
   );
 }

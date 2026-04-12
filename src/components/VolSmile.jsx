@@ -118,6 +118,8 @@ export default function VolSmile({ contracts, spotPrice, expiration, sviFit, und
     const layout = {
       ...PLOTLY_LAYOUT,
       title: plotlyTitle(`${underlying || 'SPX'} Volatility Smile — ${expiration || 'Latest'}`),
+      paper_bgcolor: 'rgba(0,0,0,0)',
+      plot_bgcolor: 'rgba(0,0,0,0)',
     };
 
     Plotly.newPlot(chartRef.current, traces, layout, {
@@ -207,7 +209,7 @@ export default function VolSmile({ contracts, spotPrice, expiration, sviFit, und
           Overlay SVI
         </label>
       </div>
-      <div ref={chartRef} style={{ width: '100%', height: '500px' }} />
+      <div ref={chartRef} style={{ width: '100%', height: '500px', backgroundColor: '#141820' }} />
     </div>
   );
 }

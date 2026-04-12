@@ -146,6 +146,8 @@ export default function FixedStrikeIvMatrix({ contracts, spotPrice, expirations,
     const layout = {
       ...BASE_LAYOUT,
       title: plotlyTitle('Fixed-Strike IV Matrix (OTM skew per expiration)'),
+      paper_bgcolor: 'rgba(0,0,0,0)',
+      plot_bgcolor: 'rgba(0,0,0,0)',
     };
 
     Plotly.newPlot(chartRef.current, [trace], layout, {
@@ -174,7 +176,7 @@ export default function FixedStrikeIvMatrix({ contracts, spotPrice, expirations,
 
   return (
     <div className="card" style={{ marginBottom: '1rem' }}>
-      <div ref={chartRef} style={{ width: '100%', height: '400px' }} />
+      <div ref={chartRef} style={{ width: '100%', height: '400px', backgroundColor: '#141820' }} />
     </div>
   );
 }
