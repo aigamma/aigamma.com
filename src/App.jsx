@@ -93,12 +93,12 @@ export default function App() {
           marginBottom: '1rem',
         }}
       >
-        <div style={{ display: 'flex', alignItems: 'baseline', gap: '0.75rem', flexWrap: 'wrap' }}>
+        <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem', flexWrap: 'wrap' }}>
           <img
             src="/logo.png"
             alt="aigamma.com"
             style={{
-              height: '1.6rem',
+              height: '3.2rem',
               display: 'block',
             }}
           />
@@ -107,14 +107,18 @@ export default function App() {
               title={regime.hint}
               style={{
                 fontFamily: 'Courier New, monospace',
-                fontSize: '0.72rem',
-                padding: '0.2rem 0.55rem',
+                fontSize: '1rem',
+                padding: '0.55rem 0.75rem',
                 border: `1px solid ${REGIME_COLORS[regime.tone]}`,
                 color: REGIME_COLORS[regime.tone],
                 borderRadius: '3px',
                 letterSpacing: '0.08em',
                 textTransform: 'uppercase',
                 whiteSpace: 'nowrap',
+                height: '3.2rem',
+                boxSizing: 'border-box',
+                display: 'inline-flex',
+                alignItems: 'center',
               }}
             >
               {regime.label}
