@@ -41,10 +41,10 @@ function computeGexByStrike(contracts, spotPrice) {
   return Array.from(byStrike.values()).sort((a, b) => a.strike - b.strike);
 }
 
-// Symmetric log: compresses extreme magnitudes while preserving sign.
-// f(0) = 0 and smooth through the origin, so a 200M spike at one strike
-// no longer flattens the proportionate detail of every other bar.
-const symlog = (v) => Math.sign(v) * Math.log10(1 + Math.abs(v));
+// Symmetric log with linear threshold C: below C the mapping is nearly
+// linear; above C magnitudes compress logarithmically. C is computed per
+// render as P75(|netGex|) so the crossover adapts to each dataset.
+const symlog = (x, C) => Math.sign(x) * Math.log1p(Math.abs(x) / C) * C;
 
 function formatSI(v) {
   const abs = Math.abs(v);
@@ -57,7 +57,7 @@ function formatSI(v) {
   return '0';
 }
 
-function symlogTicks(rawValues) {
+function symlogTicks(rawValues, C) {
   const maxAbs = Math.max(...rawValues.map(Math.abs), 1);
   const decades = Math.ceil(Math.log10(maxAbs));
   const step = decades <= 4 ? 1 : decades <= 8 ? 2 : 3;
@@ -66,7 +66,7 @@ function symlogTicks(rawValues) {
   for (let p = 0; p <= decades + 1; p += step) {
     const v = Math.pow(10, p);
     if (v > maxAbs * 2) break;
-    tickvals.push(symlog(v), symlog(-v));
+    tickvals.push(symlog(v, C), symlog(-v, C));
     ticktext.push(formatSI(v), formatSI(-v));
   }
   return { tickvals, ticktext };
@@ -115,12 +115,19 @@ export default function GexProfile({ contracts, spotPrice, levels }) {
     const callGexRaw = gexData.map((e) => e.callGex);
     const putGexRaw = gexData.map((e) => -e.putGex);
 
-    const { tickvals, ticktext } = symlogTicks([...callGexRaw, ...putGexRaw]);
+    // C = 75th percentile of |netGex| — the crossover between linear and
+    // logarithmic compression, recomputed from the live dataset each render.
+    const absNetGex = gexData
+      .map((e) => Math.abs(e.callGex - e.putGex))
+      .sort((a, b) => a - b);
+    const C = absNetGex[Math.floor(absNetGex.length * 0.75)] || 1;
+
+    const { tickvals, ticktext } = symlogTicks([...callGexRaw, ...putGexRaw], C);
 
     const traces = [
       {
         x: strikes,
-        y: callGexRaw.map(symlog),
+        y: callGexRaw.map((v) => symlog(v, C)),
         customdata: callGexRaw,
         type: 'bar',
         name: 'Call GEX',
@@ -129,7 +136,7 @@ export default function GexProfile({ contracts, spotPrice, levels }) {
       },
       {
         x: strikes,
-        y: putGexRaw.map(symlog),
+        y: putGexRaw.map((v) => symlog(v, C)),
         customdata: putGexRaw,
         type: 'bar',
         name: 'Put GEX',
@@ -156,7 +163,7 @@ export default function GexProfile({ contracts, spotPrice, levels }) {
 
     const layout = {
       ...PLOTLY_LAYOUT_BASE,
-      title: plotlyTitle('Gamma Exposure Profile'),
+      title: plotlyTitle('Gamma Exposure Profile (Symlog Adjustment)'),
       yaxis: plotlyAxis('Gamma Exposure ($ notional)', {
         zerolinewidth: 2,
         tickvals,
