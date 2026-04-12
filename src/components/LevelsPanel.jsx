@@ -49,7 +49,7 @@ function expectedMoveDollar(spot, atmIv, dte) {
   return spot * atmIv * Math.sqrt(dte / 365);
 }
 
-function Stat({ label, value, accent, sub }) {
+function Stat({ label, value, accent, sub, bold }) {
   return (
     <div style={{ minWidth: 0 }}>
       <div
@@ -68,6 +68,7 @@ function Stat({ label, value, accent, sub }) {
         style={{
           fontSize: '1.05rem',
           color: accent || 'var(--text-primary)',
+          fontWeight: bold ? 700 : undefined,
         }}
       >
         {value}
@@ -165,6 +166,7 @@ export default function LevelsPanel({ levels, spotPrice, expirationMetrics, sele
           value={expMoveDollar != null ? `±$${expMoveDollar.toFixed(2)}` : '—'}
           accent="var(--accent-purple)"
           sub={expMoveSub}
+          bold
         />
         <Stat
           label="P/C Ratio (Volume)"
