@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useRef } from 'react';
+import { useEffect, useMemo, useRef, useState } from 'react';
 import usePlotly from '../hooks/usePlotly';
 import {
   PLOTLY_BASE_LAYOUT_2D,
@@ -72,54 +72,21 @@ function symlogTicks(rawValues, C) {
   return { tickvals, ticktext };
 }
 
-function refLine(x, color, label, bottom = false) {
-  const yPos = bottom ? -0.06 : 1.04;
-  // Monospace size-12 ≈ 7.5px per char; add padding for the box
-  const halfW = (label.length * 7.5 + 14) / 2;
-  return {
-    shapes: [
-      {
-        type: 'line',
-        x0: x,
-        x1: x,
-        yref: 'paper',
-        y0: 0,
-        y1: 1,
-        line: { color, width: 1.5, dash: 'dash' },
-      },
-      {
-        type: 'rect',
-        xref: 'x',
-        yref: 'paper',
-        xsizemode: 'pixel',
-        ysizemode: 'pixel',
-        xanchor: x,
-        yanchor: yPos,
-        x0: -halfW,
-        x1: halfW,
-        y0: -10,
-        y1: 10,
-        fillcolor: '#10131A',
-        line: { color, width: 1.5 },
-        layer: 'above',
-      },
-    ],
-    annotation: {
-      x,
-      xref: 'x',
-      y: yPos,
-      yref: 'paper',
-      yanchor: 'middle',
-      text: `<b>${label}</b>`,
-      showarrow: false,
-      font: { ...PLOTLY_FONTS.axisTitle, color, size: 12 },
-    },
-  };
-}
+const LABEL_STYLE = {
+  position: 'absolute',
+  backgroundColor: '#10131A',
+  padding: '2px 6px',
+  fontSize: '12px',
+  fontFamily: 'Courier New, monospace',
+  fontWeight: 'bold',
+  pointerEvents: 'none',
+  whiteSpace: 'nowrap',
+};
 
 export default function GexProfile({ contracts, spotPrice, levels }) {
   const chartRef = useRef(null);
   const { plotly: Plotly, error: plotlyError } = usePlotly();
+  const [labels, setLabels] = useState([]);
 
   const gexData = useMemo(() => {
     if (!contracts || contracts.length === 0 || !spotPrice) return null;
@@ -166,19 +133,26 @@ export default function GexProfile({ contracts, spotPrice, levels }) {
       },
     ];
 
+    // Dashed vertical reference lines only — labels are rendered as HTML
     const shapes = [];
-    const annotations = [];
-    const push = (entry) => {
-      if (entry == null || entry.shapes[0].x0 == null) return;
-      shapes.push(...entry.shapes);
-      annotations.push(entry.annotation);
+    const pushLine = (x, color) => {
+      if (x == null) return;
+      shapes.push({
+        type: 'line',
+        x0: x,
+        x1: x,
+        yref: 'paper',
+        y0: 0,
+        y1: 1,
+        line: { color, width: 1.5, dash: 'dash' },
+      });
     };
 
-    push(refLine(spotPrice, PLOTLY_COLORS.primary, 'SPOT'));
+    pushLine(spotPrice, PLOTLY_COLORS.primary);
     if (levels) {
-      push(refLine(levels.call_wall, PLOTLY_COLORS.positive, 'CW'));
-      push(refLine(levels.put_wall, PLOTLY_COLORS.negative, 'PW'));
-      push(refLine(levels.volatility_flip, PLOTLY_COLORS.highlight, 'FLIP', true));
+      pushLine(levels.call_wall, PLOTLY_COLORS.positive);
+      pushLine(levels.put_wall, PLOTLY_COLORS.negative);
+      pushLine(levels.volatility_flip, PLOTLY_COLORS.highlight);
     }
 
     const layout = {
@@ -190,7 +164,6 @@ export default function GexProfile({ contracts, spotPrice, levels }) {
         ticktext,
       }),
       shapes,
-      annotations,
       paper_bgcolor: 'rgba(0,0,0,0)',
       plot_bgcolor: 'rgba(0,0,0,0)',
     };
@@ -198,6 +171,31 @@ export default function GexProfile({ contracts, spotPrice, levels }) {
     Plotly.newPlot(chartRef.current, traces, layout, {
       responsive: true,
       displayModeBar: false,
+    }).then(() => {
+      const fl = chartRef.current?._fullLayout;
+      if (!fl) return;
+      const { l: ml, t: mt, b: mb, r: mr } = fl.margin;
+      const plotW = fl.width - ml - mr;
+      const plotH = fl.height - mt - mb;
+      const [xMin, xMax] = fl.xaxis.range;
+      const xScale = plotW / (xMax - xMin);
+      const px = (dataX) => ml + (dataX - xMin) * xScale;
+
+      const topY = mt - 5;
+      const bottomY = mt + plotH + 22;
+
+      const newLabels = [
+        { left: px(spotPrice), top: topY, color: PLOTLY_COLORS.primary, text: 'SPOT', bottom: false },
+      ];
+      if (levels) {
+        if (levels.call_wall != null)
+          newLabels.push({ left: px(levels.call_wall), top: topY, color: PLOTLY_COLORS.positive, text: 'CW', bottom: false });
+        if (levels.put_wall != null)
+          newLabels.push({ left: px(levels.put_wall), top: topY, color: PLOTLY_COLORS.negative, text: 'PW', bottom: false });
+        if (levels.volatility_flip != null)
+          newLabels.push({ left: px(levels.volatility_flip), top: bottomY, color: PLOTLY_COLORS.highlight, text: 'FLIP', bottom: true });
+      }
+      setLabels(newLabels);
     });
   }, [Plotly, gexData, spotPrice, levels]);
 
@@ -217,10 +215,27 @@ export default function GexProfile({ contracts, spotPrice, levels }) {
 
   return (
     <div className="card" style={{ marginBottom: '1rem' }}>
-      <div
-        ref={chartRef}
-        style={{ width: '100%', height: '480px', backgroundColor: '#141820' }}
-      />
+      <div style={{ position: 'relative' }}>
+        <div
+          ref={chartRef}
+          style={{ width: '100%', height: '480px', backgroundColor: '#141820' }}
+        />
+        {labels.map((l, i) => (
+          <div
+            key={i}
+            style={{
+              ...LABEL_STYLE,
+              left: l.left,
+              top: l.top,
+              transform: l.bottom ? 'translateX(-50%)' : 'translate(-50%, -100%)',
+              color: l.color,
+              border: `1.5px solid ${l.color}`,
+            }}
+          >
+            {l.text}
+          </div>
+        ))}
+      </div>
     </div>
   );
 }
