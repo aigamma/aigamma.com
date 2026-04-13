@@ -141,22 +141,33 @@ function computeTargets(underlying) {
   const tradingDate = tradingDateEt(capturedAtDate);
 
   const todayEt = new Date(tradingDate + 'T12:00:00Z');
-  const targets = new Set();
+  const monthlies = new Set();
   let nextMonthly = thirdFriday(todayEt.getUTCFullYear(), todayEt.getUTCMonth());
   if (nextMonthly <= todayEt) {
     nextMonthly = thirdFriday(todayEt.getUTCFullYear(), todayEt.getUTCMonth() + 1);
   }
   for (let i = 0; i < 9; i++) {
-    targets.add(adjustForHoliday(ymd(nextMonthly)));
+    monthlies.add(adjustForHoliday(ymd(nextMonthly)));
     nextMonthly = thirdFriday(nextMonthly.getUTCFullYear(), nextMonthly.getUTCMonth() + 1);
   }
 
-  const targetExpirations = [...targets].sort();
-  // Unfiltered fetch: picks up the full chain. Post-fetch filter keeps only
-  // the 9 target monthlies. 12-month stress test (8 back-to-back runs, all
-  // stable at 46-50s each) confirmed the unfiltered fetch is the bottleneck,
-  // not the post-fetch filter — 9 vs 12 monthlies costs only a handful of
-  // extra snapshot rows with zero impact on fetch pagination.
+  // Weeklies: any expiration date within the next 30 days is accepted so the
+  // near-term gamma (where 0-30 DTE dominates the curve) makes it into the
+  // profile. SPX lists M/T/W/Th/F weeklies, so an explicit weekday enumeration
+  // would be fragile — we take the cutoff-date approach instead and let the
+  // post-fetch filter in computeGex discover whatever the chain actually has.
+  const weeklyCutoffDate = new Date(todayEt.getTime() + 30 * 86400000);
+  const weeklyCutoff = ymd(weeklyCutoffDate);
+
+  const monthlyList = [...monthlies].sort();
+  const targetExpirations = monthlyList;
+
+  // Unfiltered fetch: picks up the full chain. Post-fetch filter keeps every
+  // contract whose expiration is either one of the 9 target monthlies or lies
+  // at or before weeklyCutoff. The 12-month stress test (8 back-to-back runs,
+  // all stable at 46-50s each) confirmed the unfiltered fetch is the bottleneck,
+  // not the post-fetch filter — adding weeklies just pulls more rows through
+  // the insert path without touching the pagination footprint.
   const fetchUrl = `https://api.massive.com/v3/snapshot/options/${apiTicker}?limit=250`;
 
   return {
@@ -166,7 +177,8 @@ function computeTargets(underlying) {
     capturedAtMs: capturedAtDate.getTime(),
     tradingDate,
     targetExpirations,
-    targetExpirationsSet: new Set(targetExpirations),
+    monthlyExpirationsSet: new Set(monthlyList),
+    weeklyCutoff,
     fetchUrl,
   };
 }
@@ -252,7 +264,7 @@ async function fetchChain(startUrl) {
 // -----------------------------------------------------------------------------
 
 function computeGex(pages, targets, startedAt, partial) {
-  const { underlying, capturedAtIso, capturedAtMs, tradingDate, targetExpirationsSet } = targets;
+  const { underlying, capturedAtIso, capturedAtMs, tradingDate, monthlyExpirationsSet, weeklyCutoff } = targets;
 
   // Dedupe raw results on (expiration, strike, type). Massive/Polygon's
   // next_url pagination can return the same contract across overlapping
@@ -302,7 +314,10 @@ function computeGex(pages, targets, startedAt, partial) {
 
   const contracts = allRaw
     .filter((r) => r.details && r.greeks && r.implied_volatility > 0.001)
-    .filter((r) => targetExpirationsSet.has(r.details.expiration_date))
+    .filter((r) => {
+      const exp = r.details.expiration_date;
+      return monthlyExpirationsSet.has(exp) || exp <= weeklyCutoff;
+    })
     .map((r) => ({
       expiration_date: r.details.expiration_date,
       strike: r.details.strike_price,
@@ -348,24 +363,14 @@ function computeGex(pages, targets, startedAt, partial) {
     if (absGex > absGammaMax) { absGammaMax = absGex; absGammaStrike = K; }
   }
 
-  // Volatility flip = sign-change boundary with the largest magnitude on
-  // either side. Interpolates between the two strikes.
-  let volatilityFlip = null;
-  let maxBoundaryMagnitude = 0;
-  for (let i = 1; i < netGexArray.length; i++) {
-    const prev = netGexArray[i - 1];
-    const curr = netGexArray[i];
-    if ((prev.netGex > 0 && curr.netGex < 0) || (prev.netGex < 0 && curr.netGex > 0)) {
-      const absPrev = Math.abs(prev.netGex);
-      const absCurr = Math.abs(curr.netGex);
-      const boundaryMagnitude = absPrev + absCurr;
-      if (boundaryMagnitude > maxBoundaryMagnitude) {
-        const ratio = absPrev / boundaryMagnitude;
-        maxBoundaryMagnitude = boundaryMagnitude;
-        volatilityFlip = prev.strike + ratio * (curr.strike - prev.strike);
-      }
-    }
-  }
+  // Volatility flip = zero crossing of the Black-Scholes dealer gamma profile
+  // computed by sweeping hypothetical spot across a ±15% window and summing
+  // per-contract dollar gamma at every sample. See computeGammaProfile for the
+  // derivation. Operating on the smooth profile instead of the raw per-strike
+  // net GEX avoids the round-strike anchor pathology that made the previous
+  // algorithm latch onto single-strike anomalies like the 6600/6605 boundary.
+  const gammaProfile = computeGammaProfile(contracts, spotPrice, capturedAtMs);
+  const volatilityFlip = findFlipFromProfile(gammaProfile);
 
   let totalCallGamma = 0, totalPutGamma = 0;
   for (const K of strikes) {
@@ -455,6 +460,7 @@ function computeGex(pages, targets, startedAt, partial) {
     put_wall_strike: putWallStrike,
     abs_gamma_strike: absGammaStrike,
     volatility_flip: volatilityFlip != null ? round(volatilityFlip, 2) : null,
+    gamma_profile: gammaProfile,
     gamma_tilt: gammaTilt != null ? round(gammaTilt, 6) : null,
     max_pain_strike: maxPainStrike,
     put_call_ratio_oi: putCallRatioOi != null ? round(putCallRatioOi, 4) : null,
@@ -501,6 +507,110 @@ function bsVannaCharm(S, K, tau, sigma, r, q, isCall) {
   const charmCore = eMinusQTau * nPrimeD1 *
     ((2 * (r - q) * tau - d2 * sigma * sqrtTau) / (2 * tau * sigma * sqrtTau));
   return { vanna: vanna / 100, charm: (-charmCore) / 365 };
+}
+
+// Black-Scholes gamma, dΔ/dS. Pure analytic form — call and put share the same
+// gamma so the contract type does not enter the formula; the dealer sign
+// convention is applied by the caller.
+function bsGamma(S, K, tau, sigma, r, q) {
+  if (!(S > 0) || !(K > 0) || !(tau > 0) || !(sigma > 0)) return 0;
+  const sqrtTau = Math.sqrt(tau);
+  const d1 = (Math.log(S / K) + (r - q + 0.5 * sigma * sigma) * tau) / (sigma * sqrtTau);
+  return Math.exp(-q * tau) * normPdf(d1) / (S * sigma * sqrtTau);
+}
+
+// Dealer gamma profile curve. For each hypothetical spot Ŝ in the sweep
+// window we re-evaluate BS gamma for every contract holding (K, τ, σ, r, q)
+// fixed at their observed values, then sum the dealer-signed dollar gamma per
+// 1% move (calls long, puts short — the SpotGamma-style assumption the rest
+// of the file already uses). Because BS gamma is continuous in S, the
+// resulting curve is naturally smooth and has no dependence on arbitrary
+// kernel widths — the zero crossing IS the structural regime boundary.
+//
+// Per-contract constants are hoisted out of the inner loop:
+//   d1 = (ln(S) + D) * invB   where D = (r-q+σ²/2)·τ - ln(K), invB = 1/(σ√τ)
+//   scale = exp(-q·τ) / (σ√τ) · OI · sign
+//   term  = scale · φ(d1)
+//   dealerGamma(Ŝ) = Ŝ · Σ term
+//
+// Sweep: [0.85·S, 1.15·S] in $5 steps → ~435 samples at current SPX levels,
+// giving <$1 interpolation error on the zero crossing. Cost: ~5M BS evals on
+// a 10k-contract chain ≈ 300ms in Node, absorbed in the ~48s ingest budget.
+function computeGammaProfile(contracts, spotPrice, capturedAtMs) {
+  if (!contracts || contracts.length === 0 || !(spotPrice > 0)) return null;
+
+  const r = RISK_FREE_RATE;
+  const q = DIVIDEND_YIELD;
+  const INV_SQRT_2PI = 1 / Math.sqrt(2 * Math.PI);
+
+  const prepared = [];
+  for (const c of contracts) {
+    const sigma = c.implied_volatility;
+    const oi = c.open_interest || 0;
+    if (!(sigma > 0) || oi <= 0 || !(c.strike > 0)) continue;
+    const tau = yearsToExpiration(c.expiration_date, capturedAtMs);
+    if (!(tau > 0)) continue;
+    const sqrtTau = Math.sqrt(tau);
+    const B = sigma * sqrtTau;
+    const invB = 1 / B;
+    const D = (r - q + 0.5 * sigma * sigma) * tau - Math.log(c.strike);
+    const sign = c.contract_type === 'call' ? 1 : -1;
+    const scale = (Math.exp(-q * tau) / B) * oi * sign;
+    prepared.push({ D, invB, scale });
+  }
+
+  if (prepared.length === 0) return null;
+
+  const lo = spotPrice * 0.85;
+  const hi = spotPrice * 1.15;
+  const step = 5;
+  const startS = Math.round(lo / step) * step;
+  const endS = Math.round(hi / step) * step;
+
+  const profile = [];
+  for (let S = startS; S <= endS + 1e-9; S += step) {
+    const lnS = Math.log(S);
+    let innerSum = 0;
+    for (let i = 0; i < prepared.length; i++) {
+      const p = prepared[i];
+      const d1 = (lnS + p.D) * p.invB;
+      const phiD1 = INV_SQRT_2PI * Math.exp(-0.5 * d1 * d1);
+      innerSum += p.scale * phiD1;
+    }
+    // dealerGamma(S) = S · Σ scale · φ(d1)
+    profile.push({ s: S, g: Math.round(S * innerSum) });
+  }
+
+  return profile;
+}
+
+// Given a smooth profile, return the zero crossing most likely to represent
+// the global regime boundary. The profile is smooth enough that there is
+// almost always exactly one crossing in the ±15% window; when there are
+// several (narrow skew, wide expiration mix), we pick the one with the
+// steepest slope — that's the most decisive transition between gamma regimes.
+function findFlipFromProfile(profile) {
+  if (!profile || profile.length < 2) return null;
+  let bestFlip = null;
+  let bestSlopeAbs = -Infinity;
+  for (let i = 1; i < profile.length; i++) {
+    const prev = profile[i - 1];
+    const curr = profile[i];
+    if (prev.g === 0) {
+      return prev.s;
+    }
+    const crosses = (prev.g < 0 && curr.g > 0) || (prev.g > 0 && curr.g < 0);
+    if (!crosses) continue;
+    const dS = curr.s - prev.s;
+    if (dS <= 0) continue;
+    const slopeAbs = Math.abs((curr.g - prev.g) / dS);
+    if (slopeAbs > bestSlopeAbs) {
+      bestSlopeAbs = slopeAbs;
+      const t = -prev.g / (curr.g - prev.g);
+      bestFlip = prev.s + t * dS;
+    }
+  }
+  return bestFlip;
 }
 
 function computeMaxPain(contracts) {

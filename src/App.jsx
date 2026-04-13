@@ -4,6 +4,7 @@ import VolSmile from './components/VolSmile';
 import LevelsHistory from './components/LevelsHistory';
 import LevelsPanel from './components/LevelsPanel';
 import GexProfile from './components/GexProfile';
+import GammaInflectionChart from './components/GammaInflectionChart';
 import TermStructure from './components/TermStructure';
 import FixedStrikeIvMatrix from './components/FixedStrikeIvMatrix';
 import RiskNeutralDensity from './components/RiskNeutralDensity';
@@ -181,6 +182,11 @@ export default function App() {
 
           <GexProfile
             contracts={data.contracts}
+            spotPrice={data.spotPrice}
+            levels={data.levels}
+          />
+
+          <GammaInflectionChart
             spotPrice={data.spotPrice}
             levels={data.levels}
           />

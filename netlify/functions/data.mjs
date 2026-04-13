@@ -166,6 +166,13 @@ export default async function handler(request) {
       close_price: toNum(c.close_price),
     }));
 
+    const rawGammaProfile = levelsRows.length > 0 ? levelsRows[0].gamma_profile : null;
+    const gammaProfile = Array.isArray(rawGammaProfile)
+      ? rawGammaProfile
+          .map((p) => ({ s: toNum(p.s), g: toNum(p.g) }))
+          .filter((p) => p.s != null && p.g != null)
+      : null;
+
     const levels = levelsRows.length > 0
       ? {
           call_wall: toNum(levelsRows[0].call_wall_strike),
@@ -179,6 +186,7 @@ export default async function handler(request) {
           total_put_oi: levelsRows[0].total_put_oi,
           total_call_volume: levelsRows[0].total_call_volume,
           total_put_volume: levelsRows[0].total_put_volume,
+          gamma_profile: gammaProfile,
         }
       : null;
 
