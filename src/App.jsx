@@ -1,7 +1,6 @@
 import { useMemo, useState } from 'react';
 import './styles/theme.css';
 import VolSmile from './components/VolSmile';
-import LevelsHistory from './components/LevelsHistory';
 import LevelsPanel from './components/LevelsPanel';
 import GexProfile from './components/GexProfile';
 import GammaInflectionChart from './components/GammaInflectionChart';
@@ -248,8 +247,6 @@ export default function App() {
           />
         </>
       )}
-
-      <LevelsHistory underlying="SPX" snapshotType="intraday" />
     </div>
   );
 }
