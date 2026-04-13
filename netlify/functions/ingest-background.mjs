@@ -12,12 +12,21 @@
 
 const SUPABASE_URL = process.env.SUPABASE_URL;
 const SUPABASE_KEY = process.env.SUPABASE_KEY;
+// Service role key is required for writes — RLS blocks anon inserts on
+// ingest_runs / snapshots / computed_levels / expiration_metrics. Falls back
+// to anon if the service key is not configured so reads still work, but all
+// write paths will 401 in that state.
+const SUPABASE_SERVICE_KEY = process.env.SUPABASE_SERVICE_KEY || SUPABASE_KEY;
 const MASSIVE_API_KEY = process.env.MASSIVE_API_KEY;
 const INGEST_SECRET = process.env.INGEST_SECRET;
 
 const RISK_FREE_RATE = 0.045;
 const DIVIDEND_YIELD = 0.0;
-const MAX_PAGES = 50;
+// Pagination ceiling for the unfiltered Massive fetch. SPX has ~30-40k raw
+// contracts across all listed expirations; at 250/page that's ~120-160 pages.
+// 300 gives comfortable headroom for calibration runs without risking the
+// 15-minute background function cap (300 pages * ~0.4s/page ≈ 2 min).
+const MAX_PAGES = 300;
 const PAGE_DELAY_MS = 200;
 const SNAPSHOT_BATCH_SIZE = 1000;
 const FETCH_TIMEOUT_MS = 15000;
@@ -520,9 +529,11 @@ function computeMaxPain(contracts) {
 // -----------------------------------------------------------------------------
 
 function supabaseHeaders(extra = {}) {
+  // Use the service role key for writes so RLS does not reject inserts on
+  // ingest_runs / snapshots / computed_levels / expiration_metrics.
   return {
-    apikey: SUPABASE_KEY,
-    Authorization: `Bearer ${SUPABASE_KEY}`,
+    apikey: SUPABASE_SERVICE_KEY,
+    Authorization: `Bearer ${SUPABASE_SERVICE_KEY}`,
     'Content-Type': 'application/json',
     ...extra,
   };

@@ -30,3 +30,4 @@ dist-ssr
 n8n/workflow.mjs
 tmp/
 .claude/
+scripts/test-ingest.mjs
