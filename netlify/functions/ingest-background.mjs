@@ -146,15 +146,14 @@ function computeTargets(underlying) {
   if (nextMonthly <= todayEt) {
     nextMonthly = thirdFriday(todayEt.getUTCFullYear(), todayEt.getUTCMonth() + 1);
   }
-  for (let i = 0; i < 6; i++) {
+  for (let i = 0; i < 12; i++) {
     targets.add(adjustForHoliday(ymd(nextMonthly)));
     nextMonthly = thirdFriday(nextMonthly.getUTCFullYear(), nextMonthly.getUTCMonth() + 1);
   }
 
   const targetExpirations = [...targets].sort();
   // Unfiltered fetch: picks up the full chain. Post-fetch filter keeps only
-  // the 6 target monthlies. Proven stable in n8n run 19 (9103 contracts → 4957
-  // after filter).
+  // the 12 target monthlies.
   const fetchUrl = `https://api.massive.com/v3/snapshot/options/${apiTicker}?limit=250`;
 
   return {
