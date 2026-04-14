@@ -12,7 +12,7 @@ import {
 
 const BASE_LAYOUT = {
   ...PLOTLY_BASE_LAYOUT_2D,
-  margin: { t: 40, r: 30, b: 35, l: 80 },
+  margin: { t: 80, r: 30, b: 35, l: 80 },
   xaxis: plotlyAxis('', { rangeslider: plotlyRangeslider() }),
   yaxis: plotlyAxis('Risk-Neutral Density', { tickformat: '.2s' }),
   // Legend floats inside the top-right of the plot area instead of the
@@ -133,7 +133,11 @@ export default function RiskNeutralDensity({ fits, spotPrice, capturedAt }) {
     // Spot line as a Plotly shape so it sits across all traces.
     const layout = {
       ...BASE_LAYOUT,
-      title: plotlyTitle('Breeden-Litzenberger Risk-Neutral Density'),
+      title: {
+        ...plotlyTitle('Breeden-Litzenberger Risk-Neutral Density'),
+        y: 0.96,
+        yanchor: 'top',
+      },
       shapes: [
         {
           type: 'line',
@@ -187,18 +191,7 @@ export default function RiskNeutralDensity({ fits, spotPrice, capturedAt }) {
 
   return (
     <div className="card" style={{ marginBottom: '1rem' }}>
-      <div
-        style={{
-          fontSize: '0.8rem',
-          color: 'var(--text-secondary)',
-          letterSpacing: '0.08em',
-          textTransform: 'uppercase',
-          marginBottom: '0.35rem',
-        }}
-      >
-        {sortedExps.length} expiration{sortedExps.length === 1 ? '' : 's'} — second derivative of SVI call-price curve
-      </div>
-      <div ref={chartRef} style={{ width: '100%', height: '460px', backgroundColor: 'var(--bg-card)' }} />
+      <div ref={chartRef} style={{ width: '100%', height: '480px', backgroundColor: 'var(--bg-card)' }} />
     </div>
   );
 }
