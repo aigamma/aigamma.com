@@ -167,30 +167,6 @@ export default function GexProfile({ contracts, spotPrice, levels }) {
         ticktext,
       }),
       shapes,
-      annotations: [
-        {
-          xref: 'container',
-          yref: 'container',
-          x: 0.02,
-          xanchor: 'left',
-          y: 0.97,
-          yanchor: 'top',
-          text: '<b>Put Gamma</b>',
-          showarrow: false,
-          font: { ...PLOTLY_FONTS.chartTitle, color: PLOTLY_COLORS.negative },
-        },
-        {
-          xref: 'container',
-          yref: 'container',
-          x: 0.98,
-          xanchor: 'right',
-          y: 0.97,
-          yanchor: 'top',
-          text: '<b>Call Gamma</b>',
-          showarrow: false,
-          font: { ...PLOTLY_FONTS.chartTitle, color: PLOTLY_COLORS.positive },
-        },
-      ],
       showlegend: false,
       paper_bgcolor: 'rgba(0,0,0,0)',
       plot_bgcolor: 'rgba(0,0,0,0)',
@@ -240,8 +216,23 @@ export default function GexProfile({ contracts, spotPrice, levels }) {
         bottomY = mt + plotH * (1 - yDomain[0]) - 35;
       }
 
+      // Query the rendered title SVG group so the Put Gamma / Call Gamma
+      // corner labels can sit on the exact same horizontal baseline as the
+      // "AI Gamma Map" title, regardless of how Plotly internally resolves
+      // the title's container-coord y=0.97 value to a pixel offset.
+      let titleTop = 22;
+      if (container) {
+        const titleEl = container.querySelector('.gtitle');
+        if (titleEl) {
+          const titleRect = titleEl.getBoundingClientRect();
+          titleTop = titleRect.top - containerRect.top;
+        }
+      }
+
       const newLabels = [
         { left: px(spotPrice), top: topY, color: PLOTLY_COLORS.primary, text: 'SPOT' },
+        { corner: 'left', offset: 20, top: titleTop, color: PLOTLY_COLORS.negative, text: 'Put Gamma' },
+        { corner: 'right', offset: 20, top: titleTop, color: PLOTLY_COLORS.positive, text: 'Call Gamma' },
       ];
       if (levels) {
         if (levels.call_wall != null)
@@ -276,21 +267,45 @@ export default function GexProfile({ contracts, spotPrice, levels }) {
           ref={chartRef}
           style={{ width: '100%', height: '700px', backgroundColor: 'var(--bg-card)' }}
         />
-        {labels.map((l, i) => (
-          <div
-            key={i}
-            style={{
-              ...LABEL_STYLE,
-              left: l.left,
-              top: l.top,
-              transform: 'translate(-50%, -100%)',
-              color: l.color,
-              border: `1.5px solid ${l.color}`,
-            }}
-          >
-            {l.text}
-          </div>
-        ))}
+        {labels.map((l, i) => {
+          if (l.corner) {
+            return (
+              <div
+                key={i}
+                style={{
+                  position: 'absolute',
+                  top: l.top,
+                  left: l.corner === 'left' ? l.offset : undefined,
+                  right: l.corner === 'right' ? l.offset : undefined,
+                  color: l.color,
+                  fontFamily: 'Courier New, monospace',
+                  fontSize: '20px',
+                  fontWeight: 'bold',
+                  lineHeight: 1,
+                  pointerEvents: 'none',
+                  whiteSpace: 'nowrap',
+                }}
+              >
+                {l.text}
+              </div>
+            );
+          }
+          return (
+            <div
+              key={i}
+              style={{
+                ...LABEL_STYLE,
+                left: l.left,
+                top: l.top,
+                transform: 'translate(-50%, -100%)',
+                color: l.color,
+                border: `1.5px solid ${l.color}`,
+              }}
+            >
+              {l.text}
+            </div>
+          );
+        })}
       </div>
     </div>
   );
