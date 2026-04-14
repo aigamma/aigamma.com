@@ -12,7 +12,7 @@ import {
 
 const PLOTLY_LAYOUT_BASE = {
   ...PLOTLY_BASE_LAYOUT_2D,
-  margin: { t: 85, r: 30, b: 70, l: 80 },
+  margin: { t: 85, r: 30, b: 15, l: 80 },
   xaxis: plotlyAxis('', { title: '', rangeslider: plotlyRangeslider() }),
   yaxis: plotlyAxis('Gamma Exposure ($ notional)', {
     zerolinewidth: 2,
@@ -184,13 +184,24 @@ export default function GexProfile({ contracts, spotPrice, levels }) {
       const xScale = plotW / (xMax - xMin);
       const px = (dataX) => ml + (dataX - xMin) * xScale;
 
-      // The rangeslider eats into the y-domain from below, so the data plot
-      // bottom edge sits above the rangeslider strip rather than at mt+plotH.
       const yDomain = fl.yaxis?.domain || [0, 1];
       const dataTopY = mt + plotH * (1 - yDomain[1]);
-      const dataBotY = mt + plotH * (1 - yDomain[0]);
       const topY = dataTopY - 5;
-      const bottomY = dataBotY - 8;
+
+      // Query the actual rendered rangeslider rect to place FLIP cleanly
+      // above it. Deriving the slider's top from yDomain[0] alone underreports
+      // the true pixel position (internal axis/padding offsets Plotly doesn't
+      // expose), so the only reliable anchor is the SVG element's bounding
+      // box measured against the chart container.
+      let bottomY;
+      const rangesliderBg = chartRef.current?.querySelector('.rangeslider-bg');
+      if (rangesliderBg) {
+        const containerRect = chartRef.current.getBoundingClientRect();
+        const sliderRect = rangesliderBg.getBoundingClientRect();
+        bottomY = sliderRect.top - containerRect.top - 10;
+      } else {
+        bottomY = mt + plotH * (1 - yDomain[0]) - 10;
+      }
 
       const newLabels = [
         { left: px(spotPrice), top: topY, color: PLOTLY_COLORS.primary, text: 'SPOT' },
