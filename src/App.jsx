@@ -147,6 +147,18 @@ export default function App() {
           )}
         </div>
 
+        <nav className="site-nav">
+          <a href="https://about.aigamma.com/">About</a>
+          <a href="https://about.aigamma.com/#services">Capabilities</a>
+          <a
+            href="https://calendar.app.google/iR8J2gEs8mUMxEct6"
+            target="_blank"
+            rel="noopener"
+          >
+            Schedule
+          </a>
+        </nav>
+
         <div
           style={{
             fontFamily: 'Courier New, monospace',
