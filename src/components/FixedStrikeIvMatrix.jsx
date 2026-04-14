@@ -156,7 +156,7 @@ export default function FixedStrikeIvMatrix({ contracts, spotPrice, expirations 
 
     const layout = {
       ...BASE_LAYOUT,
-      title: plotlyTitle('Fixed-Strike IV Matrix'),
+      title: plotlyTitle('Fixed-Strike IV'),
       paper_bgcolor: 'rgba(0,0,0,0)',
       plot_bgcolor: 'rgba(0,0,0,0)',
       xaxis: {
