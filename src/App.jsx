@@ -27,6 +27,25 @@ function formatFreshness(isoString) {
   return `${et} ET`;
 }
 
+// True on weekends or on weekdays after 16:15 ET. The options market closes at
+// 16:15 ET for SPX, and after that the snapshot is frozen for the session — so
+// the header label flips from "Last updated:" (implies ongoing updates) to
+// "Final:" (implies the snapshot is done moving).
+function isMarketClosed(nowDate) {
+  const parts = new Intl.DateTimeFormat('en-US', {
+    timeZone: 'America/New_York',
+    weekday: 'short',
+    hour: '2-digit',
+    minute: '2-digit',
+    hourCycle: 'h23',
+  }).formatToParts(nowDate);
+  const lookup = Object.fromEntries(parts.map((p) => [p.type, p.value]));
+  if (lookup.weekday === 'Sat' || lookup.weekday === 'Sun') return true;
+  const hour = parseInt(lookup.hour, 10);
+  const minute = parseInt(lookup.minute, 10);
+  return hour * 60 + minute >= 16 * 60 + 15;
+}
+
 function classifyGammaRegime(levels, spotPrice) {
   if (!levels || spotPrice == null) return null;
   const netGex = levels.net_gamma_notional;
@@ -101,6 +120,7 @@ export default function App() {
   const freshness = data ? formatFreshness(data.capturedAt) : null;
   const isSynthetic = data && data.source === 'synthetic';
   const regime = data ? classifyGammaRegime(correctedLevels, data.spotPrice) : null;
+  const marketClosed = isMarketClosed(new Date());
 
   return (
     <div style={{ maxWidth: '1100px', margin: '0 auto', padding: '1.5rem' }}>
@@ -156,7 +176,7 @@ export default function App() {
             target="_blank"
             rel="noopener"
           >
-            Schedule
+            Schedule a Meeting
           </a>
         </nav>
 
@@ -169,7 +189,7 @@ export default function App() {
         >
           {freshness && (
             <>
-              <span>AS OF {freshness}</span>
+              <span>{marketClosed ? 'Final:' : 'Last updated:'} {freshness}</span>
               {isSynthetic && (
                 <span
                   style={{
