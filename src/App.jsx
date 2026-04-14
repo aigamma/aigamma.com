@@ -72,7 +72,7 @@ const REGIME_COLORS = {
 
 export default function App() {
   const [selectedExpiration, setSelectedExpiration] = useState(null);
-  const { data, loading, error } = useOptionsData({
+  const { data, loading, error, refetch } = useOptionsData({
     underlying: 'SPX',
     snapshotType: 'intraday',
   });
@@ -216,7 +216,27 @@ export default function App() {
 
       {error && (
         <div className="card" style={{ padding: '2rem', color: 'var(--accent-coral)' }}>
-          Error: {error}
+          <div>Error: {error}</div>
+          <button
+            type="button"
+            onClick={refetch}
+            style={{
+              marginTop: '1rem',
+              padding: '0 1rem',
+              height: '2.4rem',
+              fontFamily: 'Courier New, monospace',
+              fontSize: '0.9rem',
+              letterSpacing: '0.08em',
+              textTransform: 'uppercase',
+              background: 'transparent',
+              color: 'var(--accent-blue)',
+              border: '1px solid var(--accent-blue)',
+              borderRadius: '3px',
+              cursor: 'pointer',
+            }}
+          >
+            Retry
+          </button>
         </div>
       )}
 

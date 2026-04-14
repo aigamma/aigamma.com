@@ -4,6 +4,7 @@ export default function useOptionsData({ underlying = 'SPX', snapshotType = 'int
   const [data, setData] = useState(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
+  const [retryCount, setRetryCount] = useState(0);
 
   useEffect(() => {
     let cancelled = false;
@@ -42,7 +43,7 @@ export default function useOptionsData({ underlying = 'SPX', snapshotType = 'int
     return () => {
       cancelled = true;
     };
-  }, [underlying, snapshotType, expiration, tradingDate]);
+  }, [underlying, snapshotType, expiration, tradingDate, retryCount]);
 
-  return { data, loading, error };
+  return { data, loading, error, refetch: () => setRetryCount((c) => c + 1) };
 }
