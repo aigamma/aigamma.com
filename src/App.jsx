@@ -105,8 +105,23 @@ export default function App() {
     }
   }
 
-  const displayExpiration =
-    selectedExpiration || (data && data.expirations && data.expirations[0]) || null;
+  // Default the expiration to the first row whose 16:00 ET close is still in
+  // the future relative to the snapshot's captured_at. On an after-close Final
+  // snapshot this skips today's 0DTE (which has no remaining time value, so
+  // its expected move and 25Δ IVs are null/meaningless) and lands on the next
+  // live expiration. Users can still click today manually.
+  const firstLiveExpiration = useMemo(() => {
+    if (!data?.expirations?.length) return null;
+    const capturedMs = data.capturedAt ? new Date(data.capturedAt).getTime() : NaN;
+    if (Number.isNaN(capturedMs)) return data.expirations[0];
+    const live = data.expirations.find((exp) => {
+      const closeMs = new Date(`${exp}T16:00:00-04:00`).getTime();
+      return !Number.isNaN(closeMs) && closeMs > capturedMs;
+    });
+    return live || data.expirations[0];
+  }, [data]);
+
+  const displayExpiration = selectedExpiration || firstLiveExpiration;
 
   useEffect(() => {
     if (typeof window === 'undefined') return;
