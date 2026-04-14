@@ -176,19 +176,31 @@ export default function GammaInflectionChart({ spotPrice, levels }) {
       const dataTopY = mt + plotH * (1 - yDomain[1]);
       const topY = dataTopY - 5;
 
-      // Query the actual rendered rangeslider rect to place FLIP cleanly
-      // above it. Deriving the slider's top from yDomain[0] alone underreports
-      // the true pixel position (internal axis/padding offsets Plotly doesn't
-      // expose), so the only reliable anchor is the SVG element's bounding
-      // box measured against the chart container.
+      // Anchor FLIP above the main x-axis tick-label strip (the strike-price
+      // row Plotly renders between the data plot and the rangeslider). Prefer
+      // the rendered `.xaxislayer-above` group's bounding box since it's what
+      // actually contains the tick labels; fall back to a larger offset from
+      // the rangeslider rect so the label still clears the label row if the
+      // selector changes in a future Plotly release.
       let bottomY;
-      const rangesliderBg = chartRef.current?.querySelector('.rangeslider-bg');
-      if (rangesliderBg) {
-        const containerRect = chartRef.current.getBoundingClientRect();
-        const sliderRect = rangesliderBg.getBoundingClientRect();
-        bottomY = sliderRect.top - containerRect.top - 10;
+      const container = chartRef.current;
+      if (container) {
+        const containerRect = container.getBoundingClientRect();
+        const xAxisLayer = container.querySelector('.xaxislayer-above');
+        if (xAxisLayer) {
+          const layerRect = xAxisLayer.getBoundingClientRect();
+          bottomY = layerRect.top - containerRect.top - 10;
+        } else {
+          const rangesliderBg = container.querySelector('.rangeslider-bg');
+          if (rangesliderBg) {
+            const sliderRect = rangesliderBg.getBoundingClientRect();
+            bottomY = sliderRect.top - containerRect.top - 35;
+          } else {
+            bottomY = mt + plotH * (1 - yDomain[0]) - 35;
+          }
+        }
       } else {
-        bottomY = mt + plotH * (1 - yDomain[0]) - 10;
+        bottomY = mt + plotH * (1 - yDomain[0]) - 35;
       }
 
       const newLabels = [];
@@ -237,7 +249,7 @@ export default function GammaInflectionChart({ spotPrice, levels }) {
       <div style={{ position: 'relative' }}>
         <div
           ref={chartRef}
-          style={{ width: '100%', height: '620px', backgroundColor: 'var(--bg-card)' }}
+          style={{ width: '100%', height: '700px', backgroundColor: 'var(--bg-card)' }}
         />
         {labels.map((l, i) => (
           <div
