@@ -140,6 +140,12 @@ export default function GammaInflectionChart({ spotPrice, levels }) {
     pushLine(spotPrice, PLOTLY_COLORS.primary);
     pushLine(volFlip, PLOTLY_COLORS.highlight);
 
+    const dataMin = profile[0].s;
+    const dataMax = profile[profile.length - 1].s;
+    const hasSpot = spotPrice != null;
+    const zoomLow = hasSpot ? spotPrice * 0.92 : dataMin;
+    const zoomHigh = hasSpot ? spotPrice * 1.06 : dataMax;
+
     const layout = {
       ...PLOTLY_BASE_LAYOUT_2D,
       margin: { t: 85, r: 30, b: 15, l: 80 },
@@ -148,7 +154,12 @@ export default function GammaInflectionChart({ spotPrice, levels }) {
         y: 0.97,
         yanchor: 'top',
       },
-      xaxis: plotlyAxis('', { title: '', rangeslider: plotlyRangeslider() }),
+      xaxis: plotlyAxis('', {
+        title: '',
+        range: [zoomLow, zoomHigh],
+        autorange: false,
+        rangeslider: plotlyRangeslider({ range: [dataMin, dataMax], autorange: false }),
+      }),
       yaxis: plotlyAxis('Dealer Gamma Notional ($ per 1% move)', {
         zerolinewidth: 2,
         tickformat: '.2s',

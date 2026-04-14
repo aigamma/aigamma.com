@@ -154,6 +154,11 @@ export default function GexProfile({ contracts, spotPrice, levels }) {
       pushLine(levels.volatility_flip, PLOTLY_COLORS.highlight);
     }
 
+    const strikeMin = strikes[0];
+    const strikeMax = strikes[strikes.length - 1];
+    const zoomLow = spotPrice * 0.86;
+    const zoomHigh = spotPrice * 1.12;
+
     const layout = {
       ...PLOTLY_LAYOUT_BASE,
       title: {
@@ -161,6 +166,12 @@ export default function GexProfile({ contracts, spotPrice, levels }) {
         y: 0.97,
         yanchor: 'top',
       },
+      xaxis: plotlyAxis('', {
+        title: '',
+        range: [zoomLow, zoomHigh],
+        autorange: false,
+        rangeslider: plotlyRangeslider({ range: [strikeMin, strikeMax], autorange: false }),
+      }),
       yaxis: plotlyAxis('Gamma Exposure ($ notional)', {
         zerolinewidth: 2,
         tickvals,
