@@ -117,7 +117,7 @@ export default function VolSmile({ contracts, spotPrice, expiration, sviFit, und
 
     const layout = {
       ...PLOTLY_LAYOUT,
-      title: plotlyTitle(`${underlying || 'SPX'} Volatility Smile — ${expiration || 'Latest'}`),
+      title: plotlyTitle('Volatility Smile'),
       paper_bgcolor: 'rgba(0,0,0,0)',
       plot_bgcolor: 'rgba(0,0,0,0)',
     };

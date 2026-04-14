@@ -23,7 +23,7 @@ export const PLOTLY_FONTS = {
   base: { family: PLOTLY_FONT_FAMILY, color: PLOTLY_COLORS.titleText, size: 11 },
   axisTitle: { family: PLOTLY_FONT_FAMILY, color: PLOTLY_COLORS.axisText, size: 10 },
   axisTick: { family: PLOTLY_FONT_FAMILY, color: PLOTLY_COLORS.axisText, size: 9 },
-  chartTitle: { family: PLOTLY_FONT_FAMILY, color: PLOTLY_COLORS.titleText, size: 13 },
+  chartTitle: { family: PLOTLY_FONT_FAMILY, color: PLOTLY_COLORS.titleText, size: 20 },
   legend: { family: PLOTLY_FONT_FAMILY, color: PLOTLY_COLORS.axisText, size: 10 },
 };
 

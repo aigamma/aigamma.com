@@ -50,14 +50,21 @@ body {
 
 .site-nav a {
   font-family: 'Courier New', monospace;
-  font-size: 0.72rem;
-  letter-spacing: 0.1em;
+  font-size: 1rem;
+  letter-spacing: 0.08em;
   text-transform: uppercase;
-  color: var(--text-secondary);
   text-decoration: none;
-  transition: color 0.3s ease;
+  transition: opacity 0.2s ease;
+}
+
+.site-nav a:nth-child(odd) {
+  color: var(--text-primary);
+}
+
+.site-nav a:nth-child(even) {
+  color: var(--accent-blue);
 }
 
 .site-nav a:hover {
-  color: var(--text-primary);
+  opacity: 0.75;
 }

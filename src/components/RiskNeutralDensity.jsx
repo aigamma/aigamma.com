@@ -114,7 +114,7 @@ export default function RiskNeutralDensity({ fits, spotPrice, capturedAt }) {
     // Spot line as a Plotly shape so it sits across all traces.
     const layout = {
       ...BASE_LAYOUT,
-      title: plotlyTitle('Risk-Neutral Density (Breeden-Litzenberger)'),
+      title: plotlyTitle('Breeden-Litzenberger Risk-Neutral Density'),
       shapes: [
         {
           type: 'line',

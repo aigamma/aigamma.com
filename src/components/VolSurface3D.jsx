@@ -363,11 +363,7 @@ export default function VolSurface3D({ contracts, spotPrice, capturedAt, fits, s
 
     const layout = {
       ...BASE_LAYOUT_3D,
-      title: plotlyTitle(
-        effectiveMode === 'svi' && hasSviFits
-          ? `${underlying || 'SPX'} Volatility Surface — SVI interpolation`
-          : `${underlying || 'SPX'} Volatility Surface — raw IV scatter`
-      ),
+      title: plotlyTitle('Volatility Surface'),
     };
 
     Plotly.newPlot(chartRef.current, traces, layout, {
