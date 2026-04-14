@@ -107,7 +107,7 @@ export default function App() {
       <header
         style={{
           display: 'flex',
-          alignItems: 'baseline',
+          alignItems: 'center',
           justifyContent: 'space-between',
           flexWrap: 'wrap',
           gap: '0.75rem',
@@ -130,8 +130,8 @@ export default function App() {
               title={regime.hint}
               style={{
                 fontFamily: 'Courier New, monospace',
-                fontSize: '1rem',
-                padding: '0.55rem 0.75rem',
+                fontSize: '1.25rem',
+                padding: '0 1rem',
                 border: `1px solid ${REGIME_COLORS[regime.tone]}`,
                 color: REGIME_COLORS[regime.tone],
                 borderRadius: '3px',
@@ -144,7 +144,7 @@ export default function App() {
                 alignItems: 'center',
               }}
             >
-              {regime.label}
+              STATUS: {regime.label}
             </span>
           )}
         </div>
