@@ -176,7 +176,7 @@ export default function FixedStrikeIvMatrix({ contracts, spotPrice, expirations,
 
   return (
     <div className="card" style={{ marginBottom: '1rem' }}>
-      <div ref={chartRef} style={{ width: '100%', height: '400px', backgroundColor: '#141820' }} />
+      <div ref={chartRef} style={{ width: '100%', height: '400px', backgroundColor: 'var(--bg-card)' }} />
     </div>
   );
 }

@@ -209,7 +209,7 @@ export default function VolSmile({ contracts, spotPrice, expiration, sviFit, und
           Overlay SVI
         </label>
       </div>
-      <div ref={chartRef} style={{ width: '100%', height: '500px', backgroundColor: '#141820' }} />
+      <div ref={chartRef} style={{ width: '100%', height: '500px', backgroundColor: 'var(--bg-card)' }} />
     </div>
   );
 }

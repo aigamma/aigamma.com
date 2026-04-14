@@ -222,7 +222,7 @@ export default function GammaInflectionChart({ spotPrice, levels }) {
       <div style={{ position: 'relative' }}>
         <div
           ref={chartRef}
-          style={{ width: '100%', height: '530px', backgroundColor: '#141820' }}
+          style={{ width: '100%', height: '530px', backgroundColor: 'var(--bg-card)' }}
         />
         {labels.map((l, i) => (
           <div

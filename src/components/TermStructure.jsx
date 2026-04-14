@@ -87,7 +87,7 @@ export default function TermStructure({ expirationMetrics, capturedAt }) {
 
   return (
     <div className="card" style={{ marginBottom: '1rem' }}>
-      <div ref={chartRef} style={{ width: '100%', height: '360px', backgroundColor: '#141820' }} />
+      <div ref={chartRef} style={{ width: '100%', height: '360px', backgroundColor: 'var(--bg-card)' }} />
     </div>
   );
 }
