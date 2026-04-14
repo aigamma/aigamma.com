@@ -169,8 +169,8 @@ export default function GexProfile({ contracts, spotPrice, levels }) {
       shapes,
       annotations: [
         {
-          xref: 'paper',
-          yref: 'paper',
+          xref: 'container',
+          yref: 'container',
           x: 0.02,
           xanchor: 'left',
           y: 0.97,
@@ -180,8 +180,8 @@ export default function GexProfile({ contracts, spotPrice, levels }) {
           font: { ...PLOTLY_FONTS.chartTitle, color: PLOTLY_COLORS.negative },
         },
         {
-          xref: 'paper',
-          yref: 'paper',
+          xref: 'container',
+          yref: 'container',
           x: 0.98,
           xanchor: 'right',
           y: 0.97,
