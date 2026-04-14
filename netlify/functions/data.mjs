@@ -49,7 +49,7 @@ export default async function handler(request) {
       underlying: `eq.${underlying}`,
       snapshot_type: `eq.${snapshotType}`,
       order: 'captured_at.desc',
-      limit: '1',
+      limit: '10',
     });
     if (tradingDate) runParams.set('trading_date', `eq.${tradingDate}`);
 
@@ -68,7 +68,15 @@ export default async function handler(request) {
         `No ${snapshotType} run found for ${underlying}${tradingDate ? ` on ${tradingDate}` : ''}`
       );
     }
-    const run = runRows[0];
+    // Partial runs can truncate at the background-function timeout or a
+    // transient Massive API error before the fetch reaches the back-month
+    // monthlies, which collapses the Breeden-Litzenberger chart onto 1-2
+    // expirations even though a slightly older full-chain success exists.
+    // Prefer the newest successful run inside the last ~10 cron ticks (≈50
+    // minutes at the current 5-minute cadence); degrade to the newest row
+    // overall if the upstream API has been partial for longer than that,
+    // which beats serving a 404.
+    const run = runRows.find((r) => r.status === 'success') || runRows[0];
 
     const snapParams = new URLSearchParams({
       run_id: `eq.${run.id}`,
