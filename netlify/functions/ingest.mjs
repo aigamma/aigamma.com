@@ -3,14 +3,25 @@
 // is open in ET, and (if so) dispatches to `ingest-background.mjs` via an
 // internal HTTP call with a shared INGEST_SECRET.
 //
-// Cron is intentionally disabled on initial deploy — manual testing first.
-// Uncomment the `schedule` field in `config` once the background function
-// has been calibrated and Supabase has been wiped for a clean start.
+// Schedule below fires every 5 minutes during a 9-hour UTC window that wraps
+// both EDT and EST market hours. The in-function gate further down clips to
+// the strict 9:30 ET - 16:15 ET window (SPX cash session) and skips weekends
+// and US market holidays, so any fires that fall outside actual market hours
+// (because the wrap is ~1.25h wider than the market in each DST state) are
+// fast no-op early returns. Total budget: 108 fires/day Mon-Fri × ~22 trading
+// days/month ≈ 2,376 trigger invocations/month, of which ~1,782 dispatch to
+// the background worker and the remaining ~594 are sub-100ms gate-skip
+// returns. Comfortably under Netlify free-tier 125k inv/mo and 100h runtime.
 
-// NOTE: schedule is commented out. Enable only after manual calibration.
-// export const config = {
-//   schedule: '*/5 * * * *',
-// };
+export const config = {
+  // Cron is in UTC. EDT (UTC-4): 13:00-21:55 UTC = 09:00-17:55 ET, wraps the
+  // 09:30-16:15 ET market window. EST (UTC-5): 13:00-21:55 UTC = 08:00-16:55
+  // ET, also wraps 09:30-16:15 ET. The minimum hour range that covers both
+  // DST states' market windows is 13-21 inclusive — narrower ranges miss
+  // either the EDT 09:30 open (if start > 13) or the EST 16:15 close
+  // (if end < 21). Day-of-week 1-5 = Mon-Fri.
+  schedule: '*/5 13-21 * * 1-5',
+};
 
 const INGEST_SECRET = process.env.INGEST_SECRET;
 const BACKGROUND_URL = process.env.INGEST_BACKGROUND_URL;
