@@ -5,21 +5,25 @@
 //
 // Schedule below fires every 5 minutes during a 9-hour UTC window that wraps
 // both EDT and EST market hours. The in-function gate further down clips to
-// the strict 9:30 ET - 16:15 ET window (SPX cash session) and skips weekends
-// and US market holidays, so any fires that fall outside actual market hours
-// (because the wrap is ~1.25h wider than the market in each DST state) are
-// fast no-op early returns. Total budget: 108 fires/day Mon-Fri × ~22 trading
+// the 9:30 ET - 16:30 ET window and skips weekends and US market holidays,
+// so any fires that fall outside the gate window are fast no-op early
+// returns. The SPX cash session closes at 16:15 ET, but the Massive feed
+// is 15-minute-delayed, so the final 16:15 print only lands in the backend
+// at 16:30 ET; the gate extends to 16:30 (not 16:15) to capture that last
+// snapshot. Total budget: 108 fires/day Mon-Fri × ~22 trading
 // days/month ≈ 2,376 trigger invocations/month, of which ~1,782 dispatch to
 // the background worker and the remaining ~594 are sub-100ms gate-skip
 // returns. Comfortably under Netlify free-tier 125k inv/mo and 100h runtime.
 
 export const config = {
   // Cron is in UTC. EDT (UTC-4): 13:00-21:55 UTC = 09:00-17:55 ET, wraps the
-  // 09:30-16:15 ET market window. EST (UTC-5): 13:00-21:55 UTC = 08:00-16:55
-  // ET, also wraps 09:30-16:15 ET. The minimum hour range that covers both
-  // DST states' market windows is 13-21 inclusive — narrower ranges miss
-  // either the EDT 09:30 open (if start > 13) or the EST 16:15 close
-  // (if end < 21). Day-of-week 1-5 = Mon-Fri.
+  // 09:30-16:30 ET gate window. EST (UTC-5): 13:00-21:55 UTC = 08:00-16:55
+  // ET, also wraps 09:30-16:30 ET (the EST cron tail reaches 16:55 ET, one
+  // 5-minute step past the 16:30 gate, leaving a single skip-fire at 16:35
+  // ET). The minimum hour range that covers both DST states' gate windows
+  // is 13-21 inclusive — narrower ranges miss either the EDT 09:30 open
+  // (if start > 13) or the EST 16:30 final fire (if end < 21). Day-of-week
+  // 1-5 = Mon-Fri.
   schedule: '*/5 13-21 * * 1-5',
 };
 
@@ -78,7 +82,7 @@ export default async function handler(request) {
       console.log(`[ingest-trigger] skipping holiday ${etDate}`);
       return new Response('skip: holiday', { status: 200 });
     }
-    if (timeDecimal < 9.5 || timeDecimal > 16.25) {
+    if (timeDecimal < 9.5 || timeDecimal > 16.5) {
       console.log(`[ingest-trigger] skipping outside market hours (${etString})`);
       return new Response('skip: outside market hours', { status: 200 });
     }
