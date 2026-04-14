@@ -1,4 +1,4 @@
-import { useMemo, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import './styles/theme.css';
 import VolSmile from './components/VolSmile';
 import LevelsPanel from './components/LevelsPanel';
@@ -70,8 +70,15 @@ const REGIME_COLORS = {
   amber: 'var(--accent-amber)',
 };
 
+function readExpFromUrl() {
+  if (typeof window === 'undefined') return null;
+  const params = new URLSearchParams(window.location.search);
+  const raw = params.get('exp');
+  return /^\d{4}-\d{2}-\d{2}$/.test(raw || '') ? raw : null;
+}
+
 export default function App() {
-  const [selectedExpiration, setSelectedExpiration] = useState(null);
+  const [selectedExpiration, setSelectedExpiration] = useState(readExpFromUrl);
   const { data, loading, error, refetch } = useOptionsData({
     underlying: 'SPX',
     snapshotType: 'intraday',
@@ -79,6 +86,28 @@ export default function App() {
 
   const displayExpiration =
     selectedExpiration || (data && data.expirations && data.expirations[0]) || null;
+
+  useEffect(() => {
+    if (!data || !Array.isArray(data.expirations) || data.expirations.length === 0) return;
+    if (selectedExpiration && !data.expirations.includes(selectedExpiration)) {
+      setSelectedExpiration(null);
+    }
+  }, [data, selectedExpiration]);
+
+  useEffect(() => {
+    if (typeof window === 'undefined') return;
+    const params = new URLSearchParams(window.location.search);
+    if (selectedExpiration) {
+      params.set('exp', selectedExpiration);
+    } else {
+      params.delete('exp');
+    }
+    const query = params.toString();
+    const next = window.location.pathname + (query ? `?${query}` : '') + window.location.hash;
+    if (next !== window.location.pathname + window.location.search + window.location.hash) {
+      window.history.replaceState(null, '', next);
+    }
+  }, [selectedExpiration]);
 
   const filteredContracts = useMemo(() => {
     if (!data || !data.contracts) return [];
