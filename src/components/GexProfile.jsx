@@ -224,8 +224,9 @@ export default function GexProfile({ contracts, spotPrice, levels }) {
       if (container) {
         const titleEl = container.querySelector('.gtitle');
         if (titleEl) {
+          const cRect = container.getBoundingClientRect();
           const titleRect = titleEl.getBoundingClientRect();
-          titleTop = titleRect.top - containerRect.top;
+          titleTop = titleRect.top - cRect.top;
         }
       }
 

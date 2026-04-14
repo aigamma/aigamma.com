@@ -203,7 +203,24 @@ export default function GammaInflectionChart({ spotPrice, levels }) {
         bottomY = mt + plotH * (1 - yDomain[0]) - 35;
       }
 
-      const newLabels = [];
+      // Query the rendered title SVG group so the Put Gamma / Call Gamma
+      // corner labels can sit on the exact same horizontal baseline as the
+      // "AI Gamma Chart" title, regardless of how Plotly internally resolves
+      // the title's container-coord y=0.97 value to a pixel offset.
+      let titleTop = 22;
+      if (container) {
+        const titleEl = container.querySelector('.gtitle');
+        if (titleEl) {
+          const cRect = container.getBoundingClientRect();
+          const titleRect = titleEl.getBoundingClientRect();
+          titleTop = titleRect.top - cRect.top;
+        }
+      }
+
+      const newLabels = [
+        { corner: 'left', offset: 20, top: titleTop, color: PLOTLY_COLORS.negative, text: 'Put Gamma' },
+        { corner: 'right', offset: 20, top: titleTop, color: PLOTLY_COLORS.positive, text: 'Call Gamma' },
+      ];
       if (spotPrice != null) {
         newLabels.push({
           left: px(spotPrice),
@@ -251,21 +268,45 @@ export default function GammaInflectionChart({ spotPrice, levels }) {
           ref={chartRef}
           style={{ width: '100%', height: '700px', backgroundColor: 'var(--bg-card)' }}
         />
-        {labels.map((l, i) => (
-          <div
-            key={i}
-            style={{
-              ...LABEL_STYLE,
-              left: l.left,
-              top: l.top,
-              transform: 'translate(-50%, -100%)',
-              color: l.color,
-              border: `1.5px solid ${l.color}`,
-            }}
-          >
-            {l.text}
-          </div>
-        ))}
+        {labels.map((l, i) => {
+          if (l.corner) {
+            return (
+              <div
+                key={i}
+                style={{
+                  position: 'absolute',
+                  top: l.top,
+                  left: l.corner === 'left' ? l.offset : undefined,
+                  right: l.corner === 'right' ? l.offset : undefined,
+                  color: l.color,
+                  fontFamily: 'Courier New, monospace',
+                  fontSize: '20px',
+                  fontWeight: 'bold',
+                  lineHeight: 1,
+                  pointerEvents: 'none',
+                  whiteSpace: 'nowrap',
+                }}
+              >
+                {l.text}
+              </div>
+            );
+          }
+          return (
+            <div
+              key={i}
+              style={{
+                ...LABEL_STYLE,
+                left: l.left,
+                top: l.top,
+                transform: 'translate(-50%, -100%)',
+                color: l.color,
+                border: `1.5px solid ${l.color}`,
+              }}
+            >
+              {l.text}
+            </div>
+          );
+        })}
       </div>
     </div>
   );
