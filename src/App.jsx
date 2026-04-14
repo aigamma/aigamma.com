@@ -115,14 +115,16 @@ export default function App() {
         }}
       >
         <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem', flexWrap: 'wrap' }}>
-          <img
-            src="/logo.png"
-            alt="aigamma.com"
-            style={{
-              height: '3.2rem',
-              display: 'block',
-            }}
-          />
+          <a href="https://about.aigamma.com/" style={{ display: 'block' }}>
+            <img
+              src="/logo.png"
+              alt="aigamma.com"
+              style={{
+                height: '3.2rem',
+                display: 'block',
+              }}
+            />
+          </a>
           {regime && (
             <span
               title={regime.hint}
@@ -149,7 +151,6 @@ export default function App() {
 
         <nav className="site-nav">
           <a href="https://about.aigamma.com/">About</a>
-          <a href="https://about.aigamma.com/#services">Capabilities</a>
           <a
             href="https://calendar.app.google/iR8J2gEs8mUMxEct6"
             target="_blank"
