@@ -59,11 +59,20 @@ export default function TermStructure({ expirationMetrics, capturedAt }) {
       },
     ];
 
+    const maxDte = rows[rows.length - 1].dte;
+    const zoomLow = maxDte * 0.175;
+    const zoomHigh = maxDte * 0.825;
+
     const layout = {
       ...PLOTLY_LAYOUT_BASE,
       title: plotlyTitle('Term Structure'),
       paper_bgcolor: 'rgba(0,0,0,0)',
       plot_bgcolor: 'rgba(0,0,0,0)',
+      xaxis: plotlyAxis('Days to Expiration', {
+        range: [zoomLow, zoomHigh],
+        autorange: false,
+        rangeslider: plotlyRangeslider({ range: [0, maxDte], autorange: false }),
+      }),
     };
 
     Plotly.newPlot(chartRef.current, traces, layout, {
