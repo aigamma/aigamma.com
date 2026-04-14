@@ -130,6 +130,12 @@ export default function RiskNeutralDensity({ fits, spotPrice, capturedAt }) {
       });
     });
 
+    // Default zoom is asymmetric around spot — narrower on the left, wider on
+    // the right — because the RND's right tail decays more slowly than the
+    // left, so the right side needs more room to show the full shape.
+    const zoomLow = spotPrice * 0.9;
+    const zoomHigh = spotPrice * 1.18;
+
     // Spot line as a Plotly shape so it sits across all traces.
     const layout = {
       ...BASE_LAYOUT,
@@ -138,6 +144,14 @@ export default function RiskNeutralDensity({ fits, spotPrice, capturedAt }) {
         y: 0.96,
         yanchor: 'top',
       },
+      xaxis: plotlyAxis('', {
+        range: [zoomLow, zoomHigh],
+        autorange: false,
+        rangeslider: plotlyRangeslider({
+          range: [spotPrice * 0.75, spotPrice * 1.25],
+          autorange: false,
+        }),
+      }),
       shapes: [
         {
           type: 'line',
