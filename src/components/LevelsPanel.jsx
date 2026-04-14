@@ -1,13 +1,3 @@
-function formatCurrency(value) {
-  if (value == null) return '—';
-  return value.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
-}
-
-function formatStrike(value) {
-  if (value == null) return '—';
-  return value.toFixed(2);
-}
-
 function formatInteger(value) {
   if (value == null) return '—';
   return Math.round(value).toLocaleString('en-US');

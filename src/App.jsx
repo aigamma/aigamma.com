@@ -115,7 +115,7 @@ export default function App() {
       gamma_profile: profile,
       volatility_flip: flip ?? data.levels.volatility_flip,
     };
-  }, [data?.levels, data?.contracts, data?.spotPrice, data?.capturedAt]);
+  }, [data]);
 
   const freshness = data ? formatFreshness(data.capturedAt) : null;
   const isSynthetic = data && data.source === 'synthetic';

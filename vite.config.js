@@ -7,7 +7,7 @@ export default defineConfig({
   server: {
     proxy: {
       '/api': {
-        target: 'https://aigamma.dev',
+        target: 'https://aigamma.com',
         changeOrigin: true,
         secure: true,
       },
