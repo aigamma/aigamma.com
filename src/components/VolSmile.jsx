@@ -156,7 +156,7 @@ export default function VolSmile({ contracts, spotPrice, expiration, sviFit, und
       >
         <div
           style={{
-            fontSize: '0.7rem',
+            fontSize: '0.8rem',
             color: 'var(--text-secondary)',
             letterSpacing: '0.08em',
             textTransform: 'uppercase',
@@ -194,7 +194,7 @@ export default function VolSmile({ contracts, spotPrice, expiration, sviFit, und
             gap: '0.35rem',
             cursor: sviFit ? 'pointer' : 'not-allowed',
             opacity: sviFit ? 1 : 0.5,
-            fontSize: '0.72rem',
+            fontSize: '0.8rem',
             color: 'var(--text-secondary)',
             letterSpacing: '0.08em',
             textTransform: 'uppercase',

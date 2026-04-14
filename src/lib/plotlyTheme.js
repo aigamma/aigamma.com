@@ -20,11 +20,11 @@ export const PLOTLY_COLORS = {
 export const PLOTLY_FONT_FAMILY = 'Courier New, monospace';
 
 export const PLOTLY_FONTS = {
-  base: { family: PLOTLY_FONT_FAMILY, color: PLOTLY_COLORS.titleText, size: 11 },
-  axisTitle: { family: PLOTLY_FONT_FAMILY, color: PLOTLY_COLORS.axisText, size: 10 },
-  axisTick: { family: PLOTLY_FONT_FAMILY, color: PLOTLY_COLORS.axisText, size: 9 },
+  base: { family: PLOTLY_FONT_FAMILY, color: PLOTLY_COLORS.titleText, size: 12 },
+  axisTitle: { family: PLOTLY_FONT_FAMILY, color: PLOTLY_COLORS.axisText, size: 12 },
+  axisTick: { family: PLOTLY_FONT_FAMILY, color: PLOTLY_COLORS.axisText, size: 12 },
   chartTitle: { family: PLOTLY_FONT_FAMILY, color: PLOTLY_COLORS.titleText, size: 20 },
-  legend: { family: PLOTLY_FONT_FAMILY, color: PLOTLY_COLORS.axisText, size: 10 },
+  legend: { family: PLOTLY_FONT_FAMILY, color: PLOTLY_COLORS.axisText, size: 12 },
 };
 
 // Rotation order for multi-series charts (risk-neutral density, etc).

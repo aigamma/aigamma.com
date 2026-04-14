@@ -57,7 +57,7 @@ function Stat({ label, value, accent, sub, bold }) {
     <div style={{ minWidth: 0 }}>
       <div
         style={{
-          fontSize: '0.7rem',
+          fontSize: '0.8rem',
           color: 'var(--text-secondary)',
           textTransform: 'uppercase',
           letterSpacing: '0.08em',
@@ -77,7 +77,7 @@ function Stat({ label, value, accent, sub, bold }) {
         {value}
       </div>
       {sub && (
-        <div style={{ fontSize: '0.65rem', color: 'var(--text-secondary)', marginTop: '0.15rem' }}>
+        <div style={{ fontSize: '0.8rem', color: 'var(--text-secondary)', marginTop: '0.15rem' }}>
           {sub}
         </div>
       )}
@@ -97,11 +97,7 @@ function Divider() {
   );
 }
 
-const ROW_GRID = {
-  display: 'grid',
-  gridTemplateColumns: 'repeat(5, minmax(0, 1fr))',
-  gap: '1rem',
-};
+const ROW_GRID_CLASS = 'levels-row';
 
 export default function LevelsPanel({ levels, spotPrice, prevClose, expirationMetrics, expirations, selectedExpiration, onExpirationChange, capturedAt }) {
   if (!levels) {
@@ -132,7 +128,7 @@ const volFlipSub = distanceSub(levels.volatility_flip, spotPrice);
 
   return (
     <div className="card" style={{ marginBottom: '1rem' }}>
-      <div style={ROW_GRID}>
+      <div className={ROW_GRID_CLASS}>
         <Stat
           label="Put Wall"
           value={formatInteger(levels.put_wall)}
@@ -156,7 +152,7 @@ const volFlipSub = distanceSub(levels.volatility_flip, spotPrice);
 
       <Divider />
 
-      <div style={ROW_GRID}>
+      <div className={ROW_GRID_CLASS}>
         <Stat
           label="P/C Ratio (Volume)"
           value={formatRatio(levels.put_call_ratio_volume)}
@@ -182,11 +178,11 @@ const volFlipSub = distanceSub(levels.volatility_flip, spotPrice);
       {relevantMetric && (
         <>
           <Divider />
-          <div style={ROW_GRID}>
+          <div className={ROW_GRID_CLASS}>
             <div style={{ minWidth: 0 }}>
               <div
                 style={{
-                  fontSize: '0.7rem',
+                  fontSize: '0.8rem',
                   color: 'var(--text-secondary)',
                   textTransform: 'uppercase',
                   letterSpacing: '0.08em',
@@ -205,8 +201,8 @@ const volFlipSub = distanceSub(levels.volatility_flip, spotPrice);
                   borderRadius: '4px',
                   padding: '0.35rem 0.5rem',
                   fontFamily: 'Courier New, monospace',
-                  fontSize: '0.85rem',
-                  width: '75%',
+                  fontSize: '0.9rem',
+                  width: '100%',
                 }}
               >
                 {(expirations || []).map((exp) => (

@@ -165,7 +165,7 @@ export default function App() {
   const marketClosed = isMarketClosed(new Date());
 
   return (
-    <div style={{ maxWidth: '1100px', margin: '0 auto', padding: '1.5rem' }}>
+    <div className="app-shell">
       <header
         style={{
           display: 'flex',

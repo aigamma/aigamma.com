@@ -180,7 +180,7 @@ export default function RiskNeutralDensity({ fits, spotPrice, capturedAt }) {
       >
         <div
           style={{
-            fontSize: '0.7rem',
+            fontSize: '0.8rem',
             color: 'var(--text-secondary)',
             letterSpacing: '0.08em',
             textTransform: 'uppercase',
@@ -194,7 +194,7 @@ export default function RiskNeutralDensity({ fits, spotPrice, capturedAt }) {
             alignItems: 'center',
             gap: '0.35rem',
             cursor: 'pointer',
-            fontSize: '0.72rem',
+            fontSize: '0.8rem',
             color: 'var(--text-secondary)',
             letterSpacing: '0.08em',
             textTransform: 'uppercase',
