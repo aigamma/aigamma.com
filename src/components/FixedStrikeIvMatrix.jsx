@@ -125,7 +125,7 @@ export default function FixedStrikeIvMatrix({ contracts, spotPrice, expirations 
       y: matrix.yLabels,
       text: matrix.textCells,
       texttemplate: '%{text}',
-      textfont: { family: PLOTLY_FONT_FAMILY, size: 12, color: '#0d0f13' },
+      textfont: { family: PLOTLY_FONT_FAMILY, size: 12, color: '#0d0f13', weight: 700 },
       colorscale: PLOTLY_HEATMAP_COLORSCALE,
       zmin: zMin,
       zmax: zMax,
