@@ -103,30 +103,17 @@ export const PLOTLY_HEATMAP_COLORSCALE = [
   [1, PLOTLY_COLORS.secondary],
 ];
 
-// Brush-zoom rangeslider styled to fit the dark theme. Returns a fresh object
-// each call so individual charts can override fields without mutating shared
-// state. Thickness is the slider's share of the full plot region (0..1) — 0.08
-// keeps the navigator strip compact so the data plot retains most of its
-// vertical real estate.
-//
-// The `yaxis` block pins the slider's internal y-axis to a range far above any
-// realistic data point on this dashboard (max observed y is GEX notional in
-// the low trillions, so 1e15 is comfortably out of reach). Plotly clips the
-// embedded trace preview to the slider's y viewport, so pinning that viewport
-// to an empty region effectively hides the mini-chart while keeping the dark
-// strip, border, and drag handles — a "naked slider" without Plotly's default
-// visual-noise mini-trace.
+// Brush-zoom rangeslider config. The visual "naked slider" look — hidden
+// mini-trace plus lighter unselected regions for contrast against the dark
+// selected window — is enforced by CSS overrides on the Plotly rangeslider
+// SVG classes in src/styles/theme.css, not here. This factory only sets the
+// structural props (thickness, border) that CSS cannot reach.
 export function plotlyRangeslider(extras = {}) {
   return {
     visible: true,
-    bgcolor: 'rgba(20, 24, 32, 0.55)',
     bordercolor: PLOTLY_COLORS.grid,
     borderwidth: 1,
     thickness: 0.08,
-    yaxis: {
-      rangemode: 'fixed',
-      range: [1e15, 1e15 + 1],
-    },
     ...extras,
   };
 }
