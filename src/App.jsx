@@ -137,7 +137,7 @@ export default function App() {
         <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem', flexWrap: 'wrap' }}>
           <a href="https://about.aigamma.com/" style={{ display: 'block' }}>
             <img
-              src="/logo.png"
+              src="/logo.webp"
               alt="aigamma.com"
               style={{
                 height: '3.2rem',
