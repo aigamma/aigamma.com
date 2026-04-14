@@ -1,6 +1,5 @@
 import { useEffect, useMemo, useState } from 'react';
 import './styles/theme.css';
-import VolSmile from './components/VolSmile';
 import LevelsPanel from './components/LevelsPanel';
 import GexProfile from './components/GexProfile';
 import GammaInflectionChart from './components/GammaInflectionChart';
@@ -122,22 +121,12 @@ export default function App() {
     }
   }, [selectedExpiration]);
 
-  const filteredContracts = useMemo(() => {
-    if (!data || !data.contracts) return [];
-    if (!displayExpiration) return data.contracts;
-    return data.contracts.filter((c) => c.expiration_date === displayExpiration);
-  }, [data, displayExpiration]);
-
   const sviFits = useSviFits({
     contracts: data?.contracts,
     spotPrice: data?.spotPrice,
     capturedAt: data?.capturedAt,
     backendFits: data?.sviFits,
   });
-
-  const currentSviFit = displayExpiration
-    ? sviFits.byExpiration[displayExpiration] ?? null
-    : null;
 
   // Client-side override of the gamma inflection profile and volatility flip.
   // The backend pass that writes `gamma_profile` and recomputes
@@ -250,7 +239,6 @@ export default function App() {
           <div className="skeleton-card" style={{ height: '564px' }} />
           <div className="skeleton-card" style={{ height: '434px' }} />
           <div className="skeleton-card" style={{ height: '394px' }} />
-          <div className="skeleton-card" style={{ height: '534px' }} />
           <div className="skeleton-card" style={{ height: '454px' }} />
           <div className="skeleton-card" style={{ height: '574px' }} />
         </div>
@@ -316,14 +304,6 @@ export default function App() {
           <TermStructure
             expirationMetrics={data.expirationMetrics}
             capturedAt={data.capturedAt}
-          />
-
-          <VolSmile
-            contracts={filteredContracts}
-            spotPrice={data.spotPrice}
-            expiration={displayExpiration}
-            sviFit={currentSviFit}
-            underlying={data.underlying}
           />
 
           <RiskNeutralDensity
