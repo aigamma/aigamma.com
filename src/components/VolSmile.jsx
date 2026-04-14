@@ -178,7 +178,9 @@ export default function VolSmile({ contracts, spotPrice, expiration, sviFit, und
                         : 'var(--accent-amber)',
                     }}
                   >
-                    {sviFit.diagnostics.butterflyArbFree ? 'no-arb ok' : 'butterfly warn'}
+                    {sviFit.diagnostics.butterflyArbFree
+                      ? 'Butterflies safer than usual.'
+                      : 'Butterflies more dangerous than usual.'}
                   </span>
                 </>
               )}
