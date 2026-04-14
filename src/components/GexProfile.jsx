@@ -156,8 +156,8 @@ export default function GexProfile({ contracts, spotPrice, levels }) {
 
     const strikeMin = strikes[0];
     const strikeMax = strikes[strikes.length - 1];
-    const zoomLow = spotPrice * 0.86;
-    const zoomHigh = spotPrice * 1.12;
+    const zoomLow = spotPrice * 0.87;
+    const zoomHigh = spotPrice * 1.13;
 
     const layout = {
       ...PLOTLY_LAYOUT_BASE,

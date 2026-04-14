@@ -143,8 +143,8 @@ export default function GammaInflectionChart({ spotPrice, levels }) {
     const dataMin = profile[0].s;
     const dataMax = profile[profile.length - 1].s;
     const hasSpot = spotPrice != null;
-    const zoomLow = hasSpot ? spotPrice * 0.92 : dataMin;
-    const zoomHigh = hasSpot ? spotPrice * 1.06 : dataMax;
+    const zoomLow = hasSpot ? spotPrice * 0.93 : dataMin;
+    const zoomHigh = hasSpot ? spotPrice * 1.07 : dataMax;
 
     const layout = {
       ...PLOTLY_BASE_LAYOUT_2D,
