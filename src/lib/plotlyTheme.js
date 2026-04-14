@@ -108,6 +108,14 @@ export const PLOTLY_HEATMAP_COLORSCALE = [
 // state. Thickness is the slider's share of the full plot region (0..1) — 0.08
 // keeps the navigator strip compact so the data plot retains most of its
 // vertical real estate.
+//
+// The `yaxis` block pins the slider's internal y-axis to a range far above any
+// realistic data point on this dashboard (max observed y is GEX notional in
+// the low trillions, so 1e15 is comfortably out of reach). Plotly clips the
+// embedded trace preview to the slider's y viewport, so pinning that viewport
+// to an empty region effectively hides the mini-chart while keeping the dark
+// strip, border, and drag handles — a "naked slider" without Plotly's default
+// visual-noise mini-trace.
 export function plotlyRangeslider(extras = {}) {
   return {
     visible: true,
@@ -115,6 +123,10 @@ export function plotlyRangeslider(extras = {}) {
     bordercolor: PLOTLY_COLORS.grid,
     borderwidth: 1,
     thickness: 0.08,
+    yaxis: {
+      rangemode: 'fixed',
+      range: [1e15, 1e15 + 1],
+    },
     ...extras,
   };
 }
