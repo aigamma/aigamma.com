@@ -34,6 +34,35 @@ function windowDensity({ strikes, values }, spotPrice) {
   return { strikes: outStrikes, values: outValues };
 }
 
+// Monthly SPX options expire on the third Friday of the month, shifting back
+// to the preceding Thursday when that Friday is a market holiday — Good
+// Friday is the only US holiday that ever lands on a third-Friday week. The
+// RND chart strips weeklies so the density curves compare like-for-like
+// tenors and the front-month weeklies don't stack a wall of overlapping
+// lines on top of the mode.
+function isMonthlyExpiration(dateStr, expirationSet) {
+  const d = new Date(`${dateStr}T12:00:00Z`);
+  const y = d.getUTCFullYear();
+  const m = d.getUTCMonth();
+  const first = new Date(Date.UTC(y, m, 1));
+  const firstFridayDom = 1 + ((5 - first.getUTCDay() + 7) % 7);
+  const thirdFridayDom = firstFridayDom + 14;
+  const thirdFridayStr = new Date(Date.UTC(y, m, thirdFridayDom))
+    .toISOString()
+    .split('T')[0];
+  if (dateStr === thirdFridayStr) return true;
+  // Fall through only when the canonical Friday is absent from the chain, so
+  // a Thursday weekly that happens to sit one day before its own month's
+  // monthly Friday doesn't get misclassified as the shifted monthly.
+  if (!expirationSet.has(thirdFridayStr)) {
+    const shiftedStr = new Date(Date.UTC(y, m, thirdFridayDom - 1))
+      .toISOString()
+      .split('T')[0];
+    return dateStr === shiftedStr;
+  }
+  return false;
+}
+
 export default function RiskNeutralDensity({ fits, spotPrice, capturedAt }) {
   const chartRef = useRef(null);
   const { plotly: Plotly, error: plotlyError } = usePlotly();
@@ -41,8 +70,12 @@ export default function RiskNeutralDensity({ fits, spotPrice, capturedAt }) {
   const sortedExps = useMemo(() => {
     if (!fits || !capturedAt) return [];
     const now = new Date(capturedAt).getTime();
-    return Object.values(fits)
-      .filter((f) => f?.density && f.density.strikes && f.density.values)
+    const withDensity = Object.values(fits).filter(
+      (f) => f?.density && f.density.strikes && f.density.values
+    );
+    const expirationSet = new Set(withDensity.map((f) => f.expirationDate));
+    return withDensity
+      .filter((f) => isMonthlyExpiration(f.expirationDate, expirationSet))
       .sort((a, b) => {
         const ta = new Date(a.expirationDate).getTime();
         const tb = new Date(b.expirationDate).getTime();
