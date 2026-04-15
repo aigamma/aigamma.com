@@ -266,6 +266,14 @@ export default function App() {
             capturedAt={data.capturedAt}
           />
 
+          <VolatilityRiskPremium />
+
+          <TermStructure
+            expirationMetrics={data.expirationMetrics}
+            capturedAt={data.capturedAt}
+            cloudBands={data.cloudBands}
+          />
+
           <GammaInflectionChart
             spotPrice={data.spotPrice}
             levels={correctedLevels}
@@ -275,12 +283,6 @@ export default function App() {
             contracts={data.contracts}
             spotPrice={data.spotPrice}
             levels={correctedLevels}
-          />
-
-          <TermStructure
-            expirationMetrics={data.expirationMetrics}
-            capturedAt={data.capturedAt}
-            cloudBands={data.cloudBands}
           />
 
           <FixedStrikeIvMatrix
@@ -304,8 +306,6 @@ export default function App() {
             sviSource={sviFits.source}
             underlying={data.underlying}
           />
-
-          <VolatilityRiskPremium />
         </>
       )}
     </div>
