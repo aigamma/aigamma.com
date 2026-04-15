@@ -9,6 +9,7 @@ import {
   plotlyTitle,
 } from '../lib/plotlyTheme';
 import { computeGexByStrike, symlog, symlogTicks } from '../lib/gex';
+import { mergeCollidingLabels } from '../lib/labelCollision';
 
 const PLOTLY_LAYOUT_BASE = {
   ...PLOTLY_BASE_LAYOUT_2D,
@@ -189,18 +190,68 @@ export default function GexProfile({ contracts, spotPrice, levels }) {
         }
       }
 
+      // Corner labels and SPOT numeric value render outside the collision
+      // pipeline. SPOT is a reference input (the current index price the
+      // chart is drawn around), not a derived level like CW/PW/FLIP, so it
+      // gets a lighter visual treatment — small unboxed blue text anchored
+      // inside the plot area at the top of the dashed SPOT line — and is
+      // exempted from collision detection so it never competes with or
+      // merges into the level-label row.
       const newLabels = [
-        { left: px(spotPrice), top: topY, color: PLOTLY_COLORS.primary, text: 'SPOT' },
         { corner: 'left', offset: 20, top: titleTop, color: PLOTLY_COLORS.negative, text: 'Put Gamma' },
         { corner: 'right', offset: 20, top: titleTop, color: PLOTLY_COLORS.positive, text: 'Call Gamma' },
       ];
+      if (spotPrice != null) {
+        newLabels.push({
+          spot: true,
+          left: px(spotPrice),
+          top: dataTopY + 5,
+          color: PLOTLY_COLORS.primary,
+          value: spotPrice,
+        });
+      }
+
+      // Collect the derived-level labels and run them through the shared
+      // horizontal-proximity merger. Walls (CW, PW) rank above the flip so
+      // a CW+FLIP or PW+FLIP collision produces a merged label anchored at
+      // the wall's top-of-plot row rather than at the flip's above-rangeslider
+      // row, and walls tie on priority so a CW+PW collision is broken by the
+      // alphabetical key order inside the merger.
+      const levelCandidates = [];
       if (levels) {
-        if (levels.call_wall != null)
-          newLabels.push({ left: px(levels.call_wall), top: topY, color: PLOTLY_COLORS.positive, text: 'CW' });
-        if (levels.put_wall != null)
-          newLabels.push({ left: px(levels.put_wall), top: topY, color: PLOTLY_COLORS.negative, text: 'PW' });
-        if (levels.volatility_flip != null)
-          newLabels.push({ left: px(levels.volatility_flip), top: bottomY, color: PLOTLY_COLORS.highlight, text: 'FLIP' });
+        if (levels.call_wall != null) {
+          levelCandidates.push({
+            key: 'CW',
+            value: levels.call_wall,
+            priority: 1,
+            x: px(levels.call_wall),
+            top: topY,
+            color: PLOTLY_COLORS.positive,
+          });
+        }
+        if (levels.put_wall != null) {
+          levelCandidates.push({
+            key: 'PW',
+            value: levels.put_wall,
+            priority: 1,
+            x: px(levels.put_wall),
+            top: topY,
+            color: PLOTLY_COLORS.negative,
+          });
+        }
+        if (levels.volatility_flip != null) {
+          levelCandidates.push({
+            key: 'FLIP',
+            value: levels.volatility_flip,
+            priority: 2,
+            x: px(levels.volatility_flip),
+            top: bottomY,
+            color: PLOTLY_COLORS.highlight,
+          });
+        }
+      }
+      for (const merged of mergeCollidingLabels(levelCandidates)) {
+        newLabels.push({ level: true, ...merged });
       }
       setLabels(newLabels);
     });
@@ -250,19 +301,46 @@ export default function GexProfile({ contracts, spotPrice, levels }) {
               </div>
             );
           }
+          if (l.spot) {
+            return (
+              <div
+                key={i}
+                style={{
+                  position: 'absolute',
+                  left: l.left,
+                  top: l.top,
+                  transform: 'translate(-50%, 0)',
+                  color: l.color,
+                  fontFamily: 'Courier New, monospace',
+                  fontSize: '11px',
+                  fontWeight: 'normal',
+                  lineHeight: 1,
+                  pointerEvents: 'none',
+                  whiteSpace: 'nowrap',
+                }}
+              >
+                {Number(l.value).toLocaleString('en-US', { maximumFractionDigits: 0 })}
+              </div>
+            );
+          }
           return (
             <div
               key={i}
               style={{
                 ...LABEL_STYLE,
-                left: l.left,
+                left: l.x,
                 top: l.top,
                 transform: 'translate(-50%, -100%)',
                 color: l.color,
                 border: `1.5px solid ${l.color}`,
               }}
             >
-              {l.text}
+              {l.segments.map((s, si) => (
+                <span key={s.key}>
+                  {si > 0 && <span style={{ color: PLOTLY_COLORS.axisText }}> / </span>}
+                  <span style={{ color: s.color }}>{s.display}</span>
+                </span>
+              ))}
             </div>
           );
         })}

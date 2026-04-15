@@ -7,6 +7,7 @@ import {
   plotlyRangeslider,
   plotlyTitle,
 } from '../lib/plotlyTheme';
+import { mergeCollidingLabels } from '../lib/labelCollision';
 
 // Dollar gamma notional is in the $10^9-$10^11 range at SPX scale. A plain SI
 // tick formatter (Plotly's '.2s') is sufficient — no symlog compression needed
@@ -185,7 +186,6 @@ export default function GammaInflectionChart({ spotPrice, levels }) {
 
       const yDomain = fl.yaxis?.domain || [0, 1];
       const dataTopY = mt + plotH * (1 - yDomain[1]);
-      const topY = dataTopY - 5;
 
       // Anchor FLIP above the main x-axis tick-label strip (the strike-price
       // row Plotly renders between the data plot and the rangeslider). Prefer
@@ -228,25 +228,43 @@ export default function GammaInflectionChart({ spotPrice, levels }) {
         }
       }
 
+      // Corner labels and SPOT numeric value render outside the collision
+      // pipeline. SPOT is a reference input (the current index price the
+      // chart is drawn around), not a derived level like FLIP, so it gets a
+      // lighter visual treatment — small unboxed blue text anchored inside
+      // the plot area at the top of the dashed SPOT line — and is exempted
+      // from collision detection so it never competes with FLIP. The
+      // inflection chart only has a single derived level label (FLIP), so
+      // the collision merger is effectively a no-op here; it's still run
+      // through the shared helper to keep both gamma charts on the same
+      // code path in case we add more level annotations to this chart later.
       const newLabels = [
         { corner: 'left', offset: 20, top: titleTop, color: PLOTLY_COLORS.negative, text: 'Put Gamma' },
         { corner: 'right', offset: 20, top: titleTop, color: PLOTLY_COLORS.positive, text: 'Call Gamma' },
       ];
       if (spotPrice != null) {
         newLabels.push({
+          spot: true,
           left: px(spotPrice),
-          top: topY,
+          top: dataTopY + 5,
           color: PLOTLY_COLORS.primary,
-          text: 'SPOT',
+          value: spotPrice,
         });
       }
+
+      const levelCandidates = [];
       if (volFlip != null) {
-        newLabels.push({
-          left: px(volFlip),
+        levelCandidates.push({
+          key: 'FLIP',
+          value: volFlip,
+          priority: 2,
+          x: px(volFlip),
           top: bottomY,
           color: PLOTLY_COLORS.highlight,
-          text: 'FLIP',
         });
+      }
+      for (const merged of mergeCollidingLabels(levelCandidates)) {
+        newLabels.push({ level: true, ...merged });
       }
       setLabels(newLabels);
     });
@@ -302,19 +320,46 @@ export default function GammaInflectionChart({ spotPrice, levels }) {
               </div>
             );
           }
+          if (l.spot) {
+            return (
+              <div
+                key={i}
+                style={{
+                  position: 'absolute',
+                  left: l.left,
+                  top: l.top,
+                  transform: 'translate(-50%, 0)',
+                  color: l.color,
+                  fontFamily: 'Courier New, monospace',
+                  fontSize: '11px',
+                  fontWeight: 'normal',
+                  lineHeight: 1,
+                  pointerEvents: 'none',
+                  whiteSpace: 'nowrap',
+                }}
+              >
+                {Number(l.value).toLocaleString('en-US', { maximumFractionDigits: 0 })}
+              </div>
+            );
+          }
           return (
             <div
               key={i}
               style={{
                 ...LABEL_STYLE,
-                left: l.left,
+                left: l.x,
                 top: l.top,
                 transform: 'translate(-50%, -100%)',
                 color: l.color,
                 border: `1.5px solid ${l.color}`,
               }}
             >
-              {l.text}
+              {l.segments.map((s, si) => (
+                <span key={s.key}>
+                  {si > 0 && <span style={{ color: PLOTLY_COLORS.axisText }}> / </span>}
+                  <span style={{ color: s.color }}>{s.display}</span>
+                </span>
+              ))}
             </div>
           );
         })}
