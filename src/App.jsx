@@ -4,12 +4,14 @@ import LevelsPanel from './components/LevelsPanel';
 import GexProfile from './components/GexProfile';
 import GammaInflectionChart from './components/GammaInflectionChart';
 import TermStructure from './components/TermStructure';
+import ProbabilityCloud from './components/ProbabilityCloud';
 import FixedStrikeIvMatrix from './components/FixedStrikeIvMatrix';
 import RiskNeutralDensity from './components/RiskNeutralDensity';
 import VolSurface3D from './components/VolSurface3D';
 import useOptionsData from './hooks/useOptionsData';
 import useSviFits from './hooks/useSviFits';
 import { computeGammaProfile, findFlipFromProfile } from './lib/gammaProfile';
+import { mockProbabilityCloud } from './lib/mockProbabilityCloud';
 
 function formatFreshness(isoString) {
   if (!isoString) return null;
@@ -165,6 +167,19 @@ export default function App() {
     };
   }, [data]);
 
+  // Scaffolded against synthetic bands while the reconciliation backfill
+  // populates real daily_cloud_bands / daily_term_structure rows. Swap the
+  // mock import for a useProbabilityCloud hook once the backend is live.
+  const capturedAt = data?.capturedAt;
+  const probabilityCloudMock = useMemo(() => {
+    const fmt = new Intl.DateTimeFormat('en-CA', {
+      timeZone: 'America/New_York',
+      year: 'numeric', month: '2-digit', day: '2-digit',
+    });
+    const tradingDate = fmt.format(capturedAt ? new Date(capturedAt) : new Date());
+    return mockProbabilityCloud(tradingDate);
+  }, [capturedAt]);
+
   const freshness = data ? formatFreshness(data.capturedAt) : null;
   const isSynthetic = data && data.source === 'synthetic';
   const regime = data ? classifyGammaRegime(correctedLevels, data.spotPrice) : null;
@@ -315,6 +330,8 @@ export default function App() {
             expirationMetrics={data.expirationMetrics}
             capturedAt={data.capturedAt}
           />
+
+          <ProbabilityCloud {...probabilityCloudMock} />
 
           <FixedStrikeIvMatrix
             contracts={data.contracts}
