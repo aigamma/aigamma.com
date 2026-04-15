@@ -21,17 +21,6 @@ function oneYearBefore(dateStr) {
   return d.toISOString().slice(0, 10);
 }
 
-// Normalize a ThetaData EOD greeks response into our derived shape.
-// The wire format for v3 greeks/eod with exp=* is non-trivial; deriving
-// PW/CW/VF levels and per-expiration ATM IVs from a raw chain lives in
-// its own module that doesn't exist yet. For now, the client must pass
-// a pre-derived shape under response.derived. The harness supplies this
-// directly to isolate state-machine semantics from wire-format parsing.
-function deriveFromEod(response) {
-  if (response?.derived) return response.derived;
-  throw new Error('theta-client: wire-format derivation not yet implemented; supply response.derived');
-}
-
 export async function runReconciliation(ctx) {
   const { db, theta, logger, clock } = ctx;
   const today = clock.todayEastern();
@@ -90,7 +79,17 @@ async function processDay(ctx, tradingDate) {
     logger.info('reconcile.theta_eod_not_available', { trading_date: tradingDate });
     return { status: 'deferred' };
   }
-  const thetaDerived = deriveFromEod(eodResponse);
+  // The production wire-format parser is not yet implemented; the test
+  // harness supplies a pre-derived { levels, termStructure } shape under
+  // `response.derived` so the state-machine contract can be exercised
+  // end-to-end without depending on CSV parsing. A real-theta invocation
+  // will defer here because the throw-stub in theta-client.fetchEodGreeks
+  // trips before this line is ever reached.
+  const thetaDerived = eodResponse.derived;
+  if (!thetaDerived) {
+    logger.warn('reconcile.theta_derived_missing', { trading_date: tradingDate });
+    return { status: 'deferred' };
+  }
 
   const dayRow = await db.getDay(tradingDate);
   if (!dayRow) {
