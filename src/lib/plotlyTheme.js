@@ -117,3 +117,16 @@ export function plotlyRangeslider(extras = {}) {
     ...extras,
   };
 }
+
+// Composes PLOTLY_BASE_LAYOUT_2D with the transparent-card background every
+// 2D chart overrides anyway (charts sit inside dark cards, so the plot area
+// reads through to var(--bg-card) instead of PLOTLY_COLORS.plot). Extras are
+// applied last so callers can set margin, title, axes, shapes, etc.
+export function plotly2DChartLayout(extras = {}) {
+  return {
+    ...PLOTLY_BASE_LAYOUT_2D,
+    paper_bgcolor: 'rgba(0,0,0,0)',
+    plot_bgcolor: 'rgba(0,0,0,0)',
+    ...extras,
+  };
+}

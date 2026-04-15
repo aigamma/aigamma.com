@@ -10,42 +10,7 @@ import VolSurface3D from './components/VolSurface3D';
 import useOptionsData from './hooks/useOptionsData';
 import useSviFits from './hooks/useSviFits';
 import { computeGammaProfile, findFlipFromProfile } from './lib/gammaProfile';
-
-function formatFreshness(isoString) {
-  if (!isoString) return null;
-  const d = new Date(isoString);
-  if (Number.isNaN(d.getTime())) return null;
-  const et = new Intl.DateTimeFormat('en-US', {
-    timeZone: 'America/New_York',
-    month: 'short',
-    day: 'numeric',
-    hour: 'numeric',
-    minute: '2-digit',
-    hour12: false,
-  }).format(d);
-  return `${et} ET`;
-}
-
-// True on weekends or on weekdays after 16:30 ET. The SPX cash session closes
-// at 16:15 ET, but the Massive feed is 15-min-delayed so the final closing
-// print only lands in the backend at 16:30 ET (matches the cron gate in
-// netlify/functions/ingest.mjs). After 16:30 ET no fresher snapshot is
-// expected, so the header label flips from "Last updated:" (implies ongoing
-// updates) to "Final:" (implies the snapshot is done moving).
-function isMarketClosed(nowDate) {
-  const parts = new Intl.DateTimeFormat('en-US', {
-    timeZone: 'America/New_York',
-    weekday: 'short',
-    hour: '2-digit',
-    minute: '2-digit',
-    hourCycle: 'h23',
-  }).formatToParts(nowDate);
-  const lookup = Object.fromEntries(parts.map((p) => [p.type, p.value]));
-  if (lookup.weekday === 'Sat' || lookup.weekday === 'Sun') return true;
-  const hour = parseInt(lookup.hour, 10);
-  const minute = parseInt(lookup.minute, 10);
-  return hour * 60 + minute >= 16 * 60 + 30;
-}
+import { formatFreshness, isMarketClosed } from './lib/dates';
 
 function classifyGammaRegime(levels, spotPrice) {
   if (!levels || spotPrice == null) return null;

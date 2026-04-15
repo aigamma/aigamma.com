@@ -1,12 +1,13 @@
 import { useEffect, useMemo, useRef } from 'react';
 import usePlotly from '../hooks/usePlotly';
 import {
-  PLOTLY_BASE_LAYOUT_2D,
   PLOTLY_COLORS,
+  plotly2DChartLayout,
   plotlyAxis,
   plotlyRangeslider,
   plotlyTitle,
 } from '../lib/plotlyTheme';
+import { addDaysIso, daysBetween, tradingDateFromCapturedAt } from '../lib/dates';
 
 // Cloud-band visual language:
 // - Four discrete percentile bands, each an independent fill: 'toself'
@@ -43,46 +44,10 @@ const BAND_UPPER    = 'rgba(230, 126, 34, 0.28)';  // p50-p75 (upper-mid, orange
 const BAND_LOWER    = 'rgba(241, 196, 15, 0.28)';  // p25-p50 (lower-mid, yellow)
 const BAND_BOTTOM   = 'rgba(46, 204, 113, 0.32)';  // p10-p25 (calm band, green)
 
-// Tight bottom margin matches GammaInflectionChart's `b: 15` so the
-// rangeslider sits flush against the card floor instead of leaving a
-// strip of empty card underneath. Previous `b: 90` was copy-paste from a
-// chart that had axis-title text below the rangeslider; this one has
-// none.
-const PLOTLY_LAYOUT_BASE = {
-  ...PLOTLY_BASE_LAYOUT_2D,
-  margin: { t: 50, r: 40, b: 15, l: 70 },
-  yaxis: plotlyAxis('ATM IV (%)', { tickformat: '.1f' }),
-};
-
-function tradingDateFromCapturedAt(capturedAt) {
-  if (!capturedAt) return null;
-  const d = new Date(capturedAt);
-  if (Number.isNaN(d.getTime())) return null;
-  return new Intl.DateTimeFormat('en-CA', {
-    timeZone: 'America/New_York',
-    year: 'numeric', month: '2-digit', day: '2-digit',
-  }).format(d);
-}
-
-function daysBetween(isoDate, referenceMs) {
-  if (!isoDate) return null;
-  const target = new Date(`${isoDate}T16:00:00-04:00`).getTime();
-  if (Number.isNaN(target)) return null;
-  const diff = (target - referenceMs) / (1000 * 60 * 60 * 24);
-  return Math.max(0, Math.round(diff * 10) / 10);
-}
-
-// Bands arrive from the backend as DTE-keyed rows (see
-// daily_cloud_bands schema). Calendar x values are derived from the
-// observed trading date plus integer DTE, so the cloud lines up with
-// the live term-structure trace that uses the same anchor date.
-function addDaysIso(isoDate, days) {
-  if (!isoDate) return null;
-  const d = new Date(`${isoDate}T00:00:00Z`);
-  if (Number.isNaN(d.getTime())) return null;
-  d.setUTCDate(d.getUTCDate() + days);
-  return d.toISOString().slice(0, 10);
-}
+// Bands arrive from the backend as DTE-keyed rows (see daily_cloud_bands
+// schema). Calendar x values are derived from the observed trading date
+// plus integer DTE, so the cloud lines up with the live term-structure
+// trace that uses the same anchor date.
 
 function toPct(iv) {
   return iv == null ? null : iv * 100;
@@ -201,11 +166,14 @@ export default function TermStructure({ expirationMetrics, capturedAt, cloudBand
       });
     }
 
-    const layout = {
-      ...PLOTLY_LAYOUT_BASE,
+    // Tight bottom margin matches GammaInflectionChart's `b: 15` so the
+    // rangeslider sits flush against the card floor instead of leaving a
+    // strip of empty card underneath. Previous `b: 90` was copy-paste from a
+    // chart with an axis-title row below the slider that this one doesn't
+    // have.
+    const layout = plotly2DChartLayout({
+      margin: { t: 50, r: 40, b: 15, l: 70 },
       title: plotlyTitle('Term Structure'),
-      paper_bgcolor: 'rgba(0,0,0,0)',
-      plot_bgcolor: 'rgba(0,0,0,0)',
       xaxis: plotlyAxis('', {
         type: 'date',
         range: [startDate, initialWindowEnd],
@@ -215,9 +183,10 @@ export default function TermStructure({ expirationMetrics, capturedAt, cloudBand
           autorange: false,
         }),
       }),
+      yaxis: plotlyAxis('ATM IV (%)', { tickformat: '.1f' }),
       shapes,
       annotations,
-    };
+    });
 
     Plotly.newPlot(chartRef.current, traces, layout, {
       responsive: true,

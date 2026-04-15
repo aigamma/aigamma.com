@@ -1,26 +1,5 @@
-function formatInteger(value) {
-  if (value == null) return '—';
-  return Math.round(value).toLocaleString('en-US');
-}
-
-function formatGamma(value) {
-  if (value == null) return '—';
-  const abs = Math.abs(value);
-  if (abs >= 1e9) return `${(value / 1e9).toFixed(2)}B`;
-  if (abs >= 1e6) return `${(value / 1e6).toFixed(2)}M`;
-  if (abs >= 1e3) return `${(value / 1e3).toFixed(2)}K`;
-  return value.toFixed(0);
-}
-
-function formatPercent(value, digits = 2) {
-  if (value == null) return '—';
-  return `${(value * 100).toFixed(digits)}%`;
-}
-
-function formatRatio(value) {
-  if (value == null) return '—';
-  return value.toFixed(2);
-}
+import { formatGamma, formatInteger, formatPercent, formatRatio } from '../lib/format';
+import { daysToExpiration } from '../lib/dates';
 
 function distanceSub(level, spot) {
   if (level == null || spot == null) return null;
@@ -36,15 +15,6 @@ function spotDeltaSub(spot, prevClose) {
   const pct = (dollar / prevClose) * 100;
   const sign = dollar >= 0 ? '+' : '';
   return `${sign}${dollar.toFixed(2)}  ·  ${sign}${pct.toFixed(2)}%`;
-}
-
-function daysToExpiration(expirationDate, capturedAt) {
-  if (!expirationDate || !capturedAt) return null;
-  const target = new Date(`${expirationDate}T16:00:00-04:00`).getTime();
-  const ref = new Date(capturedAt).getTime();
-  if (Number.isNaN(target) || Number.isNaN(ref)) return null;
-  const diffDays = (target - ref) / (1000 * 60 * 60 * 24);
-  return Math.max(0, diffDays);
 }
 
 function expectedMoveDollar(spot, atmIv, dte) {
