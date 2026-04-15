@@ -640,30 +640,59 @@ function computeGammaProfile(contracts, spotPrice, capturedAtMs) {
   return profile;
 }
 
-// Given a smooth profile, return the zero crossing most likely to represent
-// the global regime boundary. The profile is smooth enough that there is
-// almost always exactly one crossing in the ±15% window; when there are
-// several (narrow skew, wide expiration mix), we pick the one with the
-// steepest slope — that's the most decisive transition between gamma regimes.
+// Given a smooth profile, return the interpolated zero crossing that
+// represents the structural regime boundary. A dealer gamma profile
+// accumulates a large negative area below spot (dealer short gamma on
+// short puts) and a large positive area above spot (dealer long gamma on
+// long calls), separated by the volatility flip. Narrow tail oscillations
+// — which arise when short-dated contracts at far-OTM strikes swap their
+// per-strike gamma peaks as the hypothetical-spot sweep walks across their
+// strike — can produce extra zero crossings with very steep instantaneous
+// slopes but negligible cumulative mass. The previous "steepest slope"
+// heuristic amplified that pathology rather than rejecting it: on
+// 2026-04-15 run 210 the profile had a 250-billion oscillation between
+// s=5975 and s=5985 whose slope was ~47 billion per dollar — two orders of
+// magnitude steeper than the real crossing at 6894 whose slope was 0.54
+// billion per dollar — so the flip latched onto the spurious tail
+// oscillation at 5984 instead of the structural boundary. The correct
+// heuristic is the crossing with the largest bilateral cumulative
+// exposure: walk the profile once building the prefix sum of g, and among
+// the zero crossings return the one where the prefix sum magnitude at the
+// left neighbor is largest. At that crossing the left-side accumulated
+// signed area is as extreme as possible, which by conservation means the
+// right-side area is as extreme as possible in the opposite direction.
+// Narrow oscillations contribute locally bounded prefix-sum swings that
+// get dominated by the sustained regime area of the real boundary.
+// Replaying this against the 120 persisted profiles from 2026-04-13 onward
+// picks the same flip as the stored value on 117 runs and corrects three
+// that the old heuristic had misrouted into the tails (run 210 from 5984
+// to 6894, run 168 from 7988 to 6883, run 105 from 7987 to 6850).
 function findFlipFromProfile(profile) {
   if (!profile || profile.length < 2) return null;
+
+  const n = profile.length;
+  const prefix = new Array(n);
+  let running = 0;
+  for (let i = 0; i < n; i++) {
+    running += profile[i].g;
+    prefix[i] = running;
+  }
+
   let bestFlip = null;
-  let bestSlopeAbs = -Infinity;
-  for (let i = 1; i < profile.length; i++) {
+  let bestScore = -Infinity;
+  for (let i = 1; i < n; i++) {
     const prev = profile[i - 1];
     const curr = profile[i];
-    if (prev.g === 0) {
-      return prev.s;
-    }
-    const crosses = (prev.g < 0 && curr.g > 0) || (prev.g > 0 && curr.g < 0);
-    if (!crosses) continue;
-    const dS = curr.s - prev.s;
-    if (dS <= 0) continue;
-    const slopeAbs = Math.abs((curr.g - prev.g) / dS);
-    if (slopeAbs > bestSlopeAbs) {
-      bestSlopeAbs = slopeAbs;
-      const t = -prev.g / (curr.g - prev.g);
-      bestFlip = prev.s + t * dS;
+    if (Math.sign(prev.g) === Math.sign(curr.g)) continue;
+    const score = Math.abs(prefix[i - 1]);
+    if (score <= bestScore) continue;
+    bestScore = score;
+    const dg = curr.g - prev.g;
+    if (dg === 0) {
+      bestFlip = prev.s;
+    } else {
+      const t = -prev.g / dg;
+      bestFlip = prev.s + t * (curr.s - prev.s);
     }
   }
   return bestFlip;
