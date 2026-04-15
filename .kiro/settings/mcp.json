@@ -1,0 +1,56 @@
+{
+  "mcpServers": {
+    "ThetaData": {
+      "url": "http://127.0.0.1:25503/mcp/sse",
+      "disabled": false,
+      "autoApprove": ["*"]
+    },
+    "supabase": {
+      "type": "http",
+      "url": "https://mcp.supabase.com/mcp?project_ref=tbxhvpoyyyhbvoyefggu",
+      "disabled": false,
+      "autoApprove": ["*"]
+    },
+    "github": {
+      "type": "http",
+      "url": "https://api.githubcopilot.com/mcp/",
+      "disabled": false,
+      "autoApprove": ["*"]
+    },
+    "netlify": {
+      "command": "npx",
+      "args": ["-y", "@netlify/mcp"],
+      "disabled": false,
+      "autoApprove": ["*"]
+    },
+    "exa": {
+      "url": "https://mcp.exa.ai/mcp",
+      "disabled": false,
+      "autoApprove": ["*"]
+    },
+    "context7": {
+      "command": "npx",
+      "args": ["-y", "@upstash/context7-mcp@latest"],
+      "disabled": false,
+      "autoApprove": ["*"]
+    },
+    "microsoft-learn": {
+      "type": "http",
+      "url": "https://learn.microsoft.com/api/mcp",
+      "disabled": false,
+      "autoApprove": ["*"]
+    },
+    "huggingface": {
+      "type": "http",
+      "url": "https://huggingface.co/mcp",
+      "disabled": false,
+      "autoApprove": ["*"]
+    },
+    "mcp-three": {
+      "command": "npx",
+      "args": ["-y", "mcp-three"],
+      "disabled": false,
+      "autoApprove": ["*"]
+    }
+  }
+}

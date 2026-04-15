@@ -1,0 +1,16 @@
+{
+  "enabled": true,
+  "name": "Check Netlify Function Env Vars",
+  "description": "Reminds the agent to verify environment variable references when editing Netlify serverless functions.",
+  "version": "1",
+  "when": {
+    "type": "fileEdited",
+    "patterns": [
+      "netlify/functions/*.mjs"
+    ]
+  },
+  "then": {
+    "type": "askAgent",
+    "prompt": "A Netlify function was just edited. Verify that any process.env references match the variables listed in .env.example (SUPABASE_URL, SUPABASE_KEY, SUPABASE_SERVICE_KEY, MASSIVE_API_KEY, INGEST_SECRET, INGEST_BACKGROUND_URL, URL). Flag any new env vars that would need to be added to both .env.example and the Netlify dashboard."
+  }
+}

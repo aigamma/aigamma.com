@@ -1,0 +1,19 @@
+{
+  "enabled": true,
+  "name": "Lint After Edit",
+  "description": "Runs ESLint after editing .jsx or .mjs files to catch syntax and style issues early.",
+  "version": "1",
+  "when": {
+    "type": "fileEdited",
+    "patterns": [
+      "*.jsx",
+      "*.mjs",
+      "*.js"
+    ]
+  },
+  "then": {
+    "type": "runCommand",
+    "command": "npx eslint --no-warn-ignored --max-warnings 0 .",
+    "timeout": 30
+  }
+}
