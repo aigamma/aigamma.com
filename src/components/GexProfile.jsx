@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useRef, useState } from 'react';
+import { useEffect, useMemo, useRef } from 'react';
 import usePlotly from '../hooks/usePlotly';
 import {
   PLOTLY_BASE_LAYOUT_2D,
@@ -6,14 +6,13 @@ import {
   PLOTLY_SERIES_OPACITY,
   plotlyAxis,
   plotlyRangeslider,
-  plotlyTitle,
 } from '../lib/plotlyTheme';
 import { computeGexByStrike, symlog, symlogTicks } from '../lib/gex';
-import { mergeCollidingLabels } from '../lib/labelCollision';
+import { formatInteger } from '../lib/format';
 
 const PLOTLY_LAYOUT_BASE = {
   ...PLOTLY_BASE_LAYOUT_2D,
-  margin: { t: 85, r: 30, b: 15, l: 80 },
+  margin: { t: 20, r: 30, b: 15, l: 80 },
   xaxis: plotlyAxis('', { title: '', rangeslider: plotlyRangeslider() }),
   yaxis: plotlyAxis('Gamma Exposure ($ notional)', {
     zerolinewidth: 2,
@@ -22,21 +21,43 @@ const PLOTLY_LAYOUT_BASE = {
   barmode: 'relative',
 };
 
-const LABEL_STYLE = {
-  position: 'absolute',
-  backgroundColor: '#10131A',
-  padding: '2px 6px',
-  fontSize: '12px',
-  fontFamily: 'Courier New, monospace',
-  fontWeight: 'bold',
-  pointerEvents: 'none',
-  whiteSpace: 'nowrap',
-};
+function LevelLabel({ name, value, color }) {
+  if (value == null) return null;
+  return (
+    <div
+      style={{
+        display: 'flex',
+        alignItems: 'baseline',
+        gap: '0.5rem',
+        fontFamily: 'Courier New, monospace',
+      }}
+    >
+      <span
+        style={{
+          color: 'var(--text-secondary)',
+          fontSize: '0.75rem',
+          textTransform: 'uppercase',
+          letterSpacing: '0.08em',
+        }}
+      >
+        {name}
+      </span>
+      <span
+        style={{
+          color,
+          fontSize: '1rem',
+          fontWeight: 'bold',
+        }}
+      >
+        {formatInteger(value)}
+      </span>
+    </div>
+  );
+}
 
 export default function GexProfile({ contracts, spotPrice, levels }) {
   const chartRef = useRef(null);
   const { plotly: Plotly, error: plotlyError } = usePlotly();
-  const [labels, setLabels] = useState([]);
 
   const gexData = useMemo(() => {
     if (!contracts || contracts.length === 0 || !spotPrice) return null;
@@ -83,7 +104,10 @@ export default function GexProfile({ contracts, spotPrice, levels }) {
       },
     ];
 
-    // Dashed vertical reference lines only — labels are rendered as HTML
+    // Dashed vertical reference lines only — no text attached. The horizontal
+    // legend row above the chart names each line and supplies the numeric
+    // value, so the in-plot markers carry no labels of their own and stay
+    // locked to data coordinates as the user pans or zooms the rangeslider.
     const shapes = [];
     const pushLine = (x, color) => {
       if (x == null) return;
@@ -98,10 +122,12 @@ export default function GexProfile({ contracts, spotPrice, levels }) {
       });
     };
 
-    pushLine(spotPrice, PLOTLY_COLORS.primary);
     if (levels) {
+      pushLine(levels.put_wall, PLOTLY_COLORS.negative);
       pushLine(levels.volatility_flip, PLOTLY_COLORS.highlight);
+      pushLine(levels.call_wall, PLOTLY_COLORS.positive);
     }
+    pushLine(spotPrice, PLOTLY_COLORS.primary);
 
     const strikeMin = strikes[0];
     const strikeMax = strikes[strikes.length - 1];
@@ -110,11 +136,6 @@ export default function GexProfile({ contracts, spotPrice, levels }) {
 
     const layout = {
       ...PLOTLY_LAYOUT_BASE,
-      title: {
-        ...plotlyTitle('AI Gamma Map'),
-        y: 0.97,
-        yanchor: 'top',
-      },
       xaxis: plotlyAxis('', {
         title: '',
         range: [zoomLow, zoomHigh],
@@ -135,125 +156,6 @@ export default function GexProfile({ contracts, spotPrice, levels }) {
     Plotly.newPlot(chartRef.current, traces, layout, {
       responsive: true,
       displayModeBar: false,
-    }).then(() => {
-      const fl = chartRef.current?._fullLayout;
-      if (!fl) return;
-      const { l: ml, t: mt, b: mb, r: mr } = fl.margin;
-      const plotW = fl.width - ml - mr;
-      const plotH = fl.height - mt - mb;
-      const [xMin, xMax] = fl.xaxis.range;
-      const xScale = plotW / (xMax - xMin);
-      const px = (dataX) => ml + (dataX - xMin) * xScale;
-
-      const yDomain = fl.yaxis?.domain || [0, 1];
-      const dataTopY = mt + plotH * (1 - yDomain[1]);
-      const topY = dataTopY - 5;
-
-      // Anchor FLIP above the main x-axis tick-label strip (the strike-price
-      // row Plotly renders between the data plot and the rangeslider). Prefer
-      // the rendered `.xaxislayer-above` group's bounding box since it's what
-      // actually contains the tick labels; fall back to a larger offset from
-      // the rangeslider rect so the label still clears the label row if the
-      // selector changes in a future Plotly release.
-      let bottomY;
-      const container = chartRef.current;
-      if (container) {
-        const containerRect = container.getBoundingClientRect();
-        const xAxisLayer = container.querySelector('.xaxislayer-above');
-        if (xAxisLayer) {
-          const layerRect = xAxisLayer.getBoundingClientRect();
-          bottomY = layerRect.top - containerRect.top - 10;
-        } else {
-          const rangesliderBg = container.querySelector('.rangeslider-bg');
-          if (rangesliderBg) {
-            const sliderRect = rangesliderBg.getBoundingClientRect();
-            bottomY = sliderRect.top - containerRect.top - 35;
-          } else {
-            bottomY = mt + plotH * (1 - yDomain[0]) - 35;
-          }
-        }
-      } else {
-        bottomY = mt + plotH * (1 - yDomain[0]) - 35;
-      }
-
-      // Query the rendered title SVG group so the Put Gamma / Call Gamma
-      // corner labels can sit on the exact same horizontal baseline as the
-      // "AI Gamma Map" title, regardless of how Plotly internally resolves
-      // the title's container-coord y=0.97 value to a pixel offset.
-      let titleTop = 22;
-      if (container) {
-        const titleEl = container.querySelector('.gtitle');
-        if (titleEl) {
-          const cRect = container.getBoundingClientRect();
-          const titleRect = titleEl.getBoundingClientRect();
-          titleTop = titleRect.top - cRect.top;
-        }
-      }
-
-      // Corner labels and SPOT numeric value render outside the collision
-      // pipeline. SPOT is a reference input (the current index price the
-      // chart is drawn around), not a derived level like CW/PW/FLIP, so it
-      // gets a lighter visual treatment — small unboxed blue text anchored
-      // inside the plot area at the top of the dashed SPOT line — and is
-      // exempted from collision detection so it never competes with or
-      // merges into the level-label row.
-      const newLabels = [
-        { corner: 'left', offset: 20, top: titleTop, color: PLOTLY_COLORS.negative, text: 'Put Gamma' },
-        { corner: 'right', offset: 20, top: titleTop, color: PLOTLY_COLORS.positive, text: 'Call Gamma' },
-      ];
-      if (spotPrice != null) {
-        newLabels.push({
-          spot: true,
-          left: px(spotPrice),
-          top: dataTopY + 5,
-          color: PLOTLY_COLORS.primary,
-          value: spotPrice,
-        });
-      }
-
-      // Collect the derived-level labels and run them through the shared
-      // horizontal-proximity merger. Walls (CW, PW) rank above the flip so
-      // a CW+FLIP or PW+FLIP collision produces a merged label anchored at
-      // the wall's top-of-plot row rather than at the flip's above-rangeslider
-      // row, and walls tie on priority so a CW+PW collision is broken by the
-      // alphabetical key order inside the merger.
-      const levelCandidates = [];
-      if (levels) {
-        if (levels.call_wall != null) {
-          levelCandidates.push({
-            key: 'CW',
-            value: levels.call_wall,
-            priority: 1,
-            x: px(levels.call_wall),
-            top: topY,
-            color: PLOTLY_COLORS.positive,
-          });
-        }
-        if (levels.put_wall != null) {
-          levelCandidates.push({
-            key: 'PW',
-            value: levels.put_wall,
-            priority: 1,
-            x: px(levels.put_wall),
-            top: topY,
-            color: PLOTLY_COLORS.negative,
-          });
-        }
-        if (levels.volatility_flip != null) {
-          levelCandidates.push({
-            key: 'FLIP',
-            value: levels.volatility_flip,
-            priority: 2,
-            x: px(levels.volatility_flip),
-            top: bottomY,
-            color: PLOTLY_COLORS.highlight,
-          });
-        }
-      }
-      for (const merged of mergeCollidingLabels(levelCandidates)) {
-        newLabels.push({ level: true, ...merged });
-      }
-      setLabels(newLabels);
     });
   }, [Plotly, gexData, spotPrice, levels]);
 
@@ -273,78 +175,43 @@ export default function GexProfile({ contracts, spotPrice, levels }) {
 
   return (
     <div className="card" style={{ marginBottom: '1rem' }}>
-      <div style={{ position: 'relative' }}>
+      <div
+        style={{
+          padding: '0.75rem 1rem 0.5rem 1rem',
+          display: 'flex',
+          flexDirection: 'column',
+          gap: '0.6rem',
+        }}
+      >
         <div
-          ref={chartRef}
-          style={{ width: '100%', height: '700px', backgroundColor: 'var(--bg-card)' }}
-        />
-        {labels.map((l, i) => {
-          if (l.corner) {
-            return (
-              <div
-                key={i}
-                style={{
-                  position: 'absolute',
-                  top: l.top,
-                  left: l.corner === 'left' ? l.offset : undefined,
-                  right: l.corner === 'right' ? l.offset : undefined,
-                  color: l.color,
-                  fontFamily: 'Courier New, monospace',
-                  fontSize: '20px',
-                  fontWeight: 'bold',
-                  lineHeight: 1,
-                  pointerEvents: 'none',
-                  whiteSpace: 'nowrap',
-                }}
-              >
-                {l.text}
-              </div>
-            );
-          }
-          if (l.spot) {
-            return (
-              <div
-                key={i}
-                style={{
-                  position: 'absolute',
-                  left: l.left,
-                  top: l.top,
-                  transform: 'translate(-50%, 0)',
-                  color: l.color,
-                  fontFamily: 'Courier New, monospace',
-                  fontSize: '11px',
-                  fontWeight: 'normal',
-                  lineHeight: 1,
-                  pointerEvents: 'none',
-                  whiteSpace: 'nowrap',
-                }}
-              >
-                {Number(l.value).toLocaleString('en-US', { maximumFractionDigits: 0 })}
-              </div>
-            );
-          }
-          return (
-            <div
-              key={i}
-              style={{
-                ...LABEL_STYLE,
-                left: l.x,
-                top: l.top,
-                transform: 'translate(-50%, -100%)',
-                color: l.color,
-                border: `1.5px solid ${l.color}`,
-              }}
-            >
-              {l.segments.map((s, si) => (
-                <span key={s.key}>
-                  {si > 0 && <span style={{ color: PLOTLY_COLORS.axisText }}> / </span>}
-                  <span style={{ color: s.color }}>{s.display}</span>
-                </span>
-              ))}
-            </div>
-          );
-        })}
+          style={{
+            color: PLOTLY_COLORS.titleText,
+            fontFamily: 'Courier New, monospace',
+            fontSize: '20px',
+            fontWeight: 'normal',
+            lineHeight: 1,
+          }}
+        >
+          AI Gamma Map
+        </div>
+        <div
+          style={{
+            display: 'flex',
+            flexWrap: 'wrap',
+            gap: '1.75rem',
+            alignItems: 'baseline',
+          }}
+        >
+          <LevelLabel name="Put Wall" value={levels?.put_wall} color={PLOTLY_COLORS.negative} />
+          <LevelLabel name="Flip" value={levels?.volatility_flip} color={PLOTLY_COLORS.highlight} />
+          <LevelLabel name="Spot" value={spotPrice} color={PLOTLY_COLORS.primary} />
+          <LevelLabel name="Call Wall" value={levels?.call_wall} color={PLOTLY_COLORS.positive} />
+        </div>
       </div>
+      <div
+        ref={chartRef}
+        style={{ width: '100%', height: '700px', backgroundColor: 'var(--bg-card)' }}
+      />
     </div>
   );
 }
