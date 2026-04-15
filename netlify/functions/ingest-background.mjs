@@ -271,7 +271,6 @@ function computeGex(pages, targets, startedAt, partial) {
   // pages, which would violate the snapshots unique constraint on insert.
   const allRaw = [];
   const seenKeys = new Set();
-  let spotPrice = null;
 
   for (const body of pages) {
     if (!body || !Array.isArray(body.results)) continue;
@@ -283,34 +282,23 @@ function computeGex(pages, targets, startedAt, partial) {
       }
       allRaw.push(r);
     }
-    if (!spotPrice) {
-      for (const r of body.results) {
-        if (r.underlying_asset && r.underlying_asset.price) {
-          spotPrice = r.underlying_asset.price;
-          break;
-        }
-      }
-    }
   }
 
-  // Fallback: infer spot from the ATM call (strike closest to delta 0.5).
-  if (!spotPrice && allRaw.length > 0) {
-    let closestDelta = Infinity;
-    for (const r of allRaw) {
-      if (
-        r.details && r.details.contract_type === 'call' &&
-        r.greeks && typeof r.greeks.delta === 'number'
-      ) {
-        const dist = Math.abs(r.greeks.delta - 0.5);
-        if (dist < closestDelta) {
-          closestDelta = dist;
-          spotPrice = r.details.strike_price;
-        }
-      }
-    }
-  }
+  if (allRaw.length === 0) return null;
 
-  if (allRaw.length === 0 || !spotPrice) return null;
+  // Spot inference from the chain. Massive API stopped populating
+  // underlying_asset.price for SPX index options (every contract returns
+  // { ticker: "I:SPX" } with no price field), and the old "argmin |delta-0.5|
+  // across allRaw" fallback picked up LEAPS whose delta-0.5 strike equals the
+  // multi-year FORWARD price (S·exp((r-q+σ²/2)·τ)), not spot — which is why the
+  // stored spot was wandering between 7000 and 9200 on a ~7025 underlying. We
+  // now restrict to the shortest-DTE expiration that has at least five calls,
+  // bracket delta = 0.5 between the two adjacent strikes, linearly interpolate
+  // to find the K where delta would be exactly 0.5, then invert BS delta
+  // (d1=0 ⇒ S = K·exp(-(r-q+σ²/2)·τ)) to strip out forward drift. For a
+  // <10-DTE front expiration this leaves <$5 of residual error at SPX levels.
+  const spotPrice = inferSpotFromChain(allRaw, capturedAtMs);
+  if (!(spotPrice > 0)) return null;
 
   const contracts = allRaw
     .filter((r) => r.details && r.greeks && r.implied_volatility > 0.001)
@@ -483,6 +471,74 @@ function round(n, decimals) {
 
 function normPdf(x) {
   return Math.exp(-0.5 * x * x) / Math.sqrt(2 * Math.PI);
+}
+
+// Back out SPX spot from the nearest-DTE ATM call using Black-Scholes delta
+// inversion. Call delta is monotone decreasing in strike at any fixed
+// expiration, so the two adjacent listed strikes that bracket delta=0.5 pin
+// down the exact K where delta would be 0.5 via linear interpolation. Setting
+// d1=0 (the delta=0.5 condition) and solving gives
+//   S = K·exp(-(r-q+σ²/2)·τ)
+// with σ approximated by the ATM call's IV. Restricting to the shortest
+// expiration keeps τ tiny (usually <0.03 years), so the drift correction is
+// small and the result tracks the true index level to within a few dollars.
+function inferSpotFromChain(allRaw, capturedAtMs) {
+  const callsByExp = new Map();
+  for (const r of allRaw) {
+    if (r.details?.contract_type !== 'call') continue;
+    if (typeof r.greeks?.delta !== 'number') continue;
+    if (!(r.details.strike_price > 0)) continue;
+    const exp = r.details.expiration_date;
+    if (!exp) continue;
+    if (!callsByExp.has(exp)) callsByExp.set(exp, []);
+    callsByExp.get(exp).push({
+      strike: r.details.strike_price,
+      delta: r.greeks.delta,
+      iv: typeof r.implied_volatility === 'number' && r.implied_volatility > 0
+        ? r.implied_volatility
+        : 0.15,
+    });
+  }
+  if (callsByExp.size === 0) return null;
+
+  const sortedExps = [...callsByExp.keys()].sort();
+  let chosenExp = null;
+  let chosenCalls = null;
+  for (const exp of sortedExps) {
+    const calls = callsByExp.get(exp);
+    if (calls.length >= 5) { chosenExp = exp; chosenCalls = calls; break; }
+  }
+  if (!chosenCalls) return null;
+  chosenCalls.sort((a, b) => a.strike - b.strike);
+
+  let strikeAtHalfDelta = null;
+  let atmIv = null;
+  for (let i = 0; i < chosenCalls.length - 1; i++) {
+    const a = chosenCalls[i];
+    const b = chosenCalls[i + 1];
+    if (a.delta >= 0.5 && b.delta <= 0.5) {
+      const span = a.delta - b.delta;
+      if (span > 0) {
+        const t = (a.delta - 0.5) / span;
+        strikeAtHalfDelta = a.strike + t * (b.strike - a.strike);
+        atmIv = a.iv + t * (b.iv - a.iv);
+        break;
+      }
+    }
+  }
+  if (strikeAtHalfDelta == null) {
+    let best = chosenCalls[0];
+    for (const c of chosenCalls) {
+      if (Math.abs(c.delta - 0.5) < Math.abs(best.delta - 0.5)) best = c;
+    }
+    strikeAtHalfDelta = best.strike;
+    atmIv = best.iv;
+  }
+
+  const tau = yearsToExpiration(chosenExp, capturedAtMs) || (1 / 365);
+  const sigma = atmIv > 0 ? atmIv : 0.15;
+  const drift = Math.exp(-(RISK_FREE_RATE - DIVIDEND_YIELD + 0.5 * sigma * sigma) * tau);
+  return strikeAtHalfDelta * drift;
 }
 
 function yearsToExpiration(expirationIso, refMs) {
