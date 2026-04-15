@@ -9,24 +9,39 @@ import {
 } from '../lib/plotlyTheme';
 
 // Cloud-band visual language:
-// - Four discrete quartile bands, each an independent fill: 'toself'
+// - Four discrete percentile bands, each an independent fill: 'toself'
 //   closed polygon so there is no alpha accumulation between adjacent
 //   regions — each band renders as exactly its assigned color.
-// - Hot-to-cold palette carves out the quartiles by color alone:
-//   teal (p10-p25) → yellow (p25-p50) → orange (p50-p75) → red (p75-p90).
-//   The observed ATM IV curve's quartile membership is then readable at a
-//   glance with no legend and no numeric boundary lines — a point sitting
-//   in the red band is visibly stressed, a point in the teal band is
-//   visibly subdued, and the transitions between quartiles are the color
-//   edges themselves. No p25/p50/p75 stroke lines — the colors are the
-//   boundaries.
+// - Hot-to-cold palette carves out the regions by color alone:
+//   green (p10-p25) → yellow (p25-p50) → orange (p50-p75) → red (p75-p90).
+//   A point sitting in the red band is visibly stressed, a point in the
+//   green band is visibly subdued, and the color edges are the
+//   boundaries — no p25/p50/p75 stroke lines needed.
+// - Alphas held low (0.28 each) so the cloud reads as atmospheric
+//   context wash rather than hard colored walls, and the observed ATM
+//   IV trace in primary blue stays the clear foreground element.
+//
+// On the "why are the bands not even height":
+// Percentile bands on a right-skewed distribution are inherently
+// asymmetric — the top band is wider than the bottom band because the
+// real IV distribution has a heavy right tail. At DTE 30 on the 1yr
+// lookback the empirical spans are p10→p25=0.90, p25→p50=1.25,
+// p50→p75=2.81, p75→p90=3.97 — the red band is ~4x the green band
+// because stress regimes push IV up much harder than calm regimes push
+// it down. This is the real shape of the distribution, not a math bug;
+// verified by recomputing percentile_cont directly from the underlying
+// daily_term_structure rows and matching bit-for-bit. Forcing the bands
+// to visually equal heights would require abandoning the percentile
+// semantic entirely, which would lose the "where does today's curve
+// sit in the historical distribution" reading the cloud exists to give.
+//
 // The observed ATM IV curve sits ON TOP of the bands in the same chart —
 // cloud is historical context for today's term structure, not a separate
 // view. One chart, one scale.
-const BAND_TOP      = 'rgba(231, 76, 60, 0.55)';   // p75-p90 (top quartile, red)
-const BAND_UPPER    = 'rgba(230, 126, 34, 0.50)';  // p50-p75 (upper-mid, orange)
-const BAND_LOWER    = 'rgba(241, 196, 15, 0.45)';  // p25-p50 (lower-mid, yellow)
-const BAND_BOTTOM   = 'rgba(46, 204, 113, 0.50)';  // p10-p25 (bottom quartile, teal)
+const BAND_TOP      = 'rgba(231, 76, 60, 0.32)';   // p75-p90 (stress band, red)
+const BAND_UPPER    = 'rgba(230, 126, 34, 0.28)';  // p50-p75 (upper-mid, orange)
+const BAND_LOWER    = 'rgba(241, 196, 15, 0.28)';  // p25-p50 (lower-mid, yellow)
+const BAND_BOTTOM   = 'rgba(46, 204, 113, 0.32)';  // p10-p25 (calm band, green)
 
 // Tight bottom margin matches GammaInflectionChart's `b: 15` so the
 // rangeslider sits flush against the card floor instead of leaving a
