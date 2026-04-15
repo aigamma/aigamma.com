@@ -250,7 +250,7 @@ export default function GammaInflectionChart({ spotPrice, levels }) {
       }
       setLabels(newLabels);
     });
-  }, [Plotly, hasProfile, split, spotPrice, volFlip]);
+  }, [Plotly, hasProfile, split, spotPrice, volFlip, profile]);
 
   if (plotlyError) {
     return (

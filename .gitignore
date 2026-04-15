@@ -31,10 +31,17 @@ dist-ssr
 .env.local
 .env.*.local
 
-#Blocked files and folders
+# Blocked files and folders
 p/
 tmp/
 .claude/
 scripts/test-ingest.mjs
 scripts/backfill/.cache/
 CLAUDE.md
+
+# ThetaData terminal credentials and binaries
+creds.txt
+lib/*.jar
+
+# Kiro workspace settings (trust/approval prefs are local)
+.vscode/settings.json
