@@ -18,9 +18,13 @@ import {
 // - Conditional fill between the two vol lines: green where IV > RV
 //   (positive VRP, the normal state where options price more vol than has
 //   been realized), red where RV > IV (negative VRP, the rare stressed
-//   state where realized has exceeded option-implied expectation).
-// - Labels live in the legend only, anchored top-left INSIDE the plot area
-//   so they never collide with page margins on mobile.
+//   state where realized has exceeded option-implied expectation). These
+//   shaded bands are visually self-explanatory (green = IV above RV,
+//   red = RV above IV) and carry no legend entries — the legend would
+//   just restate what the colors already make obvious.
+// - Legend contains only the three line series (S&P 500, RV, IV) and sits
+//   as a horizontal row in the top margin band below the chart title, so
+//   it never overlaps the data area.
 const POS_VRP_FILL  = 'rgba(46, 204, 113, 0.22)';
 const NEG_VRP_FILL  = 'rgba(231, 76, 60, 0.38)';
 const SPX_AREA_FILL = 'rgba(74, 158, 255, 0.12)';
@@ -84,8 +88,10 @@ function buildVrpSegments(series) {
 // polygon walks the IV edge forward in time and the HV edge backward,
 // so the filled region is exactly the area between the two lines over
 // this segment's x-range — never reaching the axis floor, never
-// extending past the segment's boundaries.
-function vrpSegmentTrace(segment, fillcolor, name, showlegend, legendgroup) {
+// extending past the segment's boundaries. The fill color itself is the
+// only cue these polygons contribute to the chart — no legend entry, no
+// hover — so the reader's focus stays on the three labeled line series.
+function vrpSegmentTrace(segment, fillcolor) {
   return {
     x: [...segment.xs, ...segment.xs.slice().reverse()],
     y: [...segment.ivs, ...segment.hvs.slice().reverse()],
@@ -95,9 +101,7 @@ function vrpSegmentTrace(segment, fillcolor, name, showlegend, legendgroup) {
     mode: 'lines',
     type: 'scatter',
     yaxis: 'y2',
-    name,
-    legendgroup,
-    showlegend,
+    showlegend: false,
     hoverinfo: 'skip',
   };
 }
@@ -176,21 +180,13 @@ export default function VolatilityRiskPremium() {
     // lines themselves, so the fill is a thin ribbon that expands and
     // contracts with the spread — it never drops down to the chart
     // floor the way a fill:'tonexty' pair would on a null-gapped series.
-    // Legend entries live on only the first segment of each sign via
-    // legendgroup; subsequent segments share the group with
-    // showlegend:false so the legend shows one row per color.
+    // None of these polygons contribute a legend entry — their meaning
+    // is carried entirely by color (green = positive VRP, red = negative).
     const vrpTraces = [];
-    let firstPos = true;
-    let firstNeg = true;
     for (const seg of vrpSegments) {
       if (seg.xs.length < 2) continue;
-      if (seg.kind === 'positive') {
-        vrpTraces.push(vrpSegmentTrace(seg, POS_VRP_FILL, 'Positive VRP (IV > RV)', firstPos, 'vrp_pos'));
-        firstPos = false;
-      } else {
-        vrpTraces.push(vrpSegmentTrace(seg, NEG_VRP_FILL, 'Negative VRP (RV > IV)', firstNeg, 'vrp_neg'));
-        firstNeg = false;
-      }
+      const fill = seg.kind === 'positive' ? POS_VRP_FILL : NEG_VRP_FILL;
+      vrpTraces.push(vrpSegmentTrace(seg, fill));
     }
 
     const rvLine = {
@@ -236,9 +232,19 @@ export default function VolatilityRiskPremium() {
     const sixMonthsBack = addMonthsIso(lastDate, -6);
     const windowStart = sixMonthsBack >= firstDate ? sixMonthsBack : firstDate;
 
+    // Top margin has to hold both the chart title and the horizontal legend
+    // row, so it's noticeably taller than the 50px used on single-row-title
+    // charts. Title is pinned to the top of the container; legend sits just
+    // above the plot area (y slightly above 1 in paper coords, yanchor
+    // bottom), leaving a comfortable band between the two.
     const layout = plotly2DChartLayout({
-      margin: { t: 50, r: 80, b: 15, l: 80 },
-      title: plotlyTitle('Volatility Risk Premium'),
+      margin: { t: 100, r: 80, b: 15, l: 80 },
+      title: {
+        ...plotlyTitle('Volatility Risk Premium'),
+        y: 0.97,
+        yref: 'container',
+        yanchor: 'top',
+      },
       xaxis: plotlyAxis('', {
         type: 'date',
         range: [windowStart, lastDate],
@@ -264,15 +270,14 @@ export default function VolatilityRiskPremium() {
         overlaying: 'y',
       }),
       legend: {
-        orientation: 'v',
-        x: 0.01,
-        y: 0.99,
-        xanchor: 'left',
-        yanchor: 'top',
+        orientation: 'h',
+        x: 0.5,
+        y: 1.03,
+        xanchor: 'center',
+        yanchor: 'bottom',
         font: PLOTLY_FONTS.legend,
-        bgcolor: 'rgba(10, 14, 26, 0.75)',
-        bordercolor: PLOTLY_COLORS.grid,
-        borderwidth: 1,
+        bgcolor: 'rgba(0, 0, 0, 0)',
+        borderwidth: 0,
       },
       hovermode: 'x unified',
     });
