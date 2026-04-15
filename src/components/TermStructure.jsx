@@ -9,27 +9,33 @@ import {
 } from '../lib/plotlyTheme';
 
 // Cloud-band visual language:
-// - Independent fill: 'toself' polygons so each quartile is its own
-//   compositing-independent region — no accidental alpha accumulation
-//   across adjacent bands, which was the root cause of the "continuous
-//   gradient" look during scaffolding.
-// - Outer bands (p10-p25, p75-p90) darker; inner bands (p25-p50, p50-p75)
-//   lighter, so a trace near the extremes is visually loud and a trace
-//   near the median is visually calm.
-// - Thin boundary strokes at p25, p50, p75 render the hard edges
-//   explicitly so the p50 line is visible even though the two inner
-//   quartiles share a shade.
+// - Four discrete quartile bands, each an independent fill: 'toself'
+//   closed polygon so there is no alpha accumulation between adjacent
+//   regions — each band renders as exactly its assigned color.
+// - Hot-to-cold palette carves out the quartiles by color alone:
+//   teal (p10-p25) → yellow (p25-p50) → orange (p50-p75) → red (p75-p90).
+//   The observed ATM IV curve's quartile membership is then readable at a
+//   glance with no legend and no numeric boundary lines — a point sitting
+//   in the red band is visibly stressed, a point in the teal band is
+//   visibly subdued, and the transitions between quartiles are the color
+//   edges themselves. No p25/p50/p75 stroke lines — the colors are the
+//   boundaries.
 // The observed ATM IV curve sits ON TOP of the bands in the same chart —
 // cloud is historical context for today's term structure, not a separate
 // view. One chart, one scale.
-const BAND_OUTER     = 'rgba(74, 158, 255, 0.55)';
-const BAND_INNER     = 'rgba(74, 158, 255, 0.12)';
-const BOUNDARY_COLOR = 'rgba(74, 158, 255, 0.75)';
-const MEDIAN_COLOR   = 'rgba(74, 158, 255, 0.90)';
+const BAND_TOP      = 'rgba(231, 76, 60, 0.55)';   // p75-p90 (top quartile, red)
+const BAND_UPPER    = 'rgba(230, 126, 34, 0.50)';  // p50-p75 (upper-mid, orange)
+const BAND_LOWER    = 'rgba(241, 196, 15, 0.45)';  // p25-p50 (lower-mid, yellow)
+const BAND_BOTTOM   = 'rgba(46, 204, 113, 0.50)';  // p10-p25 (bottom quartile, teal)
 
+// Tight bottom margin matches GammaInflectionChart's `b: 15` so the
+// rangeslider sits flush against the card floor instead of leaving a
+// strip of empty card underneath. Previous `b: 90` was copy-paste from a
+// chart that had axis-title text below the rangeslider; this one has
+// none.
 const PLOTLY_LAYOUT_BASE = {
   ...PLOTLY_BASE_LAYOUT_2D,
-  margin: { t: 50, r: 40, b: 90, l: 70 },
+  margin: { t: 50, r: 40, b: 15, l: 70 },
   yaxis: plotlyAxis('ATM IV (%)', { tickformat: '.1f' }),
 };
 
@@ -81,18 +87,6 @@ function closedPolygon(xDates, yLower, yUpper, fillcolor) {
   };
 }
 
-function boundaryLine(xDates, y, color, width) {
-  return {
-    x: xDates,
-    y,
-    mode: 'lines',
-    type: 'scatter',
-    line: { color, width },
-    hoverinfo: 'skip',
-    showlegend: false,
-  };
-}
-
 export default function TermStructure({ expirationMetrics, capturedAt, cloudBands }) {
   const chartRef = useRef(null);
   const { plotly: Plotly, error: plotlyError } = usePlotly();
@@ -136,13 +130,10 @@ export default function TermStructure({ expirationMetrics, capturedAt, cloudBand
 
       if (xDates.length > 0) {
         traces.push(
-          closedPolygon(xDates, p10, p25, BAND_OUTER),
-          closedPolygon(xDates, p25, p50, BAND_INNER),
-          closedPolygon(xDates, p50, p75, BAND_INNER),
-          closedPolygon(xDates, p75, p90, BAND_OUTER),
-          boundaryLine(xDates, p25, BOUNDARY_COLOR, 1),
-          boundaryLine(xDates, p50, MEDIAN_COLOR,   1.25),
-          boundaryLine(xDates, p75, BOUNDARY_COLOR, 1),
+          closedPolygon(xDates, p10, p25, BAND_BOTTOM),
+          closedPolygon(xDates, p25, p50, BAND_LOWER),
+          closedPolygon(xDates, p50, p75, BAND_UPPER),
+          closedPolygon(xDates, p75, p90, BAND_TOP),
         );
       }
     }
