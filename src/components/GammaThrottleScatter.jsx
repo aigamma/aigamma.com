@@ -235,15 +235,43 @@ export default function GammaThrottleScatter() {
       });
     }
 
+    // Build the upper-right annotation with current values and window stats
+    const annotations = [];
+    if (lastPoint) {
+      const lines = [
+        `Throttle: ${lastPoint.gamma_throttle.toFixed(2)}`,
+        `10d rVol: ${(lastPoint.hv_10d * 100).toFixed(2)}%`,
+      ];
+      if (stats.total > 0) {
+        lines.push(`${stats.total} days · <span style="color:${PLOTLY_COLORS.positive}">${stats.pos}</span>/<span style="color:${PLOTLY_COLORS.negative}">${stats.neg}</span>`);
+      }
+      annotations.push({
+        x: 0.99,
+        y: 0.99,
+        xref: 'paper',
+        yref: 'paper',
+        text: lines.join('<br>'),
+        showarrow: false,
+        font: { family: PLOTLY_FONT_FAMILY, color: PLOTLY_COLORS.axisText, size: 12 },
+        bgcolor: 'rgba(20, 24, 32, 0.85)',
+        bordercolor: PLOTLY_COLORS.grid,
+        borderwidth: 1,
+        borderpad: 6,
+        xanchor: 'right',
+        yanchor: 'top',
+        align: 'right',
+      });
+    }
+
     const layout = plotly2DChartLayout({
-      margin: mobile ? { t: 45, r: 15, b: 50, l: 50 } : { t: 80, r: 30, b: 60, l: 70 },
+      margin: mobile ? { t: 45, r: 15, b: 40, l: 50 } : { t: 80, r: 30, b: 45, l: 70 },
       title: {
         ...plotlyTitle(mobile ? 'Gamma Throttle vs Realized Vol' : 'SPX Gamma Volatility Throttle Vs. 10-Day Realized Volatility'),
         y: 0.97,
         yref: 'container',
         yanchor: 'top',
       },
-      xaxis: plotlyAxis(mobile ? '' : 'SPX Gamma Volatility Throttle', {
+      xaxis: plotlyAxis('', {
         type: 'linear',
         range: [xMin - xPad, xMax + xPad],
         autorange: false,
@@ -262,26 +290,7 @@ export default function GammaThrottleScatter() {
       }),
       hovermode: 'closest',
       showlegend: false,
-      // Current values annotation in the bottom-left
-      annotations: lastPoint
-        ? [
-            {
-              x: 0.01,
-              y: 0.01,
-              xref: 'paper',
-              yref: 'paper',
-              text: `Gamma Throttle: ${lastPoint.gamma_throttle.toFixed(2)}<br>10-Day rVol: ${(lastPoint.hv_10d * 100).toFixed(2)}`,
-              showarrow: false,
-              font: { family: PLOTLY_FONT_FAMILY, color: PLOTLY_COLORS.axisText, size: 12 },
-              bgcolor: 'rgba(20, 24, 32, 0.85)',
-              bordercolor: PLOTLY_COLORS.grid,
-              borderwidth: 1,
-              borderpad: 6,
-              xanchor: 'left',
-              yanchor: 'bottom',
-            },
-          ]
-        : [],
+      annotations,
     });
 
     try {
@@ -322,7 +331,7 @@ export default function GammaThrottleScatter() {
     };
 
     const layout = plotly2DChartLayout({
-      margin: { t: 0, r: mobile ? 15 : 30, b: 0, l: mobile ? 50 : 70 },
+      margin: { t: 5, r: mobile ? 15 : 30, b: 0, l: mobile ? 50 : 70 },
       xaxis: plotlyAxis('', {
         type: 'date',
         range: activeRange || defaultRange,
@@ -331,7 +340,6 @@ export default function GammaThrottleScatter() {
         rangeslider: plotlyRangeslider({
           range: [firstDate, lastDate],
           autorange: false,
-          thickness: 1.0,
         }),
       }),
       yaxis: plotlyAxis('', {
@@ -342,7 +350,7 @@ export default function GammaThrottleScatter() {
         zeroline: false,
         fixedrange: true,
       }),
-      height: 40,
+      height: 80,
       showlegend: false,
     });
 
@@ -401,38 +409,11 @@ export default function GammaThrottleScatter() {
     );
   }
 
-  const ratioText =
-    stats.ratio === Infinity
-      ? `${stats.pos}:0`
-      : stats.neg === 0
-        ? '---'
-        : `${stats.ratio.toFixed(1)}:1`;
-
   return (
     <div className="card" style={{ marginBottom: '1rem' }}>
       <div ref={scatterRef} style={{ width: '100%', height: '520px', backgroundColor: 'var(--bg-card)' }} />
-
-      {/* Counter strip */}
-      <div
-        style={{
-          display: 'flex',
-          justifyContent: 'center',
-          gap: mobile ? '0.75rem' : '2rem',
-          padding: '0.4rem 0',
-          fontFamily: 'Courier New, monospace',
-          fontSize: mobile ? '0.75rem' : '0.85rem',
-          color: 'var(--text-secondary)',
-          flexWrap: 'wrap',
-        }}
-      >
-        <span>{stats.total} days</span>
-        <span style={{ color: 'var(--accent-green)' }}>{stats.pos} positive</span>
-        <span style={{ color: 'var(--accent-coral)' }}>{stats.neg} negative</span>
-        <span>{ratioText}</span>
-      </div>
-
-      {/* Time context strip with rangeslider */}
-      <div ref={timeRef} style={{ width: '100%', height: '40px', backgroundColor: 'var(--bg-card)' }} />
+      {/* Time context strip with rangeslider for date brush zoom */}
+      <div ref={timeRef} style={{ width: '100%', height: '80px', backgroundColor: 'var(--bg-card)' }} />
     </div>
   );
 }
