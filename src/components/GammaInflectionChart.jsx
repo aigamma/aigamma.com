@@ -185,9 +185,8 @@ export default function GammaInflectionChart({ spotPrice, levels }) {
       const px = (dataX) => ml + (dataX - xMin) * xScale;
 
       const yDomain = fl.yaxis?.domain || [0, 1];
-      const dataTopY = mt + plotH * (1 - yDomain[1]);
 
-      // Anchor FLIP above the main x-axis tick-label strip (the strike-price
+      // Anchor FLIP and SPOT above the main x-axis tick-label strip (the strike-price
       // row Plotly renders between the data plot and the rangeslider). Prefer
       // the rendered `.xaxislayer-above` group's bounding box since it's what
       // actually contains the tick labels; fall back to a larger offset from
@@ -228,29 +227,23 @@ export default function GammaInflectionChart({ spotPrice, levels }) {
         }
       }
 
-      // Corner labels and SPOT numeric value render outside the collision
-      // pipeline. SPOT is a reference input (the current index price the
-      // chart is drawn around), not a derived level like FLIP, so it gets a
-      // lighter visual treatment — small unboxed blue text anchored inside
-      // the plot area at the top of the dashed SPOT line — and is exempted
-      // from collision detection so it never competes with FLIP. The
-      // inflection chart only has a single derived level label (FLIP), so
-      // the collision merger is effectively a no-op here; it's still run
-      // through the shared helper to keep both gamma charts on the same
-      // code path in case we add more level annotations to this chart later.
+      // Corner labels (Put Gamma / Call Gamma) render outside the collision
+      // pipeline because they sit in fixed positions at the top corners of
+      // the card and never collide with any level label. FLIP and SPOT both
+      // flow through the shared collision merger and share a single boxed-
+      // annotation style so the label row just above the x-axis tick strip
+      // reads with a consistent visual language — a bordered dark rectangle
+      // carrying the label name and numeric value, anchored at px(x) above
+      // the colored dashed line it references. At typical FLIP/SPOT
+      // separation they emerge from the merger as two independent boxes,
+      // each sitting on its own line; at the rare crossings where the two
+      // land within COLLISION_THRESHOLD_PX the merger combines them into a
+      // single "FLIP / SPOT" box anchored on the FLIP side (priority 2
+      // beats SPOT priority 3).
       const newLabels = [
         { corner: 'left', offset: 20, top: titleTop, color: PLOTLY_COLORS.negative, text: 'Put Gamma' },
         { corner: 'right', offset: 20, top: titleTop, color: PLOTLY_COLORS.positive, text: 'Call Gamma' },
       ];
-      if (spotPrice != null) {
-        newLabels.push({
-          spot: true,
-          left: px(spotPrice),
-          top: dataTopY + 5,
-          color: PLOTLY_COLORS.primary,
-          value: spotPrice,
-        });
-      }
 
       const levelCandidates = [];
       if (volFlip != null) {
@@ -261,6 +254,16 @@ export default function GammaInflectionChart({ spotPrice, levels }) {
           x: px(volFlip),
           top: bottomY,
           color: PLOTLY_COLORS.highlight,
+        });
+      }
+      if (spotPrice != null) {
+        levelCandidates.push({
+          key: 'SPOT',
+          value: spotPrice,
+          priority: 3,
+          x: px(spotPrice),
+          top: bottomY,
+          color: PLOTLY_COLORS.primary,
         });
       }
       for (const merged of mergeCollidingLabels(levelCandidates)) {
@@ -317,28 +320,6 @@ export default function GammaInflectionChart({ spotPrice, levels }) {
                 }}
               >
                 {l.text}
-              </div>
-            );
-          }
-          if (l.spot) {
-            return (
-              <div
-                key={i}
-                style={{
-                  position: 'absolute',
-                  left: l.left,
-                  top: l.top,
-                  transform: 'translate(-50%, 0)',
-                  color: l.color,
-                  fontFamily: 'Courier New, monospace',
-                  fontSize: '11px',
-                  fontWeight: 'normal',
-                  lineHeight: 1,
-                  pointerEvents: 'none',
-                  whiteSpace: 'nowrap',
-                }}
-              >
-                {Number(l.value).toLocaleString('en-US', { maximumFractionDigits: 0 })}
               </div>
             );
           }
