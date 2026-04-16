@@ -127,7 +127,7 @@ export default function LevelsPanel({ levels, spotPrice, prevClose, expirationMe
         <Stat
           label="Dist from Risk Off"
           value={flipDist != null ? `${aboveFlip ? '+' : ''}${flipDist.toFixed(2)}` : '\u2014'}
-          accent={aboveFlip ? 'var(--accent-green)' : 'var(--accent-coral)'}
+          accent="var(--accent-amber)"
           sub={flipDist != null ? `${((flipDist / spotPrice) * 100).toFixed(2)}%` : null}
         />
       </div>
