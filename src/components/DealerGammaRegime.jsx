@@ -101,7 +101,7 @@ export default function DealerGammaRegime() {
     const layout = plotly2DChartLayout({
       margin: mobile ? { t: 45, r: 15, b: 15, l: 50 } : { t: 90, r: 30, b: 15, l: 70 },
       title: {
-        ...plotlyTitle('SPX Dealer Gamma Exposure By Regime'),
+        ...plotlyTitle('Gamma Regime History'),
         y: 0.97,
         yref: 'container',
         yanchor: 'top',
