@@ -34,21 +34,32 @@ const BASE_LAYOUT = {
   },
 };
 
-// Windows the density to within +/- 25% of spot so the chart does not waste
-// horizontal space on the near-zero wings of the RND. 25% is wide enough to
-// see the fat left tail while still keeping the mode visible.
-function windowDensity({ strikes, values }, spotPrice) {
+// Compute the CDF via trapezoidal integration on the FULL density, then
+// window density + CDF together so P(SPX < K) is accurate even at the
+// left edge of the visible range. Without computing on the full array
+// first, the CDF would start at zero at the left window boundary instead
+// of reflecting the probability mass in the far left tail.
+function windowDensityWithCdf({ strikes, values }, spotPrice) {
   const lo = spotPrice * 0.75;
   const hi = spotPrice * 1.25;
+
+  const cdf = new Array(strikes.length);
+  cdf[0] = 0;
+  for (let i = 1; i < strikes.length; i++) {
+    cdf[i] = cdf[i - 1] + (values[i - 1] + values[i]) / 2 * (strikes[i] - strikes[i - 1]);
+  }
+
   const outStrikes = [];
   const outValues = [];
+  const outCdf = [];
   for (let i = 0; i < strikes.length; i++) {
     if (strikes[i] >= lo && strikes[i] <= hi) {
       outStrikes.push(strikes[i]);
       outValues.push(values[i]);
+      outCdf.push(cdf[i]);
     }
   }
-  return { strikes: outStrikes, values: outValues };
+  return { strikes: outStrikes, values: outValues, cdf: outCdf };
 }
 
 // Monthly SPX options expire on the third Friday of the month, shifting back
@@ -110,9 +121,9 @@ export default function RiskNeutralDensity({ fits, spotPrice, capturedAt }) {
     const traces = [];
 
     sortedExps.forEach((fit, idx) => {
-      const windowed = windowDensity(
+      const windowed = windowDensityWithCdf(
         { strikes: fit.density.strikes, values: fit.density.values },
-        spotPrice
+        spotPrice,
       );
       const color = PLOTLY_SERIES_PALETTE[idx % PLOTLY_SERIES_PALETTE.length];
       const label = `${fit.expirationDate} (${fit.dte.toFixed(0)}d)`;
@@ -120,13 +131,14 @@ export default function RiskNeutralDensity({ fits, spotPrice, capturedAt }) {
       traces.push({
         x: windowed.strikes,
         y: windowed.values,
+        customdata: windowed.cdf,
         mode: 'lines',
         type: 'scatter',
         name: label,
         line: { color, width: 2 },
         fill: 'tozeroy',
         fillcolor: `${color}22`,
-        hovertemplate: 'K %{x:.2f}<br>density %{y:.3s}<extra>' + label + '</extra>',
+        hovertemplate: 'K %{x:,.0f}<br>P(SPX < K) = %{customdata:.1%}<extra>' + label + '</extra>',
       });
     });
 
