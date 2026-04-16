@@ -252,11 +252,11 @@ export default function GammaThrottleScatter() {
         yref: 'paper',
         text: lines.join('<br>'),
         showarrow: false,
-        font: { family: PLOTLY_FONT_FAMILY, color: PLOTLY_COLORS.axisText, size: 12 },
+        font: { family: PLOTLY_FONT_FAMILY, color: PLOTLY_COLORS.titleText, size: 16 },
         bgcolor: 'rgba(20, 24, 32, 0.85)',
         bordercolor: PLOTLY_COLORS.grid,
         borderwidth: 1,
-        borderpad: 6,
+        borderpad: 8,
         xanchor: 'right',
         yanchor: 'top',
         align: 'right',
@@ -316,26 +316,27 @@ export default function GammaThrottleScatter() {
     const yMin = Math.min(...closes);
     const yMax = Math.max(...closes);
 
-    // Invisible line trace — exists only to give the rangeslider a date
-    // axis to bind to. The CSS hides the rangeplot miniature anyway.
+    // Thin SPX close line gives the rangeslider a date axis to bind to.
+    // The CSS hides the rangeplot miniature (`.rangeslider-rangeplot`),
+    // so the rangeslider renders as handles on a black strip with gray
+    // outside masks — identical to every other chart on the dashboard.
     const trace = {
       x: dates,
       y: closes,
       mode: 'lines',
       type: 'scatter',
-      line: { color: 'transparent', width: 0 },
+      line: { color: 'rgba(74, 158, 255, 0.3)', width: 1 },
       hoverinfo: 'skip',
       showlegend: false,
     };
 
     // The scatter's x-axis is throttle (numeric), not dates, so the
-    // rangeslider can't live on the scatter itself. This minimal chart
-    // hosts a date rangeslider sized to match the ~40px rangesliders
-    // on DealerGammaRegime, VRP, etc. Thickness 0.7 of a 55px chart
-    // gives a ~38px rangeslider; the remaining ~17px for the plot area
-    // keeps the y-axis from hitting the doAutoRange crash.
+    // rangeslider lives in this companion chart. Uses the same
+    // plotlyRangeslider() factory as every other chart but with a
+    // larger thickness so the rangeslider fills a useful portion of
+    // the compact height.
     const layout = plotly2DChartLayout({
-      margin: { t: 2, r: mobile ? 15 : 30, b: 2, l: mobile ? 50 : 70 },
+      margin: { t: 15, r: mobile ? 15 : 30, b: 15, l: mobile ? 50 : 70 },
       xaxis: plotlyAxis('', {
         type: 'date',
         range: activeRange || defaultRange,
@@ -344,10 +345,11 @@ export default function GammaThrottleScatter() {
         rangeslider: plotlyRangeslider({
           range: [firstDate, lastDate],
           autorange: false,
-          thickness: 0.7,
+          thickness: 0.5,
         }),
       }),
       yaxis: plotlyAxis('', {
+        type: 'linear',
         range: [yMin * 0.95, yMax * 1.05],
         autorange: false,
         showticklabels: false,
@@ -355,21 +357,17 @@ export default function GammaThrottleScatter() {
         zeroline: false,
         fixedrange: true,
       }),
-      height: 55,
+      height: 80,
       showlegend: false,
     });
 
-    try {
-      Plotly.newPlot(timeRef.current, [trace], layout, {
-        responsive: true,
-        displayModeBar: false,
-      });
+    Plotly.newPlot(timeRef.current, [trace], layout, {
+      responsive: true,
+      displayModeBar: false,
+    });
 
-      // Wire up relayout listener for the rangeslider
-      timeRef.current.on('plotly_relayout', handleTimeRelayout);
-    } catch (_) {
-      // Time strip is non-essential; scatter still works without it.
-    }
+    // Wire up relayout listener for the rangeslider
+    timeRef.current.on('plotly_relayout', handleTimeRelayout);
 
     return () => {
       if (timeRef.current) {
@@ -417,8 +415,8 @@ export default function GammaThrottleScatter() {
   return (
     <div className="card" style={{ marginBottom: '1rem' }}>
       <div ref={scatterRef} style={{ width: '100%', height: '520px', backgroundColor: 'var(--bg-card)' }} />
-      {/* Date brush zoom — rangeslider only, no visible chart content */}
-      <div ref={timeRef} style={{ width: '100%', height: '55px', backgroundColor: 'var(--bg-card)' }} />
+      {/* Date brush zoom */}
+      <div ref={timeRef} style={{ width: '100%', height: '80px', backgroundColor: 'var(--bg-card)' }} />
     </div>
   );
 }
