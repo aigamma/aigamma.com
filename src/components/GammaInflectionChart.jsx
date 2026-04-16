@@ -186,7 +186,7 @@ export default function GammaInflectionChart({ spotPrice, levels }) {
 
       const yDomain = fl.yaxis?.domain || [0, 1];
 
-      // Anchor FLIP and SPOT above the main x-axis tick-label strip (the strike-price
+      // Anchor FLIP above the main x-axis tick-label strip (the strike-price
       // row Plotly renders between the data plot and the rangeslider). Prefer
       // the rendered `.xaxislayer-above` group's bounding box since it's what
       // actually contains the tick labels; fall back to a larger offset from
@@ -213,6 +213,12 @@ export default function GammaInflectionChart({ spotPrice, levels }) {
         bottomY = mt + plotH * (1 - yDomain[0]) - 35;
       }
 
+      // SPOT anchors at the top of the plot area so it can never collide
+      // with FLIP at the bottom, regardless of how close spot sits to the
+      // volatility flip level. The 10px offset from mt mirrors the 10px
+      // clearance bottomY leaves between FLIP and the x-axis tick strip.
+      const topY = mt + 10;
+
       // Query the rendered title SVG group so the Put Gamma / Call Gamma
       // corner labels can sit on the exact same horizontal baseline as the
       // "AI Gamma Chart" title, regardless of how Plotly internally resolves
@@ -229,25 +235,26 @@ export default function GammaInflectionChart({ spotPrice, levels }) {
 
       // Corner labels (Put Gamma / Call Gamma) render outside the collision
       // pipeline because they sit in fixed positions at the top corners of
-      // the card and never collide with any level label. FLIP and SPOT both
-      // flow through the shared collision merger and share a single boxed-
-      // annotation style so the label row just above the x-axis tick strip
-      // reads with a consistent visual language — a bordered dark rectangle
-      // carrying the label name and numeric value, anchored at px(x) above
-      // the colored dashed line it references. At typical FLIP/SPOT
-      // separation they emerge from the merger as two independent boxes,
-      // each sitting on its own line; at the rare crossings where the two
-      // land within COLLISION_THRESHOLD_PX the merger combines them into a
-      // single "FLIP / SPOT" box anchored on the FLIP side (priority 2
-      // beats SPOT priority 3).
+      // the card and never collide with any level label. SPOT and FLIP are
+      // anchored at opposite vertical ends of the plot area — SPOT at the
+      // top of the dashed blue spot line, FLIP above the x-axis tick strip —
+      // so they can no longer collide visually even when spot sits directly
+      // on the volatility flip level. The vertical separation also visually
+      // demonstrates the distance between spot and the regime boundary,
+      // since the two labels sit on opposite edges of the same plot area
+      // the dashed lines cross. Each label is still routed through
+      // `mergeCollidingLabels` as its own single-element candidate list so
+      // the segment-shape normalization in the helper stays the source of
+      // truth for the `KEY VALUE` display string across every label on the
+      // dashboard.
       const newLabels = [
         { corner: 'left', offset: 20, top: titleTop, color: PLOTLY_COLORS.negative, text: 'Put Gamma' },
         { corner: 'right', offset: 20, top: titleTop, color: PLOTLY_COLORS.positive, text: 'Call Gamma' },
       ];
 
-      const levelCandidates = [];
+      const bottomCandidates = [];
       if (volFlip != null) {
-        levelCandidates.push({
+        bottomCandidates.push({
           key: 'FLIP',
           value: volFlip,
           priority: 2,
@@ -256,18 +263,23 @@ export default function GammaInflectionChart({ spotPrice, levels }) {
           color: PLOTLY_COLORS.highlight,
         });
       }
+      for (const merged of mergeCollidingLabels(bottomCandidates)) {
+        newLabels.push({ level: true, anchor: 'bottom', ...merged });
+      }
+
+      const topCandidates = [];
       if (spotPrice != null) {
-        levelCandidates.push({
+        topCandidates.push({
           key: 'SPOT',
           value: spotPrice,
           priority: 3,
           x: px(spotPrice),
-          top: bottomY,
+          top: topY,
           color: PLOTLY_COLORS.primary,
         });
       }
-      for (const merged of mergeCollidingLabels(levelCandidates)) {
-        newLabels.push({ level: true, ...merged });
+      for (const merged of mergeCollidingLabels(topCandidates)) {
+        newLabels.push({ level: true, anchor: 'top', ...merged });
       }
       setLabels(newLabels);
     });
@@ -330,7 +342,7 @@ export default function GammaInflectionChart({ spotPrice, levels }) {
                 ...LABEL_STYLE,
                 left: l.x,
                 top: l.top,
-                transform: 'translate(-50%, -100%)',
+                transform: l.anchor === 'top' ? 'translate(-50%, 0)' : 'translate(-50%, -100%)',
                 color: l.color,
                 border: `1.5px solid ${l.color}`,
               }}
