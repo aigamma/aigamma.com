@@ -75,6 +75,13 @@ export default function TermStructure({ expirationMetrics, capturedAt, cloudBand
     [capturedAt],
   );
 
+  // Filter 0DTE (and any fractional DTE below 1) because same-day options
+  // carry microstructure noise — pin risk, jump-to-expiry effects, and
+  // bid/ask blowouts in the final minutes — that chronically distorts the
+  // observed ATM IV at DTE 0 and compresses the meaningful portion of the
+  // term-structure curve on the y-axis. The filter is applied at the
+  // component level so the underlying row stays available in Supabase and
+  // in the reader endpoint for any downstream model that wants it.
   const rows = useMemo(() => {
     if (!expirationMetrics || expirationMetrics.length === 0 || !capturedAt) return [];
     const refMs = new Date(capturedAt).getTime();
@@ -85,36 +92,44 @@ export default function TermStructure({ expirationMetrics, capturedAt, cloudBand
         dte: daysBetween(m.expiration_date, refMs),
         atmIv: m.atm_iv,
       }))
-      .filter((r) => r.dte != null)
+      .filter((r) => r.dte != null && r.dte >= 1)
       .sort((a, b) => a.dte - b.dte);
   }, [expirationMetrics, capturedAt]);
+
+  // Hoist the sorted cloud-band slice above the effect so the same
+  // filtered DTE-domain is used by both the polygon construction and the
+  // x-axis range computation below. The `>= 1` filter matches the rows
+  // filter above so the cloud and the observed curve share a single
+  // no-0DTE domain.
+  const sortedCloudBands = useMemo(() => {
+    if (!cloudBands || cloudBands.length === 0 || !tradingDate) return [];
+    return cloudBands
+      .filter((b) =>
+        b.dte != null && b.dte >= 1 &&
+        b.iv_p10 != null && b.iv_p30 != null && b.iv_p50 != null &&
+        b.iv_p70 != null && b.iv_p90 != null)
+      .sort((a, b) => a.dte - b.dte);
+  }, [cloudBands, tradingDate]);
 
   useEffect(() => {
     if (!Plotly || !chartRef.current || rows.length === 0) return;
 
     const traces = [];
 
-    if (cloudBands && cloudBands.length > 0 && tradingDate) {
-      const sorted = cloudBands
-        .filter((b) =>
-          b.iv_p10 != null && b.iv_p30 != null && b.iv_p50 != null &&
-          b.iv_p70 != null && b.iv_p90 != null)
-        .sort((a, b) => a.dte - b.dte);
-      const xDates = sorted.map((b) => addDaysIso(tradingDate, b.dte));
-      const p10 = sorted.map((b) => toPct(b.iv_p10));
-      const p30 = sorted.map((b) => toPct(b.iv_p30));
-      const p50 = sorted.map((b) => toPct(b.iv_p50));
-      const p70 = sorted.map((b) => toPct(b.iv_p70));
-      const p90 = sorted.map((b) => toPct(b.iv_p90));
+    if (sortedCloudBands.length > 0) {
+      const xDates = sortedCloudBands.map((b) => addDaysIso(tradingDate, b.dte));
+      const p10 = sortedCloudBands.map((b) => toPct(b.iv_p10));
+      const p30 = sortedCloudBands.map((b) => toPct(b.iv_p30));
+      const p50 = sortedCloudBands.map((b) => toPct(b.iv_p50));
+      const p70 = sortedCloudBands.map((b) => toPct(b.iv_p70));
+      const p90 = sortedCloudBands.map((b) => toPct(b.iv_p90));
 
-      if (xDates.length > 0) {
-        traces.push(
-          closedPolygon(xDates, p10, p30, BAND_BOTTOM),
-          closedPolygon(xDates, p30, p50, BAND_LOWER),
-          closedPolygon(xDates, p50, p70, BAND_UPPER),
-          closedPolygon(xDates, p70, p90, BAND_TOP),
-        );
-      }
+      traces.push(
+        closedPolygon(xDates, p10, p30, BAND_BOTTOM),
+        closedPolygon(xDates, p30, p50, BAND_LOWER),
+        closedPolygon(xDates, p50, p70, BAND_UPPER),
+        closedPolygon(xDates, p70, p90, BAND_TOP),
+      );
     }
 
     // Observed ATM IV curve — calendar-date x, DTE shown in hover tooltip.
@@ -130,40 +145,27 @@ export default function TermStructure({ expirationMetrics, capturedAt, cloudBand
       hovertemplate: '%{x}<br>%{text}<br>ATM IV: %{y:.2f}%<extra></extra>',
     });
 
-    const maxBandDte = (cloudBands && cloudBands.length > 0 && tradingDate)
-      ? Math.max(...cloudBands.map((b) => b.dte))
+    // The chart domain starts at the first non-0DTE observed expiration
+    // rather than the snapshot's trading date — since 0DTE is filtered
+    // out, the old "today anchor + today marker" frame would leave the
+    // first DTE-1 point sitting a full calendar day off the left edge
+    // with an empty band running from today to the first observed point.
+    // Anchoring the x-axis on rows[0].expiration puts the first observed
+    // point flush against the left edge.
+    const maxBandDte = sortedCloudBands.length > 0
+      ? sortedCloudBands[sortedCloudBands.length - 1].dte
       : null;
     const cloudLast = (maxBandDte != null && tradingDate)
       ? addDaysIso(tradingDate, maxBandDte)
       : rows[rows.length - 1].expiration;
-    const startDate = tradingDate || rows[0].expiration;
-    const initialWindowEnd = (maxBandDte != null && maxBandDte >= 90 && tradingDate)
-      ? addDaysIso(tradingDate, 90)
-      : cloudLast;
-
-    const shapes = [];
-    const annotations = [];
-    if (tradingDate) {
-      shapes.push({
-        type: 'line',
-        xref: 'x', yref: 'paper',
-        x0: tradingDate, x1: tradingDate,
-        y0: 0, y1: 1,
-        line: { color: PLOTLY_COLORS.axisText, width: 1, dash: 'dash' },
-      });
-      annotations.push({
-        xref: 'x', yref: 'paper',
-        x: tradingDate, y: 1.02,
-        text: 'today',
-        showarrow: false,
-        xanchor: 'left',
-        font: {
-          family: 'Courier New, monospace',
-          size: 11,
-          color: PLOTLY_COLORS.axisText,
-        },
-      });
-    }
+    const startDate = rows[0].expiration;
+    // Default brush window is 100 calendar days from the first non-0DTE
+    // expiration, which is wide enough to show the next several monthly
+    // expirations and the near-term curvature without requiring the user
+    // to touch the rangeslider. Capped at cloudLast so the initial window
+    // can never run past the furthest data point on the cloud domain.
+    const naturalEnd = addDaysIso(startDate, 100);
+    const initialWindowEnd = (cloudLast && naturalEnd > cloudLast) ? cloudLast : naturalEnd;
 
     // Tight bottom margin matches GammaInflectionChart's `b: 15` so the
     // rangeslider sits flush against the card floor instead of leaving a
@@ -183,15 +185,13 @@ export default function TermStructure({ expirationMetrics, capturedAt, cloudBand
         }),
       }),
       yaxis: plotlyAxis('ATM IV (%)', { tickformat: '.1f' }),
-      shapes,
-      annotations,
     });
 
     Plotly.newPlot(chartRef.current, traces, layout, {
       responsive: true,
       displayModeBar: false,
     });
-  }, [Plotly, rows, cloudBands, tradingDate]);
+  }, [Plotly, rows, sortedCloudBands, tradingDate]);
 
   if (plotlyError) {
     return (
