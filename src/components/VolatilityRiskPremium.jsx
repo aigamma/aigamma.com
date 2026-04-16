@@ -303,6 +303,9 @@ export default function VolatilityRiskPremium() {
           ticksuffix: '%',
           side: 'right',
           overlaying: 'y',
+          ticks: 'outside',
+          ticklen: 8,
+          tickcolor: 'rgba(0,0,0,0)',
         }),
         title: {
           text: 'Implied Volatility',
