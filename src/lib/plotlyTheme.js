@@ -48,12 +48,12 @@ export const PLOTLY_SERIES_PALETTE = [
 export const PLOTLY_SERIES_OPACITY = 0.85;
 
 export function plotlyAxis(titleText, extras = {}) {
-  // Non-empty titles get the site-wide bold chart-scale treatment so every
-  // y-axis label on the dashboard reads at the same size and weight as the
-  // VRP card's "SPX" title. Empty titles skip the bold styling because
-  // there is no text to render.
+  // Non-empty titles get the site-wide chart-scale treatment so every
+  // y-axis label on the dashboard reads at the same size as the VRP card's
+  // "SPX" title. The text is rendered unbolded at 20px because the thin
+  // monospace stroke is easier to read at that scale than the bold variant.
   const title = titleText
-    ? { text: `<b>${titleText}</b>`, font: PLOTLY_FONTS.axisTitleBold, standoff: 10 }
+    ? { text: titleText, font: PLOTLY_FONTS.axisTitleBold, standoff: 10 }
     : { text: '', font: PLOTLY_FONTS.axisTitle };
   return {
     title,

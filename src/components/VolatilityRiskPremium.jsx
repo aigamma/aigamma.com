@@ -285,7 +285,7 @@ export default function VolatilityRiskPremium() {
           showgrid: false,
         }),
         title: {
-          text: '<b>SPX</b>',
+          text: 'SPX',
           font: axisTitleFont,
           standoff: 10,
         },
@@ -300,7 +300,7 @@ export default function VolatilityRiskPremium() {
           overlaying: 'y',
         }),
         title: {
-          text: '<b>Implied Volatility</b>',
+          text: 'Implied Volatility',
           font: axisTitleFont,
           standoff: 30,
         },
