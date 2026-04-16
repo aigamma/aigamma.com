@@ -316,27 +316,29 @@ export default function GammaThrottleScatter() {
     const yMin = Math.min(...closes);
     const yMax = Math.max(...closes);
 
-    // Pure rangeslider strip — no visible chart content, just the
-    // gray/dark/gray brush with white handles, matching every other
-    // chart on the dashboard. The trace is colored #141820 (card bg)
-    // so it's invisible but gives Plotly real data to avoid the
-    // doAutoRange crash that transparent traces trigger. Non-zero
-    // margins are required — Plotly's rangeslider creates an internal
-    // subplot whose axis scaling crashes with "Something went wrong
-    // with axis scaling" when zero margins + high thickness leave
-    // fewer than ~10px for the main plot area.
+    // SPX sparkline with a rangeslider below — the same pattern that
+    // every other chart on the dashboard uses (DealerGammaRegime, VRP,
+    // TermStructure all embed a rangeslider in a full-height chart).
+    // The 55px pure-rangeslider strip that preceded this was
+    // visually disconnected from the scatter and made the brush
+    // discoverability unclear. A 120px companion with a visible SPX
+    // line above a rangeslider restores visual parity: you see a small
+    // chart with regime-style context, and the gray/dark/white brush
+    // control reads as an obvious interactive element below it.
     const trace = {
       x: dates,
       y: closes,
       mode: 'lines',
       type: 'scatter',
-      line: { color: '#141820', width: 1 },
+      line: { color: PLOTLY_COLORS.primary, width: 1.25 },
+      fill: 'tozeroy',
+      fillcolor: 'rgba(74, 158, 255, 0.08)',
       hoverinfo: 'skip',
       showlegend: false,
     };
 
     const layout = plotly2DChartLayout({
-      margin: { t: 8, r: mobile ? 15 : 30, b: 5, l: mobile ? 50 : 70 },
+      margin: { t: 15, r: mobile ? 15 : 30, b: 10, l: mobile ? 50 : 70 },
       xaxis: plotlyAxis('', {
         type: 'date',
         range: activeRange || defaultRange,
@@ -347,7 +349,7 @@ export default function GammaThrottleScatter() {
         rangeslider: plotlyRangeslider({
           range: [firstDate, lastDate],
           autorange: false,
-          thickness: 0.65,
+          thickness: 0.4,
         }),
       }),
       yaxis: plotlyAxis('', {
@@ -359,7 +361,7 @@ export default function GammaThrottleScatter() {
         zeroline: false,
         fixedrange: true,
       }),
-      height: 55,
+      height: 120,
       showlegend: false,
     });
 
@@ -404,7 +406,7 @@ export default function GammaThrottleScatter() {
     );
   }
   if (loading) {
-    return <div className="skeleton-card" style={{ height: '620px', marginBottom: '1rem' }} />;
+    return <div className="skeleton-card" style={{ height: '640px', marginBottom: '1rem' }} />;
   }
   if (!data || fullSeries.length === 0) {
     return (
@@ -417,10 +419,12 @@ export default function GammaThrottleScatter() {
   return (
     <div className="card" style={{ marginBottom: '1rem' }}>
       <div ref={scatterRef} style={{ width: '100%', height: '520px', backgroundColor: 'var(--bg-card)' }} />
-      {/* Date brush zoom — gray strip matches rangeslider mask color
-          so the whole control reads as solid gray with a dark selection
-          window, identical to Term Structure's embedded rangeslider */}
-      <div ref={timeRef} style={{ width: '100%', height: '55px', backgroundColor: 'rgba(138, 143, 156, 0.18)' }} />
+      {/* Date brush zoom — a 120px companion chart with an SPX
+          sparkline and embedded rangeslider, mirroring the big-chart+
+          rangeslider pattern used by DealerGammaRegime, VRP, and
+          TermStructure. The sparkline gives date-window context; the
+          rangeslider below it supplies the gray/dark/white brush. */}
+      <div ref={timeRef} style={{ width: '100%', height: '120px', backgroundColor: 'var(--bg-card)' }} />
     </div>
   );
 }
