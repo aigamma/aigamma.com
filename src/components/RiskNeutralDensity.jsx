@@ -130,11 +130,12 @@ export default function RiskNeutralDensity({ fits, spotPrice, capturedAt }) {
       });
     });
 
-    // Default zoom is asymmetric around spot — narrower on the left, wider on
-    // the right — because the RND's right tail decays more slowly than the
-    // left, so the right side needs more room to show the full shape.
-    const zoomLow = spotPrice * 0.9;
-    const zoomHigh = spotPrice * 1.18;
+    // Default zoom is asymmetric around spot — tight on the left where the
+    // density falls off sharply, wider on the right where the longer-dated
+    // curves spread out. 5% below / 12% above keeps all the probability
+    // mass visible without wasting space on near-zero wings.
+    const zoomLow = spotPrice * 0.95;
+    const zoomHigh = spotPrice * 1.12;
 
     // Spot line as a Plotly shape so it sits across all traces.
     const layout = {
