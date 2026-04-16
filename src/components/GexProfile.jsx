@@ -113,10 +113,13 @@ export default function GexProfile({ contracts, spotPrice, levels, prevContracts
       allRaw = [...allRaw, ...prevCallGexRaw, ...prevPutGexRaw];
     }
 
-    const absNetAll = (showPrior && hasPrior ? [...gexData, ...prevGexData] : gexData)
-      .map((e) => Math.abs(e.callGex - e.putGex))
-      .sort((a, b) => a - b);
-    const C = absNetAll[Math.floor(absNetAll.length * 0.75)] || 1;
+    // C sets the symlog crossover: below C the bars scale linearly (preserving
+    // relative size), above C they compress logarithmically. Using P90 of the
+    // actual bar magnitudes (not net GEX) keeps the top 10% of bars in the log
+    // regime and the rest linear, so the important ATM bars dominate visually
+    // instead of being flattened into uniformity.
+    const allAbs = allRaw.map(Math.abs).sort((a, b) => a - b);
+    const C = allAbs[Math.floor(allAbs.length * 0.90)] || 1;
 
     const { tickvals, ticktext } = symlogTicks(allRaw, C);
 
