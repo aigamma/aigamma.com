@@ -1,8 +1,9 @@
-import { useEffect, useMemo, useRef } from 'react';
+import { useEffect, useMemo, useRef, useState } from 'react';
 import usePlotly from '../hooks/usePlotly';
 import {
   PLOTLY_BASE_LAYOUT_2D,
   PLOTLY_COLORS,
+  PLOTLY_FONT_FAMILY,
   PLOTLY_SERIES_OPACITY,
   plotlyAxis,
   plotlyRangeslider,
@@ -18,8 +19,10 @@ const PLOTLY_LAYOUT_BASE = {
     zerolinewidth: 2,
     tickformat: '.2s',
   }),
-  barmode: 'relative',
+  barmode: 'overlay',
 };
+
+const SHADOW_OPACITY = 0.2;
 
 function LevelLabel({ name, value, color }) {
   if (value == null) return null;
@@ -55,9 +58,25 @@ function LevelLabel({ name, value, color }) {
   );
 }
 
-export default function GexProfile({ contracts, spotPrice, levels }) {
+function toggleBtnStyle(active) {
+  return {
+    background: active ? 'rgba(74,158,255,0.12)' : 'none',
+    border: `1px solid ${active ? 'rgba(74,158,255,0.4)' : 'transparent'}`,
+    borderRadius: '3px',
+    padding: '0.15rem 0.45rem',
+    fontFamily: PLOTLY_FONT_FAMILY,
+    fontSize: '0.75rem',
+    letterSpacing: '0.08em',
+    textTransform: 'uppercase',
+    cursor: 'pointer',
+    color: active ? '#e0e0e0' : '#555',
+  };
+}
+
+export default function GexProfile({ contracts, spotPrice, levels, prevContracts, prevSpotPrice }) {
   const chartRef = useRef(null);
   const { plotly: Plotly, error: plotlyError } = usePlotly();
+  const [showPrior, setShowPrior] = useState(true);
 
   const gexData = useMemo(() => {
     if (!contracts || contracts.length === 0 || !spotPrice) return null;
@@ -67,6 +86,16 @@ export default function GexProfile({ contracts, spotPrice, levels }) {
     return all.filter((e) => e.strike >= lower && e.strike <= upper);
   }, [contracts, spotPrice]);
 
+  const prevGexData = useMemo(() => {
+    if (!prevContracts || prevContracts.length === 0 || !prevSpotPrice || !spotPrice) return null;
+    const all = computeGexByStrike(prevContracts, prevSpotPrice);
+    const lower = spotPrice * 0.8;
+    const upper = spotPrice * 1.2;
+    return all.filter((e) => e.strike >= lower && e.strike <= upper);
+  }, [prevContracts, prevSpotPrice, spotPrice]);
+
+  const hasPrior = prevGexData != null && prevGexData.length > 0;
+
   useEffect(() => {
     if (!Plotly || !chartRef.current || !gexData || gexData.length === 0) return;
 
@@ -74,16 +103,51 @@ export default function GexProfile({ contracts, spotPrice, levels }) {
     const callGexRaw = gexData.map((e) => e.callGex);
     const putGexRaw = gexData.map((e) => -e.putGex);
 
-    // C = 75th percentile of |netGex| — the crossover between linear and
-    // logarithmic compression, recomputed from the live dataset each render.
-    const absNetGex = gexData
+    // Build combined raw values for consistent symlog scaling when shadow is active.
+    let allRaw = [...callGexRaw, ...putGexRaw];
+    let prevCallGexRaw, prevPutGexRaw, prevStrikes;
+    if (showPrior && hasPrior) {
+      prevStrikes = prevGexData.map((e) => e.strike);
+      prevCallGexRaw = prevGexData.map((e) => e.callGex);
+      prevPutGexRaw = prevGexData.map((e) => -e.putGex);
+      allRaw = [...allRaw, ...prevCallGexRaw, ...prevPutGexRaw];
+    }
+
+    const absNetAll = (showPrior && hasPrior ? [...gexData, ...prevGexData] : gexData)
       .map((e) => Math.abs(e.callGex - e.putGex))
       .sort((a, b) => a - b);
-    const C = absNetGex[Math.floor(absNetGex.length * 0.75)] || 1;
+    const C = absNetAll[Math.floor(absNetAll.length * 0.75)] || 1;
 
-    const { tickvals, ticktext } = symlogTicks([...callGexRaw, ...putGexRaw], C);
+    const { tickvals, ticktext } = symlogTicks(allRaw, C);
 
-    const traces = [
+    const traces = [];
+
+    // Ghost bars from previous day — drawn first so they sit behind.
+    if (showPrior && hasPrior) {
+      traces.push(
+        {
+          x: prevStrikes,
+          y: prevCallGexRaw.map((v) => symlog(v, C)),
+          type: 'bar',
+          name: 'Prior Call',
+          marker: { color: PLOTLY_COLORS.positive, opacity: SHADOW_OPACITY },
+          hoverinfo: 'skip',
+          showlegend: false,
+        },
+        {
+          x: prevStrikes,
+          y: prevPutGexRaw.map((v) => symlog(v, C)),
+          type: 'bar',
+          name: 'Prior Put',
+          marker: { color: PLOTLY_COLORS.negative, opacity: SHADOW_OPACITY },
+          hoverinfo: 'skip',
+          showlegend: false,
+        },
+      );
+    }
+
+    // Current bars — drawn last so they render on top.
+    traces.push(
       {
         x: strikes,
         y: callGexRaw.map((v) => symlog(v, C)),
@@ -102,14 +166,10 @@ export default function GexProfile({ contracts, spotPrice, levels }) {
         marker: { color: PLOTLY_COLORS.negative, opacity: PLOTLY_SERIES_OPACITY },
         hovertemplate: 'Strike %{x}<br>Put Gamma: %{customdata:.3s}<extra></extra>',
       },
-    ];
+    );
 
-    // Dashed vertical reference lines only — no text attached. The horizontal
-    // legend row above the chart names each line and supplies the numeric
-    // value, so the in-plot markers carry no labels of their own and stay
-    // locked to data coordinates as the user pans or zooms the rangeslider.
     const shapes = [];
-    const pushLine = (x, color) => {
+    const pushLine = (x, color, dash = 'dash') => {
       if (x == null) return;
       shapes.push({
         type: 'line',
@@ -118,12 +178,12 @@ export default function GexProfile({ contracts, spotPrice, levels }) {
         yref: 'paper',
         y0: 0,
         y1: 1,
-        line: { color, width: 3, dash: 'dash' },
+        line: { color, width: 3, dash },
       });
     };
 
     if (levels) {
-      pushLine(levels.put_wall, PLOTLY_COLORS.negative);
+      pushLine(levels.put_wall, PLOTLY_COLORS.negative, 'dot');
       pushLine(levels.volatility_flip, PLOTLY_COLORS.highlight);
       pushLine(levels.call_wall, PLOTLY_COLORS.positive);
     }
@@ -157,7 +217,7 @@ export default function GexProfile({ contracts, spotPrice, levels }) {
       responsive: true,
       displayModeBar: false,
     });
-  }, [Plotly, gexData, spotPrice, levels]);
+  }, [Plotly, gexData, spotPrice, levels, prevGexData, showPrior, hasPrior]);
 
   if (plotlyError) {
     return (
@@ -185,15 +245,30 @@ export default function GexProfile({ contracts, spotPrice, levels }) {
       >
         <div
           style={{
-            color: PLOTLY_COLORS.titleText,
-            fontFamily: 'Courier New, monospace',
-            fontSize: '20px',
-            fontWeight: 'normal',
-            lineHeight: 1,
-            textAlign: 'center',
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+            position: 'relative',
           }}
         >
-          AI Gamma Map
+          <span
+            style={{
+              color: PLOTLY_COLORS.titleText,
+              fontFamily: 'Courier New, monospace',
+              fontSize: '20px',
+              fontWeight: 'normal',
+              lineHeight: 1,
+            }}
+          >
+            AI Gamma Map
+          </span>
+          {hasPrior && (
+            <div style={{ position: 'absolute', right: 0 }}>
+              <button type="button" onClick={() => setShowPrior((p) => !p)} style={toggleBtnStyle(showPrior)}>
+                Prior Day
+              </button>
+            </div>
+          )}
         </div>
         <div
           style={{

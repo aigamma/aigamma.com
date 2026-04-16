@@ -69,7 +69,7 @@ function Divider() {
 
 const ROW_GRID_CLASS = 'levels-row';
 
-export default function LevelsPanel({ levels, spotPrice, prevClose, expirationMetrics, expirations, selectedExpiration, onExpirationChange, capturedAt }) {
+export default function LevelsPanel({ levels, spotPrice, prevClose, expirationMetrics, expirations, selectedExpiration, onExpirationChange, capturedAt, vrpMetric }) {
   if (!levels) {
     return (
       <div className="card text-muted" style={{ marginBottom: '1rem' }}>
@@ -142,6 +142,12 @@ const volFlipSub = distanceSub(levels.volatility_flip, spotPrice);
               ? `${formatGamma(levels.total_put_oi)}P / ${formatGamma(levels.total_call_oi)}C`
               : null
           }
+        />
+        <Stat
+          label="VRP"
+          value={vrpMetric ? `${vrpMetric.vrp > 0 ? '+' : ''}${vrpMetric.vrp.toFixed(2)}%` : '\u2014'}
+          accent="var(--accent-cyan)"
+          sub={vrpMetric ? `IV ${vrpMetric.iv.toFixed(1)}% / RV ${vrpMetric.rv.toFixed(1)}%` : null}
         />
       </div>
 

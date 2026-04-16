@@ -2,6 +2,7 @@ import { useEffect, useMemo, useRef } from 'react';
 import usePlotly from '../hooks/usePlotly';
 import {
   PLOTLY_COLORS,
+  PLOTLY_FONTS,
   plotly2DChartLayout,
   plotlyAxis,
   plotlyRangeslider,
@@ -187,7 +188,15 @@ export default function TermStructure({ expirationMetrics, capturedAt, cloudBand
           autorange: false,
         }),
       }),
-      yaxis: plotlyAxis('ATM IV (%)', { tickformat: '.1f' }),
+      yaxis: {
+        ...plotlyAxis('ATM IV (%)', { tickformat: '.1f' }),
+        title: {
+          text: 'ATM IV (%)',
+          font: { ...PLOTLY_FONTS.axisTitleBold, color: PLOTLY_COLORS.primary },
+          standoff: 10,
+        },
+        tickfont: { ...PLOTLY_FONTS.axisTick, color: PLOTLY_COLORS.primary },
+      },
     });
 
     Plotly.newPlot(chartRef.current, traces, layout, {

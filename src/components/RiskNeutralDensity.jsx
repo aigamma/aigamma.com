@@ -140,7 +140,7 @@ export default function RiskNeutralDensity({ fits, spotPrice, capturedAt }) {
     const layout = {
       ...BASE_LAYOUT,
       title: {
-        ...plotlyTitle('Breeden-Litzenberger Risk-Neutral Density'),
+        ...plotlyTitle('Breeden-Litzenberger'),
         y: 0.96,
         yanchor: 'top',
       },

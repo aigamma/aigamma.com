@@ -93,6 +93,11 @@ export const PLOTLY_BASE_LAYOUT_2D = {
     font: PLOTLY_FONTS.legend,
   },
   hovermode: 'x unified',
+  hoverlabel: {
+    bgcolor: PLOTLY_COLORS.plot,
+    bordercolor: PLOTLY_COLORS.grid,
+    font: { family: PLOTLY_FONT_FAMILY, color: PLOTLY_COLORS.titleText, size: 13 },
+  },
 };
 
 export const PLOTLY_BASE_LAYOUT_3D = {

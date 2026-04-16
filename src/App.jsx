@@ -9,6 +9,7 @@ import RiskNeutralDensity from './components/RiskNeutralDensity';
 import VolSurface3D from './components/VolSurface3D';
 import VolatilityRiskPremium from './components/VolatilityRiskPremium';
 import useOptionsData from './hooks/useOptionsData';
+import { useVrpHistory } from './hooks/useHistoricalData';
 import useSviFits from './hooks/useSviFits';
 import { computeGammaProfile, findFlipFromProfile } from './lib/gammaProfile';
 import { formatFreshness, isMarketClosed } from './lib/dates';
@@ -56,6 +57,21 @@ export default function App() {
     tradingDate: data?.prevTradingDate,
     enabled: !!data?.prevTradingDate,
   });
+  const { data: vrpData } = useVrpHistory({});
+  const vrpMetric = useMemo(() => {
+    if (!vrpData?.series) return null;
+    for (let i = vrpData.series.length - 1; i >= 0; i--) {
+      const r = vrpData.series[i];
+      if (r.iv_30d_cm != null && r.hv_20d_yz != null) {
+        return {
+          vrp: (r.iv_30d_cm - r.hv_20d_yz) * 100,
+          iv: r.iv_30d_cm * 100,
+          rv: r.hv_20d_yz * 100,
+        };
+      }
+    }
+    return null;
+  }, [vrpData]);
   const [prevData, setPrevData] = useState(data);
 
   // React's recommended "adjust state during render" pattern for deriving
@@ -270,6 +286,7 @@ export default function App() {
             selectedExpiration={displayExpiration}
             onExpirationChange={setSelectedExpiration}
             capturedAt={data.capturedAt}
+            vrpMetric={vrpMetric}
           />
 
           <VolatilityRiskPremium />
@@ -289,6 +306,8 @@ export default function App() {
             contracts={data.contracts}
             spotPrice={data.spotPrice}
             levels={correctedLevels}
+            prevContracts={prevDayData?.contracts}
+            prevSpotPrice={prevDayData?.spotPrice}
           />
 
           <FixedStrikeIvMatrix
