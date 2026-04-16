@@ -80,7 +80,13 @@ export default function LevelsPanel({ levels, spotPrice, prevClose, expirationMe
 
   const callWallSub = distanceSub(levels.call_wall, spotPrice);
   const putWallSub = distanceSub(levels.put_wall, spotPrice);
-const volFlipSub = distanceSub(levels.volatility_flip, spotPrice);
+  const volFlipSub = distanceSub(levels.volatility_flip, spotPrice);
+
+  const flipDist =
+    spotPrice != null && levels.volatility_flip != null
+      ? spotPrice - levels.volatility_flip
+      : null;
+  const aboveFlip = flipDist != null && flipDist >= 0;
 
   const relevantMetric =
     expirationMetrics && expirationMetrics.length > 0
@@ -117,6 +123,12 @@ const volFlipSub = distanceSub(levels.volatility_flip, spotPrice);
           value={formatInteger(levels.call_wall)}
           accent="var(--accent-green)"
           sub={callWallSub}
+        />
+        <Stat
+          label="Dist from Risk Off"
+          value={flipDist != null ? `${aboveFlip ? '+' : ''}${flipDist.toFixed(2)}` : '\u2014'}
+          accent={aboveFlip ? 'var(--accent-green)' : 'var(--accent-coral)'}
+          sub={flipDist != null ? `${((flipDist / spotPrice) * 100).toFixed(2)}%` : null}
         />
       </div>
 
