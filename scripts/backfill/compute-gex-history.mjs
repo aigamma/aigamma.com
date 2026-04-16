@@ -82,20 +82,45 @@ function parseCsv(csvText, requiredCols) {
   return rows;
 }
 
+async function fetchTextWithRetry(url, label, attempts = 4) {
+  let lastErr;
+  for (let i = 0; i < attempts; i++) {
+    const ac = new AbortController();
+    const timer = setTimeout(() => ac.abort(new Error('client timeout 120s')), 120000);
+    try {
+      const res = await fetch(url, { signal: ac.signal });
+      if (res.status === 404) { clearTimeout(timer); return null; }
+      if (!res.ok) throw new Error(`HTTP ${res.status}`);
+      const text = await res.text();
+      clearTimeout(timer);
+      return text;
+    } catch (err) {
+      clearTimeout(timer);
+      lastErr = err;
+      if (i < attempts - 1) {
+        const backoff = 2000 * Math.pow(2, i);
+        log('gex.fetch_retry', { label, attempt: i + 1, error: String(err), backoff_ms: backoff });
+        await new Promise(r => setTimeout(r, backoff));
+      }
+    }
+  }
+  throw lastErr;
+}
+
 async function fetchGreeks(baseUrl, symbol, date) {
   const compact = toCompactDate(date);
   const url = `${baseUrl}/v3/option/history/greeks/eod?symbol=${symbol}&expiration=*&start_date=${compact}&end_date=${compact}`;
-  const res = await fetch(url);
-  if (!res.ok) { if (res.status === 404) return []; throw new Error(`greeks HTTP ${res.status} ${symbol} ${date}`); }
-  return parseCsv(await res.text(), ['expiration', 'strike', 'right', 'gamma', 'underlying_price']);
+  const text = await fetchTextWithRetry(url, `greeks ${symbol} ${date}`);
+  if (text === null) return [];
+  return parseCsv(text, ['expiration', 'strike', 'right', 'gamma', 'underlying_price']);
 }
 
 async function fetchOI(baseUrl, symbol, date) {
   const compact = toCompactDate(date);
   const url = `${baseUrl}/v3/option/history/open_interest?symbol=${symbol}&expiration=*&start_date=${compact}&end_date=${compact}`;
-  const res = await fetch(url);
-  if (!res.ok) { if (res.status === 404) return []; throw new Error(`OI HTTP ${res.status} ${symbol} ${date}`); }
-  return parseCsv(await res.text(), ['expiration', 'strike', 'right', 'open_interest']);
+  const text = await fetchTextWithRetry(url, `oi ${symbol} ${date}`);
+  if (text === null) return [];
+  return parseCsv(text, ['expiration', 'strike', 'right', 'open_interest']);
 }
 
 function joinGreeksAndOI(greeks, oiRows) {
@@ -189,9 +214,11 @@ async function main() {
     try {
       let allContracts = [];
       for (const root of ROOTS) {
-        const [greeks, oi] = await Promise.all([fetchGreeks(baseUrl, root, day), fetchOI(baseUrl, root, day)]);
+        const greeks = await fetchGreeks(baseUrl, root, day);
+        const oi = await fetchOI(baseUrl, root, day);
         allContracts.push(...joinGreeksAndOI(greeks, oi));
       }
+      await new Promise(r => setTimeout(r, 150));
       const result = computeDailyGex(allContracts);
       if (!result) { log('gex.skip_no_data', { date: day }); continue; }
 
