@@ -247,9 +247,9 @@ export default function GammaThrottleScatter() {
       }
       annotations.push({
         x: 0.99,
-        y: 0.99,
+        y: 0.97,
         xref: 'paper',
-        yref: 'paper',
+        yref: 'container',
         text: lines.join('<br>'),
         showarrow: false,
         font: { family: PLOTLY_FONT_FAMILY, color: PLOTLY_COLORS.titleText, size: 16 },
@@ -320,8 +320,11 @@ export default function GammaThrottleScatter() {
     // gray/dark/gray brush with white handles, matching every other
     // chart on the dashboard. The trace is colored #141820 (card bg)
     // so it's invisible but gives Plotly real data to avoid the
-    // doAutoRange crash that transparent traces trigger. Thickness
-    // 0.85 fills most of the 55px height with the rangeslider control.
+    // doAutoRange crash that transparent traces trigger. Non-zero
+    // margins are required — Plotly's rangeslider creates an internal
+    // subplot whose axis scaling crashes with "Something went wrong
+    // with axis scaling" when zero margins + high thickness leave
+    // fewer than ~10px for the main plot area.
     const trace = {
       x: dates,
       y: closes,
@@ -333,7 +336,7 @@ export default function GammaThrottleScatter() {
     };
 
     const layout = plotly2DChartLayout({
-      margin: { t: 0, r: mobile ? 15 : 30, b: 0, l: mobile ? 50 : 70 },
+      margin: { t: 8, r: mobile ? 15 : 30, b: 5, l: mobile ? 50 : 70 },
       xaxis: plotlyAxis('', {
         type: 'date',
         range: activeRange || defaultRange,
@@ -344,7 +347,7 @@ export default function GammaThrottleScatter() {
         rangeslider: plotlyRangeslider({
           range: [firstDate, lastDate],
           autorange: false,
-          thickness: 0.85,
+          thickness: 0.65,
         }),
       }),
       yaxis: plotlyAxis('', {
