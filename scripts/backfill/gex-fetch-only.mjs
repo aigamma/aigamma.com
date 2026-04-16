@@ -1,47 +1,38 @@
 #!/usr/bin/env node
-// Historical daily dealer GEX backfill from ThetaData EOD Greeks + OI.
-// For each trading day, fetches the full options chain (SPX + SPXW roots)
-// from two endpoints (greeks/eod for gamma, open_interest for OI), joins
-// them by contract key, computes net dealer gamma exposure using the
-// standard convention (call GEX positive, put GEX negative), finds the
-// vol flip strike (zero crossing of the net gamma profile), and writes
-// the aggregate metrics to daily_gex_stats.
+// Fetch-only GEX computation — pulls ThetaData EOD Greeks + Open Interest
+// (two separate endpoints), joins by (expiration, strike, right), computes
+// dealer GEX, and writes results as JSON to stdout. Does NOT write to
+// Supabase — the caller handles persistence (e.g. via MCP SQL).
 //
-// GEX formula matches src/lib/gex.js:
-//   GEX_contract = gamma * OI * 100 * spot^2 * 0.01
-// Call-side GEX is positive (dealer-short-calls creates stabilizing hedging).
-// Put-side GEX is negative (dealer-short-puts creates destabilizing hedging).
-// Net GEX = call_gex - put_gex; positive net = positive gamma regime.
+// The greeks/eod endpoint provides gamma and underlying_price but NOT OI.
+// The open_interest endpoint provides OI per contract. Both use the same
+// wildcard expiration=* pattern for a single date.
 //
 // Usage:
-//   SUPABASE_URL=... SUPABASE_SERVICE_KEY=... \
-//   node scripts/backfill/compute-gex-history.mjs [--start YYYY-MM-DD] [--end YYYY-MM-DD] [--force]
+//   node scripts/backfill/gex-fetch-only.mjs --start YYYY-MM-DD --end YYYY-MM-DD
 //
-// Resumable: skips dates already in daily_gex_stats unless --force is set.
+// Output: JSON array of { trading_date, spx_close, net_gex, call_gex,
+//         put_gex, vol_flip_strike, contract_count }
 
 import process from 'node:process';
-import { createBackfillWriter } from './supabase-writer.mjs';
 import { tradingDaysBetween } from './trading-days.mjs';
 
-const DEFAULT_START = '2017-01-03';
-const DEFAULT_END   = '2026-04-16';
 const DEFAULT_THETA = 'http://127.0.0.1:25503';
-const ROOTS         = ['SPXW', 'SPX'];
-const BATCH_SIZE    = 10;
+const ROOTS = ['SPXW', 'SPX'];
 
 function parseArgs(argv) {
-  const out = { start: DEFAULT_START, end: DEFAULT_END, force: false };
+  const out = { start: null, end: null };
   for (let i = 0; i < argv.length; i++) {
     const a = argv[i];
     if (a === '--start') out.start = argv[++i];
     else if (a === '--end') out.end = argv[++i];
-    else if (a === '--force') out.force = true;
+  }
+  if (!out.start || !out.end) {
+    console.error('Usage: node gex-fetch-only.mjs --start YYYY-MM-DD --end YYYY-MM-DD');
+    process.exit(2);
   }
   return out;
 }
-
-const log = (event, data = {}) =>
-  console.log(JSON.stringify({ ts: new Date().toISOString(), event, ...data }));
 
 function toCompactDate(iso) { return iso.replaceAll('-', ''); }
 
@@ -76,34 +67,46 @@ function parseCsv(csvText, requiredCols) {
   for (let i = 1; i < lines.length; i++) {
     const parts = parseCsvLine(lines[i]);
     const row = {};
-    for (const col of requiredCols) row[col] = parts[idx[col]];
+    for (const col of requiredCols) {
+      row[col] = parts[idx[col]];
+    }
     rows.push(row);
   }
   return rows;
 }
 
+// Fetch greeks/eod: returns gamma + underlying_price per contract
 async function fetchGreeks(baseUrl, symbol, date) {
   const compact = toCompactDate(date);
   const url = `${baseUrl}/v3/option/history/greeks/eod?symbol=${symbol}&expiration=*&start_date=${compact}&end_date=${compact}`;
   const res = await fetch(url);
-  if (!res.ok) { if (res.status === 404) return []; throw new Error(`greeks HTTP ${res.status} ${symbol} ${date}`); }
+  if (!res.ok) {
+    if (res.status === 404) return [];
+    throw new Error(`greeks HTTP ${res.status} ${symbol} ${date}`);
+  }
   return parseCsv(await res.text(), ['expiration', 'strike', 'right', 'gamma', 'underlying_price']);
 }
 
+// Fetch open_interest: returns OI per contract
 async function fetchOI(baseUrl, symbol, date) {
   const compact = toCompactDate(date);
   const url = `${baseUrl}/v3/option/history/open_interest?symbol=${symbol}&expiration=*&start_date=${compact}&end_date=${compact}`;
   const res = await fetch(url);
-  if (!res.ok) { if (res.status === 404) return []; throw new Error(`OI HTTP ${res.status} ${symbol} ${date}`); }
+  if (!res.ok) {
+    if (res.status === 404) return [];
+    throw new Error(`OI HTTP ${res.status} ${symbol} ${date}`);
+  }
   return parseCsv(await res.text(), ['expiration', 'strike', 'right', 'open_interest']);
 }
 
+// Join greeks + OI by (expiration, strike, right) contract key
 function joinGreeksAndOI(greeks, oiRows) {
   const oiMap = new Map();
   for (const r of oiRows) {
     const key = `${r.expiration}|${r.strike}|${r.right.replace(/^"|"$/g, '')}`;
     oiMap.set(key, Number(r.open_interest));
   }
+
   const joined = [];
   for (const g of greeks) {
     const right = g.right.replace(/^"|"$/g, '');
@@ -111,12 +114,18 @@ function joinGreeksAndOI(greeks, oiRows) {
     const oi = oiMap.get(key);
     const gamma = Number(g.gamma);
     if (!(gamma > 0) || !(oi > 0)) continue;
-    joined.push({ strike: Number(g.strike), right, gamma, open_interest: oi, underlyingPrice: Number(g.underlying_price) });
+    joined.push({
+      strike: Number(g.strike),
+      right,
+      gamma,
+      open_interest: oi,
+      underlyingPrice: Number(g.underlying_price),
+    });
   }
   return joined;
 }
 
-function computeDailyGex(contracts) {
+function computeGex(contracts) {
   if (!contracts || contracts.length === 0) return null;
   let spotPrice = null;
   for (const c of contracts) { if (c.underlyingPrice > 0) { spotPrice = c.underlyingPrice; break; } }
@@ -159,63 +168,47 @@ function computeDailyGex(contracts) {
     }
   }
 
-  return { spx_close: spotPrice, net_gex: netGex, call_gex: totalCallGex, put_gex: totalPutGex, vol_flip_strike: volFlip, contract_count: contracts.length };
+  return {
+    spx_close: spotPrice,
+    net_gex: netGex,
+    call_gex: totalCallGex,
+    put_gex: totalPutGex,
+    vol_flip_strike: volFlip,
+    contract_count: contracts.length,
+  };
 }
 
 async function main() {
   const args = parseArgs(process.argv.slice(2));
-  const url = process.env.SUPABASE_URL;
-  const serviceKey = process.env.SUPABASE_SERVICE_KEY;
-  if (!url || !serviceKey) { log('gex.missing_env', { need: ['SUPABASE_URL', 'SUPABASE_SERVICE_KEY'] }); process.exit(2); }
-
-  const writer = createBackfillWriter({ url, serviceKey });
   const baseUrl = process.env.THETA_BASE_URL || DEFAULT_THETA;
-  const allDays = tradingDaysBetween(args.start, args.end);
-  log('gex.start', { start: args.start, end: args.end, trading_days: allDays.length, force: args.force });
+  const days = tradingDaysBetween(args.start, args.end);
+  const results = [];
 
-  let existingDates = new Set();
-  if (!args.force) {
-    try { existingDates = await writer.getExistingGexDates(); log('gex.existing', { count: existingDates.size }); }
-    catch (err) { log('gex.existing_fetch_failed', { error: String(err) }); }
-  }
-
-  const pendingDays = allDays.filter(d => !existingDates.has(d));
-  log('gex.pending', { total: allDays.length, existing: existingDates.size, pending: pendingDays.length });
-  if (pendingDays.length === 0) { log('gex.nothing_to_do'); process.exit(0); }
-
-  let processed = 0, errors = 0, batch = [];
-
-  for (const day of pendingDays) {
+  for (const day of days) {
     try {
       let allContracts = [];
       for (const root of ROOTS) {
-        const [greeks, oi] = await Promise.all([fetchGreeks(baseUrl, root, day), fetchOI(baseUrl, root, day)]);
-        allContracts.push(...joinGreeksAndOI(greeks, oi));
+        // Fetch greeks and OI in parallel for same root (2 requests)
+        const [greeks, oi] = await Promise.all([
+          fetchGreeks(baseUrl, root, day),
+          fetchOI(baseUrl, root, day),
+        ]);
+        const joined = joinGreeksAndOI(greeks, oi);
+        allContracts.push(...joined);
       }
-      const result = computeDailyGex(allContracts);
-      if (!result) { log('gex.skip_no_data', { date: day }); continue; }
-
-      batch.push({ trading_date: day, ...result });
-      processed++;
-
-      if (batch.length >= BATCH_SIZE) {
-        await writer.upsertDailyGexStats(batch);
-        log('gex.batch_written', { count: batch.length, through: day, processed, remaining: pendingDays.length - processed });
-        batch = [];
+      const gex = computeGex(allContracts);
+      if (gex) {
+        results.push({ trading_date: day, ...gex });
+        process.stderr.write(`\r${day} [${results.length}/${days.length}]`);
+      } else {
+        process.stderr.write(`\r${day} [skip - no data]           `);
       }
     } catch (err) {
-      errors++;
-      log('gex.day_error', { date: day, error: String(err) });
-      if (errors > 20) { log('gex.too_many_errors', { errors }); break; }
+      process.stderr.write(`\n${day}: ${err.message}\n`);
     }
   }
-
-  if (batch.length > 0) {
-    try { await writer.upsertDailyGexStats(batch); log('gex.batch_written', { count: batch.length, through: batch[batch.length - 1].trading_date, processed }); }
-    catch (err) { log('gex.final_batch_failed', { error: String(err) }); }
-  }
-
-  log('gex.done', { processed, errors, total_days: pendingDays.length });
+  process.stderr.write('\n');
+  console.log(JSON.stringify(results));
 }
 
-main().catch(err => { log('gex.fatal', { error: String(err), stack: err?.stack }); process.exit(1); });
+main().catch(err => { console.error(err); process.exit(1); });
