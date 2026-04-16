@@ -239,10 +239,16 @@ export default function VolatilityRiskPremium() {
     // row, so it's noticeably taller than the 50px used on single-row-title
     // charts. Title is pinned to the top of the container; legend sits just
     // above the plot area (y slightly above 1 in paper coords, yanchor
-    // bottom), leaving a comfortable band between the two. Left and right
-    // margins are grown from the 80px default to 115px to host the bolder,
-    // 20px y-axis titles plus their 30px standoff from the tick labels
-    // without running into the card edge on either side.
+    // bottom), leaving a comfortable band between the two. Left margin
+    // matches the 80px used on GammaInflectionChart and GexProfile so the
+    // SPX axis sits flush with the other charts on the page; the bolder
+    // 20px y-axis title fits inside that budget by trimming the standoff
+    // from 30px to 10px, which still reads as deliberate padding between
+    // the rotated title and the right-edge tick labels without wasting the
+    // card's left margin on a huge title-to-tick gap. Right margin is
+    // left at 115px because the right y-axis ("Implied Volatility") still
+    // carries the 30px standoff and the user's feedback was scoped to the
+    // left edge only.
     const axisTitleFont = {
       family: PLOTLY_FONT_FAMILY,
       color: PLOTLY_COLORS.titleText,
@@ -254,7 +260,7 @@ export default function VolatilityRiskPremium() {
       size: 18,
     };
     const layout = plotly2DChartLayout({
-      margin: { t: 100, r: 115, b: 15, l: 115 },
+      margin: { t: 100, r: 115, b: 15, l: 80 },
       title: {
         ...plotlyTitle('Volatility Risk Premium'),
         y: 0.97,
@@ -281,7 +287,7 @@ export default function VolatilityRiskPremium() {
         title: {
           text: '<b>SPX</b>',
           font: axisTitleFont,
-          standoff: 30,
+          standoff: 10,
         },
       },
       yaxis2: {
