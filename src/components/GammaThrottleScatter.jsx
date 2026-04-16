@@ -316,24 +316,24 @@ export default function GammaThrottleScatter() {
     const yMin = Math.min(...closes);
     const yMax = Math.max(...closes);
 
-    // SPX close sparkline gives visual context and makes the
-    // rangeslider discoverable — same pattern as DealerGammaRegime
-    // but shorter. Transparent traces crash Plotly's rangeslider
-    // subplot, so a visible line is required.
+    // Pure rangeslider strip — no visible chart content, just the
+    // gray/dark/gray brush with white handles, matching every other
+    // chart on the dashboard. The trace is colored #141820 (card bg)
+    // so it's invisible but gives Plotly real data to avoid the
+    // doAutoRange crash that transparent traces trigger. Thickness
+    // 0.85 fills most of the 55px height with the rangeslider control.
     const trace = {
       x: dates,
       y: closes,
       mode: 'lines',
       type: 'scatter',
-      line: { color: 'rgba(74, 158, 255, 0.4)', width: 1 },
-      fill: 'tozeroy',
-      fillcolor: 'rgba(74, 158, 255, 0.06)',
+      line: { color: '#141820', width: 1 },
       hoverinfo: 'skip',
       showlegend: false,
     };
 
     const layout = plotly2DChartLayout({
-      margin: { t: 5, r: mobile ? 15 : 30, b: 15, l: mobile ? 50 : 70 },
+      margin: { t: 0, r: mobile ? 15 : 30, b: 0, l: mobile ? 50 : 70 },
       xaxis: plotlyAxis('', {
         type: 'date',
         range: activeRange || defaultRange,
@@ -344,6 +344,7 @@ export default function GammaThrottleScatter() {
         rangeslider: plotlyRangeslider({
           range: [firstDate, lastDate],
           autorange: false,
+          thickness: 0.85,
         }),
       }),
       yaxis: plotlyAxis('', {
@@ -355,7 +356,7 @@ export default function GammaThrottleScatter() {
         zeroline: false,
         fixedrange: true,
       }),
-      height: 120,
+      height: 55,
       showlegend: false,
     });
 
@@ -413,8 +414,8 @@ export default function GammaThrottleScatter() {
   return (
     <div className="card" style={{ marginBottom: '1rem' }}>
       <div ref={scatterRef} style={{ width: '100%', height: '520px', backgroundColor: 'var(--bg-card)' }} />
-      {/* SPX sparkline with date brush zoom */}
-      <div ref={timeRef} style={{ width: '100%', height: '120px', backgroundColor: 'var(--bg-card)' }} />
+      {/* Date brush zoom — pure rangeslider strip, no visible chart */}
+      <div ref={timeRef} style={{ width: '100%', height: '55px', backgroundColor: 'var(--bg-card)' }} />
     </div>
   );
 }
