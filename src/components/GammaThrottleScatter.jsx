@@ -313,25 +313,29 @@ export default function GammaThrottleScatter() {
     const firstDate = dates[0];
     const lastDate = dates[dates.length - 1];
 
-    // Explicit y range avoids Plotly's doAutoRange, which throws
-    // "Something went wrong with axis scaling" when the rangeslider's
-    // thickness: 1.0 leaves zero pixels for the plot area's y axis.
     const yMin = Math.min(...closes);
     const yMax = Math.max(...closes);
 
+    // Invisible line trace — exists only to give the rangeslider a date
+    // axis to bind to. The CSS hides the rangeplot miniature anyway.
     const trace = {
       x: dates,
       y: closes,
       mode: 'lines',
       type: 'scatter',
-      line: { color: 'rgba(74, 158, 255, 0.5)', width: 1 },
-      fill: 'tozeroy',
-      fillcolor: 'rgba(74, 158, 255, 0.08)',
+      line: { color: 'transparent', width: 0 },
       hoverinfo: 'skip',
+      showlegend: false,
     };
 
+    // The scatter's x-axis is throttle (numeric), not dates, so the
+    // rangeslider can't live on the scatter itself. This minimal chart
+    // hosts a date rangeslider sized to match the ~40px rangesliders
+    // on DealerGammaRegime, VRP, etc. Thickness 0.7 of a 55px chart
+    // gives a ~38px rangeslider; the remaining ~17px for the plot area
+    // keeps the y-axis from hitting the doAutoRange crash.
     const layout = plotly2DChartLayout({
-      margin: { t: 5, r: mobile ? 15 : 30, b: 0, l: mobile ? 50 : 70 },
+      margin: { t: 2, r: mobile ? 15 : 30, b: 2, l: mobile ? 50 : 70 },
       xaxis: plotlyAxis('', {
         type: 'date',
         range: activeRange || defaultRange,
@@ -340,6 +344,7 @@ export default function GammaThrottleScatter() {
         rangeslider: plotlyRangeslider({
           range: [firstDate, lastDate],
           autorange: false,
+          thickness: 0.7,
         }),
       }),
       yaxis: plotlyAxis('', {
@@ -350,7 +355,7 @@ export default function GammaThrottleScatter() {
         zeroline: false,
         fixedrange: true,
       }),
-      height: 80,
+      height: 55,
       showlegend: false,
     });
 
@@ -412,8 +417,8 @@ export default function GammaThrottleScatter() {
   return (
     <div className="card" style={{ marginBottom: '1rem' }}>
       <div ref={scatterRef} style={{ width: '100%', height: '520px', backgroundColor: 'var(--bg-card)' }} />
-      {/* Time context strip with rangeslider for date brush zoom */}
-      <div ref={timeRef} style={{ width: '100%', height: '80px', backgroundColor: 'var(--bg-card)' }} />
+      {/* Date brush zoom — rangeslider only, no visible chart content */}
+      <div ref={timeRef} style={{ width: '100%', height: '55px', backgroundColor: 'var(--bg-card)' }} />
     </div>
   );
 }
