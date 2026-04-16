@@ -286,6 +286,12 @@ export default function GammaThrottleScatter() {
     const firstDate = dates[0];
     const lastDate = dates[dates.length - 1];
 
+    // Explicit y range avoids Plotly's doAutoRange, which throws
+    // "Something went wrong with axis scaling" when the rangeslider's
+    // thickness: 1.0 leaves zero pixels for the plot area's y axis.
+    const yMin = Math.min(...closes);
+    const yMax = Math.max(...closes);
+
     const trace = {
       x: dates,
       y: closes,
@@ -311,6 +317,8 @@ export default function GammaThrottleScatter() {
         }),
       }),
       yaxis: plotlyAxis('', {
+        range: [yMin * 0.95, yMax * 1.05],
+        autorange: false,
         showticklabels: false,
         showgrid: false,
         zeroline: false,
