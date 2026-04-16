@@ -171,7 +171,9 @@ async function main() {
     log('spx_ohlc.fetch_failed', { error: String(err) });
     process.exit(1);
   }
-  log('spx_ohlc.fetched', { rows: rows.length });
+  const deduped = [...new Map(rows.map((r) => [r.trading_date, r])).values()];
+  log('spx_ohlc.fetched', { rows: rows.length, deduped: deduped.length });
+  rows = deduped;
 
   if (rows.length === 0) {
     log('spx_ohlc.no_rows');
