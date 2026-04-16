@@ -21,7 +21,15 @@ export const PLOTLY_FONT_FAMILY = 'Courier New, monospace';
 
 export const PLOTLY_FONTS = {
   base: { family: PLOTLY_FONT_FAMILY, color: PLOTLY_COLORS.titleText, size: 12 },
+  // `axisTitle` is the legacy small/muted font kept for annotations and
+  // colorbar titles where the bold chart-scale font would be overbearing.
+  // `axisTitleBold` is the site-wide axis-title font — every 2D chart
+  // renders its y-axis title at 20px bright-white bold so the axis is
+  // legible at the reduced resolution that screenshots get shared at on
+  // Discord, Twitter, and similar. `plotlyAxis` applies it automatically
+  // to any non-empty title.
   axisTitle: { family: PLOTLY_FONT_FAMILY, color: PLOTLY_COLORS.axisText, size: 12 },
+  axisTitleBold: { family: PLOTLY_FONT_FAMILY, color: PLOTLY_COLORS.titleText, size: 20 },
   axisTick: { family: PLOTLY_FONT_FAMILY, color: PLOTLY_COLORS.axisText, size: 12 },
   chartTitle: { family: PLOTLY_FONT_FAMILY, color: PLOTLY_COLORS.titleText, size: 20 },
   legend: { family: PLOTLY_FONT_FAMILY, color: PLOTLY_COLORS.axisText, size: 12 },
@@ -40,8 +48,15 @@ export const PLOTLY_SERIES_PALETTE = [
 export const PLOTLY_SERIES_OPACITY = 0.85;
 
 export function plotlyAxis(titleText, extras = {}) {
+  // Non-empty titles get the site-wide bold chart-scale treatment so every
+  // y-axis label on the dashboard reads at the same size and weight as the
+  // VRP card's "SPX" title. Empty titles skip the bold styling because
+  // there is no text to render.
+  const title = titleText
+    ? { text: `<b>${titleText}</b>`, font: PLOTLY_FONTS.axisTitleBold, standoff: 10 }
+    : { text: '', font: PLOTLY_FONTS.axisTitle };
   return {
-    title: { text: titleText, font: PLOTLY_FONTS.axisTitle },
+    title,
     gridcolor: PLOTLY_COLORS.grid,
     zerolinecolor: PLOTLY_COLORS.zeroLine,
     tickfont: PLOTLY_FONTS.axisTick,
