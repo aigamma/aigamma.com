@@ -1,12 +1,17 @@
 import { useState, useEffect } from 'react';
 
-export default function useOptionsData({ underlying = 'SPX', snapshotType = 'intraday', expiration = null, tradingDate = null } = {}) {
+export default function useOptionsData({ underlying = 'SPX', snapshotType = 'intraday', expiration = null, tradingDate = null, enabled = true } = {}) {
   const [data, setData] = useState(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
   const [retryCount, setRetryCount] = useState(0);
 
   useEffect(() => {
+    if (!enabled) {
+      setLoading(false);
+      return;
+    }
+
     let cancelled = false;
 
     async function fetchData() {
@@ -43,7 +48,7 @@ export default function useOptionsData({ underlying = 'SPX', snapshotType = 'int
     return () => {
       cancelled = true;
     };
-  }, [underlying, snapshotType, expiration, tradingDate, retryCount]);
+  }, [underlying, snapshotType, expiration, tradingDate, retryCount, enabled]);
 
   return { data, loading, error, refetch: () => setRetryCount((c) => c + 1) };
 }

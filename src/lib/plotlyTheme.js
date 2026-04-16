@@ -111,10 +111,20 @@ export const PLOTLY_COLORBAR = {
 
 // Diverging heatmap colorscale built from the palette — cold primary blue at
 // low values, amber at the midpoint, coral at the hot end. Used by the fixed-
-// strike IV matrix and any other 2D heatmap.
+// strike IV matrix (level mode) and any other 2D heatmap.
 export const PLOTLY_HEATMAP_COLORSCALE = [
   [0, PLOTLY_COLORS.primary],
   [0.5, PLOTLY_COLORS.highlight],
+  [1, PLOTLY_COLORS.secondary],
+];
+
+// Symmetric change colorscale — blue for IV contraction, dark neutral at zero
+// change, coral for IV expansion. Used by the fixed-strike IV matrix in
+// day-over-day change mode. The midpoint matches the zeroLine color so
+// unchanged cells recede visually and large moves pop.
+export const PLOTLY_HEATMAP_DIVERGING_COLORSCALE = [
+  [0, PLOTLY_COLORS.primary],
+  [0.5, PLOTLY_COLORS.zeroLine],
   [1, PLOTLY_COLORS.secondary],
 ];
 

@@ -93,7 +93,7 @@ export default async function handler(request) {
           trading_date: `lt.${run.trading_date}`,
           order: 'captured_at.desc',
           limit: '1',
-          select: 'spot_price',
+          select: 'spot_price,trading_date',
         }).toString()
       : null;
 
@@ -195,6 +195,9 @@ export default async function handler(request) {
     const prevClose = Array.isArray(prevCloseRows) && prevCloseRows.length > 0
       ? toNum(prevCloseRows[0].spot_price)
       : null;
+    const prevTradingDate = Array.isArray(prevCloseRows) && prevCloseRows.length > 0
+      ? prevCloseRows[0].trading_date
+      : null;
 
     const contracts = contractRows.map((c) => ({
       expiration_date: c.expiration_date,
@@ -290,6 +293,7 @@ export default async function handler(request) {
       underlying: run.underlying,
       spotPrice: toNum(run.spot_price),
       prevClose,
+      prevTradingDate,
       capturedAt: run.captured_at,
       tradingDate: run.trading_date,
       snapshotType: run.snapshot_type,

@@ -50,6 +50,12 @@ export default function App() {
     underlying: 'SPX',
     snapshotType: 'intraday',
   });
+  const { data: prevDayData } = useOptionsData({
+    underlying: 'SPX',
+    snapshotType: 'intraday',
+    tradingDate: data?.prevTradingDate,
+    enabled: !!data?.prevTradingDate,
+  });
   const [prevData, setPrevData] = useState(data);
 
   // React's recommended "adjust state during render" pattern for deriving
@@ -289,7 +295,7 @@ export default function App() {
             contracts={data.contracts}
             spotPrice={data.spotPrice}
             expirations={data.expirations}
-            capturedAt={data.capturedAt}
+            prevContracts={prevDayData?.contracts}
           />
 
           <RiskNeutralDensity

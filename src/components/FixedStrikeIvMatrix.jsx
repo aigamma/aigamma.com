@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useRef } from 'react';
+import { useEffect, useMemo, useRef, useState } from 'react';
 import usePlotly from '../hooks/usePlotly';
 import {
   PLOTLY_BASE_LAYOUT_2D,
@@ -6,9 +6,9 @@ import {
   PLOTLY_FONT_FAMILY,
   PLOTLY_FONTS,
   PLOTLY_HEATMAP_COLORSCALE,
+  PLOTLY_HEATMAP_DIVERGING_COLORSCALE,
   plotlyAxis,
   plotlyRangeslider,
-  plotlyTitle,
 } from '../lib/plotlyTheme';
 
 const NUM_STRIKE_ROWS = 11;
@@ -19,7 +19,7 @@ const MONTH_ABBR = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep
 
 const BASE_LAYOUT = {
   ...PLOTLY_BASE_LAYOUT_2D,
-  margin: { t: 40, r: 40, b: 60, l: 110 },
+  margin: { t: 10, r: 40, b: 60, l: 110 },
   hovermode: 'closest',
   xaxis: plotlyAxis('', {
     side: 'bottom',
@@ -80,74 +80,144 @@ function buildStrikeLadder(spot) {
   return Array.from({ length: NUM_STRIKE_ROWS }, (_, i) => center + (i - HALF_ROWS) * inc);
 }
 
-export default function FixedStrikeIvMatrix({ contracts, spotPrice, expirations }) {
+function groupByExpiration(contracts) {
+  const map = new Map();
+  if (!contracts) return map;
+  for (const c of contracts) {
+    if (!c.expiration_date) continue;
+    if (!map.has(c.expiration_date)) map.set(c.expiration_date, []);
+    map.get(c.expiration_date).push(c);
+  }
+  return map;
+}
+
+function toggleBtnStyle(active) {
+  return {
+    background: active ? 'rgba(74,158,255,0.12)' : 'none',
+    border: `1px solid ${active ? 'rgba(74,158,255,0.4)' : 'transparent'}`,
+    borderRadius: '3px',
+    padding: '0.15rem 0.45rem',
+    fontFamily: PLOTLY_FONT_FAMILY,
+    fontSize: '0.75rem',
+    letterSpacing: '0.08em',
+    textTransform: 'uppercase',
+    cursor: 'pointer',
+    color: active ? '#e0e0e0' : '#555',
+  };
+}
+
+export default function FixedStrikeIvMatrix({ contracts, spotPrice, expirations, prevContracts }) {
   const chartRef = useRef(null);
   const { plotly: Plotly, error: plotlyError } = usePlotly();
+  const [mode, setMode] = useState('change');
 
-  const matrix = useMemo(() => {
+  const { levelMatrix, changeMatrix } = useMemo(() => {
     if (!contracts || contracts.length === 0 || !spotPrice || !expirations || expirations.length === 0) {
-      return null;
+      return { levelMatrix: null, changeMatrix: null };
     }
-    const byExp = new Map();
-    for (const c of contracts) {
-      if (!c.expiration_date) continue;
-      if (!byExp.has(c.expiration_date)) byExp.set(c.expiration_date, []);
-      byExp.get(c.expiration_date).push(c);
-    }
+
+    const byExp = groupByExpiration(contracts);
+    const prevByExp = groupByExpiration(prevContracts);
 
     const sortedExps = [...expirations].sort();
     const xLabels = sortedExps.map(formatExpLabel);
-
     const strikes = buildStrikeLadder(spotPrice);
     const yLabels = strikes.map((s) => s.toString());
 
-    const z = strikes.map(() => []);
-    const textCells = strikes.map(() => []);
+    const zLevel = strikes.map(() => []);
+    const textLevel = strikes.map(() => []);
+    const zChange = strikes.map(() => []);
+    const textChange = strikes.map(() => []);
+    let hasAnyChange = false;
 
     for (let col = 0; col < sortedExps.length; col++) {
       const expContracts = byExp.get(sortedExps[col]) || [];
+      const prevExpContracts = prevByExp.get(sortedExps[col]) || [];
+
       for (let row = 0; row < strikes.length; row++) {
         const targetStrike = strikes[row];
         const preferCall = targetStrike > spotPrice;
+
         let iv = interpolateIv(expContracts, targetStrike, preferCall);
-        if (iv == null) {
-          iv = interpolateIv(expContracts, targetStrike, !preferCall);
+        if (iv == null) iv = interpolateIv(expContracts, targetStrike, !preferCall);
+
+        zLevel[row].push(iv != null ? iv * 100 : null);
+        textLevel[row].push(iv != null ? `${(iv * 100).toFixed(2)}%` : '\u2014');
+
+        if (prevExpContracts.length > 0 && iv != null) {
+          let prevIv = interpolateIv(prevExpContracts, targetStrike, preferCall);
+          if (prevIv == null) prevIv = interpolateIv(prevExpContracts, targetStrike, !preferCall);
+
+          if (prevIv != null) {
+            const delta = (iv - prevIv) * 100;
+            zChange[row].push(delta);
+            const sign = delta > 0 ? '+' : '';
+            textChange[row].push(`${sign}${delta.toFixed(2)}`);
+            hasAnyChange = true;
+          } else {
+            zChange[row].push(null);
+            textChange[row].push('\u2014');
+          }
+        } else {
+          zChange[row].push(null);
+          textChange[row].push('\u2014');
         }
-        z[row].push(iv != null ? iv * 100 : null);
-        textCells[row].push(iv != null ? `${(iv * 100).toFixed(2)}%` : '—');
       }
     }
 
-    return { xLabels, yLabels, z, textCells };
-  }, [contracts, spotPrice, expirations]);
+    const level = { xLabels, yLabels, z: zLevel, textCells: textLevel };
+    const change = hasAnyChange ? { xLabels, yLabels, z: zChange, textCells: textChange } : null;
+    return { levelMatrix: level, changeMatrix: change };
+  }, [contracts, spotPrice, expirations, prevContracts]);
+
+  const hasPrev = changeMatrix != null;
+  const isChangeMode = mode === 'change' && hasPrev;
+  const activeMatrix = isChangeMode ? changeMatrix : levelMatrix;
 
   useEffect(() => {
-    if (!Plotly || !chartRef.current || !matrix) return;
+    if (!Plotly || !chartRef.current || !activeMatrix) return;
 
-    const allValues = matrix.z.flat().filter((v) => v != null);
+    const allValues = activeMatrix.z.flat().filter((v) => v != null);
     if (allValues.length === 0) return;
-    const zMin = Math.min(...allValues);
-    const zMax = Math.max(...allValues);
+
+    let zMin, zMax, colorscale;
+    if (isChangeMode) {
+      const absMax = Math.max(...allValues.map(Math.abs));
+      zMin = -absMax;
+      zMax = absMax;
+      colorscale = PLOTLY_HEATMAP_DIVERGING_COLORSCALE;
+    } else {
+      zMin = Math.min(...allValues);
+      zMax = Math.max(...allValues);
+      colorscale = PLOTLY_HEATMAP_COLORSCALE;
+    }
 
     const trace = {
       type: 'heatmap',
-      z: matrix.z,
-      x: matrix.xLabels,
-      y: matrix.yLabels,
-      text: matrix.textCells,
+      z: activeMatrix.z,
+      x: activeMatrix.xLabels,
+      y: activeMatrix.yLabels,
+      text: activeMatrix.textCells,
       texttemplate: '%{text}',
-      textfont: { family: PLOTLY_FONT_FAMILY, size: 12, color: '#0d0f13', weight: 700 },
-      colorscale: PLOTLY_HEATMAP_COLORSCALE,
+      textfont: {
+        family: PLOTLY_FONT_FAMILY,
+        size: 12,
+        color: isChangeMode ? '#e0e0e0' : '#0d0f13',
+        weight: 700,
+      },
+      colorscale,
       zmin: zMin,
       zmax: zMax,
       hoverongaps: false,
-      hovertemplate: '%{x}<br>Strike %{y}<br>IV %{text}<extra></extra>',
+      hovertemplate: isChangeMode
+        ? '%{x}<br>Strike %{y}<br>\u0394 %{text}<extra></extra>'
+        : '%{x}<br>Strike %{y}<br>IV %{text}<extra></extra>',
       xgap: 2,
       ygap: 2,
       opacity: 0.85,
       colorbar: {
         ...PLOTLY_COLORBAR,
-        title: { text: 'IV %', font: PLOTLY_FONTS.axisTitle },
+        title: { text: isChangeMode ? '\u0394 IV' : 'IV %', font: PLOTLY_FONTS.axisTitle },
         thickness: 14,
         len: 0.9,
         outlinewidth: 0,
@@ -156,12 +226,12 @@ export default function FixedStrikeIvMatrix({ contracts, spotPrice, expirations 
 
     const layout = {
       ...BASE_LAYOUT,
-      title: plotlyTitle('Fixed-Strike IV'),
+      title: { text: '' },
       paper_bgcolor: 'rgba(0,0,0,0)',
       plot_bgcolor: 'rgba(0,0,0,0)',
       xaxis: {
         ...BASE_LAYOUT.xaxis,
-        ...(matrix.xLabels.length > 10 ? { range: [-0.5, 9.5] } : {}),
+        ...(activeMatrix.xLabels.length > 10 ? { range: [-0.5, 9.5] } : {}),
       },
     };
 
@@ -169,7 +239,7 @@ export default function FixedStrikeIvMatrix({ contracts, spotPrice, expirations 
       responsive: true,
       displayModeBar: false,
     });
-  }, [Plotly, matrix]);
+  }, [Plotly, activeMatrix, isChangeMode]);
 
   if (plotlyError) {
     return (
@@ -181,7 +251,7 @@ export default function FixedStrikeIvMatrix({ contracts, spotPrice, expirations 
       </div>
     );
   }
-  if (!matrix) {
+  if (!levelMatrix) {
     return (
       <div className="card text-muted" style={{ padding: '1rem', marginBottom: '1rem' }}>
         Fixed-strike IV matrix unavailable.
@@ -191,6 +261,34 @@ export default function FixedStrikeIvMatrix({ contracts, spotPrice, expirations 
 
   return (
     <div className="card" style={{ marginBottom: '1rem' }}>
+      <div
+        style={{
+          display: 'flex',
+          alignItems: 'center',
+          justifyContent: 'space-between',
+          padding: '0 0.75rem',
+        }}
+      >
+        <span
+          style={{
+            fontFamily: PLOTLY_FONT_FAMILY,
+            fontSize: '20px',
+            color: '#e0e0e0',
+          }}
+        >
+          Fixed-Strike IV
+        </span>
+        {hasPrev && (
+          <div style={{ display: 'inline-flex', gap: '0.35rem' }}>
+            <button type="button" onClick={() => setMode('change')} style={toggleBtnStyle(mode === 'change')}>
+              1D Change
+            </button>
+            <button type="button" onClick={() => setMode('level')} style={toggleBtnStyle(mode === 'level')}>
+              Level
+            </button>
+          </div>
+        )}
+      </div>
       <div ref={chartRef} style={{ width: '100%', height: '440px', backgroundColor: 'var(--bg-card)' }} />
     </div>
   );
