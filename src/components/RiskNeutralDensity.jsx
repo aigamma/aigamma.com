@@ -237,6 +237,7 @@ export default function RiskNeutralDensity({ fits, spotPrice, capturedAt }) {
       ],
       paper_bgcolor: 'rgba(0,0,0,0)',
       plot_bgcolor: 'rgba(0,0,0,0)',
+      hovermode: 'closest',
     };
 
     Plotly.newPlot(chartRef.current, traces, layout, {
