@@ -272,7 +272,8 @@ export default function FixedStrikeIvMatrix({ contracts, spotPrice, expirations,
         style={{
           display: 'flex',
           alignItems: 'center',
-          justifyContent: 'space-between',
+          justifyContent: 'center',
+          position: 'relative',
           padding: '0 0.75rem',
         }}
       >
@@ -286,7 +287,7 @@ export default function FixedStrikeIvMatrix({ contracts, spotPrice, expirations,
           Fixed-Strike IV
         </span>
         {hasPrev && (
-          <div style={{ display: 'inline-flex', gap: '0.35rem' }}>
+          <div style={{ position: 'absolute', right: '0.75rem', display: 'inline-flex', gap: '0.35rem' }}>
             <button type="button" onClick={() => setMode('change')} style={toggleBtnStyle(mode === 'change')}>
               1D Change
             </button>
