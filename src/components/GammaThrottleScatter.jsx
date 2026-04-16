@@ -247,9 +247,9 @@ export default function GammaThrottleScatter() {
       }
       annotations.push({
         x: 0.99,
-        y: 0.97,
+        y: 1.15,
         xref: 'paper',
-        yref: 'container',
+        yref: 'paper',
         text: lines.join('<br>'),
         showarrow: false,
         font: { family: PLOTLY_FONT_FAMILY, color: PLOTLY_COLORS.titleText, size: 16 },
@@ -417,8 +417,10 @@ export default function GammaThrottleScatter() {
   return (
     <div className="card" style={{ marginBottom: '1rem' }}>
       <div ref={scatterRef} style={{ width: '100%', height: '520px', backgroundColor: 'var(--bg-card)' }} />
-      {/* Date brush zoom — pure rangeslider strip, no visible chart */}
-      <div ref={timeRef} style={{ width: '100%', height: '55px', backgroundColor: 'var(--bg-card)' }} />
+      {/* Date brush zoom — gray strip matches rangeslider mask color
+          so the whole control reads as solid gray with a dark selection
+          window, identical to Term Structure's embedded rangeslider */}
+      <div ref={timeRef} style={{ width: '100%', height: '55px', backgroundColor: 'rgba(138, 143, 156, 0.18)' }} />
     </div>
   );
 }
