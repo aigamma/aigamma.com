@@ -356,6 +356,8 @@ export default function App() {
             />
           </ErrorBoundary>
 
+          <ErrorBoundary><GammaThrottleScatter /></ErrorBoundary>
+
           <ErrorBoundary>
             <FixedStrikeIvMatrix
               contracts={data.contracts}
@@ -383,8 +385,6 @@ export default function App() {
               underlying={data.underlying}
             />
           </ErrorBoundary>
-
-          <ErrorBoundary><GammaThrottleScatter /></ErrorBoundary>
         </>
       )}
     </div>
