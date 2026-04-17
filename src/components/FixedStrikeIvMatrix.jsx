@@ -109,6 +109,11 @@ function toggleBtnStyle(active) {
 
 export default function FixedStrikeIvMatrix({ contracts, spotPrice, expirations, prevContracts }) {
   const chartRef = useRef(null);
+  // Persists the user's current x-axis zoom across mode toggles. Stored
+  // in a ref rather than state so updating it on every rangeslider drag
+  // does not re-fire the newPlot effect (the chart is already showing
+  // the right range — we just need to remember it for the next toggle).
+  const xRangeRef = useRef(null);
   const { plotly: Plotly, error: plotlyError } = usePlotly();
   const [mode, setMode] = useState('change');
   const mobile = useIsMobile();
@@ -226,6 +231,20 @@ export default function FixedStrikeIvMatrix({ contracts, spotPrice, expirations,
       },
     };
 
+    // Default zoom shows 5 expirations on desktop (previously 10 —
+    // boxes were too small to read at a glance) and 4 on mobile where
+    // the card is narrower. If the user has already dragged the
+    // rangeslider (xRangeRef is populated), honor that zoom instead so
+    // switching between 1D Change and Level does not snap the view
+    // back to the default. The ref is updated by the plotly_relayout
+    // listener attached below on every slider drag.
+    const defaultXRange = mobile
+      ? [-0.5, 3.5]
+      : activeMatrix.xLabels.length > 5
+        ? [-0.5, 4.5]
+        : null;
+    const effectiveXRange = xRangeRef.current ?? defaultXRange;
+
     const layout = {
       ...BASE_LAYOUT,
       ...(mobile ? { margin: { t: 10, r: 30, b: 60, l: 70 } } : {}),
@@ -234,11 +253,7 @@ export default function FixedStrikeIvMatrix({ contracts, spotPrice, expirations,
       plot_bgcolor: 'rgba(0,0,0,0)',
       xaxis: {
         ...BASE_LAYOUT.xaxis,
-        ...(mobile
-          ? { range: [-0.5, 3.5] }
-          : activeMatrix.xLabels.length > 10
-            ? { range: [-0.5, 9.5] }
-            : {}),
+        ...(effectiveXRange ? { range: effectiveXRange } : {}),
       },
       // Lock the strike axis to the full ladder regardless of how the
       // user drags the x-axis rangeslider. Without fixedrange + an
@@ -264,6 +279,23 @@ export default function FixedStrikeIvMatrix({ contracts, spotPrice, expirations,
       responsive: true,
       displayModeBar: false,
     });
+
+    const chartEl = chartRef.current;
+    const relayoutHandler = (eventData) => {
+      if (!eventData) return;
+      const r0 = eventData['xaxis.range[0]'] ?? eventData['xaxis.range']?.[0];
+      const r1 = eventData['xaxis.range[1]'] ?? eventData['xaxis.range']?.[1];
+      if (r0 != null && r1 != null) {
+        xRangeRef.current = [r0, r1];
+      }
+    };
+    chartEl.on('plotly_relayout', relayoutHandler);
+
+    return () => {
+      if (chartEl?.removeAllListeners) {
+        chartEl.removeAllListeners('plotly_relayout');
+      }
+    };
   }, [Plotly, activeMatrix, isChangeMode, mobile]);
 
   if (plotlyError) {
