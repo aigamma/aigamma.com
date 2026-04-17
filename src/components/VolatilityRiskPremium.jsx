@@ -296,11 +296,11 @@ export default function VolatilityRiskPremium() {
           ticks: 'outside',
           ticklen: 8,
           tickcolor: 'rgba(0,0,0,0)',
-          tickfont: { ...PLOTLY_FONTS.axisTick, color: PLOTLY_COLORS.primary },
+          tickfont: { ...PLOTLY_FONTS.axisTick, color: SPX_LINE },
         }),
         title: mobile ? { text: '' } : {
           text: 'SPX',
-          font: { ...axisTitleFont, color: PLOTLY_COLORS.primary },
+          font: { ...axisTitleFont, color: SPX_LINE },
           standoff: 10,
         },
       },
