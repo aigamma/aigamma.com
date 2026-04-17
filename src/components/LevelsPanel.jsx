@@ -211,7 +211,7 @@ export default function LevelsPanel({ levels, spotPrice, prevClose, expirationMe
       {relevantMetric && (
         <>
           <Divider />
-          <div className={`${ROW_GRID_CLASS} levels-row--picker`}>
+          <div className={ROW_GRID_CLASS}>
             <div style={{ minWidth: 0 }}>
               <label
                 htmlFor="expiration-select"

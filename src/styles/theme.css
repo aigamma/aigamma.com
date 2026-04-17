@@ -82,21 +82,20 @@ body {
   padding: 1.5rem;
 }
 
+/* Column 1 is slightly wider than columns 2-5 because the expiration
+   picker in the third metric row renders "2026-05-15 AM (28d)" plus the
+   native <select> arrow chrome, which was clipping against "28d)" at a
+   pure 5-equal-column layout. A 1.15fr first column pulls ~20px from
+   the combined width of the other four cells — enough to clear the
+   arrow collision without making the picker feel oversized relative to
+   the adjacent Expected Move / IV metric cells. The same ratio applies
+   to all three rows of the card so that column boundaries align
+   vertically (Put Wall over P/C Volume over Expiration, Vol Flip over
+   P/C OI over Expected Move, and so on). */
 .levels-row {
   display: grid;
-  grid-template-columns: repeat(5, minmax(0, 1fr));
+  grid-template-columns: 1.15fr repeat(4, minmax(0, 1fr));
   gap: 1rem;
-}
-
-/* The picker row needs a wider first column because the AM-labeled
-   expiration option ("2026-05-15 AM (28d)") is longer than a plain
-   metric value like "284.06" and was clipping inside the default
-   equal-width grid. The 1.4fr first column pulls ~60px from the other
-   four metric cells, which remain wide enough to render their values
-   comfortably, and visually "hinges" the metric row slightly right
-   from the two rows above it. */
-.levels-row.levels-row--picker {
-  grid-template-columns: 1.4fr repeat(4, minmax(0, 1fr));
 }
 
 .skeleton-card {
@@ -159,8 +158,7 @@ body {
     padding: 0.75rem;
   }
 
-  .levels-row,
-  .levels-row.levels-row--picker {
+  .levels-row {
     grid-template-columns: repeat(2, minmax(0, 1fr));
     gap: 0.75rem;
   }
