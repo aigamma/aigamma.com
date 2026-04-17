@@ -1,5 +1,6 @@
 import { useEffect, useMemo, useRef, useState } from 'react';
 import usePlotly from '../hooks/usePlotly';
+import useIsMobile from '../hooks/useIsMobile';
 import { sviTotalVariance } from '../lib/svi';
 import {
   PLOTLY_BASE_LAYOUT_3D,
@@ -265,6 +266,7 @@ export default function VolSurface3D({ contracts, spotPrice, capturedAt, fits, s
   const chartRef = useRef(null);
   const { plotly: Plotly, error: plotlyError } = usePlotly();
   const [mode, setMode] = useState('raw');
+  const mobile = useIsMobile();
 
   const capturedAtMs = useMemo(
     () => (capturedAt ? new Date(capturedAt).getTime() : null),
@@ -314,7 +316,7 @@ export default function VolSurface3D({ contracts, spotPrice, capturedAt, fits, s
         cmin: cMin,
         cmid: cMid,
         cmax: cMax,
-        showscale: true,
+        showscale: !mobile,
         opacity: 0.85,
         contours: {
           z: {
@@ -372,7 +374,7 @@ export default function VolSurface3D({ contracts, spotPrice, capturedAt, fits, s
           cmid: cMid,
           cmin: cMin,
           cmax: cMax,
-          showscale: true,
+          showscale: !mobile,
           opacity: 0.85,
           colorbar: {
             ...PLOTLY_COLORBAR,
@@ -400,7 +402,7 @@ export default function VolSurface3D({ contracts, spotPrice, capturedAt, fits, s
       responsive: true,
       displayModeBar: false,
     });
-  }, [Plotly, effectiveMode, sviSurface, rawScatter, spotPrice, atmIv, sortedFits, hasSviFits, underlying]);
+  }, [Plotly, effectiveMode, sviSurface, rawScatter, spotPrice, atmIv, sortedFits, hasSviFits, underlying, mobile]);
 
   if (plotlyError) {
     return (
