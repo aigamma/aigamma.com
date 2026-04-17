@@ -191,6 +191,7 @@ export default function TermStructure({ expirationMetrics, capturedAt, cloudBand
     const layout = plotly2DChartLayout({
       margin: mobile ? { t: 45, r: 15, b: 40, l: 50 } : { t: 50, r: 40, b: 45, l: 70 },
       title: plotlyTitle('Term Structure'),
+      showlegend: false,
       xaxis: plotlyAxis('', {
         type: 'date',
         range: [windowStart, windowEnd],
@@ -236,7 +237,7 @@ export default function TermStructure({ expirationMetrics, capturedAt, cloudBand
 
   return (
     <div className="card" style={{ marginBottom: '1rem' }}>
-      <div ref={chartRef} style={{ width: '100%', height: '720px', backgroundColor: 'var(--bg-card)' }} />
+      <div ref={chartRef} style={{ width: '100%', height: '500px', backgroundColor: 'var(--bg-card)' }} />
       {brushDomain && (
         <RangeBrush
           min={isoToMs(brushDomain.axisStart)}

@@ -274,7 +274,7 @@ export default function VolatilityRiskPremium() {
       size: 18,
     };
     const layout = plotly2DChartLayout({
-      margin: mobile ? { t: 45, r: 50, b: 15, l: 50 } : { t: 100, r: 115, b: 15, l: 80 },
+      margin: mobile ? { t: 45, r: 50, b: 40, l: 50 } : { t: 100, r: 115, b: 45, l: 80 },
       title: {
         ...plotlyTitle('Volatility Risk Premium'),
         y: 0.97,
