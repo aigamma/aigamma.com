@@ -13,13 +13,6 @@ const signed = (n, d = 2) =>
     ? '-'
     : (Number(n) > 0 ? '+' : '') + Number(n).toFixed(d);
 
-// Expected move is a symmetric magnitude, never signed. Prefix with `±` so
-// the reader sees the bidirectional band rather than a misleading `+` sign.
-const magnitude = (n, d = 2) =>
-  n == null || Number.isNaN(Number(n))
-    ? '-'
-    : '±' + Math.abs(Number(n)).toFixed(d);
-
 const pct = (n) =>
   n == null || Number.isNaN(Number(n))
     ? '-'
@@ -46,7 +39,6 @@ async function load() {
     set('volFlip', fmt(d.volFlip));
     set('callWall', fmt(d.callWall));
     set('distRiskOff', signed(d.distanceFromRiskOff));
-    set('expMove', magnitude(d.expectedMove));
     set('atmIv', d.atmIv == null ? '-' : fmt(d.atmIv, 2) + '%');
     set('vrp', pct(d.vrp));
     set('ivRank', d.ivRank == null ? '-' : fmt(d.ivRank, 1) + '%');
@@ -71,7 +63,7 @@ async function load() {
     status.className = 'status neg';
     // Wipe the loading placeholders so the popup doesn't keep showing "..."
     // on every row forever when the endpoint is unreachable.
-    ['spot', 'putWall', 'volFlip', 'callWall', 'distRiskOff', 'expMove',
+    ['spot', 'putWall', 'volFlip', 'callWall', 'distRiskOff',
      'atmIv', 'vrp', 'ivRank', 'pcVol'].forEach((id) => set(id, '-'));
     set('asOf', 'Failed to load');
   }
