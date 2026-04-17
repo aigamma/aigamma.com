@@ -316,18 +316,17 @@ export default function GammaThrottleScatter() {
     const yMin = Math.min(...closes);
     const yMax = Math.max(...closes);
 
-    // 120px strip with a Plotly rangeslider anchored at the bottom.
-    // The rangeslider's main-plot subplot needs meaningful height to
-    // lay out its SVG correctly — squeezing it into a 55px strip with
-    // thickness 0.85 was silently failing to render any visible mask
-    // fills or handles, which is why previous attempts produced an
-    // apparently empty strip. At 120px with margins t=4 b=4, the plot
-    // area is 112px and thickness 0.32 gives a ~36px rangeslider (same
-    // physical size as the DealerGammaRegime rangeslider) plus ~76px
-    // of main-plot area above it. The main-plot trace is colored
-    // #141820 (card bg) so that 76px band reads as invisible empty
-    // space, and what the user sees is a gray brush bar at the bottom
-    // of the strip exactly matching the regime chart's rangeslider.
+    // Tight 52px strip sized to the smallest footprint Plotly's
+    // rangeslider will still reliably render at. The rangeslider needs
+    // at least ~10-12px of main-plot area above it or the SVG layout
+    // silently fails; at 52px with margins t=2 b=2 the plot area is
+    // 48px, and thickness 0.75 gives a ~36px rangeslider (same height
+    // as the DealerGammaRegime rangeslider) with a ~12px invisible
+    // buffer above. The remaining whitespace is ~12px instead of the
+    // 76px that a 120px strip carried, and the freed 68px is handed
+    // over to the scatter chart so it grows into that vertical band
+    // instead of leaving it as a card-colored void between the data
+    // and the rangeslider.
     const trace = {
       x: dates,
       y: closes,
@@ -339,7 +338,7 @@ export default function GammaThrottleScatter() {
     };
 
     const layout = plotly2DChartLayout({
-      margin: { t: 4, r: mobile ? 15 : 30, b: 4, l: mobile ? 50 : 70 },
+      margin: { t: 2, r: mobile ? 15 : 30, b: 2, l: mobile ? 50 : 70 },
       xaxis: plotlyAxis('', {
         type: 'date',
         range: activeRange || defaultRange,
@@ -350,7 +349,7 @@ export default function GammaThrottleScatter() {
         rangeslider: plotlyRangeslider({
           range: [firstDate, lastDate],
           autorange: false,
-          thickness: 0.32,
+          thickness: 0.75,
         }),
       }),
       yaxis: plotlyAxis('', {
@@ -362,7 +361,7 @@ export default function GammaThrottleScatter() {
         zeroline: false,
         fixedrange: true,
       }),
-      height: 120,
+      height: 52,
       showlegend: false,
     });
 
@@ -419,14 +418,15 @@ export default function GammaThrottleScatter() {
 
   return (
     <div className="card" style={{ marginBottom: '1rem' }}>
-      <div ref={scatterRef} style={{ width: '100%', height: '520px', backgroundColor: 'var(--bg-card)' }} />
-      {/* Date brush zoom — 120px strip hosting a Plotly rangeslider at
-          thickness 0.32. The strip height matches the natural footprint
-          Plotly's rangeslider needs to lay out its SVG; anything smaller
-          silently renders nothing. The top ~76px of main-plot area
-          carries an invisible #141820 trace that reads as empty card
-          space, and the bottom ~36px is the visible gray brush bar. */}
-      <div ref={timeRef} style={{ width: '100%', height: '120px', backgroundColor: 'var(--bg-card)' }} />
+      <div ref={scatterRef} style={{ width: '100%', height: '588px', backgroundColor: 'var(--bg-card)' }} />
+      {/* Date brush zoom — tight 52px strip sized to the minimum that
+          still renders a visible Plotly rangeslider. With margins t=2
+          b=2 and thickness 0.75, the visible rangeslider is ~36px at
+          the bottom of the strip and only ~12px of invisible-trace
+          buffer sits above it — the scatter above now owns the rest of
+          the card height, eliminating the prior ~76px of empty card
+          space between the x-axis and the rangeslider. */}
+      <div ref={timeRef} style={{ width: '100%', height: '52px', backgroundColor: 'var(--bg-card)' }} />
     </div>
   );
 }
