@@ -129,23 +129,50 @@ export default function App() {
     }
   }
 
-  // Default the expiration to the first row whose 16:00 ET close is still in
-  // the future relative to the snapshot's captured_at. On an after-close Final
-  // snapshot this skips today's 0DTE (which has no remaining time value, so
-  // its expected move and 25Δ IVs are null/meaningless) and lands on the next
-  // live expiration. Users can still click today manually.
-  const firstLiveExpiration = useMemo(() => {
+  // Default the expiration picker to the next standard SPX monthly closest
+  // to 30 DTE relative to the snapshot's captured_at. The previous behavior
+  // picked the first expiration whose 16:00 ET close was still in the future,
+  // which meant the dashboard landed on the 0DTE row during market hours.
+  // 0DTE on SPX produces three simultaneous display pathologies once the
+  // chain decays into its late-session pin: ATM IV collapses into the low
+  // single digits (the BSM solver inverts penny-priced ATM calls to IVs
+  // that can read <1% even though the rest of the term structure is at
+  // 14-16%), the Expected Move derived from that IV is therefore also
+  // meaningless, and the 25Δ call contract disappears because the call
+  // delta distribution bifurcates into δ<0.10 (deep OTM) and δ>0.40 (near
+  // ITM) with nothing in the 0.15-0.35 selection window. Anchoring on the
+  // next monthly (3rd Friday of a month, always between the 15th and 21st)
+  // closest to 30 DTE gives dense strike coverage and stable Greeks on all
+  // three stats. Users can still pick 0DTE or any other expiration from the
+  // dropdown; this only changes what renders before interaction.
+  const defaultExpiration = useMemo(() => {
     if (!data?.expirations?.length) return null;
     const capturedMs = data.capturedAt ? new Date(data.capturedAt).getTime() : NaN;
     if (Number.isNaN(capturedMs)) return data.expirations[0];
-    const live = data.expirations.find((exp) => {
-      const closeMs = new Date(`${exp}T16:00:00-04:00`).getTime();
-      return !Number.isNaN(closeMs) && closeMs > capturedMs;
-    });
-    return live || data.expirations[0];
+
+    const withDte = data.expirations
+      .map((exp) => {
+        const closeMs = new Date(`${exp}T16:00:00-04:00`).getTime();
+        const dte = (closeMs - capturedMs) / 86400000;
+        return { exp, dte };
+      })
+      .filter((x) => Number.isFinite(x.dte) && x.dte > 0);
+
+    const isMonthly = (iso) => {
+      const d = new Date(`${iso}T12:00:00Z`);
+      if (d.getUTCDay() !== 5) return false;
+      const day = d.getUTCDate();
+      return day >= 15 && day <= 21;
+    };
+
+    const monthlies = withDte.filter((x) => isMonthly(x.exp));
+    const pool = monthlies.length > 0 ? monthlies : withDte;
+    if (pool.length === 0) return data.expirations[0];
+    pool.sort((a, b) => Math.abs(a.dte - 30) - Math.abs(b.dte - 30));
+    return pool[0].exp;
   }, [data]);
 
-  const displayExpiration = selectedExpiration || firstLiveExpiration;
+  const displayExpiration = selectedExpiration || defaultExpiration;
 
   useEffect(() => {
     if (typeof window === 'undefined') return;
