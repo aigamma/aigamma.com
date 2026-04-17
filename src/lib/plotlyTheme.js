@@ -11,6 +11,15 @@ export const PLOTLY_COLORS = {
   titleText: '#e0e0e0',
   axisText: '#8a8f9c',
   primary: '#4a9eff',
+  // Soft sky-blue tint of `primary` (lifted toward titleText with mild
+  // desaturation, equivalent to Tailwind blue-300). Used for axis titles
+  // and tick text that need to chromatically associate with a primary-blue
+  // trace family but stay legible on the dark card. The fully-saturated
+  // primary reads too "neon" for static text and a 0.55-alpha version of
+  // primary blends down to ~#2f5e95 against the card, which is fine for a
+  // thin line stroke but too dark for glyph interiors. ~9.4:1 contrast on
+  // var(--bg-card), well above the WCAG AA 4.5:1 floor for normal text.
+  primarySoft: '#93c5fd',
   secondary: '#e74c3c',
   highlight: '#f1c40f',
   positive: '#2ecc71',

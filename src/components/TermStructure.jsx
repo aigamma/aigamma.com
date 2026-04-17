@@ -123,6 +123,32 @@ export default function TermStructure({ expirationMetrics, capturedAt, cloudBand
       .sort((a, b) => a.dte - b.dte);
   }, [cloudBands, tradingDate]);
 
+  // Compute a tight y-axis range over the cloud bands' p10/p90 envelope and
+  // the observed ATM IV trace, then floor the lower bound at 1% so Plotly's
+  // auto-tick can never emit a "0.0" tick at the bottom-left corner where it
+  // would collide with the first x-axis date label. Padded ±5% so the
+  // outermost data sits comfortably inside the plot area.
+  const yRange = useMemo(() => {
+    let yMin = Infinity;
+    let yMax = -Infinity;
+    for (const r of rows) {
+      if (r.atmIv != null) {
+        const v = r.atmIv * 100;
+        if (v < yMin) yMin = v;
+        if (v > yMax) yMax = v;
+      }
+    }
+    for (const b of sortedCloudBands) {
+      const lo = b.iv_p10 * 100;
+      const hi = b.iv_p90 * 100;
+      if (lo < yMin) yMin = lo;
+      if (hi > yMax) yMax = hi;
+    }
+    if (!Number.isFinite(yMin) || !Number.isFinite(yMax)) return null;
+    const pad = (yMax - yMin) * 0.05;
+    return [Math.max(1, yMin - pad), yMax + pad];
+  }, [rows, sortedCloudBands]);
+
   // Compute the brush's outer domain and default initial window outside
   // the effect so the render path can share the same numbers with the
   // Plotly layout. `axisStart` is padded 3 days left of the first
@@ -201,10 +227,11 @@ export default function TermStructure({ expirationMetrics, capturedAt, cloudBand
         ...plotlyAxis('ATM IV (%)', { tickformat: '.1f' }),
         title: mobile ? { text: '' } : {
           text: 'ATM IV (%)',
-          font: { ...PLOTLY_FONTS.axisTitleBold, color: PLOTLY_COLORS.primary },
+          font: { ...PLOTLY_FONTS.axisTitleBold, color: PLOTLY_COLORS.primarySoft },
           standoff: 10,
         },
-        tickfont: { ...PLOTLY_FONTS.axisTick, color: PLOTLY_COLORS.primary },
+        tickfont: { ...PLOTLY_FONTS.axisTick, color: PLOTLY_COLORS.primarySoft },
+        ...(yRange ? { range: yRange, autorange: false } : {}),
       },
     });
 
@@ -212,7 +239,7 @@ export default function TermStructure({ expirationMetrics, capturedAt, cloudBand
       responsive: true,
       displayModeBar: false,
     });
-  }, [Plotly, rows, sortedCloudBands, tradingDate, mobile, brushDomain, timeRange]);
+  }, [Plotly, rows, sortedCloudBands, tradingDate, mobile, brushDomain, timeRange, yRange]);
 
   const handleBrushChange = useCallback((minMs, maxMs) => {
     setTimeRange([msToIso(minMs), msToIso(maxMs)]);

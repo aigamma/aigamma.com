@@ -42,13 +42,6 @@ const POS_VRP_FILL  = 'rgba(46, 204, 113, 0.22)';
 const NEG_VRP_FILL  = 'rgba(231, 76, 60, 0.38)';
 const SPX_AREA_FILL = 'rgba(74, 158, 255, 0.12)';
 const SPX_LINE      = 'rgba(74, 158, 255, 0.55)';
-// Soft sky-blue tint of PLOTLY_COLORS.primary (#4a9eff lightened toward
-// titleText) used for the SPX axis title and tick labels. The line itself
-// stays alpha-faded as backdrop, but alpha-blending against the dark card
-// renders the rgba 0.55 line as ~#2f5e95 — readable for a thin line, too
-// dark for text. A solid lightened blue gives the labels a clearly readable
-// soft tone that still chromatically associates with the SPX trace.
-const SPX_LABEL     = '#93c5fd';
 const RV_COLOR      = PLOTLY_COLORS.highlight;
 const IV_COLOR      = PLOTLY_COLORS.titleText;
 
@@ -303,11 +296,11 @@ export default function VolatilityRiskPremium() {
           ticks: 'outside',
           ticklen: 8,
           tickcolor: 'rgba(0,0,0,0)',
-          tickfont: { ...PLOTLY_FONTS.axisTick, color: SPX_LABEL },
+          tickfont: { ...PLOTLY_FONTS.axisTick, color: PLOTLY_COLORS.primarySoft },
         }),
         title: mobile ? { text: '' } : {
           text: 'SPX',
-          font: { ...axisTitleFont, color: SPX_LABEL },
+          font: { ...axisTitleFont, color: PLOTLY_COLORS.primarySoft },
           standoff: 10,
         },
       },
