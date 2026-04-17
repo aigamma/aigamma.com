@@ -5,22 +5,24 @@ import { useGexHistory } from '../hooks/useHistoricalData';
 import {
   PLOTLY_COLORS,
   PLOTLY_FONT_FAMILY,
-  PLOTLY_FONTS,
   plotly2DChartLayout,
   plotlyAxis,
-  plotlyRangeslider,
   plotlyTitle,
 } from '../lib/plotlyTheme';
 
 // Scatter of gamma throttle (x) vs 10-day realized volatility (y).
 // Each dot is one trading day, colored on a continuous scale by throttle
 // value: coral (deep negative gamma) through amber (neutral) to blue
-// (strong positive gamma). A time-based brush zoom below the scatter
-// controls which historical window is included — dragging left reveals
-// more history. An exponential fit curve shows the structural negative
-// correlation between gamma positioning and realized vol. The counter
-// strip between the charts shows total days, positive/negative counts,
-// and their ratio.
+// (strong positive gamma). A custom HTML/CSS date-brush below the scatter
+// controls which historical window is included — dragging the handles or
+// the window body re-filters the scatter. An exponential fit curve shows
+// the structural negative correlation between gamma positioning and
+// realized vol. The brush is a plain div-based control rather than
+// Plotly's rangeslider because the scatter's x-axis is linear (gamma
+// throttle), not a date; embedding a date rangeslider requires a separate
+// strip chart, and Plotly's rangeslider silently fails to render in thin
+// strips (<~76px of main-plot area above the slider), which burned
+// several sessions before this was rewritten as a standalone widget.
 
 const THROTTLE_COLORSCALE = [
   [0.0, '#e74c3c'],
@@ -29,6 +31,8 @@ const THROTTLE_COLORSCALE = [
   [0.55, '#2ecc71'],
   [1.0, '#4a9eff'],
 ];
+
+const DAY_MS = 86400000;
 
 // Exponential fit: y = a * exp(b * x)
 // Solved via OLS on ln(y) = ln(a) + b*x
@@ -66,14 +70,150 @@ function addMonthsIso(iso, months) {
   return d.toISOString().slice(0, 10);
 }
 
+function isoToMs(iso) {
+  return new Date(`${iso}T00:00:00Z`).getTime();
+}
+
+function msToIso(ms) {
+  return new Date(ms).toISOString().slice(0, 10);
+}
+
+// Custom date-range brush — three absolutely-positioned divs inside a
+// gray track. Matches the aesthetic of the other charts' Plotly
+// rangesliders (gray ends, dark middle, white vertical handles) without
+// going through Plotly's SVG rangeslider machinery. Emits onChange only
+// on pointer release so the downstream scatter doesn't re-render 60x/s
+// during a drag; the brush's own display updates locally at drag rate.
+function DateRangeBrush({ firstDate, lastDate, activeRange, onChange, height = 40 }) {
+  const trackRef = useRef(null);
+  const [dragState, setDragState] = useState(null);
+
+  const firstMs = useMemo(() => isoToMs(firstDate), [firstDate]);
+  const lastMs = useMemo(() => isoToMs(lastDate), [lastDate]);
+  const totalMs = lastMs - firstMs;
+
+  const displayRange = dragState?.currentRange ?? activeRange;
+  const activeMinMs = isoToMs(displayRange[0]);
+  const activeMaxMs = isoToMs(displayRange[1]);
+
+  const leftPct = Math.max(0, ((activeMinMs - firstMs) / totalMs) * 100);
+  const rightPct = Math.max(0, ((lastMs - activeMaxMs) / totalMs) * 100);
+
+  const handlePointerDown = (handle) => (e) => {
+    if (!trackRef.current) return;
+    e.preventDefault();
+    e.stopPropagation();
+    e.target.setPointerCapture?.(e.pointerId);
+    setDragState({
+      handle,
+      startClientX: e.clientX,
+      startMin: isoToMs(activeRange[0]),
+      startMax: isoToMs(activeRange[1]),
+      rect: trackRef.current.getBoundingClientRect(),
+      currentRange: activeRange,
+    });
+  };
+
+  const handlePointerMove = (e) => {
+    if (!dragState) return;
+    const { handle, startClientX, startMin, startMax, rect } = dragState;
+    if (rect.width <= 0) return;
+    const deltaMs = ((e.clientX - startClientX) / rect.width) * totalMs;
+
+    let newRange;
+    if (handle === 'min') {
+      const newMin = Math.max(firstMs, Math.min(startMax - DAY_MS * 5, startMin + deltaMs));
+      newRange = [msToIso(newMin), msToIso(startMax)];
+    } else if (handle === 'max') {
+      const newMax = Math.min(lastMs, Math.max(startMin + DAY_MS * 5, startMax + deltaMs));
+      newRange = [msToIso(startMin), msToIso(newMax)];
+    } else {
+      const windowWidth = startMax - startMin;
+      let newMin = startMin + deltaMs;
+      let newMax = newMin + windowWidth;
+      if (newMin < firstMs) {
+        newMin = firstMs;
+        newMax = firstMs + windowWidth;
+      }
+      if (newMax > lastMs) {
+        newMax = lastMs;
+        newMin = lastMs - windowWidth;
+      }
+      newRange = [msToIso(newMin), msToIso(newMax)];
+    }
+    setDragState({ ...dragState, currentRange: newRange });
+  };
+
+  const handlePointerUp = () => {
+    if (!dragState) return;
+    onChange(dragState.currentRange);
+    setDragState(null);
+  };
+
+  return (
+    <div
+      ref={trackRef}
+      onPointerMove={handlePointerMove}
+      onPointerUp={handlePointerUp}
+      onPointerCancel={handlePointerUp}
+      style={{
+        width: '100%',
+        height: `${height}px`,
+        backgroundColor: 'rgba(138, 143, 156, 0.32)',
+        position: 'relative',
+        userSelect: 'none',
+        touchAction: 'none',
+        borderLeft: `1px solid ${PLOTLY_COLORS.grid}`,
+        borderRight: `1px solid ${PLOTLY_COLORS.grid}`,
+        borderBottom: `1px solid ${PLOTLY_COLORS.grid}`,
+      }}
+    >
+      <div
+        onPointerDown={handlePointerDown('window')}
+        style={{
+          position: 'absolute',
+          top: 0,
+          bottom: 0,
+          left: `${leftPct}%`,
+          right: `${rightPct}%`,
+          backgroundColor: PLOTLY_COLORS.plot,
+          cursor: dragState?.handle === 'window' ? 'grabbing' : 'grab',
+        }}
+      />
+      <div
+        onPointerDown={handlePointerDown('min')}
+        style={{
+          position: 'absolute',
+          top: 0,
+          bottom: 0,
+          left: `calc(${leftPct}% - 3px)`,
+          width: '6px',
+          backgroundColor: PLOTLY_COLORS.titleText,
+          cursor: 'ew-resize',
+        }}
+      />
+      <div
+        onPointerDown={handlePointerDown('max')}
+        style={{
+          position: 'absolute',
+          top: 0,
+          bottom: 0,
+          right: `calc(${rightPct}% - 3px)`,
+          width: '6px',
+          backgroundColor: PLOTLY_COLORS.titleText,
+          cursor: 'ew-resize',
+        }}
+      />
+    </div>
+  );
+}
+
 export default function GammaThrottleScatter() {
   const scatterRef = useRef(null);
-  const timeRef = useRef(null);
   const { plotly: Plotly, error: plotlyError } = usePlotly();
   const { data, loading, error } = useGexHistory({});
   const mobile = useIsMobile();
 
-  // Full series with valid throttle + rv
   const fullSeries = useMemo(() => {
     if (!data?.series) return [];
     return data.series.filter(
@@ -81,7 +221,6 @@ export default function GammaThrottleScatter() {
     );
   }, [data]);
 
-  // Time range state — defaults to last 12 months
   const [timeRange, setTimeRange] = useState(null);
 
   const defaultRange = useMemo(() => {
@@ -94,7 +233,6 @@ export default function GammaThrottleScatter() {
 
   const activeRange = timeRange || defaultRange;
 
-  // Filtered data within the active time window
   const filtered = useMemo(() => {
     if (!activeRange || fullSeries.length === 0) return fullSeries;
     return fullSeries.filter(
@@ -102,7 +240,6 @@ export default function GammaThrottleScatter() {
     );
   }, [fullSeries, activeRange]);
 
-  // Stats for the counter
   const stats = useMemo(() => {
     const total = filtered.length;
     const pos = filtered.filter((r) => r.regime === 'positive').length;
@@ -111,13 +248,11 @@ export default function GammaThrottleScatter() {
     return { total, pos, neg, ratio };
   }, [filtered]);
 
-  // Last data point (most recent in full series)
   const lastPoint = useMemo(() => {
     if (fullSeries.length === 0) return null;
     return fullSeries[fullSeries.length - 1];
   }, [fullSeries]);
 
-  // Fit curve on the filtered data
   const fitCurve = useMemo(() => {
     if (filtered.length < 10) return null;
     const xs = filtered.map((r) => r.gamma_throttle);
@@ -141,21 +276,10 @@ export default function GammaThrottleScatter() {
     return { x: curveX, y: curveY };
   }, [filtered]);
 
-  // Handle relayout events from the time strip's rangeslider
-  const handleTimeRelayout = useCallback(
-    (eventData) => {
-      let r0 = eventData['xaxis.range[0]'] ?? eventData['xaxis.range']?.[0];
-      let r1 = eventData['xaxis.range[1]'] ?? eventData['xaxis.range']?.[1];
-      if (r0 && r1) {
-        if (typeof r0 === 'string') r0 = r0.slice(0, 10);
-        if (typeof r1 === 'string') r1 = r1.slice(0, 10);
-        setTimeRange([r0, r1]);
-      }
-    },
-    [],
-  );
+  const handleBrushChange = useCallback((range) => {
+    setTimeRange(range);
+  }, []);
 
-  // Render the scatter plot
   const [scatterError, setScatterError] = useState(null);
   useEffect(() => {
     if (!Plotly || !scatterRef.current || filtered.length === 0) return;
@@ -171,8 +295,6 @@ export default function GammaThrottleScatter() {
     const cmin = Math.max(Math.min(...colorVals, -10), -80);
     const cmax = Math.min(Math.max(...colorVals, 10), 60);
 
-    // Explicit axis ranges to bypass Plotly's doAutoRange, which throws
-    // "Something went wrong with axis scaling" on certain data shapes.
     const xMin = Math.min(...throttleVals);
     const xMax = Math.max(...throttleVals);
     const xPad = Math.max((xMax - xMin) * 0.05, 2);
@@ -180,7 +302,6 @@ export default function GammaThrottleScatter() {
 
     const traces = [];
 
-    // Main scatter
     traces.push({
       x: throttleVals,
       y: rvVals,
@@ -200,7 +321,6 @@ export default function GammaThrottleScatter() {
       showlegend: false,
     });
 
-    // Fit curve
     if (fitCurve) {
       traces.push({
         x: fitCurve.x,
@@ -213,7 +333,6 @@ export default function GammaThrottleScatter() {
       });
     }
 
-    // "Last" marker
     if (lastPoint) {
       traces.push({
         x: [lastPoint.gamma_throttle],
@@ -235,7 +354,6 @@ export default function GammaThrottleScatter() {
       });
     }
 
-    // Build the upper-right annotation with current values and window stats
     const annotations = [];
     if (lastPoint) {
       const lines = [
@@ -302,86 +420,7 @@ export default function GammaThrottleScatter() {
     } catch (err) {
       setScatterError(err.message);
     }
-  }, [Plotly, filtered, fitCurve, lastPoint, mobile]);
-
-  // Render the time context strip with rangeslider
-  useEffect(() => {
-    if (!Plotly || !timeRef.current || fullSeries.length === 0 || !defaultRange) return;
-
-    const dates = fullSeries.map((r) => r.trading_date);
-    const closes = fullSeries.map((r) => r.spx_close);
-    const firstDate = dates[0];
-    const lastDate = dates[dates.length - 1];
-
-    const yMin = Math.min(...closes);
-    const yMax = Math.max(...closes);
-
-    // 80px strip — empirical minimum for Plotly to reliably render the
-    // rangeslider's SVG. 52px (main-plot 12px) silently fails, 120px
-    // (main-plot 76px) renders but leaves a lot of empty space; 80px
-    // with margins t=3 b=3 gives a 74px plot area, and thickness 0.48
-    // gives a ~36px rangeslider (matching the DealerGammaRegime
-    // rangeslider's physical height) with a ~38px invisible buffer
-    // above. The 38px of buffer is still more than ideal but is the
-    // smallest that has been observed to render reliably without
-    // silent layout failure. The scatter above grows to 560px to absorb
-    // most of the whitespace that the 120px strip was carrying.
-    const trace = {
-      x: dates,
-      y: closes,
-      mode: 'lines',
-      type: 'scatter',
-      line: { color: '#141820', width: 1 },
-      hoverinfo: 'skip',
-      showlegend: false,
-    };
-
-    const layout = plotly2DChartLayout({
-      margin: { t: 3, r: mobile ? 15 : 30, b: 3, l: mobile ? 50 : 70 },
-      xaxis: plotlyAxis('', {
-        type: 'date',
-        range: activeRange || defaultRange,
-        autorange: false,
-        showticklabels: false,
-        showgrid: false,
-        zeroline: false,
-        rangeslider: plotlyRangeslider({
-          range: [firstDate, lastDate],
-          autorange: false,
-          thickness: 0.48,
-        }),
-      }),
-      yaxis: plotlyAxis('', {
-        type: 'linear',
-        range: [yMin * 0.95, yMax * 1.05],
-        autorange: false,
-        showticklabels: false,
-        showgrid: false,
-        zeroline: false,
-        fixedrange: true,
-      }),
-      height: 80,
-      showlegend: false,
-    });
-
-    Plotly.newPlot(timeRef.current, [trace], layout, {
-      responsive: true,
-      displayModeBar: false,
-    });
-
-    // Wire up relayout listener for the rangeslider
-    timeRef.current.on('plotly_relayout', handleTimeRelayout);
-
-    return () => {
-      if (timeRef.current) {
-        timeRef.current.removeListener?.('plotly_relayout', handleTimeRelayout);
-      }
-    };
-  }, [Plotly, fullSeries, defaultRange, handleTimeRelayout, mobile]);
-  // NOTE: activeRange is intentionally excluded from the time strip's
-  // dependency array to avoid re-rendering the rangeslider on its own
-  // events (which would reset the drag state). The rangeslider is the
-  // source of truth for activeRange, not the other way around.
+  }, [Plotly, filtered, fitCurve, lastPoint, mobile, stats]);
 
   if (plotlyError) {
     return (
@@ -415,17 +454,19 @@ export default function GammaThrottleScatter() {
     );
   }
 
+  const firstDate = fullSeries[0].trading_date;
+  const lastDate = fullSeries[fullSeries.length - 1].trading_date;
+
   return (
     <div className="card" style={{ marginBottom: '1rem' }}>
-      <div ref={scatterRef} style={{ width: '100%', height: '560px', backgroundColor: 'var(--bg-card)' }} />
-      {/* Date brush zoom — 80px strip, the empirical minimum at which
-          Plotly reliably renders the rangeslider. Smaller heights
-          (52px tried) silently fail to paint any visible rangeslider
-          SVG. With margins t=3 b=3 and thickness 0.48 the visible
-          rangeslider is ~36px at the bottom of the strip; the ~38px
-          above it is an invisible #141820 trace that Plotly needs for
-          its internal layout. */}
-      <div ref={timeRef} style={{ width: '100%', height: '80px', backgroundColor: 'var(--bg-card)' }} />
+      <div ref={scatterRef} style={{ width: '100%', height: '600px', backgroundColor: 'var(--bg-card)' }} />
+      <DateRangeBrush
+        firstDate={firstDate}
+        lastDate={lastDate}
+        activeRange={activeRange}
+        onChange={handleBrushChange}
+        height={40}
+      />
     </div>
   );
 }
