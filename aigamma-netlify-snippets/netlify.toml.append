@@ -1,0 +1,15 @@
+# APPEND these blocks to your existing netlify.toml.
+# Do not duplicate existing redirects; only add what is new.
+
+[[redirects]]
+  from = "/api/snapshot.json"
+  to = "/.netlify/functions/snapshot"
+  status = 200
+  force = true
+
+[[headers]]
+  for = "/api/snapshot.json"
+  [headers.values]
+    Cache-Control = "public, max-age=30, s-maxage=30"
+    Content-Type = "application/json; charset=utf-8"
+    Access-Control-Allow-Origin = "*"
