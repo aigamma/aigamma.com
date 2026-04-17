@@ -66,13 +66,13 @@ const BASE_LAYOUT_3D = {
       ticktext: LOG_IV_TICKVALS.map((v) => `${v}%`),
     }),
     camera: {
-      eye: { x: 2.0, y: -1.4, z: 0.8 },
-      center: { x: 0, y: 0, z: -0.1 },
+      eye: { x: -1.8, y: -1.8, z: 0.7 },
+      center: { x: 0, y: 0, z: -0.15 },
       up: { x: 0, y: 0, z: 1 },
     },
     aspectmode: 'manual',
     aspectratio: { x: 1.5, y: 1.5, z: 1.0 },
-    domain: { y: [0.05, 0.95] },
+    domain: { x: [0, 1], y: [0, 0.92] },
   },
 };
 
