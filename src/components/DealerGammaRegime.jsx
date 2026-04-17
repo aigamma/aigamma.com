@@ -24,11 +24,13 @@ function msToIso(ms) {
 // Green dots = positive gamma (dealers dampen moves, spot >= vol flip).
 // Red dots = negative gamma (dealers amplify moves, spot < vol flip).
 // Brush zoom via rangeslider defaults to the last 6 months with the full
-// historical range available for expansion. Marker size, marker opacity,
-// AND the y-axis range are all recomputed on every rangeslider drag — the
-// dots grow into larger semi-transparent spheres as the user zooms in,
-// and the SPX y-axis tightens to exactly the visible window's min/max so
-// intraday detail is not flattened by distant out-of-view highs or lows.
+// historical range available for expansion. Marker size and the y-axis
+// range are recomputed on every rangeslider drag — the dots grow as the
+// user zooms in, and the SPX y-axis tightens to exactly the visible
+// window's min/max so intraday detail is not flattened by distant
+// out-of-view highs or lows. Dots are fully opaque so that overlapping
+// markers in the zoomed-out view render as crisp shapes rather than
+// blending into a soft wash.
 
 const LINE_COLOR = 'rgba(138, 143, 156, 0.35)';
 
@@ -88,20 +90,6 @@ function computeMarkerSize(visibleCount, chartWidth, mobile) {
   return Math.max(minSize, Math.min(maxSize, scaled));
 }
 
-// Opacity drops as the visible count rises so clusters on the zoomed-out
-// view accumulate into a denser color rather than stacking as one
-// flat-colored wall of dots. Clamped to [0.40, 0.70] so the dots always
-// carry slight transparency — at every zoom level overlapping dots mix
-// into a visibly denser color, which is what lets a cluster read as a
-// cluster instead of as a single flat-filled dot sitting on top of its
-// neighbors. The previous ceiling of 0.88 was effectively opaque, which
-// hid cluster density.
-function computeMarkerOpacity(visibleCount) {
-  if (visibleCount <= 0) return 0.6;
-  const opacity = 2.5 / Math.sqrt(visibleCount) + 0.40;
-  return Math.max(0.40, Math.min(0.70, opacity));
-}
-
 export default function DealerGammaRegime() {
   const chartRef = useRef(null);
   const { plotly: Plotly, error: plotlyError } = usePlotly();
@@ -156,15 +144,13 @@ export default function DealerGammaRegime() {
       .slice(0, 10);
     const displayEnd = windowEnd >= lastDate ? paddedEndIso : windowEnd;
 
-    // Marker size, marker opacity, and y-axis range are all derived from
-    // the currently-visible window so the dots grow into denser bubbles
-    // and the y-axis tightens around the visible closes as the user
-    // brushes in. Because the brush commits only on pointerUp, this
-    // recompute runs once per drag instead of at 60 fps.
+    // Marker size and y-axis range are derived from the currently-visible
+    // window so the dots grow as the user brushes in and the y-axis
+    // tightens around the visible closes. Because the brush commits only
+    // on pointerUp, this recompute runs once per drag instead of at 60 fps.
     const visibleCount = countInRange(allDates, windowStart, windowEnd);
     const chartWidth = chartRef.current.clientWidth || (mobile ? 400 : 900);
     const markerSize = computeMarkerSize(visibleCount, chartWidth, mobile);
-    const markerOpacity = computeMarkerOpacity(visibleCount);
     const yRange = computeYRange(allDates, allCloses, windowStart, windowEnd);
 
     // Thin connecting line for price continuity
@@ -178,9 +164,6 @@ export default function DealerGammaRegime() {
       hoverinfo: 'skip',
     };
 
-    // Positive gamma dots (green). line.width:0 suppresses Plotly's
-    // default 1px data-colored border, which at low opacity renders as
-    // a distracting halo around each sphere.
     const posTrace = {
       x: positive.map((r) => r.trading_date),
       y: positive.map((r) => r.spx_close),
@@ -189,14 +172,12 @@ export default function DealerGammaRegime() {
       marker: {
         color: PLOTLY_COLORS.positive,
         size: markerSize,
-        opacity: markerOpacity,
         line: { width: 0 },
       },
       name: '<b>Positive Gamma</b>',
       hovertemplate: '%{x}<br>SPX: %{y:,.0f}<br>Positive Gamma<extra></extra>',
     };
 
-    // Negative gamma dots (red)
     const negTrace = {
       x: negative.map((r) => r.trading_date),
       y: negative.map((r) => r.spx_close),
@@ -205,7 +186,6 @@ export default function DealerGammaRegime() {
       marker: {
         color: PLOTLY_COLORS.negative,
         size: markerSize,
-        opacity: markerOpacity,
         line: { width: 0 },
       },
       name: '<b>Negative Gamma</b>',
