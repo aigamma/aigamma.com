@@ -2,16 +2,14 @@ import { formatGamma, formatInteger, formatPercent, formatRatio } from '../lib/f
 import { daysToExpiration } from '../lib/dates';
 
 // Treat the 3rd Friday of the month (Friday whose calendar day is 15-21) as
-// an AM-settled standard SPX monthly, and everything else as a PM-settled
-// SPXW weekly. On 3rd Fridays both roots technically share the same calendar
-// date — the AM SPX monthly settles via SOQ at 9:30 ET and the PM SPXW
-// weekly trades until 16:00 ET — but the App-level same-day filter removes
-// that specific date from the picker entirely, so by the time a date
-// reaches this function it either hasn't arrived yet (future monthly, where
-// the AM contract is the primary interest) or is a non-3rd-Friday weekly
-// (PM only). The 3rd-Friday test is therefore a reliable proxy for the
-// AM/PM distinction without needing a root column piped through from the
-// data layer.
+// an AM-settled standard SPX monthly; everything else is a PM-settled SPXW
+// weekly. Only the AM case is labeled in the dropdown — PM is the default
+// so an unlabeled entry implicitly means PM, which keeps the dropdown
+// column narrow enough to fit the longer AM label without clipping. On
+// 3rd Fridays both roots technically share the same calendar date, but the
+// App-level same-day filter removes that date from the picker entirely,
+// leaving only future 3rd Fridays (where the AM monthly is the primary
+// interest) and non-3rd-Friday weeklies (where only SPXW exists).
 function isThirdFridayMonthly(iso) {
   const d = new Date(`${iso}T12:00:00Z`);
   if (d.getUTCDay() !== 5) return false;
@@ -20,10 +18,12 @@ function isThirdFridayMonthly(iso) {
 }
 
 function formatExpirationOption(exp, capturedAt) {
-  const settlement = isThirdFridayMonthly(exp) ? 'AM' : 'PM';
   const dteFrac = daysToExpiration(exp, capturedAt);
   const dteLabel = dteFrac != null ? `${Math.max(0, Math.round(dteFrac))}d` : '—d';
-  return `${exp} ${settlement} (${dteLabel})`;
+  if (isThirdFridayMonthly(exp)) {
+    return `${exp} AM (${dteLabel})`;
+  }
+  return `${exp} (${dteLabel})`;
 }
 
 function distanceSub(level, spot) {
@@ -211,7 +211,7 @@ export default function LevelsPanel({ levels, spotPrice, prevClose, expirationMe
       {relevantMetric && (
         <>
           <Divider />
-          <div className={ROW_GRID_CLASS}>
+          <div className={`${ROW_GRID_CLASS} levels-row--picker`}>
             <div style={{ minWidth: 0 }}>
               <label
                 htmlFor="expiration-select"

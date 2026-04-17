@@ -88,6 +88,17 @@ body {
   gap: 1rem;
 }
 
+/* The picker row needs a wider first column because the AM-labeled
+   expiration option ("2026-05-15 AM (28d)") is longer than a plain
+   metric value like "284.06" and was clipping inside the default
+   equal-width grid. The 1.4fr first column pulls ~60px from the other
+   four metric cells, which remain wide enough to render their values
+   comfortably, and visually "hinges" the metric row slightly right
+   from the two rows above it. */
+.levels-row.levels-row--picker {
+  grid-template-columns: 1.4fr repeat(4, minmax(0, 1fr));
+}
+
 .skeleton-card {
   background-color: var(--bg-card);
   border: 1px solid var(--bg-card-border);
@@ -148,7 +159,8 @@ body {
     padding: 0.75rem;
   }
 
-  .levels-row {
+  .levels-row,
+  .levels-row.levels-row--picker {
     grid-template-columns: repeat(2, minmax(0, 1fr));
     gap: 0.75rem;
   }
