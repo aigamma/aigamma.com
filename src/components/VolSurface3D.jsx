@@ -56,8 +56,8 @@ const BASE_LAYOUT_3D = {
   scene: {
     bgcolor: PLOTLY_COLORS.plot,
     xaxis: axis3D('strike', { dtick: 500 }),
-    yaxis: axis3D('days to expiration'),
-    zaxis: axis3D('implied volatility (%)', {
+    yaxis: axis3D('DTE'),
+    zaxis: axis3D('IV%', {
       type: 'log',
       zerolinecolor: PLOTLY_COLORS.primary,
       zerolinewidth: 1.5,
@@ -65,7 +65,11 @@ const BASE_LAYOUT_3D = {
       tickvals: LOG_IV_TICKVALS,
       ticktext: LOG_IV_TICKVALS.map((v) => `${v}%`),
     }),
-    camera: { eye: { x: 1.55, y: -1.85, z: 0.85 } },
+    camera: {
+      eye: { x: 2.0, y: -1.4, z: 0.8 },
+      center: { x: 0, y: 0, z: -0.1 },
+      up: { x: 0, y: 0, z: 1 },
+    },
     aspectmode: 'manual',
     aspectratio: { x: 1.5, y: 1.5, z: 1.0 },
     domain: { y: [0.05, 0.95] },
