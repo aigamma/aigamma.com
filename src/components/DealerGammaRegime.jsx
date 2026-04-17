@@ -15,8 +15,12 @@ import {
 // SPX price as a thin connecting line with regime-colored dots overlaid.
 // Green dots = positive gamma (dealers dampen moves, spot >= vol flip).
 // Red dots = negative gamma (dealers amplify moves, spot < vol flip).
-// Brush zoom via rangeslider defaults to the last 2 years with the full
-// historical range available for expansion.
+// Brush zoom via rangeslider defaults to the last 6 months with the full
+// historical range available for expansion. Marker size, marker opacity,
+// AND the y-axis range are all recomputed on every rangeslider drag — the
+// dots grow into larger semi-transparent spheres as the user zooms in,
+// and the SPX y-axis tightens to exactly the visible window's min/max so
+// intraday detail is not flattened by distant out-of-view highs or lows.
 
 const LINE_COLOR = 'rgba(138, 143, 156, 0.35)';
 
@@ -24,6 +28,66 @@ function addMonthsIso(iso, months) {
   const d = new Date(`${iso}T00:00:00Z`);
   d.setUTCMonth(d.getUTCMonth() + months);
   return d.toISOString().slice(0, 10);
+}
+
+// Count entries in a sorted ISO-date array that fall within [lo, hi]
+// inclusive. Linear scan — fine for the ~2500-point history we render.
+function countInRange(sortedDates, lo, hi) {
+  let count = 0;
+  for (const d of sortedDates) {
+    if (d >= lo && d <= hi) count++;
+  }
+  return count;
+}
+
+// Compute a tight y-axis range (5% padded) over only the closes whose
+// matching date falls inside [xStart, xEnd] inclusive. Returns null if no
+// points fall in the window, in which case callers should leave the
+// existing range alone rather than collapsing the axis to a degenerate
+// span.
+function computeYRange(allDates, allCloses, xStart, xEnd) {
+  let yMin = Infinity;
+  let yMax = -Infinity;
+  for (let i = 0; i < allDates.length; i++) {
+    if (allDates[i] >= xStart && allDates[i] <= xEnd) {
+      const v = allCloses[i];
+      if (v < yMin) yMin = v;
+      if (v > yMax) yMax = v;
+    }
+  }
+  if (!Number.isFinite(yMin) || !Number.isFinite(yMax)) return null;
+  if (yMax === yMin) {
+    const pad = Math.max(yMin * 0.01, 1);
+    return [yMin - pad, yMax + pad];
+  }
+  const pad = (yMax - yMin) * 0.06;
+  return [yMin - pad, yMax + pad];
+}
+
+// Scale marker diameter so dots fill roughly sqrt(pixels-per-point) of
+// their x-axis slot. At the default 6-month view (~125 trading days on a
+// ~900px-wide card) this gives ~11px dots; zooming to 1 month pushes them
+// to ~27px and saturates at the 30px ceiling, which is about the point
+// where overlapping spheres start to blend meaningfully under the opacity
+// curve below. The floor at 7px keeps dots visible even at full-history
+// zoom-out (~2500 days).
+function computeMarkerSize(visibleCount, chartWidth, mobile) {
+  const minSize = mobile ? 4 : 7;
+  const maxSize = mobile ? 16 : 30;
+  if (visibleCount <= 0) return minSize;
+  const pxPerPoint = chartWidth / visibleCount;
+  const scaled = Math.sqrt(pxPerPoint) * (mobile ? 3.0 : 4.2);
+  return Math.max(minSize, Math.min(maxSize, scaled));
+}
+
+// Opacity drops as the visible count rises so clusters on the zoomed-out
+// view accumulate into a denser color rather than stacking as one
+// flat-colored wall of dots. Clamped to [0.45, 0.88] so neither extreme
+// washes the dots out or turns them fully opaque.
+function computeMarkerOpacity(visibleCount) {
+  if (visibleCount <= 0) return 0.7;
+  const opacity = 6 / Math.sqrt(visibleCount) + 0.45;
+  return Math.max(0.45, Math.min(0.88, opacity));
 }
 
 export default function DealerGammaRegime() {
@@ -54,6 +118,22 @@ export default function DealerGammaRegime() {
   useEffect(() => {
     if (!Plotly || !chartRef.current || allDates.length === 0) return;
 
+    const firstDate = allDates[0];
+    const lastDate = allDates[allDates.length - 1];
+    const sixMonthsBack = addMonthsIso(lastDate, -6);
+    const windowStart = sixMonthsBack >= firstDate ? sixMonthsBack : firstDate;
+
+    // Seed markers and y-axis range with the values that match the
+    // default 6-month window so the first paint is already at the right
+    // scale — big bubbles, tight vertical range, no flat-to-top artifact
+    // from distant historical highs. The relayout listener recomputes
+    // all three (size, opacity, y-range) on every rangeslider drag.
+    const initialCount = countInRange(allDates, windowStart, lastDate);
+    const chartWidth = chartRef.current.clientWidth || (mobile ? 400 : 900);
+    const initialSize = computeMarkerSize(initialCount, chartWidth, mobile);
+    const initialOpacity = computeMarkerOpacity(initialCount);
+    const initialYRange = computeYRange(allDates, allCloses, windowStart, lastDate);
+
     // Thin connecting line for price continuity
     const priceLine = {
       x: allDates,
@@ -65,13 +145,20 @@ export default function DealerGammaRegime() {
       hoverinfo: 'skip',
     };
 
-    // Positive gamma dots (green)
+    // Positive gamma dots (green). line.width:0 suppresses Plotly's
+    // default 1px data-colored border, which at low opacity renders as
+    // a distracting halo around each sphere.
     const posTrace = {
       x: positive.map((r) => r.trading_date),
       y: positive.map((r) => r.spx_close),
       mode: 'markers',
       type: 'scatter',
-      marker: { color: PLOTLY_COLORS.positive, size: mobile ? 3 : 4, opacity: 0.85 },
+      marker: {
+        color: PLOTLY_COLORS.positive,
+        size: initialSize,
+        opacity: initialOpacity,
+        line: { width: 0 },
+      },
       name: '<b>Positive Gamma</b>',
       hovertemplate: '%{x}<br>SPX: %{y:,.0f}<br>Positive Gamma<extra></extra>',
     };
@@ -82,15 +169,15 @@ export default function DealerGammaRegime() {
       y: negative.map((r) => r.spx_close),
       mode: 'markers',
       type: 'scatter',
-      marker: { color: PLOTLY_COLORS.negative, size: mobile ? 3 : 4, opacity: 0.85 },
+      marker: {
+        color: PLOTLY_COLORS.negative,
+        size: initialSize,
+        opacity: initialOpacity,
+        line: { width: 0 },
+      },
       name: '<b>Negative Gamma</b>',
       hovertemplate: '%{x}<br>SPX: %{y:,.0f}<br>Negative Gamma<extra></extra>',
     };
-
-    const firstDate = allDates[0];
-    const lastDate = allDates[allDates.length - 1];
-    const twoYearsBack = addMonthsIso(lastDate, -24);
-    const windowStart = twoYearsBack >= firstDate ? twoYearsBack : firstDate;
 
     const legendFont = {
       family: PLOTLY_FONT_FAMILY,
@@ -120,6 +207,7 @@ export default function DealerGammaRegime() {
         ticks: 'outside',
         ticklen: 8,
         tickcolor: 'rgba(0,0,0,0)',
+        ...(initialYRange ? { range: initialYRange, autorange: false } : {}),
       }),
       showlegend: !mobile,
       legend: {
@@ -139,6 +227,61 @@ export default function DealerGammaRegime() {
       responsive: true,
       displayModeBar: false,
     });
+
+    // Recompute marker size, marker opacity, AND y-axis range whenever
+    // the rangeslider brush is dragged. Plotly fires plotly_relayout
+    // with the new xaxis range (either as `xaxis.range[0]/[1]` or
+    // `xaxis.range` array) — both shapes are handled. Autorange resets
+    // (no range keys in the event) fall back to the full series. Events
+    // that carry only yaxis updates are skipped so the y-range relayout
+    // we call from inside the handler does not loop back into itself;
+    // the yaxis.range update we trigger fires relayout again, but that
+    // second event has no xaxis keys and is filtered out at the top.
+    // Plotly.restyle targets only the two scatter traces (indices 1 and
+    // 2), leaving the price line alone.
+    const chartEl = chartRef.current;
+    const relayoutHandler = (eventData) => {
+      if (!eventData) return;
+      const hasXRange =
+        eventData['xaxis.range[0]'] != null ||
+        eventData['xaxis.range'] != null ||
+        eventData['xaxis.autorange'] === true;
+      if (!hasXRange) return;
+
+      let r0 = eventData['xaxis.range[0]'] ?? eventData['xaxis.range']?.[0];
+      let r1 = eventData['xaxis.range[1]'] ?? eventData['xaxis.range']?.[1];
+      if (r0 == null || r1 == null) {
+        if (eventData['xaxis.autorange'] !== true) return;
+        r0 = firstDate;
+        r1 = lastDate;
+      }
+      if (typeof r0 === 'string') r0 = r0.slice(0, 10);
+      if (typeof r1 === 'string') r1 = r1.slice(0, 10);
+
+      const count = countInRange(allDates, r0, r1);
+      const width = chartEl.clientWidth || (mobile ? 400 : 900);
+      const size = computeMarkerSize(count, width, mobile);
+      const opacity = computeMarkerOpacity(count);
+
+      Plotly.restyle(
+        chartEl,
+        { 'marker.size': size, 'marker.opacity': opacity },
+        [1, 2],
+      );
+
+      const yRange = computeYRange(allDates, allCloses, r0, r1);
+      if (yRange) {
+        Plotly.relayout(chartEl, { 'yaxis.range': yRange });
+      }
+    };
+
+    chartEl.on('plotly_relayout', relayoutHandler);
+
+    return () => {
+      if (chartEl?.removeAllListeners) {
+        chartEl.removeAllListeners('plotly_relayout');
+      }
+    };
   }, [Plotly, positive, negative, allDates, allCloses, mobile]);
 
   if (plotlyError) {

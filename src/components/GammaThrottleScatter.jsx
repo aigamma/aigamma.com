@@ -318,14 +318,13 @@ export default function GammaThrottleScatter() {
 
     // Rangeslider-only strip — no visible chart content above the
     // brush. The trace is colored #141820 (card background) so it's
-    // invisible to the user but gives Plotly real renderable data
-    // to initialize the axis without triggering the doAutoRange
-    // crash that transparent zero-width traces produce. Rangeslider
-    // thickness is set high (0.85) so the gray/dark/white brush fills
-    // nearly the entire strip. Non-zero margins are required because
-    // Plotly's rangeslider creates an internal subplot whose axis
-    // scaling crashes when zero margins combined with high thickness
-    // leave fewer than ~10px for the main plot area.
+    // invisible against the card; the only visible rangeslider pieces
+    // are the CSS-overridden mask fills (gray on the unselected ends)
+    // and the default white handles. Thickness 0.85 on a 44px plot
+    // area (55px total height minus t=6 b=5 margins) gives a ~37px
+    // rangeslider with ~7px of harmless invisible plot area above it.
+    // Pushing thickness higher or margins lower risks the doAutoRange
+    // crash that hits when the main plot area falls under ~10px.
     const trace = {
       x: dates,
       y: closes,
@@ -418,9 +417,12 @@ export default function GammaThrottleScatter() {
   return (
     <div className="card" style={{ marginBottom: '1rem' }}>
       <div ref={scatterRef} style={{ width: '100%', height: '520px', backgroundColor: 'var(--bg-card)' }} />
-      {/* Date brush zoom — a 55px rangeslider-only strip. No visible
-          sparkline or chart content above the brush; just the
-          gray/dark/white rangeslider control itself. */}
+      {/* Date brush zoom — 55px strip hosting a Plotly rangeslider at
+          thickness 0.85. Outer div is card color so only the CSS mask
+          fills (gray on unselected ends, dark on the selected window)
+          render as visible content. This matches the DealerGammaRegime
+          rangeslider's look — no sparkline, no extra chart content,
+          just the gray brush bar with white handles. */}
       <div ref={timeRef} style={{ width: '100%', height: '55px', backgroundColor: 'var(--bg-card)' }} />
     </div>
   );
