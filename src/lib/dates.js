@@ -43,6 +43,69 @@ export function daysToExpiration(expirationDate, capturedAt) {
   return Math.max(0, diffDays);
 }
 
+// True when the ISO date falls on the 3rd Friday of its calendar month
+// (Friday with day-of-month 15..21), which is the settlement anchor for
+// standard AM-settled SPX monthly options. Used by expiration-picker logic
+// that needs to prefer monthlies over SPXW weeklies.
+export function isThirdFridayMonthly(iso) {
+  if (!iso) return false;
+  const d = new Date(`${iso}T12:00:00Z`);
+  if (Number.isNaN(d.getTime())) return false;
+  if (d.getUTCDay() !== 5) return false;
+  const day = d.getUTCDate();
+  return day >= 15 && day <= 21;
+}
+
+// Strip the same-day expiration out of a picker list. 0DTE SPX contracts
+// produce unreliable BSM-derived metrics — ATM IV collapses in the late-
+// session pin and the 25Δ call contract can disappear because the delta
+// distribution bifurcates — so the picker should never default to one.
+// Keying on the ET calendar date removes both the AM-settled SPX monthly
+// and the PM-settled SPXW weekly that share today's date on 3rd Fridays.
+export function filterPickerExpirations(expirations, capturedAt) {
+  if (!expirations?.length) return [];
+  const todayIso = tradingDateFromCapturedAt(capturedAt);
+  if (!todayIso) return expirations;
+  return expirations.filter((exp) => exp !== todayIso);
+}
+
+// Choose the default expiration for the metrics panel: the 3rd-Friday
+// AM-settled SPX monthly closest to 30 DTE, preferring one that is at
+// least 21 DTE from the snapshot. Falls back to nearest monthly > 14 DTE,
+// then to the first element. 3rd-Friday monthlies are the most liquid
+// SPX expirations and the primary institutional hedging vehicles, so
+// anchoring the default there gives stable ATM IV, Expected Move, and
+// 25Δ readings. Requiring DTE ≥ 21 keeps the default from drifting onto
+// the current monthly in its final settlement week where the term
+// structure can steepen sharply.
+export function pickDefaultExpiration(expirations, capturedAt) {
+  if (!expirations?.length) return null;
+  const capturedMs = capturedAt ? new Date(capturedAt).getTime() : NaN;
+  if (Number.isNaN(capturedMs)) return expirations[0];
+
+  const withDte = expirations.map((exp) => {
+    const closeMs = new Date(`${exp}T16:00:00-04:00`).getTime();
+    const dte = (closeMs - capturedMs) / 86400000;
+    return { exp, dte };
+  });
+
+  const monthlies = withDte.filter((x) => isThirdFridayMonthly(x.exp));
+
+  const primary = monthlies.filter((x) => x.dte >= 21);
+  if (primary.length > 0) {
+    primary.sort((a, b) => Math.abs(a.dte - 30) - Math.abs(b.dte - 30));
+    return primary[0].exp;
+  }
+
+  const fallback = monthlies.filter((x) => x.dte > 14);
+  if (fallback.length > 0) {
+    fallback.sort((a, b) => a.dte - b.dte);
+    return fallback[0].exp;
+  }
+
+  return expirations[0];
+}
+
 export function formatFreshness(isoString) {
   if (!isoString) return null;
   const d = new Date(isoString);

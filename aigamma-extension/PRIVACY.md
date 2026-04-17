@@ -1,9 +1,9 @@
 # AI Gamma SPX Regime Status and Metrics - Privacy Policy
 
-Last updated: [DATE]
+Last updated: 2026-04-17
 
 The AI Gamma SPX Regime Status and Metrics browser extension ("the extension") is published
-by [YOUR LEGAL NAME OR ENTITY] and operates as follows.
+by AI Gamma LLC and operates as follows.
 
 ## What the extension does
 
@@ -42,4 +42,4 @@ No data is shared with third parties because no user data is collected.
 
 ## Contact
 
-[YOUR CONTACT EMAIL]
+ericallione@gmail.com

@@ -3,7 +3,44 @@
   publish = "dist"
   functions = "netlify/functions"
 
+# Specific /api/snapshot.json redirect MUST come before the /api/* wildcard —
+# otherwise the wildcard expands :splat to `snapshot.json` and Netlify looks
+# for a function literally named `snapshot.json` (which doesn't exist). The
+# `force = true` flag makes the rewrite apply even if a static file with
+# this path is ever added under publish, belt-and-suspenders for the
+# extension contract that the URL stays a function response.
+[[redirects]]
+  from = "/api/snapshot.json"
+  to = "/.netlify/functions/snapshot"
+  status = 200
+  force = true
+
 [[redirects]]
   from = "/api/*"
   to = "/.netlify/functions/:splat"
   status = 200
+
+# Pretty-URL rewrite for the Chrome Web Store-required privacy policy page.
+# The static file is published as dist/extension-privacy.html; this rewrite
+# keeps the public URL extensionless. Netlify's implicit pretty-URL behavior
+# handles this in production asset serving, but netlify dev proxies through
+# Vite which treats unknown routes as SPA fallbacks (returning index.html);
+# an explicit 200 rewrite normalizes behavior across local and production.
+[[redirects]]
+  from = "/extension-privacy"
+  to = "/extension-privacy.html"
+  status = 200
+
+# Platform-level headers for the extension snapshot endpoint. Duplicates
+# what snapshot.mjs sets in its Response — the function is authoritative
+# on the 200 path, but having these at the edge guarantees the CORS
+# header is present even if the function short-circuits before its own
+# headers are written (cold-start error, import failure, etc). The
+# extension has zero permissions and depends entirely on CORS for the
+# cross-origin fetch to succeed.
+[[headers]]
+  for = "/api/snapshot.json"
+  [headers.values]
+    Cache-Control = "public, max-age=30, s-maxage=30"
+    Content-Type = "application/json; charset=utf-8"
+    Access-Control-Allow-Origin = "*"
