@@ -7,7 +7,6 @@ import GammaInflectionChart from './components/GammaInflectionChart';
 import TermStructure from './components/TermStructure';
 import FixedStrikeIvMatrix from './components/FixedStrikeIvMatrix';
 import RiskNeutralDensity from './components/RiskNeutralDensity';
-import VolSurface3D from './components/VolSurface3D';
 import VolatilityRiskPremium from './components/VolatilityRiskPremium';
 import DealerGammaRegime from './components/DealerGammaRegime';
 import GammaThrottleScatter from './components/GammaThrottleScatter';
@@ -289,7 +288,6 @@ export default function App() {
           <div className="skeleton-card" style={{ height: '394px' }} />
           <div className="skeleton-card" style={{ height: '434px' }} />
           <div className="skeleton-card" style={{ height: '454px' }} />
-          <div className="skeleton-card" style={{ height: '574px' }} />
         </div>
       )}
 
@@ -380,17 +378,6 @@ export default function App() {
               fits={sviFits.byExpiration}
               spotPrice={data.spotPrice}
               capturedAt={data.capturedAt}
-            />
-          </ErrorBoundary>
-
-          <ErrorBoundary>
-            <VolSurface3D
-              contracts={data.contracts}
-              spotPrice={data.spotPrice}
-              capturedAt={data.capturedAt}
-              fits={sviFits.byExpiration}
-              sviSource={sviFits.source}
-              underlying={data.underlying}
             />
           </ErrorBoundary>
         </>

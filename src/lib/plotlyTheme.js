@@ -1,7 +1,7 @@
 // Shared Plotly layout theme — dark mode, Courier New monospace.
-// VolSurface3D is the canonical reference; every other chart on the platform
-// composes its layout from the constants and helpers below so background,
-// typography, and color language stay in sync across the site.
+// Every 2D chart on the platform composes its layout from the constants and
+// helpers below so background, typography, and color language stay in sync
+// across the site.
 
 export const PLOTLY_COLORS = {
   paper: 'transparent',
@@ -73,18 +73,6 @@ export function plotlyAxis(titleText, extras = {}) {
   };
 }
 
-export function plotly3DAxis(titleText, extras = {}) {
-  return {
-    title: { text: titleText, font: PLOTLY_FONTS.axisTitle },
-    gridcolor: PLOTLY_COLORS.grid,
-    zerolinecolor: PLOTLY_COLORS.zeroLine,
-    tickfont: PLOTLY_FONTS.axisTick,
-    backgroundcolor: PLOTLY_COLORS.plot,
-    showbackground: true,
-    ...extras,
-  };
-}
-
 export function plotlyTitle(text) {
   return { text, font: PLOTLY_FONTS.chartTitle };
 }
@@ -107,22 +95,12 @@ export const PLOTLY_BASE_LAYOUT_2D = {
     bordercolor: PLOTLY_COLORS.grid,
     font: { family: PLOTLY_FONT_FAMILY, color: PLOTLY_COLORS.titleText, size: 13 },
   },
-  // Click-and-drag rubber-band zoom and pan are disabled on every 2D
-  // card so the only way to re-frame a chart is through its RangeBrush
-  // widget — a brush-only paradigm that keeps tick positions and axis
-  // scales stable across the dashboard and makes chart screenshots
-  // reproducible. The 3D VolSurface card is the one exception: it
-  // enables Plotly's native 3D navigation (turntable/orbit/pan/zoom)
-  // alongside its three RangeBrush widgets, because a 3D surface can't
-  // be inspected without camera rotation. Hover still works here —
-  // hovermode is independent of dragmode.
+  // Click-and-drag rubber-band zoom and pan are disabled on every chart
+  // so the only way to re-frame a chart is through its RangeBrush widget
+  // — a brush-only paradigm that keeps tick positions and axis scales
+  // stable across the dashboard and makes chart screenshots reproducible.
+  // Hover still works here; hovermode is independent of dragmode.
   dragmode: false,
-};
-
-export const PLOTLY_BASE_LAYOUT_3D = {
-  paper_bgcolor: PLOTLY_COLORS.paper,
-  font: PLOTLY_FONTS.base,
-  margin: { t: 30, r: 10, b: 10, l: 10 },
 };
 
 // Standardized colorbar props for heatmaps / surfaces / scatter3d.
