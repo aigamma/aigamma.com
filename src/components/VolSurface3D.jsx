@@ -1,7 +1,8 @@
-import { useEffect, useMemo, useRef, useState } from 'react';
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import usePlotly from '../hooks/usePlotly';
 import useIsMobile from '../hooks/useIsMobile';
 import { sviTotalVariance } from '../lib/svi';
+import RangeBrush from './RangeBrush';
 import {
   PLOTLY_BASE_LAYOUT_3D,
   PLOTLY_COLORBAR,
@@ -56,6 +57,13 @@ const BASE_LAYOUT_3D = {
   ...PLOTLY_BASE_LAYOUT_3D,
   scene: {
     bgcolor: PLOTLY_COLORS.plot,
+    // Orbit/turntable rotation is disabled across all three interaction
+    // paths — mouse drag, touch swipe, and stylus — so the surface reads
+    // as a static print matching the rest of the dashboard's 2D cards.
+    // Users re-frame the view by moving the x/y RangeBrush handles
+    // below and to the right of the chart rather than by dragging on
+    // the surface itself.
+    dragmode: false,
     xaxis: axis3D('strike', { dtick: 500 }),
     yaxis: axis3D('DTE'),
     zaxis: axis3D('IV%', {
@@ -292,6 +300,71 @@ export default function VolSurface3D({ contracts, spotPrice, capturedAt, fits, s
 
   const atmIv = useMemo(() => atmIvReference(sortedFits), [sortedFits]);
 
+  // Strike (x) domain is the SVI grid's ±12% window around spot — this
+  // matches the surface mesh extent and covers the overwhelming majority
+  // of raw-scatter points too. Raw points that land in the ±12-14% buffer
+  // are clipped when the x-axis range is enforced, which is acceptable
+  // because that outer ring is where the SVI extrapolation is least
+  // trustworthy anyway.
+  const strikeDomain = useMemo(() => {
+    if (!spotPrice) return null;
+    return [
+      spotPrice * (1 - STRIKE_WINDOW_PCT),
+      spotPrice * (1 + STRIKE_WINDOW_PCT),
+    ];
+  }, [spotPrice]);
+
+  // DTE (y) domain spans the full expiration ladder — for SVI mode it
+  // matches the SVI surface's DTE grid, for raw mode it's the observed
+  // DTE extent of the filtered scatter points.
+  const dteDomain = useMemo(() => {
+    if (effectiveMode === 'svi' && sortedFits.length > 0) {
+      const minDte = Math.max(Math.floor(sortedFits[0].dte), 0);
+      const maxDte = Math.max(
+        Math.ceil(sortedFits[sortedFits.length - 1].dte),
+        minDte + 1,
+      );
+      return [minDte, maxDte];
+    }
+    if (rawScatter && rawScatter.y.length > 0) {
+      let minDte = Infinity;
+      let maxDte = -Infinity;
+      for (const v of rawScatter.y) {
+        if (v < minDte) minDte = v;
+        if (v > maxDte) maxDte = v;
+      }
+      if (!Number.isFinite(minDte)) return null;
+      const loFloor = Math.max(Math.floor(minDte), 0);
+      const hiCeil = Math.max(Math.ceil(maxDte), loFloor + 1);
+      return [loFloor, hiCeil];
+    }
+    return null;
+  }, [effectiveMode, sortedFits, rawScatter]);
+
+  const [strikeRange, setStrikeRange] = useState(null);
+  const [dteRange, setDteRange] = useState(null);
+
+  // When the domain changes (new data, mode switch), reset any prior
+  // user-selected range so the brush snaps back to the full domain
+  // rather than holding a narrower selection that may now lie partly
+  // outside the new data.
+  useEffect(() => {
+    setStrikeRange(null);
+  }, [strikeDomain?.[0], strikeDomain?.[1]]);
+  useEffect(() => {
+    setDteRange(null);
+  }, [dteDomain?.[0], dteDomain?.[1]]);
+
+  const activeStrikeRange = strikeRange || strikeDomain;
+  const activeDteRange = dteRange || dteDomain;
+
+  const handleStrikeBrushChange = useCallback((lo, hi) => {
+    setStrikeRange([lo, hi]);
+  }, []);
+  const handleDteBrushChange = useCallback((lo, hi) => {
+    setDteRange([lo, hi]);
+  }, []);
+
   useEffect(() => {
     if (!Plotly || !chartRef.current || !spotPrice) return;
 
@@ -393,16 +466,51 @@ export default function VolSurface3D({ contracts, spotPrice, capturedAt, fits, s
       });
     }
 
+    const baseScene = BASE_LAYOUT_3D.scene;
     const layout = {
       ...BASE_LAYOUT_3D,
       title: plotlyTitle('Volatility Surface'),
+      scene: {
+        ...baseScene,
+        xaxis: {
+          ...baseScene.xaxis,
+          ...(activeStrikeRange
+            ? { range: activeStrikeRange, autorange: false }
+            : {}),
+        },
+        yaxis: {
+          ...baseScene.yaxis,
+          ...(activeDteRange
+            ? { range: activeDteRange, autorange: false }
+            : {}),
+        },
+      },
     };
 
     Plotly.newPlot(chartRef.current, traces, layout, {
       responsive: true,
       displayModeBar: false,
+      // scrollZoom off disables mousewheel/pinch zoom on the 3D scene,
+      // matching the locked-viewport behavior of the dashboard's 2D
+      // cards. Combined with scene.dragmode: false above, this fully
+      // neutralizes the default orbital/zoom interactions; users
+      // re-frame via the x/y RangeBrush instead.
+      scrollZoom: false,
     });
-  }, [Plotly, effectiveMode, sviSurface, rawScatter, spotPrice, atmIv, sortedFits, hasSviFits, underlying, mobile]);
+  }, [
+    Plotly,
+    effectiveMode,
+    sviSurface,
+    rawScatter,
+    spotPrice,
+    atmIv,
+    sortedFits,
+    hasSviFits,
+    underlying,
+    mobile,
+    activeStrikeRange,
+    activeDteRange,
+  ]);
 
   if (plotlyError) {
     return (
@@ -421,6 +529,11 @@ export default function VolSurface3D({ contracts, spotPrice, capturedAt, fits, s
       </div>
     );
   }
+
+  const dteBrushRenderable =
+    dteDomain && activeDteRange && dteDomain[1] > dteDomain[0];
+  const strikeBrushRenderable =
+    strikeDomain && activeStrikeRange && strikeDomain[1] > strikeDomain[0];
 
   return (
     <div className="card" style={{ marginBottom: '1rem' }}>
@@ -495,7 +608,33 @@ export default function VolSurface3D({ contracts, spotPrice, capturedAt, fits, s
           </label>
         </div>
       </div>
-      <div ref={chartRef} style={{ width: '100%', height: '800px' }} />
+      <div style={{ display: 'flex', alignItems: 'stretch' }}>
+        <div ref={chartRef} style={{ flex: 1, height: '800px' }} />
+        {dteBrushRenderable && (
+          <RangeBrush
+            orientation="vertical"
+            min={dteDomain[0]}
+            max={dteDomain[1]}
+            activeMin={activeDteRange[0]}
+            activeMax={activeDteRange[1]}
+            onChange={handleDteBrushChange}
+            width={40}
+            minWidth={Math.max((dteDomain[1] - dteDomain[0]) * 0.02, 2)}
+          />
+        )}
+      </div>
+      {strikeBrushRenderable && (
+        <RangeBrush
+          orientation="horizontal"
+          min={strikeDomain[0]}
+          max={strikeDomain[1]}
+          activeMin={activeStrikeRange[0]}
+          activeMax={activeStrikeRange[1]}
+          onChange={handleStrikeBrushChange}
+          height={40}
+          minWidth={spotPrice * 0.01}
+        />
+      )}
     </div>
   );
 }
