@@ -18,7 +18,7 @@ import { useCallback, useEffect, useRef, useState } from 'react';
 
 const CHAT_ENDPOINT = '/api/chat';
 const MODEL = 'claude-opus-4-6';
-const WELCOME = 'Ask about the math, logic, or philosophy behind anything on this dashboard. The dealer gamma regime, the SVI fit, the Breeden-Litzenberger density, the VRP construction, why ATM IV excludes the front-month weekly, where the Put Wall comes from, how term structure pricing works, and any of the theory underneath. Answers come from Claude Opus 4.6 and stream as they are generated.';
+const WELCOME = "What's on your mind?";
 
 export default function Chat() {
   const [messages, setMessages] = useState([]);
