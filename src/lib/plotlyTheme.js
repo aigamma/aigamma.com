@@ -107,6 +107,13 @@ export const PLOTLY_BASE_LAYOUT_2D = {
     bordercolor: PLOTLY_COLORS.grid,
     font: { family: PLOTLY_FONT_FAMILY, color: PLOTLY_COLORS.titleText, size: 13 },
   },
+  // Click-and-drag rubber-band zoom and pan are disabled on every 2D
+  // card so the only way to re-frame a chart is through its RangeBrush
+  // widget. This matches the locked-viewport behavior of VolSurface3D
+  // (scene.dragmode: false + scrollZoom: false) and keeps the whole
+  // site on a single "navigate via brush, never via drag" interaction
+  // paradigm. Hover still works — hovermode is an independent property.
+  dragmode: false,
 };
 
 export const PLOTLY_BASE_LAYOUT_3D = {

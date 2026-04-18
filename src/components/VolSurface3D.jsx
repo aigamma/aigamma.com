@@ -60,9 +60,9 @@ const BASE_LAYOUT_3D = {
     // Orbit/turntable rotation is disabled across all three interaction
     // paths — mouse drag, touch swipe, and stylus — so the surface reads
     // as a static print matching the rest of the dashboard's 2D cards.
-    // Users re-frame the view by moving the x/y RangeBrush handles
-    // below and to the right of the chart rather than by dragging on
-    // the surface itself.
+    // Users re-frame the view by moving the three RangeBrush handles
+    // (volatility on the left, strike below, DTE on the right) rather
+    // than by dragging on the surface itself.
     dragmode: false,
     xaxis: axis3D('strike', { dtick: 500 }),
     yaxis: axis3D('DTE'),
@@ -341,8 +341,48 @@ export default function VolSurface3D({ contracts, spotPrice, capturedAt, fits, s
     return null;
   }, [effectiveMode, sortedFits, rawScatter]);
 
+  // Volatility (z) domain is expressed in log10(IV%) space so the brush
+  // moves linearly across the log tick ladder that the z-axis already
+  // uses — a handle drag that spans half the brush track covers half
+  // the decades, not half the raw IV range. The domain is derived from
+  // visible data with a small log-space pad on each side, clamped to
+  // the site-wide IV_CLAMP_MIN/MAX band; the fallback covers the ladder
+  // when no data is on screen yet.
+  const volLogDomain = useMemo(() => {
+    let minIv = Infinity;
+    let maxIv = -Infinity;
+    if (effectiveMode === 'svi' && sviSurface) {
+      for (const row of sviSurface.z) {
+        for (const v of row) {
+          if (v != null && Number.isFinite(v) && v > 0) {
+            if (v < minIv) minIv = v;
+            if (v > maxIv) maxIv = v;
+          }
+        }
+      }
+    } else if (rawScatter) {
+      for (const v of rawScatter.z) {
+        if (v != null && Number.isFinite(v) && v > 0) {
+          if (v < minIv) minIv = v;
+          if (v > maxIv) maxIv = v;
+        }
+      }
+    }
+    if (!Number.isFinite(minIv) || !Number.isFinite(maxIv) || maxIv <= minIv) {
+      return [Math.log10(IV_CLAMP_MIN * 100), Math.log10(IV_CLAMP_MAX * 100)];
+    }
+    const logMin = Math.log10(Math.max(minIv, IV_CLAMP_MIN * 100));
+    const logMax = Math.log10(Math.min(maxIv, IV_CLAMP_MAX * 100));
+    const pad = Math.max((logMax - logMin) * 0.05, 0.01);
+    return [
+      Math.max(logMin - pad, Math.log10(IV_CLAMP_MIN * 100)),
+      Math.min(logMax + pad, Math.log10(IV_CLAMP_MAX * 100)),
+    ];
+  }, [effectiveMode, sviSurface, rawScatter]);
+
   const [strikeRange, setStrikeRange] = useState(null);
   const [dteRange, setDteRange] = useState(null);
+  const [volLogRange, setVolLogRange] = useState(null);
 
   // When the domain changes (new data, mode switch), reset any prior
   // user-selected range so the brush snaps back to the full domain
@@ -354,15 +394,22 @@ export default function VolSurface3D({ contracts, spotPrice, capturedAt, fits, s
   useEffect(() => {
     setDteRange(null);
   }, [dteDomain?.[0], dteDomain?.[1]]);
+  useEffect(() => {
+    setVolLogRange(null);
+  }, [volLogDomain[0], volLogDomain[1]]);
 
   const activeStrikeRange = strikeRange || strikeDomain;
   const activeDteRange = dteRange || dteDomain;
+  const activeVolLogRange = volLogRange || volLogDomain;
 
   const handleStrikeBrushChange = useCallback((lo, hi) => {
     setStrikeRange([lo, hi]);
   }, []);
   const handleDteBrushChange = useCallback((lo, hi) => {
     setDteRange([lo, hi]);
+  }, []);
+  const handleVolBrushChange = useCallback((lo, hi) => {
+    setVolLogRange([lo, hi]);
   }, []);
 
   useEffect(() => {
@@ -484,6 +531,15 @@ export default function VolSurface3D({ contracts, spotPrice, capturedAt, fits, s
             ? { range: activeDteRange, autorange: false }
             : {}),
         },
+        // The z-axis is log-type, so Plotly interprets `range` as log10
+        // values — passing the brush's log10(iv%) handles directly is
+        // correct and does not need a further transform.
+        zaxis: {
+          ...baseScene.zaxis,
+          ...(activeVolLogRange
+            ? { range: activeVolLogRange, autorange: false }
+            : {}),
+        },
       },
     };
 
@@ -494,7 +550,7 @@ export default function VolSurface3D({ contracts, spotPrice, capturedAt, fits, s
       // matching the locked-viewport behavior of the dashboard's 2D
       // cards. Combined with scene.dragmode: false above, this fully
       // neutralizes the default orbital/zoom interactions; users
-      // re-frame via the x/y RangeBrush instead.
+      // re-frame via the three RangeBrush widgets (strike, DTE, vol).
       scrollZoom: false,
     });
   }, [
@@ -510,6 +566,7 @@ export default function VolSurface3D({ contracts, spotPrice, capturedAt, fits, s
     mobile,
     activeStrikeRange,
     activeDteRange,
+    activeVolLogRange,
   ]);
 
   if (plotlyError) {
@@ -534,6 +591,8 @@ export default function VolSurface3D({ contracts, spotPrice, capturedAt, fits, s
     dteDomain && activeDteRange && dteDomain[1] > dteDomain[0];
   const strikeBrushRenderable =
     strikeDomain && activeStrikeRange && strikeDomain[1] > strikeDomain[0];
+  const volBrushRenderable =
+    volLogDomain && activeVolLogRange && volLogDomain[1] > volLogDomain[0];
 
   return (
     <div className="card" style={{ marginBottom: '1rem' }}>
@@ -609,7 +668,33 @@ export default function VolSurface3D({ contracts, spotPrice, capturedAt, fits, s
         </div>
       </div>
       <div style={{ display: 'flex', alignItems: 'stretch' }}>
-        <div ref={chartRef} style={{ flex: 1, height: '800px' }} />
+        {volBrushRenderable && (
+          <RangeBrush
+            orientation="vertical"
+            min={volLogDomain[0]}
+            max={volLogDomain[1]}
+            activeMin={activeVolLogRange[0]}
+            activeMax={activeVolLogRange[1]}
+            onChange={handleVolBrushChange}
+            width={40}
+            minWidth={Math.max((volLogDomain[1] - volLogDomain[0]) * 0.02, 0.02)}
+          />
+        )}
+        <div style={{ flex: 1, display: 'flex', flexDirection: 'column' }}>
+          <div ref={chartRef} style={{ flex: 1, height: '800px' }} />
+          {strikeBrushRenderable && (
+            <RangeBrush
+              orientation="horizontal"
+              min={strikeDomain[0]}
+              max={strikeDomain[1]}
+              activeMin={activeStrikeRange[0]}
+              activeMax={activeStrikeRange[1]}
+              onChange={handleStrikeBrushChange}
+              height={40}
+              minWidth={spotPrice * 0.01}
+            />
+          )}
+        </div>
         {dteBrushRenderable && (
           <RangeBrush
             orientation="vertical"
@@ -623,18 +708,6 @@ export default function VolSurface3D({ contracts, spotPrice, capturedAt, fits, s
           />
         )}
       </div>
-      {strikeBrushRenderable && (
-        <RangeBrush
-          orientation="horizontal"
-          min={strikeDomain[0]}
-          max={strikeDomain[1]}
-          activeMin={activeStrikeRange[0]}
-          activeMax={activeStrikeRange[1]}
-          onChange={handleStrikeBrushChange}
-          height={40}
-          minWidth={spotPrice * 0.01}
-        />
-      )}
     </div>
   );
 }
