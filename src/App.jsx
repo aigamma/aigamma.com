@@ -11,6 +11,7 @@ import VolSurface3D from './components/VolSurface3D';
 import VolatilityRiskPremium from './components/VolatilityRiskPremium';
 import DealerGammaRegime from './components/DealerGammaRegime';
 import GammaThrottleScatter from './components/GammaThrottleScatter';
+import Chat from './components/Chat';
 import useOptionsData from './hooks/useOptionsData';
 import { useVrpHistory } from './hooks/useHistoricalData';
 import useSviFits from './hooks/useSviFits';
@@ -394,6 +395,11 @@ export default function App() {
           </ErrorBoundary>
         </>
       )}
+
+      {/* Chat renders regardless of dashboard load state so users can ask
+          questions about the math and philosophy of the dashboard even if
+          the live options data is still loading or in an error state. */}
+      <ErrorBoundary><Chat /></ErrorBoundary>
     </div>
   );
 }
