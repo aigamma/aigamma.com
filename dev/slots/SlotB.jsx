@@ -1,7 +1,7 @@
 import { useEffect, useMemo, useRef, useState } from 'react';
-import usePlotly from '../src/hooks/usePlotly';
-import useIsMobile from '../src/hooks/useIsMobile';
-import { useGexHistory } from '../src/hooks/useHistoricalData';
+import usePlotly from '../../src/hooks/usePlotly';
+import useIsMobile from '../../src/hooks/useIsMobile';
+import { useGexHistory } from '../../src/hooks/useHistoricalData';
 import {
   PLOTLY_COLORS,
   PLOTLY_FONTS,
@@ -9,8 +9,8 @@ import {
   plotly2DChartLayout,
   plotlyAxis,
   plotlyTitle,
-} from '../src/lib/plotlyTheme';
-import { fitEnsemble, forecastEnsemble, annualize } from './garch';
+} from '../../src/lib/plotlyTheme';
+import { fitEnsemble, forecastEnsemble, annualize } from '../garch';
 
 // -----------------------------------------------------------------------------
 // GARCH ensemble — dev-lab proof of concept
@@ -124,7 +124,7 @@ function ParamRow({ model, weight, color }) {
   );
 }
 
-export default function Slot() {
+export default function SlotB() {
   const chartRef = useRef(null);
   const { plotly: Plotly, error: plotlyError } = usePlotly();
   const mobile = useIsMobile();

@@ -1,7 +1,7 @@
 import { useEffect, useMemo, useRef } from 'react';
-import usePlotly from '../src/hooks/usePlotly';
-import useIsMobile from '../src/hooks/useIsMobile';
-import useOptionsData from '../src/hooks/useOptionsData';
+import usePlotly from '../../src/hooks/usePlotly';
+import useIsMobile from '../../src/hooks/useIsMobile';
+import useOptionsData from '../../src/hooks/useOptionsData';
 import {
   PLOTLY_COLORS,
   PLOTLY_FONTS,
@@ -9,8 +9,8 @@ import {
   plotly2DChartLayout,
   plotlyAxis,
   plotlyTitle,
-} from '../src/lib/plotlyTheme';
-import { daysToExpiration } from '../src/lib/dates';
+} from '../../src/lib/plotlyTheme';
+import { daysToExpiration } from '../../src/lib/dates';
 
 // -----------------------------------------------------------------------------
 // Put-call parity — box-spread implied rate
@@ -170,7 +170,7 @@ function StatCell({ label, value, sub, accent }) {
   );
 }
 
-export default function Slot() {
+export default function SlotB() {
   const chartRef = useRef(null);
   const { plotly: Plotly, error: plotlyError } = usePlotly();
   const mobile = useIsMobile();
