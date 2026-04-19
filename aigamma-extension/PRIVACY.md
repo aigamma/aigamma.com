@@ -54,4 +54,4 @@ No data is shared with third parties because no user data is collected.
 
 ## Contact
 
-support@aigamma.com
+privacy@aigamma.com
