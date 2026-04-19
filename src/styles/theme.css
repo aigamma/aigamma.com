@@ -76,6 +76,136 @@ body {
   background-color: rgba(255, 255, 255, 0.06);
 }
 
+/* ===== QUANT MENU =====
+   Dropdown nav exposing the eight bookmark-only lab directories from
+   every page header. Purple accent matches the Expected Move metric in
+   the main dashboard's levels panel (var(--accent-purple) = #BF7FFF) so
+   the token reads distinct from the existing About button's accent-blue
+   without inventing a new color. Trigger visual weight matches the
+   other header buttons (3.2rem tall, Courier New 1.1rem, 3px radius,
+   1rem horizontal padding). The panel is anchored right-aligned to the
+   trigger so it never overflows the viewport on the right edge of the
+   header, and the min-width 320px keeps the two-column path/descriptor
+   layout readable at the narrowest desktop width. Hover and focus-visible
+   share the same ~8% tinted background so keyboard and mouse users see
+   the same affordance. */
+.quant-menu {
+  position: relative;
+  display: inline-flex;
+}
+
+.quant-menu-trigger {
+  font-family: 'Courier New', monospace;
+  font-size: 1.1rem;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  padding: 0 1rem;
+  height: 3.2rem;
+  box-sizing: border-box;
+  display: inline-flex;
+  align-items: center;
+  gap: 0.4rem;
+  border: 1px solid var(--accent-purple);
+  color: var(--accent-purple);
+  background: transparent;
+  border-radius: 3px;
+  cursor: pointer;
+  white-space: nowrap;
+  transition: background-color 0.2s ease;
+}
+
+.quant-menu-trigger:hover,
+.quant-menu-trigger:focus-visible {
+  background-color: rgba(191, 127, 255, 0.08);
+  outline: none;
+}
+
+.quant-menu-caret {
+  display: inline-block;
+  transition: transform 0.2s ease;
+  font-size: 0.75em;
+  line-height: 1;
+}
+
+.quant-menu-caret.is-open {
+  transform: rotate(180deg);
+}
+
+.quant-menu-panel {
+  position: absolute;
+  top: calc(100% + 4px);
+  right: 0;
+  min-width: 320px;
+  background: #1a1e2a;
+  border: 1px solid var(--bg-card-border);
+  border-radius: 6px;
+  padding: 0.4rem 0;
+  box-shadow: 0 10px 30px rgba(0, 0, 0, 0.45);
+  z-index: 40;
+}
+
+/* The QuantMenu trigger lives inside the main dashboard's <nav class="site-nav">,
+   which styles all <a> descendants via .site-nav a at specificity (0,1,1).
+   The menu items are <a> tags inside the absolute-positioned panel but still
+   descendants of .site-nav in the DOM tree, so their color / height /
+   padding would be overridden without a more-specific selector. The
+   .quant-menu ancestor prefix brings specificity to (0,2,0), which wins
+   across every existing site-nav rule. */
+.quant-menu .quant-menu-item {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 0.9rem;
+  padding: 0.55rem 0.9rem;
+  height: auto;
+  font-family: 'Courier New', monospace;
+  font-size: inherit;
+  letter-spacing: normal;
+  text-transform: none;
+  text-decoration: none;
+  color: var(--text-primary);
+  border: none;
+  border-left: 2px solid transparent;
+  border-radius: 0;
+  transition: background-color 0.15s ease, border-color 0.15s ease;
+  outline: none;
+}
+
+.quant-menu .quant-menu-item:hover,
+.quant-menu .quant-menu-item:focus-visible {
+  background-color: rgba(191, 127, 255, 0.08);
+  border-left-color: var(--accent-purple);
+}
+
+.quant-menu .quant-menu-path {
+  color: var(--accent-purple);
+  font-size: 0.95rem;
+  white-space: nowrap;
+}
+
+.quant-menu .quant-menu-desc {
+  color: var(--text-secondary);
+  font-size: 0.72rem;
+  text-align: right;
+  line-height: 1.4;
+}
+
+/* On narrow phone widths, the four header tokens (logo, status pill,
+   About / QuantMenu nav, timestamp) will not all fit on a single row
+   without the timestamp wrapping awkwardly under the logo. The
+   timestamp is secondary information — the dashboard carries the same
+   freshness signal in the live data itself — so below 640px we drop
+   it so the status pill, About, and QuantMenu stay visible in the
+   primary row. This media query is intentionally wider than the
+   main 768px dashboard breakpoint because the four-token header
+   starts crowding 480-640px before the content grid begins to
+   reflow. */
+@media (max-width: 640px) {
+  .site-timestamp {
+    display: none;
+  }
+}
+
 .app-shell {
   max-width: 1100px;
   margin: 0 auto;
@@ -393,6 +523,16 @@ body {
     font-size: 0.95rem;
     height: 2.8rem;
     padding: 0 0.75rem;
+  }
+
+  .quant-menu-trigger {
+    font-size: 0.95rem;
+    height: 2.8rem;
+    padding: 0 0.75rem;
+  }
+
+  .quant-menu-panel {
+    min-width: min(320px, calc(100vw - 1.5rem));
   }
 
   .chat-body { max-height: 60vh; }

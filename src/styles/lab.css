@@ -59,6 +59,16 @@
   text-transform: uppercase;
 }
 
+/* Cluster the QuantMenu trigger with the lab-meta block so the right
+   side of the lab header reads as one group. The gap matches the
+   header's own 0.75rem inter-item gap for visual continuity. */
+.lab-nav-group {
+  display: inline-flex;
+  align-items: center;
+  gap: 1rem;
+  flex-wrap: wrap;
+}
+
 .lab-meta-sep {
   opacity: 0.5;
 }
@@ -237,6 +247,17 @@
 
   .lab-meta {
     font-size: 0.68rem;
+  }
+
+  /* Inside the lab-shell, scale the QuantMenu trigger a second step to
+     match the 2.4rem lab-badge / lab-logo sizing at phone widths. The
+     trigger selector outside of lab-shell stays at the 2.8rem width set
+     by the 768px block in theme.css. */
+  .lab-shell .quant-menu-trigger {
+    font-size: 0.85rem;
+    height: 2.4rem;
+    padding: 0 0.6rem;
+    letter-spacing: 0.06em;
   }
 
   .lab-warning {

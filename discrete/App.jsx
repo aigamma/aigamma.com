@@ -1,6 +1,7 @@
 import '../src/styles/theme.css';
 import '../src/styles/lab.css';
 import ErrorBoundary from '../src/ErrorBoundary';
+import QuantMenu from '../src/components/QuantMenu';
 import SlotA from './slots/SlotA';
 import SlotB from './slots/SlotB';
 import SlotC from './slots/SlotC';
@@ -78,12 +79,15 @@ export default function App() {
             Discrete &amp; Parametric Vol Lab
           </span>
         </div>
-        <div className="lab-meta">
-          <span className="lab-meta-line">bookmark-only</span>
-          <span className="lab-meta-sep">·</span>
-          <span className="lab-meta-line">6 slots</span>
-          <span className="lab-meta-sep">·</span>
-          <span className="lab-meta-line">pre-β</span>
+        <div className="lab-nav-group">
+          <QuantMenu />
+          <div className="lab-meta">
+            <span className="lab-meta-line">bookmark-only</span>
+            <span className="lab-meta-sep">·</span>
+            <span className="lab-meta-line">6 slots</span>
+            <span className="lab-meta-sep">·</span>
+            <span className="lab-meta-line">pre-β</span>
+          </div>
         </div>
       </header>
 

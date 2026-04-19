@@ -11,6 +11,7 @@ import VolatilityRiskPremium from './components/VolatilityRiskPremium';
 import DealerGammaRegime from './components/DealerGammaRegime';
 import GammaThrottleScatter from './components/GammaThrottleScatter';
 import Chat from './components/Chat';
+import QuantMenu from './components/QuantMenu';
 import useOptionsData from './hooks/useOptionsData';
 import { useVrpHistory } from './hooks/useHistoricalData';
 import useSviFits from './hooks/useSviFits';
@@ -294,10 +295,12 @@ export default function App() {
 
         <nav className="site-nav">
           <a href="https://about.aigamma.com/">About</a>
+          <QuantMenu />
         </nav>
 
         {freshness && (
           <div
+            className="site-timestamp"
             style={{
               fontFamily: 'Courier New, monospace',
               fontSize: '0.8rem',
