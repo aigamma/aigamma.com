@@ -14,24 +14,26 @@ import { fitAll, forecastAll, annualize } from '../garch';
 // -----------------------------------------------------------------------------
 // GARCH family zoo — single slot on /garch/
 //
-// Fits 9 univariate GARCH-family specifications (GARCH, IGARCH, EGARCH,
-// GJR, TGARCH, APARCH, NAGARCH, NGARCH, AVGARCH) by Gaussian MLE on the
-// daily SPX log-return series from /api/gex-history, renders each model's
-// in-sample conditional σ path, overlays an equal-weight master ensemble,
-// and forecasts `FORECAST_HORIZON` trading days forward. Per-model
-// parameter, log-likelihood, and BIC breakdowns sit under the chart.
+// Fits 21 GARCH-family specifications by Gaussian MLE on the daily SPX
+// log-return series from /api/gex-history, renders each model's in-sample
+// conditional σ path, overlays an equal-weight master ensemble, and
+// forecasts `FORECAST_HORIZON` trading days forward.
 //
-// This is Stage 1 of the zoo — the remaining models from the user's list
-// (Component GARCH, GARCH-in-Mean, FIGARCH, HYGARCH, GAS, MS-GARCH,
-// Realized GARCH, HEAVY, DCC, CCC, BEKK, OGARCH) land in follow-up
-// commits. The plumbing here is shared across all stages: one slot
-// component, one fit orchestrator in garch.js, one equal-weight ensemble.
+// Univariate (17): GARCH, IGARCH, EGARCH, GJR, TGARCH, APARCH, NAGARCH,
+// NGARCH, AVGARCH, CGARCH, GAS, FIGARCH, HYGARCH, MS-GARCH, Realized GARCH,
+// HEAVY, and GARCH-M (fit on raw returns, not demeaned).
+//
+// Multivariate (4): CCC, DCC, BEKK(1,1), OGARCH. Paired with a second
+// series built from gamma_throttle's daily first difference, giving the
+// multivariate models a positioning-vs-returns covariance structure to
+// estimate. Each exports the SPX-marginal H_t[0,0] for the scalar ensemble
+// and the implied ρ_{12}(t) for a separate correlation trace.
 // -----------------------------------------------------------------------------
 
 const FORECAST_HORIZON = 30;
 const CHART_LOOKBACK_DAYS = 180;
 
-function buildLogReturns(series) {
+function buildLogReturnsAndPair(series) {
   const rows = [];
   for (let i = 1; i < series.length; i++) {
     const p0 = series[i - 1].spx_close;
@@ -39,7 +41,15 @@ function buildLogReturns(series) {
     if (!(p0 > 0) || !(p1 > 0)) continue;
     const r = Math.log(p1 / p0);
     if (!Number.isFinite(r)) continue;
-    rows.push({ date: series[i].trading_date, r, hv10: series[i].hv_10d });
+    const gt0 = series[i - 1].gamma_throttle;
+    const gt1 = series[i].gamma_throttle;
+    const gtDelta = (gt0 != null && gt1 != null) ? (gt1 - gt0) / 100 : 0;
+    rows.push({
+      date: series[i].trading_date,
+      r,
+      hv10: series[i].hv_10d,
+      gtDelta,
+    });
   }
   return rows;
 }
@@ -70,10 +80,18 @@ function leverageTerm(m) {
   if (p.gamma != null) return p.gamma;
   if (p.theta != null) return p.theta;
   if (p.alphaPos != null && p.alphaNeg != null) return p.alphaNeg - p.alphaPos;
+  if (p.lambda != null) return p.lambda;
+  if (p.rho != null && m.family === 'multivariate') return p.rho;
+  if (p.dccAlpha != null) return p.dccAlpha;
   return null;
 }
 function powerTerm(m) {
-  return m.params?.delta ?? null;
+  const p = m.params;
+  if (!p) return null;
+  if (p.delta != null) return p.delta;
+  if (p.d != null) return p.d;
+  if (p.mix != null) return p.mix;
+  return null;
 }
 function persistenceOf(m) {
   const p = m.params;
@@ -87,6 +105,15 @@ function persistenceOf(m) {
   if (m.name === 'APARCH') return p.alpha + p.beta;
   if (m.name === 'NGARCH') return p.alpha + p.beta;
   if (m.name === 'AVGARCH') return p.alpha * Math.sqrt(2 / Math.PI) + p.beta;
+  if (m.name === 'CGARCH') return p.rho;
+  if (m.name === 'GAS') return Math.abs(p.beta);
+  if (m.name === 'FIGARCH') return 1;
+  if (m.name === 'HYGARCH') return p.mix + (1 - p.mix) * (p.alpha + p.beta);
+  if (m.name === 'MS-GARCH') return (p.alpha1 + p.beta1 + p.alpha2 + p.beta2) / 2;
+  if (m.name === 'Realized GARCH') return p.beta + p.gamma;
+  if (m.name === 'HEAVY') return p.alpha + p.beta;
+  if (m.name === 'GARCH-M') return p.alpha + p.beta;
+  if (m.family === 'multivariate') return p.alpha + p.beta;
   return null;
 }
 
@@ -123,10 +150,17 @@ function StatCell({ label, value, sub, accent }) {
 }
 
 const FAMILY_COLORS = {
-  symmetric:  '#4a9eff',  // accent-blue
-  asymmetric: '#d85a30',  // accent-coral
-  power:      '#a67bd6',  // purple
-  absolute:   '#f0a030',  // accent-amber
+  symmetric:    '#4a9eff',  // accent-blue
+  asymmetric:   '#d85a30',  // accent-coral
+  power:        '#a67bd6',  // purple
+  absolute:     '#f0a030',  // accent-amber
+  component:    '#4acfc1',  // teal
+  mean:         '#d64ab0',  // magenta
+  score:        '#6bc3d6',  // light blue
+  'long-memory':'#e06040',  // warm red
+  regime:       '#f0d040',  // gold
+  realized:     '#88d04a',  // lime
+  multivariate: '#c080ff',  // violet
 };
 
 const ENSEMBLE_COLOR = '#2ecc71'; // accent-green
@@ -153,6 +187,7 @@ function modelColor(m, idxWithinFamily) {
 
 export default function GarchZoo() {
   const chartRef = useRef(null);
+  const corrChartRef = useRef(null);
   const { plotly: Plotly, error: plotlyError } = usePlotly();
   const mobile = useIsMobile();
   const { data, loading, error } = useGexHistory({});
@@ -160,7 +195,7 @@ export default function GarchZoo() {
 
   const returnsWithDate = useMemo(() => {
     if (!data?.series) return null;
-    return buildLogReturns(data.series);
+    return buildLogReturnsAndPair(data.series);
   }, [data]);
 
   useEffect(() => {
@@ -169,7 +204,8 @@ export default function GarchZoo() {
     const handle = setTimeout(() => {
       try {
         const returns = returnsWithDate.map((r) => r.r);
-        const fit = fitAll(returns);
+        const secondSeries = returnsWithDate.map((r) => r.gtDelta);
+        const fit = fitAll(returns, { secondSeries });
         const forecast = forecastAll(fit, FORECAST_HORIZON);
         if (!cancelled) setFitState({ fit, forecast, error: null });
       } catch (err) {
@@ -278,7 +314,7 @@ export default function GarchZoo() {
 
     const layout = plotly2DChartLayout({
       title: {
-        ...plotlyTitle('GARCH Family · Conditional σ (Annualized) · 9 univariate models + EW ensemble'),
+        ...plotlyTitle('GARCH Family · Conditional σ (Annualized) · 21 specifications + EW ensemble'),
         y: 0.97,
         yref: 'container',
         yanchor: 'top',
@@ -298,6 +334,51 @@ export default function GarchZoo() {
     });
 
     Plotly.react(chartRef.current, traces, layout, {
+      responsive: true,
+      displayModeBar: false,
+    });
+  }, [Plotly, fitState, returnsWithDate, mobile]);
+
+  // Secondary chart: implied ρ_{12}(t) for the multivariate models
+  useEffect(() => {
+    if (!Plotly || !corrChartRef.current || !fitState.fit || !returnsWithDate) return;
+    const multivariate = fitState.fit.models.filter(
+      (m) => m.family === 'multivariate' && m.__correlation != null,
+    );
+    if (multivariate.length === 0) return;
+    const n = returnsWithDate.length;
+    const start = Math.max(0, n - CHART_LOOKBACK_DAYS);
+    const dates = returnsWithDate.slice(start).map((r) => r.date);
+    const traces = multivariate.map((m, idx) => ({
+      x: dates,
+      y: m.__correlation.slice(start),
+      mode: 'lines',
+      type: 'scatter',
+      name: m.name,
+      line: { color: modelColor(m, idx), width: 1.6 },
+      hovertemplate: `<b>%{x}</b><br>${m.name}: %{y:.3f}<extra></extra>`,
+    }));
+    const layout = plotly2DChartLayout({
+      title: {
+        ...plotlyTitle('Multivariate · ρ₁₂(t) · SPX returns × Δ gamma_throttle'),
+        y: 0.94,
+        yref: 'container',
+        yanchor: 'top',
+      },
+      margin: mobile ? { t: 40, r: 20, b: 70, l: 50 } : { t: 50, r: 30, b: 80, l: 65 },
+      xaxis: plotlyAxis('', { type: 'date' }),
+      yaxis: plotlyAxis('ρ', { range: [-1, 1], tickformat: '.2f' }),
+      showlegend: true,
+      legend: {
+        orientation: 'h',
+        y: -0.25,
+        x: 0.5,
+        xanchor: 'center',
+        font: PLOTLY_FONTS.legend,
+      },
+      hovermode: 'x unified',
+    });
+    Plotly.react(corrChartRef.current, traces, layout, {
       responsive: true,
       displayModeBar: false,
     });
@@ -364,9 +445,10 @@ export default function GarchZoo() {
       <div className="lab-placeholder">
         <div className="lab-placeholder-title">Fitting zoo…</div>
         <div className="lab-placeholder-hint">
-          9 GARCH-family specifications by Gaussian MLE on{' '}
+          21 GARCH-family specifications by Gaussian MLE on{' '}
           {returnsWithDate.length.toLocaleString()} daily returns. Nelder-Mead
-          in-browser, serial fit. Typical wall-clock: 0.5–1.5 seconds on a modern laptop.
+          in-browser, serial fit with FIGARCH / HYGARCH / MS-GARCH the
+          expensive ones. Typical wall-clock: 3–8 seconds on a modern laptop.
         </div>
       </div>
     );
@@ -397,7 +479,7 @@ export default function GarchZoo() {
             marginBottom: '0.35rem',
           }}
         >
-          model · GARCH family (stage 1 of 2)
+          model · GARCH family zoo
         </div>
         <div
           style={{
@@ -407,18 +489,24 @@ export default function GarchZoo() {
             maxWidth: '820px',
           }}
         >
-          Nine univariate GARCH-family specifications fit by Gaussian MLE on
-          daily SPX log returns: GARCH(1,1), IGARCH, EGARCH, GJR, TGARCH,
-          APARCH, NAGARCH, NGARCH, AVGARCH. Each is fit by Nelder-Mead in
-          unconstrained reparameterization space so the simplex stays inside
-          the stationary / positive-variance region without any barrier
-          penalty. The Ensemble (EW) trace is the equal-weight blend of the
-          in-sample conditional-variance paths; the dashed forecast tail is
-          the equal-weight blend of each model's closed-form or
-          Monte-Carlo-averaged h-step recursion from the current state.
-          Component GARCH, GARCH-in-Mean, GAS, FIGARCH, HYGARCH, MS-GARCH,
-          Realized GARCH, HEAVY, and the multivariate family (CCC, DCC,
-          BEKK, OGARCH) land in Stage 2.
+          21 GARCH-family specifications fit by Gaussian MLE on daily SPX log
+          returns. The univariate group spans quadratic (GARCH, IGARCH,
+          GJR), log (EGARCH, GAS), σ-form (TGARCH, AVGARCH), power (APARCH,
+          NGARCH), asymmetric displacement (NAGARCH), component (CGARCH),
+          in-mean (GARCH-M), long-memory (FIGARCH, HYGARCH), regime-switching
+          (MS-GARCH, Gray 1996 two-state filter), and realized-measure
+          (Realized GARCH, HEAVY, with a 5-day sum-of-squared-returns RV
+          proxy since the daily data feed has no intraday RV). The
+          multivariate group (CCC, DCC, BEKK, OGARCH) pairs SPX log returns
+          with the daily first-difference of{' '}
+          <code style={{ fontFamily: 'Courier New, monospace', color: 'var(--text-primary)' }}>
+            gamma_throttle
+          </code>
+          {' '}as a positioning-side series, and contributes each model's
+          SPX-marginal conditional variance H_t[0,0] to the scalar ensemble.
+          The dashed forecast tail is the equal-weight blend of each model's
+          closed-form or Monte-Carlo-averaged h-step recursion from the
+          current state.
         </div>
       </div>
 
@@ -459,6 +547,13 @@ export default function GarchZoo() {
       </div>
 
       <div ref={chartRef} style={{ width: '100%', height: mobile ? 380 : 480 }} />
+
+      {ok.some((m) => m.family === 'multivariate' && m.__correlation) && (
+        <div
+          ref={corrChartRef}
+          style={{ width: '100%', height: mobile ? 240 : 280, marginTop: '0.5rem' }}
+        />
+      )}
 
       <div style={{ marginTop: '1.1rem', overflowX: 'auto' }}>
         <table
@@ -567,15 +662,21 @@ export default function GarchZoo() {
         in {fit.elapsedMs.toFixed(0)}ms across {ok.length} models.
         Persistence is reported per-family:{' '}
         <code style={{ fontFamily: 'Courier New, monospace', color: 'var(--text-primary)' }}>α+β</code>{' '}
-        for symmetric quadratic (GARCH, APARCH, NGARCH),{' '}
+        for symmetric quadratic (GARCH, APARCH, NGARCH, HEAVY, GARCH-M);{' '}
         <code style={{ fontFamily: 'Courier New, monospace', color: 'var(--text-primary)' }}>α+γ/2+β</code>{' '}
-        for GJR,{' '}
+        for GJR;{' '}
         <code style={{ fontFamily: 'Courier New, monospace', color: 'var(--text-primary)' }}>|β|</code>{' '}
-        for EGARCH,{' '}
+        for EGARCH and GAS (log-variance AR(1) coefficient);{' '}
         <code style={{ fontFamily: 'Courier New, monospace', color: 'var(--text-primary)' }}>α(1+θ²)+β</code>{' '}
-        for NAGARCH, and the√(2/π)-adjusted absolute-value sum for TGARCH / AVGARCH.
-        All persistence measures close to 1 mean shocks die out slowly; the
-        IGARCH row is pinned to 1 by construction.
+        for NAGARCH; the √(2/π)-adjusted absolute-value sum for TGARCH / AVGARCH;{' '}
+        <code style={{ fontFamily: 'Courier New, monospace', color: 'var(--text-primary)' }}>ρ</code>{' '}
+        for CGARCH (long-run component AR coefficient); and 1 for IGARCH
+        and FIGARCH (integrated / fractionally integrated by construction).
+        MS-GARCH reports an average across regimes; HYGARCH reports a
+        mix-weighted blend. Multivariate persistence is the SPX-marginal
+        GARCH(1,1) persistence α+β; the ρ_{'{'}12{'}'}(t) trace below shows
+        how each multivariate model estimates the SPX-vs-positioning
+        correlation over time.
       </div>
     </div>
   );
