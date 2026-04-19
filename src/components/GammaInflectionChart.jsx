@@ -296,7 +296,7 @@ export default function GammaInflectionChart({ spotPrice, levels }) {
       }
       setLabels(newLabels);
     });
-  }, [Plotly, hasProfile, split, spotPrice, volFlip, profile, mobile, activeRange, dataMin, dataMax]);
+  }, [Plotly, hasProfile, split, spotPrice, volFlip, profile, mobile, activeRange, dataMin, dataMax, strikeRange]);
 
   const handleBrushChange = useCallback((min, max) => {
     setStrikeRange([min, max]);

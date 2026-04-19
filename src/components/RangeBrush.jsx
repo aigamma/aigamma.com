@@ -1,4 +1,4 @@
-import { useRef, useState } from 'react';
+import { useState } from 'react';
 import { PLOTLY_COLORS } from '../lib/plotlyTheme';
 
 // Site-wide range brush — three absolutely-positioned divs inside a
@@ -32,7 +32,6 @@ export default function RangeBrush({
   orientation = 'horizontal',
   minWidth = 0,
 }) {
-  const trackRef = useRef(null);
   const [dragState, setDragState] = useState(null);
   const isVertical = orientation === 'vertical';
 
@@ -49,8 +48,10 @@ export default function RangeBrush({
   const farPct =
     totalSpan > 0 ? Math.max(0, ((max - displayMax) / totalSpan) * 100) : 0;
 
-  const handlePointerDown = (handle) => (e) => {
-    if (!trackRef.current) return;
+  const handlePointerDown = (e) => {
+    const handle = e.currentTarget.dataset.handle;
+    if (!handle) return;
+    const track = e.currentTarget.parentElement;
     e.preventDefault();
     e.stopPropagation();
     e.target.setPointerCapture?.(e.pointerId);
@@ -59,7 +60,7 @@ export default function RangeBrush({
       startClient: isVertical ? e.clientY : e.clientX,
       startMin: activeMin,
       startMax: activeMax,
-      rect: trackRef.current.getBoundingClientRect(),
+      rect: track.getBoundingClientRect(),
       currentMin: activeMin,
       currentMax: activeMax,
     });
@@ -194,15 +195,14 @@ export default function RangeBrush({
 
   return (
     <div
-      ref={trackRef}
       onPointerMove={handlePointerMove}
       onPointerUp={handlePointerUp}
       onPointerCancel={handlePointerUp}
       style={trackStyle}
     >
-      <div onPointerDown={handlePointerDown('window')} style={windowStyle} />
-      <div onPointerDown={handlePointerDown('min')} style={minHandleStyle} />
-      <div onPointerDown={handlePointerDown('max')} style={maxHandleStyle} />
+      <div data-handle="window" onPointerDown={handlePointerDown} style={windowStyle} />
+      <div data-handle="min" onPointerDown={handlePointerDown} style={minHandleStyle} />
+      <div data-handle="max" onPointerDown={handlePointerDown} style={maxHandleStyle} />
     </div>
   );
 }

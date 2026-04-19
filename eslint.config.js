@@ -26,4 +26,13 @@ export default defineConfig([
       'no-unused-vars': ['error', { varsIgnorePattern: '^[A-Z_]' }],
     },
   },
+  {
+    files: ['aigamma-extension/**/*.js', 'aigamma-extension-firefox/**/*.js'],
+    languageOptions: {
+      globals: {
+        ...globals.browser,
+        ...globals.webextensions,
+      },
+    },
+  },
 ])

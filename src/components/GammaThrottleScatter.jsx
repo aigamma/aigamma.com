@@ -80,7 +80,6 @@ function msToIso(ms) {
 // on pointer release so the downstream scatter doesn't re-render 60x/s
 // during a drag; the brush's own display updates locally at drag rate.
 function DateRangeBrush({ firstDate, lastDate, activeRange, onChange, height = 40 }) {
-  const trackRef = useRef(null);
   const [dragState, setDragState] = useState(null);
 
   const firstMs = useMemo(() => isoToMs(firstDate), [firstDate]);
@@ -94,8 +93,10 @@ function DateRangeBrush({ firstDate, lastDate, activeRange, onChange, height = 4
   const leftPct = Math.max(0, ((activeMinMs - firstMs) / totalMs) * 100);
   const rightPct = Math.max(0, ((lastMs - activeMaxMs) / totalMs) * 100);
 
-  const handlePointerDown = (handle) => (e) => {
-    if (!trackRef.current) return;
+  const handlePointerDown = (e) => {
+    const handle = e.currentTarget.dataset.handle;
+    if (!handle) return;
+    const track = e.currentTarget.parentElement;
     e.preventDefault();
     e.stopPropagation();
     e.target.setPointerCapture?.(e.pointerId);
@@ -104,7 +105,7 @@ function DateRangeBrush({ firstDate, lastDate, activeRange, onChange, height = 4
       startClientX: e.clientX,
       startMin: isoToMs(activeRange[0]),
       startMax: isoToMs(activeRange[1]),
-      rect: trackRef.current.getBoundingClientRect(),
+      rect: track.getBoundingClientRect(),
       currentRange: activeRange,
     });
   };
@@ -147,7 +148,6 @@ function DateRangeBrush({ firstDate, lastDate, activeRange, onChange, height = 4
 
   return (
     <div
-      ref={trackRef}
       onPointerMove={handlePointerMove}
       onPointerUp={handlePointerUp}
       onPointerCancel={handlePointerUp}
@@ -164,7 +164,8 @@ function DateRangeBrush({ firstDate, lastDate, activeRange, onChange, height = 4
       }}
     >
       <div
-        onPointerDown={handlePointerDown('window')}
+        data-handle="window"
+        onPointerDown={handlePointerDown}
         style={{
           position: 'absolute',
           top: 0,
@@ -176,7 +177,8 @@ function DateRangeBrush({ firstDate, lastDate, activeRange, onChange, height = 4
         }}
       />
       <div
-        onPointerDown={handlePointerDown('min')}
+        data-handle="min"
+        onPointerDown={handlePointerDown}
         style={{
           position: 'absolute',
           top: 0,
@@ -188,7 +190,8 @@ function DateRangeBrush({ firstDate, lastDate, activeRange, onChange, height = 4
         }}
       />
       <div
-        onPointerDown={handlePointerDown('max')}
+        data-handle="max"
+        onPointerDown={handlePointerDown}
         style={{
           position: 'absolute',
           top: 0,
@@ -278,7 +281,6 @@ export default function GammaThrottleScatter() {
     setTimeRange(range);
   }, []);
 
-  const [scatterError, setScatterError] = useState(null);
   useEffect(() => {
     if (!Plotly || !scatterRef.current || filtered.length === 0) return;
 
@@ -409,15 +411,10 @@ export default function GammaThrottleScatter() {
       annotations,
     });
 
-    try {
-      Plotly.newPlot(scatterRef.current, traces, layout, {
-        responsive: true,
-        displayModeBar: false,
-      });
-      setScatterError(null);
-    } catch (err) {
-      setScatterError(err.message);
-    }
+    Plotly.newPlot(scatterRef.current, traces, layout, {
+      responsive: true,
+      displayModeBar: false,
+    });
   }, [Plotly, filtered, fitCurve, lastPoint, mobile, stats]);
 
   if (plotlyError) {
@@ -431,13 +428,6 @@ export default function GammaThrottleScatter() {
     return (
       <div className="card" style={{ padding: '1rem', marginBottom: '1rem', color: 'var(--accent-coral)' }}>
         GEX history fetch failed: {error}
-      </div>
-    );
-  }
-  if (scatterError) {
-    return (
-      <div className="card" style={{ padding: '1rem', marginBottom: '1rem', color: 'var(--accent-coral)' }}>
-        Gamma throttle scatter render error: {scatterError}
       </div>
     );
   }
