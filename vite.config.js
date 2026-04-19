@@ -2,7 +2,7 @@ import { fileURLToPath } from 'node:url'
 import { defineConfig } from 'vite'
 import react from '@vitejs/plugin-react'
 
-// Multi-page build. Eleven entries: the main dashboard at `index.html`
+// Multi-page build. Twelve entries: the main dashboard at `index.html`
 // (served at `/`), the bookmark-only three-slot beta lab at
 // `beta/index.html` (served at `/beta/`), the bookmark-only two-slot
 // alpha lab at `alpha/index.html` (served at `/alpha/`), the
@@ -15,9 +15,11 @@ import react from '@vitejs/plugin-react'
 // vol lab at `stochastic/index.html` (served at `/stochastic/`), the
 // bookmark-only four-slot local-volatility lab at
 // `local/index.html` (served at `/local/`), the bookmark-only
-// four-slot risk lab at `risk/index.html` (served at `/risk/`), and
-// the bookmark-only four-slot jump-process lab at `jump/index.html`
-// (served at `/jump/`). The dev lab is a peer
+// four-slot risk lab at `risk/index.html` (served at `/risk/`), the
+// bookmark-only four-slot jump-process lab at `jump/index.html`
+// (served at `/jump/`), and the bookmark-only six-slot discrete and
+// parametric lab at `discrete/index.html` (served at `/discrete/`).
+// The dev lab is a peer
 // scratch pad to /alpha — same pre-β release stage, independent
 // concept. The garch lab is a dedicated family-zoo surface for the
 // full GARCH specification list (univariate + multivariate) with an
@@ -49,11 +51,16 @@ import react from '@vitejs/plugin-react'
 // asymmetric double-exponential jumps, Bates (1996) SVJ that
 // combines Heston with Merton jumps, and Variance Gamma
 // (Madan-Carr-Chang 1998) as a pure-jump infinite-activity Levy
-// process — all calibrated in-browser against the live SPX chain.
-// Nothing in the built output links the eleven together. See
-// beta/App.jsx, alpha/App.jsx, dev/App.jsx, garch/App.jsx,
-// regime/App.jsx, rough/App.jsx, stochastic/App.jsx,
-// local/App.jsx, risk/App.jsx, and jump/App.jsx for the rationale.
+// process — all calibrated in-browser against the live SPX chain. The
+// discrete lab is a six-slot zoo pairing two discrete pricing engines
+// (Cox-Ross-Rubinstein binomial tree, Kamrad-Ritchken trinomial tree)
+// against the four-parameterization SVI family (raw, natural, JW, SSVI)
+// so the reader can compare what a state-space pricer and a parametric
+// surface smoother each produce from the same live chain. Nothing in
+// the built output links the twelve together. See beta/App.jsx,
+// alpha/App.jsx, dev/App.jsx, garch/App.jsx, regime/App.jsx,
+// rough/App.jsx, stochastic/App.jsx, local/App.jsx, risk/App.jsx,
+// jump/App.jsx, and discrete/App.jsx for the rationale.
 export default defineConfig({
   plugins: [react()],
   server: {
@@ -79,6 +86,7 @@ export default defineConfig({
         local: fileURLToPath(new URL('./local/index.html', import.meta.url)),
         risk: fileURLToPath(new URL('./risk/index.html', import.meta.url)),
         jump: fileURLToPath(new URL('./jump/index.html', import.meta.url)),
+        discrete: fileURLToPath(new URL('./discrete/index.html', import.meta.url)),
       },
     },
   },
