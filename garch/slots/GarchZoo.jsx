@@ -395,6 +395,39 @@ export default function GarchZoo() {
       hovertemplate: '<b>%{x}</b><br>forecast σ: %{y:.2f}%<extra></extra>',
     });
 
+    // Plotly's autorange would otherwise scan the full trace data — which
+    // now spans the entire history — and stretch the y-axis to cover
+    // out-of-window σ spikes (e.g. the 2020 COVID-era 100%+ readings),
+    // leaving the visible σ paths squashed against the bottom of the
+    // chart. Compute a tight y-range over only the points whose x falls
+    // inside activeRange so the y-axis fits the visible window. Mirrors
+    // `computeYRange` in src/components/DealerGammaRegime.jsx.
+    const [xStart, xEnd] = activeRange;
+    let yMin = Infinity;
+    let yMax = -Infinity;
+    for (const tr of traces) {
+      const xs = tr.x;
+      const ys = tr.y;
+      for (let i = 0; i < xs.length; i++) {
+        const xv = xs[i];
+        const yv = ys[i];
+        if (yv == null || !Number.isFinite(yv)) continue;
+        if (xv < xStart || xv > xEnd) continue;
+        if (yv < yMin) yMin = yv;
+        if (yv > yMax) yMax = yv;
+      }
+    }
+    let yRange = null;
+    if (Number.isFinite(yMin) && Number.isFinite(yMax)) {
+      if (yMax === yMin) {
+        const pad = Math.max(yMin * 0.1, 0.5);
+        yRange = [Math.max(0, yMin - pad), yMax + pad];
+      } else {
+        const pad = (yMax - yMin) * 0.08;
+        yRange = [Math.max(0, yMin - pad), yMax + pad];
+      }
+    }
+
     const totalOk = fitState.fit.models.filter((m) => m.condVar != null).length;
     const titleText = visibleModels.length === totalOk
       ? `GARCH Family · Conditional σ (Annualized) · ${totalOk} specifications + EW ensemble`
@@ -408,7 +441,11 @@ export default function GarchZoo() {
       },
       margin: mobile ? { t: 50, r: 20, b: 110, l: 60 } : { t: 70, r: 30, b: 120, l: 75 },
       xaxis: plotlyAxis('', { type: 'date', range: activeRange, autorange: false }),
-      yaxis: plotlyAxis('σ (%)', { ticksuffix: '%', tickformat: '.1f' }),
+      yaxis: plotlyAxis('σ (%)', {
+        ticksuffix: '%',
+        tickformat: '.1f',
+        ...(yRange ? { range: yRange, autorange: false } : {}),
+      }),
       showlegend: true,
       legend: {
         orientation: 'h',
