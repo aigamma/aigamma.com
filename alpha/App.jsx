@@ -26,7 +26,7 @@ export default function App() {
             className="lab-badge"
             title="Alpha — pre-β, software-stage sense"
           >
-            α LAB
+            Alpha Lab
           </span>
         </div>
         <div className="lab-meta">
