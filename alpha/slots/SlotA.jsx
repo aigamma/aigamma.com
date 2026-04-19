@@ -491,9 +491,9 @@ export default function SlotA() {
         </div>
         <div
           style={{
-            fontSize: '0.88rem',
+            fontSize: '1rem',
             color: 'var(--text-secondary)',
-            lineHeight: 1.55,
+            lineHeight: 1.6,
             maxWidth: '820px',
           }}
         >
@@ -558,30 +558,40 @@ export default function SlotA() {
 
       <div
         style={{
-          marginTop: '0.65rem',
-          fontSize: '0.75rem',
+          marginTop: '0.75rem',
+          fontSize: '0.95rem',
           color: 'var(--text-secondary)',
-          lineHeight: 1.6,
+          lineHeight: 1.65,
         }}
       >
         <strong style={{ color: 'var(--text-primary)' }}>
-          Reading the chart for edge.
+          Reading the chart for edge:
         </strong>{' '}
-        Box r meaningfully <em>above</em> the treasury rate at matching DTE
-        → boxes are cheap: <strong>buy</strong> to lend synthetically above
-        risk-free and collect the spread to expiry. Box r <em>below</em>{' '}
-        treasury → boxes are rich: <strong>sell</strong> and park the cash
-        in T-bills instead. Amber line flat near ~1.3% = parity is holding
-        cleanly, nothing to do. Amber spiking or kinking at a specific DTE
-        = per-strike mispricing at that expiration; hover to see whether K₁
-        or K₂ is the stale leg and whether r(K₁) and r(K₂) disagree within
-        the same T — a disagreement there is often a single-contract fix.
-        The slope of the blue line is the implied term structure of the
-        borrow rate, so reading calendar edge off it cleanly needs a
-        treasury-curve overlay (natural next addition). Sub-7d points are
-        almost always 1/T-amplified mark noise rather than real edge, so
-        the left-edge spikes are usually safe to ignore. Full math behind
-        each line will move to an informational dropdown in a later pass.
+        <strong style={{ color: PLOTLY_COLORS.primary }}>Box r</strong>{' '}
+        meaningfully <em>above</em> the treasury rate at matching DTE →
+        boxes are cheap: <strong>buy</strong> to lend synthetically above
+        risk-free and collect the spread to expiry.{' '}
+        <strong style={{ color: PLOTLY_COLORS.primary }}>Box r</strong>{' '}
+        <em>below</em> treasury → boxes are rich: <strong>sell</strong>{' '}
+        and park the cash in T-bills instead.{' '}
+        <strong style={{ color: PLOTLY_COLORS.highlight }}>Amber line</strong>{' '}
+        flat near ~1.3% = parity is holding cleanly, nothing to do.{' '}
+        <strong style={{ color: PLOTLY_COLORS.highlight }}>Amber spiking</strong>{' '}
+        or kinking at a specific DTE = per-strike mispricing at that
+        expiration; hover to see whether K₁ or K₂ is the stale leg and
+        whether{' '}
+        <strong style={{ color: PLOTLY_COLORS.secondary }}>r(K₁)</strong>{' '}
+        and{' '}
+        <strong style={{ color: PLOTLY_COLORS.secondary }}>r(K₂)</strong>{' '}
+        disagree within the same T — a disagreement there is often a
+        single-contract fix. The slope of the{' '}
+        <strong style={{ color: PLOTLY_COLORS.primary }}>blue line</strong>{' '}
+        is the implied term structure of the borrow rate, so reading
+        calendar edge off it cleanly needs a treasury-curve overlay
+        (natural next addition). Sub-7d points are almost always
+        1/T-amplified mark noise rather than real edge, so the left-edge
+        spikes are usually safe to ignore. Full math behind each line
+        will move to an informational dropdown in a later pass.
       </div>
     </div>
   );
