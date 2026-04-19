@@ -4,13 +4,17 @@ import ErrorBoundary from '../src/ErrorBoundary';
 import GarchZoo from './slots/GarchZoo';
 
 // /garch/ — GARCH family zoo page, bookmark-only, peer to /alpha and /dev.
-// Single slot rendering up to ~21 GARCH-family specifications plus an
-// equal-weight master ensemble on daily SPX log returns. Stage 1 covers
-// the nine univariate quadratic/power/absolute-value specifications that
-// share the simplex-search infrastructure already proven in /dev/garch.js;
-// Stage 2 adds Component GARCH, GARCH-in-Mean, GAS, FIGARCH, HYGARCH,
-// MS-GARCH, Realized GARCH, HEAVY, and the multivariate family (CCC, DCC,
-// BEKK, OGARCH) in follow-up commits.
+// Single slot rendering 17 univariate GARCH-family specifications plus an
+// equal-weight master ensemble on daily SPX log returns, with a family
+// picker above the chart that lets a viewer hide a family — the ensemble
+// and forecast tail recompute on whatever stays visible.
+//
+// The multivariate fitters (CCC / DCC / BEKK / OGARCH) stay in the
+// garch.js library but are not invoked on this page. They had been paired
+// with gamma_throttle's daily first-difference as a second series to
+// produce an SPX-vs-positioning ρ₁₂(t) time series, but that trace had no
+// actionable reading attached, so the correlation chart was removed and
+// the freed space was redirected into a taller main chart.
 //
 // Like /alpha, /beta, and /dev, this page has no ingress or egress links:
 // nothing on the main site points here, the logo is not a hyperlink, and
@@ -24,7 +28,7 @@ export default function App() {
           <img src="/logo.webp" alt="aigamma.com" className="lab-logo" />
           <span
             className="lab-badge"
-            title="GARCH — univariate + multivariate family zoo with equal-weight master ensemble"
+            title="GARCH — 17-model univariate family zoo with equal-weight ensemble and a family picker"
           >
             GARCH LAB
           </span>
@@ -52,7 +56,7 @@ export default function App() {
 
       <footer className="lab-footer">
         <span className="lab-footer-line">
-          AI Gamma LLC · GARCH lab · univariate + multivariate family zoo
+          AI Gamma LLC · GARCH lab · univariate family zoo with picker
         </span>
       </footer>
     </div>

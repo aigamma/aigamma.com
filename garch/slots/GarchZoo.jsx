@@ -9,31 +9,36 @@ import {
   plotlyAxis,
   plotlyTitle,
 } from '../../src/lib/plotlyTheme';
-import { fitAll, forecastAll, annualize } from '../garch';
+import { fitAll, forecastAll, annualize, horizonSigma } from '../garch';
 
 // -----------------------------------------------------------------------------
 // GARCH family zoo — single slot on /garch/
 //
-// Fits 21 GARCH-family specifications by Gaussian MLE on the daily SPX
-// log-return series from /api/gex-history, renders each model's in-sample
-// conditional σ path, overlays an equal-weight master ensemble, and
-// forecasts `FORECAST_HORIZON` trading days forward.
+// Fits 17 univariate GARCH-family specifications by Gaussian MLE on the daily
+// SPX log-return series from /api/gex-history, renders each model's in-sample
+// conditional σ path, overlays an equal-weight master ensemble across visible
+// models, and forecasts `FORECAST_HORIZON` trading days forward.
 //
-// Univariate (17): GARCH, IGARCH, EGARCH, GJR, TGARCH, APARCH, NAGARCH,
+// Specifications: GARCH(1,1), IGARCH, EGARCH, GJR, TGARCH, APARCH, NAGARCH,
 // NGARCH, AVGARCH, CGARCH, GAS, FIGARCH, HYGARCH, MS-GARCH, Realized GARCH,
-// HEAVY, and GARCH-M (fit on raw returns, not demeaned).
+// HEAVY, and GARCH-M (the only one fit on raw returns rather than demeaned,
+// because its mean equation carries λ as a free parameter).
 //
-// Multivariate (4): CCC, DCC, BEKK(1,1), OGARCH. Paired with a second
-// series built from gamma_throttle's daily first difference, giving the
-// multivariate models a positioning-vs-returns covariance structure to
-// estimate. Each exports the SPX-marginal H_t[0,0] for the scalar ensemble
-// and the implied ρ_{12}(t) for a separate correlation trace.
+// The multivariate fitters (CCC / DCC / BEKK / OGARCH) stay in the library
+// but are not invoked here — without a second series passed to fitAll they
+// sit idle. They were dropped from this page because the SPX-vs-positioning
+// ρ₁₂(t) time series they produced had no actionable reading attached.
+//
+// The family picker above the chart lets a viewer hide a whole family —
+// e.g., drop the absolute-value family or the realized-measure family — and
+// the ensemble plus the forecast tail recompute over whatever remains
+// visible.
 // -----------------------------------------------------------------------------
 
 const FORECAST_HORIZON = 30;
 const CHART_LOOKBACK_DAYS = 180;
 
-function buildLogReturnsAndPair(series) {
+function buildLogReturns(series) {
   const rows = [];
   for (let i = 1; i < series.length; i++) {
     const p0 = series[i - 1].spx_close;
@@ -41,14 +46,10 @@ function buildLogReturnsAndPair(series) {
     if (!(p0 > 0) || !(p1 > 0)) continue;
     const r = Math.log(p1 / p0);
     if (!Number.isFinite(r)) continue;
-    const gt0 = series[i - 1].gamma_throttle;
-    const gt1 = series[i].gamma_throttle;
-    const gtDelta = (gt0 != null && gt1 != null) ? (gt1 - gt0) / 100 : 0;
     rows.push({
       date: series[i].trading_date,
       r,
       hv10: series[i].hv_10d,
-      gtDelta,
     });
   }
   return rows;
@@ -65,8 +66,6 @@ function formatNum(v, digits = 4) {
   return v.toFixed(digits);
 }
 
-// A per-model "primary α" and "asymmetry/leverage" extractor so one
-// compact table row works across models with different parameterizations.
 function primaryAlpha(m) {
   const p = m.params;
   if (!p) return null;
@@ -81,8 +80,6 @@ function leverageTerm(m) {
   if (p.theta != null) return p.theta;
   if (p.alphaPos != null && p.alphaNeg != null) return p.alphaNeg - p.alphaPos;
   if (p.lambda != null) return p.lambda;
-  if (p.rho != null && m.family === 'multivariate') return p.rho;
-  if (p.dccAlpha != null) return p.dccAlpha;
   return null;
 }
 function powerTerm(m) {
@@ -113,7 +110,6 @@ function persistenceOf(m) {
   if (m.name === 'Realized GARCH') return p.beta + p.gamma;
   if (m.name === 'HEAVY') return p.alpha + p.beta;
   if (m.name === 'GARCH-M') return p.alpha + p.beta;
-  if (m.family === 'multivariate') return p.alpha + p.beta;
   return null;
 }
 
@@ -160,18 +156,13 @@ const FAMILY_COLORS = {
   'long-memory':'#e06040',  // warm red
   regime:       '#f0d040',  // gold
   realized:     '#88d04a',  // lime
-  multivariate: '#c080ff',  // violet
 };
 
 const ENSEMBLE_COLOR = '#2ecc71'; // accent-green
 
-// Deterministic per-model line color: family base hue + small hue offset
-// per ordinal within the family, so GARCH and IGARCH are both "symmetric
-// blue" but visually distinguishable.
 function modelColor(m, idxWithinFamily) {
   const base = FAMILY_COLORS[m.family] || 'var(--text-secondary)';
   if (!idxWithinFamily) return base;
-  // Lightness shift via hex manipulation
   const hex = base.replace('#', '');
   if (hex.length !== 6) return base;
   const r = parseInt(hex.slice(0, 2), 16);
@@ -187,15 +178,15 @@ function modelColor(m, idxWithinFamily) {
 
 export default function GarchZoo() {
   const chartRef = useRef(null);
-  const corrChartRef = useRef(null);
   const { plotly: Plotly, error: plotlyError } = usePlotly();
   const mobile = useIsMobile();
   const { data, loading, error } = useGexHistory({});
   const [fitState, setFitState] = useState({ fit: null, forecast: null, error: null });
+  const [hiddenFamilies, setHiddenFamilies] = useState(() => new Set());
 
   const returnsWithDate = useMemo(() => {
     if (!data?.series) return null;
-    return buildLogReturnsAndPair(data.series);
+    return buildLogReturns(data.series);
   }, [data]);
 
   useEffect(() => {
@@ -204,8 +195,7 @@ export default function GarchZoo() {
     const handle = setTimeout(() => {
       try {
         const returns = returnsWithDate.map((r) => r.r);
-        const secondSeries = returnsWithDate.map((r) => r.gtDelta);
-        const fit = fitAll(returns, { secondSeries });
+        const fit = fitAll(returns);
         const forecast = forecastAll(fit, FORECAST_HORIZON);
         if (!cancelled) setFitState({ fit, forecast, error: null });
       } catch (err) {
@@ -226,11 +216,56 @@ export default function GarchZoo() {
     return null;
   }, [returnsWithDate]);
 
-  useEffect(() => {
-    if (!Plotly || !chartRef.current || !fitState.fit || !returnsWithDate) return;
+  // Families present in the current fit, in fit-order, so the picker
+  // reads left-to-right in the same order the chart legend does.
+  const familiesInFit = useMemo(() => {
+    if (!fitState.fit) return [];
+    const seen = new Set();
+    const order = [];
+    for (const m of fitState.fit.models) {
+      if (m.condVar != null && !seen.has(m.family)) {
+        seen.add(m.family);
+        order.push(m.family);
+      }
+    }
+    return order;
+  }, [fitState]);
 
-    const { fit, forecast } = fitState;
-    const ok = fit.models.filter((m) => m.condVar != null);
+  const visibleModels = useMemo(() => {
+    if (!fitState.fit) return [];
+    return fitState.fit.models.filter(
+      (m) => m.condVar != null && !hiddenFamilies.has(m.family),
+    );
+  }, [fitState, hiddenFamilies]);
+
+  // Equal-weight ensemble over just the visible subset, recomputed any
+  // time the picker toggles. Matches in-sample condVar with the forecast
+  // by model name so a hidden family drops out of both panels at once.
+  const visibleEnsemble = useMemo(() => {
+    if (!fitState.forecast || visibleModels.length === 0) return null;
+    const T = visibleModels[0].condVar.length;
+    const condVar = new Array(T).fill(0);
+    for (let t = 0; t < T; t++) {
+      for (const m of visibleModels) condVar[t] += m.condVar[t] / visibleModels.length;
+    }
+    const keep = new Set(visibleModels.map((m) => m.name));
+    const fs = fitState.forecast.perModel.filter((f) => keep.has(f.name));
+    const H = fs[0]?.path.length ?? 0;
+    const path = new Array(H).fill(0);
+    for (let h = 0; h < H; h++) {
+      for (const f of fs) path[h] += f.path[h] / fs.length;
+    }
+    return {
+      condVar,
+      path,
+      sigma1d: H > 0 ? annualize(path[0]) : null,
+      sigma10d: horizonSigma(path, 10),
+      sigma21d: horizonSigma(path, 21),
+    };
+  }, [fitState, visibleModels]);
+
+  useEffect(() => {
+    if (!Plotly || !chartRef.current || !fitState.fit || !visibleEnsemble || !returnsWithDate) return;
 
     const n = returnsWithDate.length;
     const start = Math.max(0, n - CHART_LOOKBACK_DAYS);
@@ -256,9 +291,8 @@ export default function GarchZoo() {
       },
     ];
 
-    // Per-family ordinal index so colors spread within each family
     const familyCount = {};
-    ok.forEach((m) => {
+    visibleModels.forEach((m) => {
       const k = m.family;
       const idx = familyCount[k] = (familyCount[k] ?? -1) + 1;
       traces.push({
@@ -275,7 +309,7 @@ export default function GarchZoo() {
 
     traces.push({
       x: dates,
-      y: toAnnPct(fit.ensemble.condVar),
+      y: toAnnPct(visibleEnsemble.condVar),
       mode: 'lines',
       type: 'scatter',
       name: 'Ensemble (EW)',
@@ -287,20 +321,20 @@ export default function GarchZoo() {
     const lastDate = new Date(dates[dates.length - 1] + 'T00:00:00Z');
     const forecastDates = [];
     const cursor = new Date(lastDate);
-    for (let i = 0; i < forecast.ensemble.path.length; i++) {
+    for (let i = 0; i < visibleEnsemble.path.length; i++) {
       cursor.setUTCDate(cursor.getUTCDate() + 1);
       while (cursor.getUTCDay() === 0 || cursor.getUTCDay() === 6) {
         cursor.setUTCDate(cursor.getUTCDate() + 1);
       }
       forecastDates.push(cursor.toISOString().slice(0, 10));
     }
-    const lastEnsembleVar = fit.ensemble.condVar[fit.ensemble.condVar.length - 1];
+    const lastEnsembleVar = visibleEnsemble.condVar[visibleEnsemble.condVar.length - 1];
     const lastEnsembleSigma = annualize(lastEnsembleVar);
     traces.push({
       x: [dates[dates.length - 1], ...forecastDates],
       y: [
         lastEnsembleSigma != null ? lastEnsembleSigma * 100 : null,
-        ...forecast.ensemble.path.map((v) => {
+        ...visibleEnsemble.path.map((v) => {
           const a = annualize(v);
           return a != null ? a * 100 : null;
         }),
@@ -312,20 +346,24 @@ export default function GarchZoo() {
       hovertemplate: '<b>%{x}</b><br>forecast σ: %{y:.2f}%<extra></extra>',
     });
 
+    const totalOk = fitState.fit.models.filter((m) => m.condVar != null).length;
+    const titleText = visibleModels.length === totalOk
+      ? `GARCH Family · Conditional σ (Annualized) · ${totalOk} specifications + EW ensemble`
+      : `GARCH Family · Conditional σ (Annualized) · ${visibleModels.length} of ${totalOk} specifications + EW ensemble`;
     const layout = plotly2DChartLayout({
       title: {
-        ...plotlyTitle('GARCH Family · Conditional σ (Annualized) · 21 specifications + EW ensemble'),
+        ...plotlyTitle(titleText),
         y: 0.97,
         yref: 'container',
         yanchor: 'top',
       },
-      margin: mobile ? { t: 50, r: 20, b: 100, l: 60 } : { t: 70, r: 30, b: 110, l: 75 },
+      margin: mobile ? { t: 50, r: 20, b: 110, l: 60 } : { t: 70, r: 30, b: 120, l: 75 },
       xaxis: plotlyAxis('', { type: 'date' }),
       yaxis: plotlyAxis('σ (%)', { ticksuffix: '%', tickformat: '.1f' }),
       showlegend: true,
       legend: {
         orientation: 'h',
-        y: -0.22,
+        y: -0.14,
         x: 0.5,
         xanchor: 'center',
         font: PLOTLY_FONTS.legend,
@@ -337,52 +375,7 @@ export default function GarchZoo() {
       responsive: true,
       displayModeBar: false,
     });
-  }, [Plotly, fitState, returnsWithDate, mobile]);
-
-  // Secondary chart: implied ρ_{12}(t) for the multivariate models
-  useEffect(() => {
-    if (!Plotly || !corrChartRef.current || !fitState.fit || !returnsWithDate) return;
-    const multivariate = fitState.fit.models.filter(
-      (m) => m.family === 'multivariate' && m.__correlation != null,
-    );
-    if (multivariate.length === 0) return;
-    const n = returnsWithDate.length;
-    const start = Math.max(0, n - CHART_LOOKBACK_DAYS);
-    const dates = returnsWithDate.slice(start).map((r) => r.date);
-    const traces = multivariate.map((m, idx) => ({
-      x: dates,
-      y: m.__correlation.slice(start),
-      mode: 'lines',
-      type: 'scatter',
-      name: m.name,
-      line: { color: modelColor(m, idx), width: 1.6 },
-      hovertemplate: `<b>%{x}</b><br>${m.name}: %{y:.3f}<extra></extra>`,
-    }));
-    const layout = plotly2DChartLayout({
-      title: {
-        ...plotlyTitle('Multivariate · ρ₁₂(t) · SPX returns × Δ gamma_throttle'),
-        y: 0.94,
-        yref: 'container',
-        yanchor: 'top',
-      },
-      margin: mobile ? { t: 40, r: 20, b: 70, l: 50 } : { t: 50, r: 30, b: 80, l: 65 },
-      xaxis: plotlyAxis('', { type: 'date' }),
-      yaxis: plotlyAxis('ρ', { range: [-1, 1], tickformat: '.2f' }),
-      showlegend: true,
-      legend: {
-        orientation: 'h',
-        y: -0.25,
-        x: 0.5,
-        xanchor: 'center',
-        font: PLOTLY_FONTS.legend,
-      },
-      hovermode: 'x unified',
-    });
-    Plotly.react(corrChartRef.current, traces, layout, {
-      responsive: true,
-      displayModeBar: false,
-    });
-  }, [Plotly, fitState, returnsWithDate, mobile]);
+  }, [Plotly, fitState, visibleModels, visibleEnsemble, returnsWithDate, mobile]);
 
   if (loading && !data) {
     return (
@@ -445,26 +438,28 @@ export default function GarchZoo() {
       <div className="lab-placeholder">
         <div className="lab-placeholder-title">Fitting zoo…</div>
         <div className="lab-placeholder-hint">
-          21 GARCH-family specifications by Gaussian MLE on{' '}
+          17 GARCH-family specifications by Gaussian MLE on{' '}
           {returnsWithDate.length.toLocaleString()} daily returns. Nelder-Mead
           in-browser, serial fit with FIGARCH / HYGARCH / MS-GARCH the
-          expensive ones. Typical wall-clock: 3–8 seconds on a modern laptop.
+          expensive ones. Typical wall-clock: 2–5 seconds on a modern laptop.
         </div>
       </div>
     );
   }
 
-  const { fit, forecast } = fitState;
+  const { fit } = fitState;
   const ok = fit.models.filter((m) => m.condVar != null);
   const failed = fit.models.filter((m) => m.condVar == null);
 
-  // Per-family ordinal for table color, matching chart color logic
   const familyCount = {};
-  const rowColors = ok.map((m) => {
+  const rowColors = visibleModels.map((m) => {
     const k = m.family;
     const idx = familyCount[k] = (familyCount[k] ?? -1) + 1;
     return modelColor(m, idx);
   });
+
+  const familyCounts = {};
+  for (const m of ok) familyCounts[m.family] = (familyCounts[m.family] ?? 0) + 1;
 
   return (
     <div className="card" style={{ padding: '1.25rem 1.25rem 1rem' }}>
@@ -489,24 +484,18 @@ export default function GarchZoo() {
             maxWidth: '820px',
           }}
         >
-          21 GARCH-family specifications fit by Gaussian MLE on daily SPX log
-          returns. The univariate group spans quadratic (GARCH, IGARCH,
-          GJR), log (EGARCH, GAS), σ-form (TGARCH, AVGARCH), power (APARCH,
-          NGARCH), asymmetric displacement (NAGARCH), component (CGARCH),
-          in-mean (GARCH-M), long-memory (FIGARCH, HYGARCH), regime-switching
-          (MS-GARCH, Gray 1996 two-state filter), and realized-measure
-          (Realized GARCH, HEAVY, with a 5-day sum-of-squared-returns RV
-          proxy since the daily data feed has no intraday RV). The
-          multivariate group (CCC, DCC, BEKK, OGARCH) pairs SPX log returns
-          with the daily first-difference of{' '}
-          <code style={{ fontFamily: 'Courier New, monospace', color: 'var(--text-primary)' }}>
-            gamma_throttle
-          </code>
-          {' '}as a positioning-side series, and contributes each model's
-          SPX-marginal conditional variance H_t[0,0] to the scalar ensemble.
-          The dashed forecast tail is the equal-weight blend of each model's
-          closed-form or Monte-Carlo-averaged h-step recursion from the
-          current state.
+          17 univariate GARCH-family specifications fit by Gaussian MLE on daily
+          SPX log returns, spanning quadratic (GARCH, IGARCH, GJR), log (EGARCH,
+          GAS), σ-form (TGARCH, AVGARCH), power (APARCH, NGARCH), asymmetric
+          displacement (NAGARCH), component (CGARCH), in-mean (GARCH-M),
+          long-memory (FIGARCH, HYGARCH), regime-switching (MS-GARCH, Gray 1996
+          two-state filter), and realized-measure (Realized GARCH, HEAVY, with
+          a 5-day sum-of-squared-returns RV proxy since the daily data feed
+          has no intraday RV). The dashed forecast tail is the equal-weight
+          blend of each visible model's closed-form or Monte-Carlo-averaged
+          h-step recursion from the current state. Use the family picker
+          below to hide a family — the ensemble, the forecast tail, and the
+          parameter table all recompute on whatever remains visible.
         </div>
       </div>
 
@@ -523,19 +512,19 @@ export default function GarchZoo() {
       >
         <StatCell
           label="σ (1-day)"
-          value={formatPct(forecast.sigma1d, 2)}
+          value={formatPct(visibleEnsemble?.sigma1d, 2)}
           sub="ensemble · annualized"
           accent={ENSEMBLE_COLOR}
         />
         <StatCell
           label="σ (10-day)"
-          value={formatPct(forecast.sigma10d, 2)}
+          value={formatPct(visibleEnsemble?.sigma10d, 2)}
           sub="avg variance → annualized"
           accent={ENSEMBLE_COLOR}
         />
         <StatCell
           label="σ (21-day)"
-          value={formatPct(forecast.sigma21d, 2)}
+          value={formatPct(visibleEnsemble?.sigma21d, 2)}
           sub="one-month horizon"
           accent={ENSEMBLE_COLOR}
         />
@@ -546,13 +535,101 @@ export default function GarchZoo() {
         />
       </div>
 
-      <div ref={chartRef} style={{ width: '100%', height: mobile ? 380 : 480 }} />
+      {/* Family picker: toggle a family on or off. The ensemble recomputes. */}
+      <div
+        style={{
+          display: 'flex',
+          flexWrap: 'wrap',
+          gap: '0.4rem',
+          alignItems: 'center',
+          marginBottom: '0.75rem',
+        }}
+      >
+        <span
+          style={{
+            fontSize: '0.7rem',
+            color: 'var(--text-secondary)',
+            textTransform: 'uppercase',
+            letterSpacing: '0.1em',
+            marginRight: '0.25rem',
+          }}
+        >
+          families:
+        </span>
+        {familiesInFit.map((fam) => {
+          const active = !hiddenFamilies.has(fam);
+          const color = FAMILY_COLORS[fam] || 'var(--text-secondary)';
+          return (
+            <button
+              key={fam}
+              type="button"
+              onClick={() => {
+                setHiddenFamilies((prev) => {
+                  const next = new Set(prev);
+                  if (next.has(fam)) next.delete(fam);
+                  else next.add(fam);
+                  return next;
+                });
+              }}
+              style={{
+                background: active ? `${color}1a` : 'transparent',
+                border: `1px solid ${active ? color : 'var(--bg-card-border)'}`,
+                color: active ? color : 'var(--text-secondary)',
+                padding: '0.3rem 0.65rem',
+                fontFamily: 'Courier New, monospace',
+                fontSize: '0.74rem',
+                cursor: 'pointer',
+                borderRadius: '3px',
+                opacity: active ? 1 : 0.55,
+                textTransform: 'lowercase',
+                letterSpacing: '0.02em',
+              }}
+              title={active ? `hide ${fam}` : `show ${fam}`}
+            >
+              {fam} · {familyCounts[fam] ?? 0}
+            </button>
+          );
+        })}
+        {hiddenFamilies.size > 0 && (
+          <button
+            type="button"
+            onClick={() => setHiddenFamilies(new Set())}
+            style={{
+              background: 'transparent',
+              border: '1px solid var(--bg-card-border)',
+              color: 'var(--text-secondary)',
+              padding: '0.3rem 0.65rem',
+              fontFamily: 'Courier New, monospace',
+              fontSize: '0.74rem',
+              cursor: 'pointer',
+              borderRadius: '3px',
+              marginLeft: '0.25rem',
+            }}
+            title="Show all families"
+          >
+            reset
+          </button>
+        )}
+      </div>
 
-      {ok.some((m) => m.family === 'multivariate' && m.__correlation) && (
+      {visibleModels.length === 0 ? (
         <div
-          ref={corrChartRef}
-          style={{ width: '100%', height: mobile ? 240 : 280, marginTop: '0.5rem' }}
-        />
+          style={{
+            width: '100%',
+            height: mobile ? 480 : 720,
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+            border: '1px dashed var(--bg-card-border)',
+            borderRadius: '4px',
+            color: 'var(--text-secondary)',
+            fontSize: '0.85rem',
+          }}
+        >
+          All families hidden — toggle one back on or hit reset.
+        </div>
+      ) : (
+        <div ref={chartRef} style={{ width: '100%', height: mobile ? 480 : 720 }} />
       )}
 
       <div style={{ marginTop: '1.1rem', overflowX: 'auto' }}>
@@ -587,7 +664,7 @@ export default function GarchZoo() {
             </tr>
           </thead>
           <tbody>
-            {ok.map((m, i) => {
+            {visibleModels.map((m, i) => {
               const p = m.params;
               const pers = persistenceOf(m);
               return (
@@ -673,10 +750,7 @@ export default function GarchZoo() {
         for CGARCH (long-run component AR coefficient); and 1 for IGARCH
         and FIGARCH (integrated / fractionally integrated by construction).
         MS-GARCH reports an average across regimes; HYGARCH reports a
-        mix-weighted blend. Multivariate persistence is the SPX-marginal
-        GARCH(1,1) persistence α+β; the ρ_{'{'}12{'}'}(t) trace below shows
-        how each multivariate model estimates the SPX-vs-positioning
-        correlation over time.
+        mix-weighted blend.
       </div>
     </div>
   );
