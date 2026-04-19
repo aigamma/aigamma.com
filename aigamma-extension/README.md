@@ -90,8 +90,8 @@ the fields that `popup.js` reads: `spot`, `putWall`, `volFlip`, `callWall`,
 1. Pay the one-time $5 developer registration fee at
    https://chrome.google.com/webstore/devconsole.
 2. Produce at least one screenshot (1280x800 or 640x400) of the popup.
-3. Host the privacy policy at a stable URL, for example
-   https://aigamma.com/privacy. Source content lives in `PRIVACY.md`.
+3. Host the privacy policy at https://aigamma.com/extension-privacy.
+   Source content lives in `PRIVACY.md`.
 4. Zip the *contents* of this folder (not the folder itself). On Windows
    PowerShell, from inside `aigamma-extension/`:
 
