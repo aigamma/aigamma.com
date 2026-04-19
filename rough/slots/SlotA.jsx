@@ -208,7 +208,7 @@ function StatCell({ label, value, sub, accent }) {
 }
 
 function formatFixed(v, digits = 3) {
-  if (v == null || !Number.isFinite(v)) return '—';
+  if (v == null || !Number.isFinite(v)) return 'n/a';
   return v.toFixed(digits);
 }
 
@@ -365,25 +365,25 @@ export default function SlotA() {
             maxWidth: '820px',
           }}
         >
-          Structure-function scaling of a log-vol proxy.{' '}
-          <strong style={{ color: 'var(--text-primary)' }}>
-            X<sub>t</sub> = log |r<sub>t</sub>|
-          </strong>{' '}
-          is used as the daily log-σ proxy (intraday realized variance is
-          unavailable in-browser). For each moment order q, the q-th
-          structure function{' '}
-          <strong style={{ color: 'var(--text-primary)' }}>
-            m(q, Δ) = ⟨|X<sub>t+Δ</sub> − X<sub>t</sub>|<sup>q</sup>⟩
-          </strong>{' '}
-          is computed across lags Δ = 1, 2, 3, 5, 7, 10, 14, 20, 30, 45,
-          60 and regressed in log-log. Under the RFSV hypothesis the
-          slopes should be{' '}
-          <strong style={{ color: 'var(--text-primary)' }}>ζ(q) = qH</strong>{' '}
-          for a single Hurst parameter{' '}
-          <strong style={{ color: PLOTLY_COLORS.highlight }}>H</strong>.
-          The five markers per q are the log m(q, Δ) values; the dotted
-          lines are the per-q OLS fits. Parallel slopes = monofractal =
-          rough-vol signature.
+          <p style={{ margin: '0 0 0.7rem' }}>
+            This chart measures how SPX volatility correlates with itself
+            across time scales from 1 day to 60 days. Each colored line tracks
+            how much daily log-return magnitudes spread apart over that range
+            of lags.
+          </p>
+          <p style={{ margin: '0 0 0.7rem' }}>
+            The slope of each line is what matters. The{' '}
+            <strong style={{ color: PLOTLY_COLORS.highlight }}>Hurst parameter H</strong>{' '}
+            condenses that slope into one number that describes how rough or
+            smooth volatility behaves on this market.
+          </p>
+          <p style={{ margin: 0 }}>
+            For SPX, H typically lands between 0.08 and 0.18. Lines that stay
+            roughly parallel across the five q values mean a single H
+            describes the regime well, which is the normal state. Lines that
+            fan apart mean the regime is in flux and a single H value is
+            unreliable.
+          </p>
         </div>
       </div>
 
@@ -401,13 +401,13 @@ export default function SlotA() {
         <StatCell
           label="Pooled Hurst H"
           value={formatFixed(fit.hPooled, 3)}
-          sub={`mean of H(q) across q ∈ {${MOMENTS.join(', ')}}`}
+          sub="mean of five H readings across q values"
           accent={PLOTLY_COLORS.highlight}
         />
         <StatCell
           label="H spread (stdev)"
           value={formatFixed(fit.hSpread, 3)}
-          sub={monofractal ? 'tight — monofractal' : 'wide — multifractal?'}
+          sub={monofractal ? 'tight (reliable read)' : 'wide (uncertain read)'}
           accent={monofractal ? PLOTLY_COLORS.positive : PLOTLY_COLORS.secondary}
         />
         <StatCell
@@ -416,12 +416,12 @@ export default function SlotA() {
             fit.perMoment.find((r) => r.q === 2)?.H,
             3,
           )}
-          sub="canonical variance-scaling estimate"
+          sub="variance-based reading (most common in literature)"
         />
         <StatCell
           label="Sample n"
           value={fit.n.toLocaleString()}
-          sub="daily SPX log-returns used"
+          sub="daily SPX log returns in the fit window"
         />
       </div>
 
@@ -435,25 +435,34 @@ export default function SlotA() {
           lineHeight: 1.65,
         }}
       >
-        <strong style={{ color: 'var(--text-primary)' }}>Reading:</strong>{' '}
-        An H in the{' '}
-        <strong style={{ color: PLOTLY_COLORS.highlight }}>0.08-0.18</strong>{' '}
-        band reproduces the Gatheral-Jaisson-Rosenbaum result on daily index
-        data and is inconsistent with any classical diffusion SV model
-        (Heston, SABR, 3/2), all of which imply H = 0.5 under their
-        variance dynamics. A tight H spread across q (stdev &lt; 0.03) says
-        the log-vol proxy is approximately{' '}
-        <strong style={{ color: PLOTLY_COLORS.positive }}>monofractal</strong>:
-        one H describes every moment. A wide spread is a flag that the
-        proxy shows multifractal curvature — either because the sample is
-        too short to pin H down at high q, or because a pure-rough-vol
-        model is too stylized for the true dynamics. The{' '}
-        <strong style={{ color: 'var(--text-primary)' }}>log |r<sub>t</sub>|</strong>{' '}
-        proxy carries i.i.d. innovation noise that lifts every m(q, Δ) by
-        a q-dependent constant — the{' '}
-        <em>intercepts</em> are biased upward but the{' '}
-        <em>slopes</em> are not, which is why this diagnostic is useful
-        even with daily-only observations.
+        <p style={{ margin: '0 0 0.6rem' }}>
+          <strong style={{ color: 'var(--text-primary)' }}>How to use it.</strong>{' '}
+          Read the pooled H value first.
+        </p>
+        <p style={{ margin: '0 0 0.6rem' }}>
+          H around{' '}
+          <strong style={{ color: PLOTLY_COLORS.highlight }}>0.10 to 0.15</strong>{' '}
+          is the normal SPX regime. Use the headline H from this card as the
+          calibration starting point for the Slot B simulator.
+        </p>
+        <p style={{ margin: '0 0 0.6rem' }}>
+          H below 0.08 signals a more turbulent vol regime. Short-dated
+          options will price an even steeper skew than usual. Treat that as a
+          short-gamma risk flag and tighten downside protection.
+        </p>
+        <p style={{ margin: '0 0 0.6rem' }}>
+          H above 0.20 means vol is acting more like classical Brownian
+          motion. Skew should flatten and standard models like Heston will
+          fit reasonably. This is the calmest regime to sell short-dated
+          premium in.
+        </p>
+        <p style={{ margin: 0 }}>
+          Always check the H spread before trusting the headline. A spread
+          under 0.03 is a clean read. A spread above 0.05 means the lines on
+          the chart fan apart visibly, the regime is shifting, and the
+          headline H should not be used for sizing decisions until it
+          stabilizes. Cross-check with Slot C in that case.
+        </p>
       </div>
     </div>
   );

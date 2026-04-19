@@ -706,26 +706,36 @@ export default function SlotB() {
             maxWidth: '820px',
           }}
         >
-          In-browser Monte Carlo of rBergomi with exact joint Cholesky
-          sampling of the Riemann-Liouville fBm and its driving Brownian
-          motion. The variance path{' '}
-          <strong style={{ color: PLOTLY_COLORS.primary }}>
-            v<sub>t</sub> = ξ₀ · exp(η · Ŵ<sub>t</sub>^H − (η²/2) · t^(2H))
-          </strong>{' '}
-          is a log-normal functional of a non-Markovian fractional Brownian
-          motion; its hallmark visual signature versus Heston-style
-          diffusion is the rapid accumulation of micro-variance along each
-          trajectory — short, violent excursions that classical SV models
-          smooth away. The generative prediction the lab cross-checks is
-          the ATM skew power law{' '}
-          <strong style={{ color: PLOTLY_COLORS.highlight }}>
-            ψ(T) ∼ ρη · T^(H − 1/2)
-          </strong>
-          : the fitted log-log slope across {MATURITY_STEPS.length} MC
-          maturities should recover H − 1/2 from the input H, and the
-          empirical skew on equity indices matches the same explosive
-          scaling — which is the whole reason the rough-vol program
-          exists.
+          <p style={{ margin: '0 0 0.7rem' }}>
+            This is a forward-looking simulator. Set the four sliders to the
+            regime you want to test, and {N_PATHS} Monte Carlo paths will
+            project a year of SPX volatility plus the implied vol smile that
+            regime would produce.
+          </p>
+          <p style={{ margin: '0 0 0.4rem' }}>
+            <strong style={{ color: 'var(--text-primary)' }}>The four sliders.</strong>
+          </p>
+          <p style={{ margin: '0 0 0.4rem' }}>
+            <strong style={{ color: PLOTLY_COLORS.highlight }}>Hurst H</strong>{' '}
+            controls how rough the volatility moves are. Lower H means more
+            violent short-term swings.
+          </p>
+          <p style={{ margin: '0 0 0.4rem' }}>
+            <strong style={{ color: PLOTLY_COLORS.highlight }}>Vol-of-vol η</strong>{' '}
+            scales how dramatically vol can change in either direction.
+            Higher η produces a wider fan.
+          </p>
+          <p style={{ margin: '0 0 0.4rem' }}>
+            <strong style={{ color: PLOTLY_COLORS.highlight }}>Correlation ρ</strong>{' '}
+            links spot moves to vol moves. The standard equity setting is
+            negative, which produces the put-skew that you see on real SPX
+            chains.
+          </p>
+          <p style={{ margin: 0 }}>
+            <strong style={{ color: PLOTLY_COLORS.highlight }}>Initial vol √ξ₀</strong>{' '}
+            is the starting at-the-money vol level. Set this to current
+            1-month at-the-money vol to anchor the simulation to today.
+          </p>
         </div>
       </div>
 
@@ -790,26 +800,26 @@ export default function SlotB() {
       >
         <StatCell
           label="ATM σ · T=1m"
-          value={atmIv1m != null ? `${(atmIv1m * 100).toFixed(1)}%` : '—'}
-          sub="MC implied vol @ 0.1y"
+          value={atmIv1m != null ? `${(atmIv1m * 100).toFixed(1)}%` : 'n/a'}
+          sub="simulated 1-month at-the-money vol"
           accent={PLOTLY_COLORS.primary}
         />
         <StatCell
           label="ATM σ · T=1y"
-          value={atmIv1y != null ? `${(atmIv1y * 100).toFixed(1)}%` : '—'}
-          sub="MC implied vol @ 1.0y"
+          value={atmIv1y != null ? `${(atmIv1y * 100).toFixed(1)}%` : 'n/a'}
+          sub="simulated 1-year at-the-money vol"
           accent={PLOTLY_COLORS.primary}
         />
         <StatCell
           label="Skew slope (fit)"
-          value={fittedSlope != null ? fittedSlope.toFixed(3) : '—'}
-          sub={`input H − 1/2 = ${(H - 0.5).toFixed(3)}`}
+          value={fittedSlope != null ? fittedSlope.toFixed(3) : 'n/a'}
+          sub={`expected slope (H − 0.5): ${(H - 0.5).toFixed(3)}`}
           accent={PLOTLY_COLORS.highlight}
         />
         <StatCell
           label="Recovered H"
-          value={skewExpFromSlope != null ? skewExpFromSlope.toFixed(3) : '—'}
-          sub={`input H = ${H.toFixed(3)}`}
+          value={skewExpFromSlope != null ? skewExpFromSlope.toFixed(3) : 'n/a'}
+          sub={`input H: ${H.toFixed(3)}`}
           accent={PLOTLY_COLORS.positive}
         />
       </div>
@@ -856,26 +866,41 @@ export default function SlotB() {
           lineHeight: 1.65,
         }}
       >
-        <strong style={{ color: 'var(--text-primary)' }}>Reading:</strong>{' '}
-        The σ-path fan is the ensemble of {N_PATHS} instantaneous-vol
-        trajectories drawn from the joint Cholesky at N={N_STEPS} steps on
-        [0, 1] year. Narrower at t=0 (all paths agree v₀ = ξ₀), widening
-        rapidly under a low H / high η combination because short-memory
-        fBm fluctuations accumulate exponentially into v_t. The{' '}
-        <strong style={{ color: PLOTLY_COLORS.primary }}>smile chart</strong>{' '}
-        is the MC-priced σ_BS(k, T) recovered by inverting vanilla call
-        prices at five moneyness points and four maturities. Under the
-        rBergomi spec with ρ &lt; 0 the smile is a downward-sloping skew
-        that <em>steepens</em> as T → 0 — visible in the chart as the
-        short-maturity curve rotating more aggressively than the long.
-        The{' '}
-        <strong style={{ color: PLOTLY_COLORS.highlight }}>skew slope fit</strong>{' '}
-        above regresses log |ψ(T)| against log T across the four
-        maturities; recovering a slope close to the input H − 1/2 (within
-        MC noise of ~0.05 at this path count) is the internal
-        cross-check that the sampler is implementing rBergomi
-        correctly. Drag H toward 0 and watch the ATM skew explode; drag H
-        toward 1/2 and the smile flattens into the Heston-like regime.
+        <p style={{ margin: '0 0 0.6rem' }}>
+          <strong style={{ color: 'var(--text-primary)' }}>How to use it.</strong>{' '}
+          Anchor the simulator to today first.
+        </p>
+        <p style={{ margin: '0 0 0.6rem' }}>
+          Set √ξ₀ to the current SPX 1-month at-the-money implied vol. Set H
+          to the value reported in Slot A or C, typically near 0.12. Leave ρ
+          near −0.9 and η near 1.9 as a reasonable equity baseline. Then
+          read the smile chart against today's SPX option chain.
+        </p>
+        <p style={{ margin: '0 0 0.6rem' }}>
+          If the simulated short-maturity smile is{' '}
+          <strong style={{ color: 'var(--text-primary)' }}>flatter</strong>{' '}
+          than the market is currently pricing, the market is paying for
+          more risk than your regime assumes. Treat that as a possible early
+          warning of a vol regime shift.
+        </p>
+        <p style={{ margin: '0 0 0.6rem' }}>
+          If the simulated smile is{' '}
+          <strong style={{ color: 'var(--text-primary)' }}>steeper</strong>{' '}
+          than the market, the market may be too complacent relative to the
+          underlying vol process. Short-dated puts could be cheap.
+        </p>
+        <p style={{ margin: '0 0 0.6rem' }}>
+          The σ-path fan above shows the range of vol paths consistent with
+          your regime settings. Use the 25-75 percent band as the most
+          probable forward range. If realized vol breaks above the 90
+          percent line in coming weeks, the regime has likely shifted to
+          lower H (rougher vol).
+        </p>
+        <p style={{ margin: 0 }}>
+          The Recovered H stat is a sanity check that the simulator is
+          working. It should land within roughly 0.05 of the input H you
+          chose with the slider.
+        </p>
       </div>
     </div>
   );

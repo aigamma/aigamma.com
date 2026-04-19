@@ -55,7 +55,7 @@ export default function App() {
           <img src="/logo.webp" alt="aigamma.com" className="lab-logo" />
           <span
             className="lab-badge"
-            title="Rough Volatility Lab — fractional-Brownian / Volterra model zoo"
+            title="Rough Volatility Lab · fractional-Brownian / Volterra model zoo"
           >
             Rough Vol Lab
           </span>

@@ -248,7 +248,7 @@ function StatCell({ label, value, sub, accent }) {
 }
 
 function formatFixed(v, digits = 3) {
-  if (v == null || !Number.isFinite(v)) return '—';
+  if (v == null || !Number.isFinite(v)) return 'n/a';
   return v.toFixed(digits);
 }
 
@@ -432,19 +432,31 @@ export default function SlotC() {
             maxWidth: '820px',
           }}
         >
-          Three different Hurst estimators applied to the same proxy
-          series X<sub>t</sub> = log |r<sub>t</sub>|:{' '}
-          <strong style={{ color: PLOTLY_COLORS.primary }}>Variogram</strong>{' '}
-          (slope of log m(2, Δ) vs log Δ, divided by 2),{' '}
-          <strong style={{ color: PLOTLY_COLORS.highlight }}>Absolute moments</strong>{' '}
-          (slope of log m(1, Δ) vs log Δ), and{' '}
-          <strong style={{ color: PLOTLY_COLORS.positive }}>DFA</strong>{' '}
-          (slope of log F(n) vs log n on the cumulative de-meaned walk).
-          If the three estimates collapse to a tight band (stdev &lt; 0.03),
-          the rough-vol H reading is robust to estimator choice. If they
-          diverge, the sample is either too short, non-monofractal, or the
-          log |r| proxy is pushing one of the estimators into a
-          bias-dominated regime where the slope is not a clean read on H.
+          <p style={{ margin: '0 0 0.7rem' }}>
+            This card cross-checks the H reading from Slot A using three
+            independent measurement methods. All three should give a similar
+            number when the rough-vol regime is well defined.
+          </p>
+          <p style={{ margin: '0 0 0.4rem' }}>
+            <strong style={{ color: PLOTLY_COLORS.primary }}>Variogram</strong>{' '}
+            measures the typical squared difference between distant log-vol
+            observations.
+          </p>
+          <p style={{ margin: '0 0 0.4rem' }}>
+            <strong style={{ color: PLOTLY_COLORS.highlight }}>Absolute moments</strong>{' '}
+            uses absolute differences instead, which downweights the most
+            extreme days. It is more robust to outliers.
+          </p>
+          <p style={{ margin: '0 0 0.7rem' }}>
+            <strong style={{ color: PLOTLY_COLORS.positive }}>DFA</strong>{' '}
+            looks at how cumulative drift in log-vol scales with window size,
+            after removing local trends within each window.
+          </p>
+          <p style={{ margin: 0 }}>
+            When all three methods agree, the H reading is reliable. When
+            they diverge, the data is noisy or the regime is shifting, and
+            you should treat any single H estimate with skepticism.
+          </p>
         </div>
       </div>
 
@@ -485,7 +497,7 @@ export default function SlotC() {
               ? `spread stdev ${formatFixed(hSpread, 3)} · ${
                   tightAgreement ? 'tight' : 'wide'
                 }`
-              : '—'
+              : 'n/a'
           }
           accent={tightAgreement ? PLOTLY_COLORS.positive : PLOTLY_COLORS.secondary}
         />
@@ -501,23 +513,35 @@ export default function SlotC() {
           lineHeight: 1.65,
         }}
       >
-        <strong style={{ color: 'var(--text-primary)' }}>Reading:</strong>{' '}
-        All three methods are plotted on a common intercept-centered
-        log-log canvas so the visually dominant feature is the{' '}
-        <em>slope</em>, which is the Hurst parameter directly (for q=1 and
-        DFA) or 2H (for q=2). Under a pure RFSV hypothesis the three
-        slopes should be proportional in the correct ratios and the three
-        H estimates should collapse to a narrow band. In practice the
-        absolute-moments method tends to read slightly lower H than the
-        variogram on heavy-tailed proxy series because the q=1 moment
-        downweights the extreme observations that q=2 amplifies; DFA sits
-        in the middle because its drift-removal step cancels the low-
-        frequency bias that both variogram methods inherit from the proxy.
-        A triangulated H around{' '}
-        <strong style={{ color: PLOTLY_COLORS.highlight }}>0.10-0.15</strong>{' '}
-        with stdev &lt; 0.03 is the robust read on SPX and is the number
-        to plug into Slot B's rough-Bergomi simulator for a calibration
-        starting point.
+        <p style={{ margin: '0 0 0.6rem' }}>
+          <strong style={{ color: 'var(--text-primary)' }}>How to use it.</strong>{' '}
+          Look at the Triangulated H value first.
+        </p>
+        <p style={{ margin: '0 0 0.6rem' }}>
+          A spread under 0.03 means all three methods agree. The H reading
+          is reliable. Plug it into the Slot B simulator as the calibration
+          starting point.
+        </p>
+        <p style={{ margin: '0 0 0.6rem' }}>
+          A wider spread means at least one method is reading the data
+          differently. This usually happens during transitional vol regimes
+          or after a major market event has skewed the recent sample. Hold
+          off committing to a single H value. Use the most conservative
+          (highest) reading if you must choose one, or wait a few weeks for
+          the methods to converge again.
+        </p>
+        <p style={{ margin: '0 0 0.6rem' }}>
+          Watch how the spread changes over time. When the methods were
+          tight and start to spread apart, that is itself a signal of
+          regime change in SPX volatility. Treat that as a cue to reduce
+          short-vol exposure and re-check the SPX skew.
+        </p>
+        <p style={{ margin: 0 }}>
+          A triangulated H around{' '}
+          <strong style={{ color: PLOTLY_COLORS.highlight }}>0.10 to 0.15</strong>{' '}
+          with a tight spread is the typical SPX rough-vol regime. Anything
+          outside that band warrants a second look at the macro tape.
+        </p>
       </div>
     </div>
   );
