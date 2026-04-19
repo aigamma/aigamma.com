@@ -24,7 +24,7 @@ export default function App() {
           <img src="/logo.webp" alt="aigamma.com" className="lab-logo" />
           <span
             className="lab-badge"
-            title="Alpha — pre-β, software-stage sense"
+            title="Alpha · pre-β, software-stage sense"
           >
             Alpha Lab
           </span>

@@ -175,7 +175,7 @@ function median(values) {
 }
 
 function formatPct(v, digits = 2) {
-  if (v == null || !Number.isFinite(v)) return '—';
+  if (v == null || !Number.isFinite(v)) return '–';
   return `${(v * 100).toFixed(digits)}%`;
 }
 
@@ -497,20 +497,37 @@ export default function SlotA() {
             maxWidth: '820px',
           }}
         >
-          Two implied borrow-rate reads from the same SPX chain.{' '}
-          <strong style={{ color: PLOTLY_COLORS.primary }}>Box</strong>{' '}
-          (blue, 4-leg) is the stable fair-rate reference — the construction
-          cancels spot, so the number does not drift when the market moves.{' '}
-          <strong style={{ color: PLOTLY_COLORS.secondary }}>Direct PCP</strong>{' '}
-          (coral, 1-strike with q held at zero) keeps the spot term in the
-          equation, so it absorbs the dividend yield plus whatever per-strike
-          mark noise is sitting in the chain.{' '}
-          <strong style={{ color: PLOTLY_COLORS.highlight }}>Their gap</strong>{' '}
-          (amber, right axis) sits near SPX&rsquo;s ~1.3% dividend yield when
-          parity is holding cleanly, and spikes off that flat baseline at any
-          expiration where one of the four options is mispriced — which is
-          where the edge lives, since the box&rsquo;s own smoothness is exactly
-          what hides those mispricings from the main dashboard.
+          <p style={{ margin: '0 0 0.6rem' }}>
+            Two implied borrow-rate reads from the same SPX chain, plotted
+            together so any gap between them is visible at a glance.
+          </p>
+          <p style={{ margin: '0 0 0.6rem' }}>
+            The{' '}
+            <strong style={{ color: PLOTLY_COLORS.primary }}>
+              blue line (Box r)
+            </strong>{' '}
+            is a 4-leg construction that cancels spot. Its number does not
+            drift when the market moves, so it is the stable fair-rate
+            reference.
+          </p>
+          <p style={{ margin: '0 0 0.6rem' }}>
+            The{' '}
+            <strong style={{ color: PLOTLY_COLORS.secondary }}>
+              coral line (Direct PCP)
+            </strong>{' '}
+            is a 1-strike read with q held at zero. It keeps the spot term
+            in the equation, so it absorbs the dividend yield plus any
+            per-strike mark noise sitting in the chain.
+          </p>
+          <p style={{ margin: 0 }}>
+            The{' '}
+            <strong style={{ color: PLOTLY_COLORS.highlight }}>
+              amber line (box minus PCP, right axis)
+            </strong>{' '}
+            sits near SPX&rsquo;s ~1.3% dividend yield when parity holds
+            cleanly. It spikes off that baseline at any expiration where
+            one of the four options is mispriced. That spike is the signal.
+          </p>
         </div>
       </div>
 
@@ -528,7 +545,7 @@ export default function SlotA() {
         <StatCell
           label="Box r"
           value={formatPct(headline?.rBox, 2)}
-          sub={headline ? `${headline.expiration} · ${headline.dte.toFixed(1)}d` : '—'}
+          sub={headline ? `${headline.expiration} · ${headline.dte.toFixed(1)}d` : '–'}
           accent={PLOTLY_COLORS.primary}
         />
         <StatCell
@@ -543,13 +560,13 @@ export default function SlotA() {
           sub={
             diffRange
               ? `range ${formatPct(diffRange.lo, 2)} – ${formatPct(diffRange.hi, 2)}`
-              : '—'
+              : '–'
           }
           accent={PLOTLY_COLORS.highlight}
         />
         <StatCell
           label="Spot"
-          value={data?.spotPrice ? data.spotPrice.toFixed(2) : '—'}
+          value={data?.spotPrice ? data.spotPrice.toFixed(2) : '–'}
           sub="SPX index"
         />
       </div>
@@ -564,34 +581,42 @@ export default function SlotA() {
           lineHeight: 1.65,
         }}
       >
-        <strong style={{ color: 'var(--text-primary)' }}>
-          Reading the chart for edge:
-        </strong>{' '}
-        <strong style={{ color: PLOTLY_COLORS.primary }}>Box r</strong>{' '}
-        meaningfully <em>above</em> the treasury rate at matching DTE →
-        boxes are cheap: <strong>buy</strong> to lend synthetically above
-        risk-free and collect the spread to expiry.{' '}
-        <strong style={{ color: PLOTLY_COLORS.primary }}>Box r</strong>{' '}
-        <em>below</em> treasury → boxes are rich: <strong>sell</strong>{' '}
-        and park the cash in T-bills instead.{' '}
-        <strong style={{ color: PLOTLY_COLORS.highlight }}>Amber line</strong>{' '}
-        flat near ~1.3% = parity is holding cleanly, nothing to do.{' '}
-        <strong style={{ color: PLOTLY_COLORS.highlight }}>Amber spiking</strong>{' '}
-        or kinking at a specific DTE = per-strike mispricing at that
-        expiration; hover to see whether K₁ or K₂ is the stale leg and
-        whether{' '}
-        <strong style={{ color: PLOTLY_COLORS.secondary }}>r(K₁)</strong>{' '}
-        and{' '}
-        <strong style={{ color: PLOTLY_COLORS.secondary }}>r(K₂)</strong>{' '}
-        disagree within the same T — a disagreement there is often a
-        single-contract fix. The slope of the{' '}
-        <strong style={{ color: PLOTLY_COLORS.primary }}>blue line</strong>{' '}
-        is the implied term structure of the borrow rate, so reading
-        calendar edge off it cleanly needs a treasury-curve overlay
-        (natural next addition). Sub-7d points are almost always
-        1/T-amplified mark noise rather than real edge, so the left-edge
-        spikes are usually safe to ignore. Full math behind each line
-        will move to an informational dropdown in a later pass.
+        <p style={{ margin: '0 0 0.6rem', color: 'var(--text-primary)' }}>
+          <strong>Reading the chart for edge</strong>
+        </p>
+        <p style={{ margin: '0 0 0.55rem' }}>
+          <strong style={{ color: PLOTLY_COLORS.primary }}>Box r</strong>{' '}
+          sitting meaningfully <em>above</em> the treasury rate at matching
+          DTE means the box is cheap. <strong>Buy</strong> the box to lend
+          synthetically above risk-free and collect the spread to expiry.
+        </p>
+        <p style={{ margin: '0 0 0.55rem' }}>
+          <strong style={{ color: PLOTLY_COLORS.primary }}>Box r</strong>{' '}
+          sitting <em>below</em> treasury means the box is rich.{' '}
+          <strong>Sell</strong> the box and park the cash in T-bills instead.
+        </p>
+        <p style={{ margin: '0 0 0.55rem' }}>
+          <strong style={{ color: PLOTLY_COLORS.highlight }}>
+            Amber line
+          </strong>{' '}
+          flat near ~1.3% means parity is holding cleanly. Nothing to do.
+        </p>
+        <p style={{ margin: '0 0 0.55rem' }}>
+          <strong style={{ color: PLOTLY_COLORS.highlight }}>
+            Amber spiking
+          </strong>{' '}
+          or kinking at a specific DTE flags per-strike mispricing at that
+          expiration. Hover to see which of K₁ or K₂ is the stale leg. If{' '}
+          <strong style={{ color: PLOTLY_COLORS.secondary }}>r(K₁)</strong>{' '}
+          and{' '}
+          <strong style={{ color: PLOTLY_COLORS.secondary }}>r(K₂)</strong>{' '}
+          disagree within the same T, the edge is usually a single-contract
+          fix.
+        </p>
+        <p style={{ margin: 0 }}>
+          Sub-7d points are almost always 1/T-amplified mark noise rather
+          than real edge. Left-edge spikes are usually safe to ignore.
+        </p>
       </div>
     </div>
   );

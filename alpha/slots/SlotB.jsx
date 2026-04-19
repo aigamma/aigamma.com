@@ -134,7 +134,7 @@ function median(values) {
 }
 
 function formatPct(v, digits = 2) {
-  if (v == null || !Number.isFinite(v)) return '—';
+  if (v == null || !Number.isFinite(v)) return '–';
   return `${(v * 100).toFixed(digits)}%`;
 }
 
@@ -355,18 +355,27 @@ export default function SlotB() {
           style={{
             fontSize: '0.88rem',
             color: 'var(--text-secondary)',
-            lineHeight: 1.55,
+            lineHeight: 1.6,
             maxWidth: '720px',
           }}
         >
-          Box-spread reduction of put-call parity. For each listed expiration,
-          solves{' '}
-          <code style={{ fontFamily: 'Courier New, monospace', color: 'var(--text-primary)' }}>
-            box = (K₂ − K₁) · e<sup>−rT</sup>
-          </code>{' '}
-          at the tightest strike bracket around spot and inverts to r. The
-          dividend yield cancels in the box, so the result is a model-free read
-          on the market-implied borrow rate.
+          <p style={{ margin: '0 0 0.55rem' }}>
+            Options-implied borrow rate at every SPX expiration, computed
+            from a 4-leg box spread at the tightest strike bracket around
+            spot. The term structure is the curve of those rates by DTE.
+          </p>
+          <p style={{ margin: 0 }}>
+            The{' '}
+            <strong style={{ color: PLOTLY_COLORS.primary }}>
+              blue dots
+            </strong>{' '}
+            are the implied rate at each expiration. Points <em>above</em>{' '}
+            the matching treasury yield mean the box is cheap and buying it
+            captures the spread to expiry. Points <em>below</em> treasury
+            mean the box is rich and holding T-bills beats it. Flat, close
+            to treasury across DTEs means parity is holding cleanly and
+            there is nothing to do.
+          </p>
         </div>
       </div>
 
@@ -384,7 +393,7 @@ export default function SlotB() {
         <StatCell
           label="Nearest r"
           value={formatPct(headline?.r, 2)}
-          sub={headline ? `${headline.expiration} · ${headline.dte.toFixed(1)}d` : '—'}
+          sub={headline ? `${headline.expiration} · ${headline.dte.toFixed(1)}d` : '–'}
           accent={PLOTLY_COLORS.primary}
         />
         <StatCell
@@ -400,7 +409,7 @@ export default function SlotB() {
         />
         <StatCell
           label="Spot"
-          value={data?.spotPrice ? data.spotPrice.toFixed(2) : '—'}
+          value={data?.spotPrice ? data.spotPrice.toFixed(2) : '–'}
           sub="SPX index"
         />
       </div>
@@ -415,10 +424,18 @@ export default function SlotB() {
           lineHeight: 1.6,
         }}
       >
-        Hover any point for strikes, option marks, and box cost. Short-dated
-        points are the noisiest — the 1/T factor magnifies mark error at low
-        DTE, so the left edge should be read with that in mind. The flatter
-        the curve, the more consistently parity is holding across the board.
+        <p style={{ margin: '0 0 0.4rem' }}>
+          Hover any point for strikes, option marks, and box cost.
+        </p>
+        <p style={{ margin: '0 0 0.4rem' }}>
+          Short-dated points are the noisiest because the 1/T factor
+          magnifies mark error at low DTE. The left edge should be read
+          with that in mind.
+        </p>
+        <p style={{ margin: 0 }}>
+          The flatter the curve, the more consistently parity is holding
+          across the board.
+        </p>
       </div>
     </div>
   );
