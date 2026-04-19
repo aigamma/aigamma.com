@@ -1,5 +1,5 @@
 import '../src/styles/theme.css';
-import './lab.css';
+import '../src/styles/lab.css';
 import ErrorBoundary from '../src/ErrorBoundary';
 import SlotA from './slots/SlotA';
 import SlotB from './slots/SlotB';
@@ -39,8 +39,7 @@ export default function App() {
       <div className="lab-warning">
         <strong>Experimental.</strong>{' '}
         Models in these slots are under test. Data, math, and rendering may
-        be incomplete, incorrect, or change without notice. Nothing here is
-        for trading or decision-making.
+        be incomplete, incorrect, or change without notice.
       </div>
 
       <section className="lab-slot">
