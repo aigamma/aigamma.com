@@ -77,12 +77,12 @@ function advanceBusinessDays(iso, n) {
 }
 
 function formatPct(v, digits = 2) {
-  if (v == null || !Number.isFinite(v)) return '—';
+  if (v == null || !Number.isFinite(v)) return '–';
   return `${(v * 100).toFixed(digits)}%`;
 }
 
 function formatNum(v, digits = 4) {
-  if (v == null || !Number.isFinite(v)) return '—';
+  if (v == null || !Number.isFinite(v)) return '–';
   if (Math.abs(v) < 1e-4 && v !== 0) return v.toExponential(2);
   return v.toFixed(digits);
 }
@@ -566,22 +566,128 @@ export default function GarchZoo() {
           style={{
             fontSize: '0.88rem',
             color: 'var(--text-secondary)',
-            lineHeight: 1.55,
+            lineHeight: 1.6,
             maxWidth: '820px',
           }}
         >
-          17 univariate GARCH-family specifications fit by Gaussian MLE on daily
-          SPX log returns, spanning quadratic (GARCH, IGARCH, GJR), log (EGARCH,
-          GAS), σ-form (TGARCH, AVGARCH), power (APARCH, NGARCH), asymmetric
-          displacement (NAGARCH), component (CGARCH), in-mean (GARCH-M),
-          long-memory (FIGARCH, HYGARCH), regime-switching (MS-GARCH, Gray 1996
-          two-state filter), and realized-measure (Realized GARCH, HEAVY, with
-          a 5-day sum-of-squared-returns RV proxy since the daily data feed
-          has no intraday RV). The dashed forecast tail is the equal-weight
-          blend of each visible model's closed-form or Monte-Carlo-averaged
-          h-step recursion from the current state. Use the family picker
-          below to hide a family — the ensemble, the forecast tail, and the
-          parameter table all recompute on whatever remains visible.
+          <p style={{ margin: '0 0 0.7rem' }}>
+            17 volatility models fit on daily SPX log returns. Each colored
+            line is one model&apos;s conditional σ path, annualized to percent.
+            The{' '}
+            <strong style={{ color: ENSEMBLE_COLOR }}>
+              bold green line is the equal-weight ensemble
+            </strong>{' '}
+            across the visible models. The dashed green tail is its 30-day
+            forward forecast.
+          </p>
+
+          <p style={{ margin: '0 0 0.7rem' }}>
+            Compare the ensemble to the dotted realized HV₁₀ line. Ensemble
+            above realized means the models expect volatility to rise from
+            here. Ensemble below realized means they expect mean reversion
+            back down. A tight cluster of models around the ensemble is
+            high forecast confidence. A fan-out means the families disagree
+            and the regime is ambiguous.
+          </p>
+
+          <p style={{ margin: '0 0 0.5rem', color: 'var(--text-primary)' }}>
+            Each family picks up a different piece of the vol signal. Hide
+            a family in the picker below to see how much of the forecast
+            depends on it.
+          </p>
+
+          <ul
+            style={{
+              margin: '0 0 0.7rem',
+              paddingLeft: '1.1rem',
+              lineHeight: 1.55,
+            }}
+          >
+            <li>
+              <strong style={{ color: FAMILY_COLORS.symmetric }}>
+                Symmetric (GARCH, IGARCH)
+              </strong>
+              : baseline. Volatility clusters without regard to the
+              direction of the return.
+            </li>
+            <li>
+              <strong style={{ color: FAMILY_COLORS.asymmetric }}>
+                Asymmetric (GJR, EGARCH, TGARCH, NAGARCH)
+              </strong>
+              : leverage effect. Down days spike vol more than up days.
+              When these run above the symmetric line, the market is
+              pricing asymmetric downside fear.
+            </li>
+            <li>
+              <strong style={{ color: FAMILY_COLORS.power }}>
+                Power (APARCH, NGARCH)
+              </strong>
+              : adjustable response to outlier days. Softer below
+              δ&nbsp;=&nbsp;2, more extreme above it.
+            </li>
+            <li>
+              <strong style={{ color: FAMILY_COLORS.absolute }}>
+                Absolute (AVGARCH)
+              </strong>
+              : models σ directly rather than variance. Less reactive to
+              single extreme days. If it diverges from the quadratic
+              models, a handful of tail days is doing most of the work
+              in the others.
+            </li>
+            <li>
+              <strong style={{ color: FAMILY_COLORS.component }}>
+                Component (CGARCH)
+              </strong>
+              : splits a slow long-run mean of vol from short-run shocks.
+              Read its slow component as the vol level the market is
+              gravitating back toward.
+            </li>
+            <li>
+              <strong style={{ color: FAMILY_COLORS.mean }}>
+                In-mean (GARCH-M)
+              </strong>
+              : lets vol feed back into expected return. Use it as a read
+              on the risk premium currently priced into SPX.
+            </li>
+            <li>
+              <strong style={{ color: FAMILY_COLORS.score }}>
+                Score-driven (GAS)
+              </strong>
+              : robust to occasional jumps. The steadier read of baseline
+              vol when recent history has a few outlier days.
+            </li>
+            <li>
+              <strong style={{ color: FAMILY_COLORS['long-memory'] }}>
+                Long-memory (FIGARCH, HYGARCH)
+              </strong>
+              : fractional persistence. Shocks decay over weeks to
+              quarters, not days. Watch these when the question is how
+              long a spike will linger.
+            </li>
+            <li>
+              <strong style={{ color: FAMILY_COLORS.regime }}>
+                Regime (MS-GARCH)
+              </strong>
+              : switches between a calm and a stress regime. When the
+              stress regime dominates the weighted average, you are not
+              in a typical diffusion regime anymore.
+            </li>
+            <li>
+              <strong style={{ color: FAMILY_COLORS.realized }}>
+                Realized (Realized GARCH, HEAVY)
+              </strong>
+              : pulls in a 5-day realized-variance proxy. Reacts faster
+              to observed stress than the pure return-based models.
+            </li>
+          </ul>
+
+          <p style={{ margin: 0 }}>
+            If hiding one family visibly moves the{' '}
+            <strong style={{ color: ENSEMBLE_COLOR }}>green forecast</strong>,
+            that family is load-bearing for the current read. If the
+            forecast barely moves, the remaining models already agree and
+            that family is not adding information right now.
+          </p>
         </div>
       </div>
 
@@ -712,7 +818,7 @@ export default function GarchZoo() {
             fontSize: '0.85rem',
           }}
         >
-          All families hidden — toggle one back on or hit reset.
+          All families hidden. Toggle one back on or hit reset.
         </div>
       ) : (
         <div style={{ position: 'relative' }}>
@@ -792,13 +898,13 @@ export default function GarchZoo() {
                     {formatNum(powerTerm(m), 2)}
                   </td>
                   <td style={{ padding: '0.45rem 0.55rem', fontFamily: 'Courier New, monospace', textAlign: 'right' }}>
-                    {pers != null ? pers.toFixed(3) : '—'}
+                    {pers != null ? pers.toFixed(3) : '–'}
                   </td>
                   <td style={{ padding: '0.45rem 0.55rem', fontFamily: 'Courier New, monospace', textAlign: 'right' }}>
-                    {m.logLik != null ? m.logLik.toFixed(1) : '—'}
+                    {m.logLik != null ? m.logLik.toFixed(1) : '–'}
                   </td>
                   <td style={{ padding: '0.45rem 0.55rem', fontFamily: 'Courier New, monospace', textAlign: 'right' }}>
-                    {m.bic != null ? m.bic.toFixed(1) : '—'}
+                    {m.bic != null ? m.bic.toFixed(1) : '–'}
                   </td>
                 </tr>
               );
@@ -832,23 +938,21 @@ export default function GarchZoo() {
           lineHeight: 1.6,
         }}
       >
-        Fit in-browser on {returnsWithDate.length.toLocaleString()} daily log returns
-        ({returnsWithDate[0].date} → {returnsWithDate[returnsWithDate.length - 1].date})
-        in {fit.elapsedMs.toFixed(0)}ms across {ok.length} models.
-        Persistence is reported per-family:{' '}
-        <code style={{ fontFamily: 'Courier New, monospace', color: 'var(--text-primary)' }}>α+β</code>{' '}
-        for symmetric quadratic (GARCH, APARCH, NGARCH, HEAVY, GARCH-M);{' '}
-        <code style={{ fontFamily: 'Courier New, monospace', color: 'var(--text-primary)' }}>α+γ/2+β</code>{' '}
-        for GJR;{' '}
-        <code style={{ fontFamily: 'Courier New, monospace', color: 'var(--text-primary)' }}>|β|</code>{' '}
-        for EGARCH and GAS (log-variance AR(1) coefficient);{' '}
-        <code style={{ fontFamily: 'Courier New, monospace', color: 'var(--text-primary)' }}>α(1+θ²)+β</code>{' '}
-        for NAGARCH; the √(2/π)-adjusted absolute-value sum for TGARCH / AVGARCH;{' '}
-        <code style={{ fontFamily: 'Courier New, monospace', color: 'var(--text-primary)' }}>ρ</code>{' '}
-        for CGARCH (long-run component AR coefficient); and 1 for IGARCH
-        and FIGARCH (integrated / fractionally integrated by construction).
-        MS-GARCH reports an average across regimes; HYGARCH reports a
-        mix-weighted blend.
+        <p style={{ margin: '0 0 0.5rem' }}>
+          Fit in-browser on {returnsWithDate.length.toLocaleString()} daily
+          log returns ({returnsWithDate[0].date} to{' '}
+          {returnsWithDate[returnsWithDate.length - 1].date}) in{' '}
+          {fit.elapsedMs.toFixed(0)}ms across {ok.length} models.
+        </p>
+        <p style={{ margin: 0 }}>
+          <strong style={{ color: 'var(--text-primary)' }}>Persistence</strong>{' '}
+          in the table is how sticky a vol shock is. Values near 1 mean a
+          shock takes weeks to fade. Values in the 0.90 to 0.97 band are
+          typical for SPX and imply vol drifts back to average over
+          roughly a month. Values below 0.85 mean vol mean-reverts
+          quickly. IGARCH and FIGARCH are pinned at 1 by construction and
+          act as upper-bound benchmarks for how slow decay can get.
+        </p>
       </div>
     </div>
   );

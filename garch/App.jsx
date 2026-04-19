@@ -28,7 +28,7 @@ export default function App() {
           <img src="/logo.webp" alt="aigamma.com" className="lab-logo" />
           <span
             className="lab-badge"
-            title="GARCH — 17-model univariate family zoo with equal-weight ensemble and a family picker"
+            title="GARCH: 17-model univariate family zoo with equal-weight ensemble and a family picker"
           >
             GARCH LAB
           </span>
