@@ -13,44 +13,51 @@ import {
 import { daysToExpiration } from '../../src/lib/dates';
 
 // -----------------------------------------------------------------------------
-// Put-call parity — box-spread implied rate
+// Put-call parity — box-spread r vs direct-PCP r at q = 0
 //
-// Alpha-stage proof of concept, prompted by a Discord request to surface
-// put-call parity on the platform. The original ask had two shapes on the
-// table: (a) chart LHS/RHS as a ratio over time, where 1.00 is the
-// equilibrium and drifts out of 1 are arbitrage or data-artifact signals,
-// and (b) solve the parity equation for the borrow rate r and chart that
-// over time against a Fed-funds-futures reference (ZQ) as a ground truth.
+// Alpha-stage, v2 of the put-call-parity card prompted by sflush in Discord.
+// v1 rendered a single term-structure curve of the box-spread-implied borrow
+// rate. The 4-option box construction cancels S₀ exactly, so r_box is
+// model-free and spot-invariant — which is the whole point of the box, but
+// which (per sflush's v1 follow-up) is also what "washes out" the per-strike
+// and per-snapshot instability a trader might actually want to see. His
+// hypothesis: the instability of the direct-PCP variant is itself the signal.
 //
-// With only a single current snapshot of the chain we can't chart either
-// one "over time" — that needs a persisted series, which is a separate
-// piece of work. What we can do right now, honestly, is the cross-section:
-// compute the options-implied borrow rate at every listed expiration in
-// the current snapshot and render the term structure. That answers the
-// same underlying question ("is put-call parity holding, and at what r?")
-// from the shape of the curve instead of from its history.
+// v2 overlays a second rate derived from put-call parity directly at a single
+// strike, with q = 0 held fixed on purpose:
 //
-// The math is the classic box-spread reduction of put-call parity. For
-// any two strikes K1 < K2 at a common expiration T, a long synthetic at
-// K1 plus a short synthetic at K2 pays K2 - K1 at expiry with zero
-// dependence on the terminal spot, so its cost today is:
+//     C − P = S₀·exp(−qT) − K·exp(−rT)
 //
-//     box_cost = (C(K1) - P(K1)) - (C(K2) - P(K2))
+// solving for r with q = 0 gives
 //
-// and put-call parity requires
+//     r_PCP,q=0 = (1/T)·ln( K / (S₀ − C + P) ).
 //
-//     box_cost = (K2 - K1) · exp(-r·T)
+// The q = 0 assumption is pedagogical rather than a modeling choice: with
+// q = 0 baked in, whatever dividend yield the market has actually priced in
+// leaks back into the implied rate, because the spot term no longer cancels.
+// For strikes near spot and small qT, r_box − r_PCP,q=0 ≈ q_implied to first
+// order (proof: expanding the parity equation with a true q* around q=0
+// gives r_PCP,q=0 ≈ r* − q*·(S₀/K) ≈ r* − q* at ATM). So the vertical gap
+// between the two curves is approximately the options-implied SPX dividend
+// yield — a smooth baseline around 1–1.5%. And any *deviation* from that
+// smooth baseline — curvature, jumps, per-expiration kinks — is the spot-
+// driven pricing noise the box is specifically designed to wash out. If
+// sflush's hypothesis holds, the tradable instability lives there.
 //
-// which inverts to
+// We compute r_PCP,q=0 at BOTH ATM-bracket strikes (K₁, K₂) and take the
+// mean so the single plotted curve parallels the box's 2-strike construction
+// (same four options, one fewer degree of freedom than the box gives us).
+// Hover exposes the K₁- and K₂-specific values individually so the reader
+// can see whether the two strikes agree or disagree at each expiration —
+// disagreement between them at the same T is a second, orthogonal view of
+// the same instability.
 //
-//     r = (1 / T) · ln( (K2 - K1) / box_cost ).
-//
-// The dividend yield drops out because the spot-driven e^(-qT) term is the
-// same on both synthetic legs and cancels. So this is a model-free read on
-// the market-implied borrow rate; any assumption about the SPX dividend
-// yield is unnecessary. Short-dated points are the most sensitive to
-// microstructure noise because T is in the denominator, so we filter 0DTE
-// and the very-short sub-1-day expirations out before plotting.
+// With only a current snapshot this is a cross-sectional view: how the two
+// methods disagree across expirations at a single moment. The richer time-
+// series view — how each method's r wobbles from snapshot to snapshot as
+// S₀ moves between 5-minute ingests — needs a persisted series and is a
+// separate piece of work; sketched at the bottom of the card as the
+// natural next step.
 // -----------------------------------------------------------------------------
 
 function groupByExpiration(contracts) {
@@ -71,12 +78,11 @@ function groupByExpiration(contracts) {
   return byExp;
 }
 
-// Pick the tightest strike pair that brackets spot from both sides. Using
-// the nearest bracket gives the most liquid strikes at the cost of the
-// smallest (K2 - K1) denominator in the implied-rate solve; a wider bracket
-// is more numerically stable but risks pulling in thinner strikes on the
-// wings. ATM-tight is the right default here because SPX near-the-money is
-// the deepest liquidity on the board.
+// Tightest strike pair that brackets spot from both sides. ATM-tight is the
+// right default here because SPX near-the-money is the deepest liquidity on
+// the board; the (K₂ − K₁) denominator is smaller and so r_box is slightly
+// more mark-error-sensitive than a wider bracket, but the thicker marks at
+// ATM more than compensate.
 function findAtmBracket(strikes, spotPrice) {
   let K1 = null;
   let K2 = null;
@@ -91,7 +97,20 @@ function findAtmBracket(strikes, spotPrice) {
   return [K1, K2];
 }
 
-function computeBoxRateSeries(contracts, spotPrice, capturedAt) {
+// Direct put-call parity at a single strike, q = 0:
+//   r = (1/T)·ln( K / (S₀ − C + P) )
+// Undefined if the argument is non-positive, which only happens at strikes
+// far below spot where the put intrinsic dominates; the ATM bracket used
+// here keeps us well inside the regime where S₀ ≈ K and C − P ≈ 0, so the
+// argument stays safely positive.
+function pcpRateQzero(S0, K, C, P, T) {
+  const denom = S0 - C + P;
+  if (!(denom > 0) || !(T > 0)) return null;
+  const r = (1 / T) * Math.log(K / denom);
+  return Number.isFinite(r) ? r : null;
+}
+
+function computeRateSeries(contracts, spotPrice, capturedAt) {
   if (!contracts || !(spotPrice > 0) || !capturedAt) return [];
   const grouped = groupByExpiration(contracts);
   const rows = [];
@@ -115,13 +134,35 @@ function computeBoxRateSeries(contracts, spotPrice, capturedAt) {
     const C2 = calls.get(K2);
     const P2 = puts.get(K2);
     const boxCost = (C1 - P1) - (C2 - P2);
-    const spread = K2 - K1;
-    if (!(boxCost > 0) || !(spread > 0)) continue;
+    const strikeSpread = K2 - K1;
+    if (!(boxCost > 0) || !(strikeSpread > 0)) continue;
 
-    const r = (1 / T) * Math.log(spread / boxCost);
-    if (!Number.isFinite(r)) continue;
+    const rBox = (1 / T) * Math.log(strikeSpread / boxCost);
+    if (!Number.isFinite(rBox)) continue;
 
-    rows.push({ expiration, dte, T, K1, K2, C1, P1, C2, P2, boxCost, r });
+    const rPcp1 = pcpRateQzero(spotPrice, K1, C1, P1, T);
+    const rPcp2 = pcpRateQzero(spotPrice, K2, C2, P2, T);
+    let rPcp = null;
+    if (rPcp1 != null && rPcp2 != null) rPcp = 0.5 * (rPcp1 + rPcp2);
+    else if (rPcp1 != null) rPcp = rPcp1;
+    else if (rPcp2 != null) rPcp = rPcp2;
+
+    // r_box − r_PCP,q=0 ≈ options-implied dividend yield for small qT
+    // at ATM. See the header comment for the first-order expansion.
+    const rDiff = rPcp != null ? rBox - rPcp : null;
+
+    // Cross-strike disagreement between the two ATM-bracket PCP rates:
+    // a second, orthogonal view of the same instability. Null when either
+    // leg was unusable.
+    const rPcpSpread =
+      rPcp1 != null && rPcp2 != null ? Math.abs(rPcp1 - rPcp2) : null;
+
+    rows.push({
+      expiration, dte, T,
+      K1, K2, C1, P1, C2, P2,
+      boxCost, strikeSpread,
+      rBox, rPcp, rPcp1, rPcp2, rDiff, rPcpSpread,
+    });
   }
   return rows.sort((a, b) => a.dte - b.dte);
 }
@@ -180,78 +221,162 @@ export default function SlotA() {
   });
 
   const rows = useMemo(
-    () => computeBoxRateSeries(data?.contracts, data?.spotPrice, data?.capturedAt),
+    () => computeRateSeries(data?.contracts, data?.spotPrice, data?.capturedAt),
     [data],
   );
 
-  const medianR = useMemo(() => (rows.length ? median(rows.map((r) => r.r)) : null), [rows]);
+  const medianDiff = useMemo(() => {
+    const vals = rows.map((r) => r.rDiff).filter((v) => v != null);
+    return vals.length ? median(vals) : null;
+  }, [rows]);
 
-  // Headline: prefer the first expiration ≥ 7 DTE so the displayed number
-  // isn't skewed by the short-dated noise at the left edge of the curve.
+  const diffRange = useMemo(() => {
+    const vals = rows.map((r) => r.rDiff).filter((v) => v != null);
+    if (vals.length === 0) return null;
+    return { lo: Math.min(...vals), hi: Math.max(...vals) };
+  }, [rows]);
+
+  // Headline picks the first expiration ≥ 7 DTE so the displayed numbers
+  // aren't skewed by the short-dated noise at the left edge of the curve,
+  // which is where 1/T magnifies mark error the most.
   const headline = useMemo(() => rows.find((r) => r.dte >= 7) || rows[0] || null, [rows]);
 
   useEffect(() => {
     if (!Plotly || !chartRef.current || rows.length === 0) return;
 
     const xs = rows.map((r) => r.dte);
-    const ys = rows.map((r) => r.r * 100);
-
-    const hoverText = rows.map(
-      (r) =>
-        [
-          `<b>${r.expiration}</b>`,
-          `DTE ${r.dte.toFixed(1)}`,
-          `K₁ ${r.K1.toLocaleString()} · K₂ ${r.K2.toLocaleString()}`,
-          `C₁ ${r.C1.toFixed(2)} · P₁ ${r.P1.toFixed(2)}`,
-          `C₂ ${r.C2.toFixed(2)} · P₂ ${r.P2.toFixed(2)}`,
-          `box $${r.boxCost.toFixed(2)} · spread ${r.K2 - r.K1}`,
-          `<b>r ${(r.r * 100).toFixed(3)}%</b>`,
-        ].join('<br>'),
-    );
+    const yBox = rows.map((r) => r.rBox * 100);
+    const yPcp = rows.map((r) => (r.rPcp != null ? r.rPcp * 100 : null));
+    const yDiff = rows.map((r) => (r.rDiff != null ? r.rDiff * 100 : null));
 
     const xMin = 0;
     const xMax = Math.max(...xs) * 1.04 + 1;
-    const yMin = Math.min(...ys);
-    const yMax = Math.max(...ys);
+
+    const yRates = [...yBox, ...yPcp].filter((v) => v != null);
+    const yMin = Math.min(...yRates);
+    const yMax = Math.max(...yRates);
     const ySpan = yMax - yMin;
-    const yPad = ySpan > 0 ? ySpan * 0.15 : Math.abs(yMin) * 0.2 || 0.5;
+    const yPad = ySpan > 0 ? ySpan * 0.12 : Math.abs(yMin) * 0.2 || 0.5;
+
+    const yDiffFiltered = yDiff.filter((v) => v != null);
+    const y2Min = yDiffFiltered.length ? Math.min(...yDiffFiltered) : 0;
+    const y2Max = yDiffFiltered.length ? Math.max(...yDiffFiltered) : 1;
+    const y2Span = y2Max - y2Min;
+    const y2Pad = y2Span > 0 ? y2Span * 0.25 : Math.abs(y2Max) * 0.3 || 0.2;
+
+    const hoverBox = rows.map((r) =>
+      [
+        `<b>${r.expiration}</b>`,
+        `DTE ${r.dte.toFixed(1)}`,
+        `K₁ ${r.K1.toLocaleString()} · K₂ ${r.K2.toLocaleString()}`,
+        `C₁ ${r.C1.toFixed(2)} · P₁ ${r.P1.toFixed(2)}`,
+        `C₂ ${r.C2.toFixed(2)} · P₂ ${r.P2.toFixed(2)}`,
+        `box $${r.boxCost.toFixed(2)} · ΔK ${r.strikeSpread}`,
+        `<b>r<sub>box</sub> ${(r.rBox * 100).toFixed(3)}%</b>`,
+      ].join('<br>'),
+    );
+
+    const hoverPcp = rows.map((r) =>
+      r.rPcp != null
+        ? [
+            `<b>${r.expiration}</b>`,
+            `DTE ${r.dte.toFixed(1)}`,
+            `direct PCP · q = 0 assumed`,
+            `r at K₁ ${(r.rPcp1 * 100).toFixed(3)}%`,
+            `r at K₂ ${(r.rPcp2 * 100).toFixed(3)}%`,
+            r.rPcpSpread != null
+              ? `|r(K₁) − r(K₂)| ${(r.rPcpSpread * 100).toFixed(3)}%`
+              : '',
+            `<b>r̄<sub>PCP</sub> ${(r.rPcp * 100).toFixed(3)}%</b>`,
+          ]
+            .filter(Boolean)
+            .join('<br>')
+        : '',
+    );
+
+    const hoverDiff = rows.map((r) =>
+      r.rDiff != null
+        ? [
+            `<b>${r.expiration}</b>`,
+            `DTE ${r.dte.toFixed(1)}`,
+            `r<sub>box</sub> − r<sub>PCP,q=0</sub>`,
+            `<b>${(r.rDiff * 100).toFixed(3)}%</b>`,
+            `<span style="opacity:0.7">≈ options-implied q at ATM</span>`,
+          ].join('<br>')
+        : '',
+    );
 
     const traces = [
       {
         x: xs,
-        y: ys,
+        y: yBox,
+        name: 'r<sub>box</sub> · 4-leg, spot cancels',
         mode: 'lines+markers',
         type: 'scatter',
-        line: { color: PLOTLY_COLORS.primary, width: 1.25 },
+        line: { color: PLOTLY_COLORS.primary, width: 1.5 },
         marker: { color: PLOTLY_COLORS.primary, size: mobile ? 6 : 8, line: { width: 0 } },
         hoverinfo: 'text',
-        text: hoverText,
-        showlegend: false,
+        text: hoverBox,
+      },
+      {
+        x: xs,
+        y: yPcp,
+        name: 'r<sub>PCP</sub> · 1-strike, q = 0',
+        mode: 'lines+markers',
+        type: 'scatter',
+        line: { color: PLOTLY_COLORS.secondary, width: 1.5, dash: 'dot' },
+        marker: {
+          color: PLOTLY_COLORS.secondary,
+          size: mobile ? 6 : 8,
+          symbol: 'diamond',
+          line: { width: 0 },
+        },
+        hoverinfo: 'text',
+        text: hoverPcp,
+        connectgaps: false,
+      },
+      {
+        x: xs,
+        y: yDiff,
+        name: 'r<sub>box</sub> − r<sub>PCP</sub> · ≈ implied q',
+        mode: 'lines+markers',
+        type: 'scatter',
+        line: { color: PLOTLY_COLORS.highlight, width: 1.25 },
+        marker: {
+          color: PLOTLY_COLORS.highlight,
+          size: mobile ? 5 : 7,
+          symbol: 'triangle-up',
+          line: { width: 0 },
+        },
+        hoverinfo: 'text',
+        text: hoverDiff,
+        yaxis: 'y2',
+        connectgaps: false,
       },
     ];
 
     const shapes = [];
     const annotations = [];
-    if (medianR != null) {
-      const medianPct = medianR * 100;
+    if (medianDiff != null) {
+      const medPct = medianDiff * 100;
       shapes.push({
         type: 'line',
         xref: 'x',
-        yref: 'y',
+        yref: 'y2',
         x0: xMin,
         x1: xMax,
-        y0: medianPct,
-        y1: medianPct,
+        y0: medPct,
+        y1: medPct,
         line: { color: PLOTLY_COLORS.highlight, width: 1, dash: 'dash' },
       });
       annotations.push({
         x: xMax,
-        y: medianPct,
+        y: medPct,
         xref: 'x',
-        yref: 'y',
+        yref: 'y2',
         xanchor: 'right',
         yanchor: 'bottom',
-        text: `median ${medianPct.toFixed(2)}%`,
+        text: `median q ${medPct.toFixed(2)}%`,
         showarrow: false,
         font: { family: PLOTLY_FONT_FAMILY, color: PLOTLY_COLORS.highlight, size: 11 },
         xshift: -4,
@@ -261,30 +386,48 @@ export default function SlotA() {
 
     const layout = plotly2DChartLayout({
       title: {
-        ...plotlyTitle('Put-Call Parity · Box-Spread Implied Rate'),
+        ...plotlyTitle('Put-Call Parity · Box vs Direct PCP (q = 0)'),
         y: 0.97,
         yref: 'container',
         yanchor: 'top',
       },
-      margin: mobile ? { t: 50, r: 20, b: 55, l: 60 } : { t: 70, r: 30, b: 60, l: 75 },
+      margin: mobile
+        ? { t: 50, r: 55, b: 95, l: 60 }
+        : { t: 70, r: 75, b: 105, l: 75 },
       xaxis: plotlyAxis('Days to Expiration', { range: [xMin, xMax], autorange: false }),
-      yaxis: plotlyAxis('Implied r (%)', {
+      yaxis: plotlyAxis('r (%)', {
         range: [yMin - yPad, yMax + yPad],
         autorange: false,
         ticksuffix: '%',
         tickformat: '.2f',
       }),
+      yaxis2: plotlyAxis('q ≈ box − PCP (%)', {
+        range: [y2Min - y2Pad, y2Max + y2Pad],
+        autorange: false,
+        overlaying: 'y',
+        side: 'right',
+        showgrid: false,
+        ticksuffix: '%',
+        tickformat: '.2f',
+      }),
       shapes,
       annotations,
-      showlegend: false,
       hovermode: 'closest',
+      showlegend: true,
+      legend: {
+        orientation: 'h',
+        y: -0.22,
+        x: 0.5,
+        xanchor: 'center',
+        font: PLOTLY_FONTS.legend,
+      },
     });
 
     Plotly.react(chartRef.current, traces, layout, {
       responsive: true,
       displayModeBar: false,
     });
-  }, [Plotly, rows, medianR, mobile]);
+  }, [Plotly, rows, medianDiff, mobile]);
 
   if (loading && !data) {
     return (
@@ -325,16 +468,11 @@ export default function SlotA() {
         <div className="lab-placeholder-title">No usable strike pairs</div>
         <div className="lab-placeholder-hint">
           The current snapshot does not contain enough matched call/put pairs
-          bracketing the spot price to compute a box-spread implied rate.
+          bracketing the spot price to compute implied rates at either method.
         </div>
       </div>
     );
   }
-
-  const rangeR = {
-    lo: Math.min(...rows.map((r) => r.r)),
-    hi: Math.max(...rows.map((r) => r.r)),
-  };
 
   return (
     <div className="card" style={{ padding: '1.25rem 1.25rem 1rem' }}>
@@ -349,24 +487,39 @@ export default function SlotA() {
             marginBottom: '0.35rem',
           }}
         >
-          model · put-call parity
+          model · put-call parity · box vs direct
         </div>
         <div
           style={{
             fontSize: '0.88rem',
             color: 'var(--text-secondary)',
             lineHeight: 1.55,
-            maxWidth: '720px',
+            maxWidth: '820px',
           }}
         >
-          Box-spread reduction of put-call parity. For each listed expiration,
-          solves{' '}
+          Two ways to back out a rate from put-call parity.{' '}
+          <strong style={{ color: PLOTLY_COLORS.primary }}>Box spread</strong>{' '}
+          (4 options at K₁ and K₂): the spot term cancels exactly in the
+          construction, so{' '}
           <code style={{ fontFamily: 'Courier New, monospace', color: 'var(--text-primary)' }}>
-            box = (K₂ − K₁) · e<sup>−rT</sup>
+            r<sub>box</sub> = (1/T)·ln((K₂ − K₁) / box)
           </code>{' '}
-          at the tightest strike bracket around spot and inverts to r. The
-          dividend yield cancels in the box, so the result is a model-free read
-          on the market-implied borrow rate.
+          is model-free and spot-invariant.{' '}
+          <strong style={{ color: PLOTLY_COLORS.secondary }}>Direct PCP</strong>{' '}
+          (1 strike, q = 0 assumed): solves{' '}
+          <code style={{ fontFamily: 'Courier New, monospace', color: 'var(--text-primary)' }}>
+            C − P = S₀·e<sup>−qT</sup> − K·e<sup>−rT</sup>
+          </code>{' '}
+          with q held at zero, which keeps the spot term in the equation so
+          the implied rate absorbs the market-priced dividend yield. The
+          vertical gap{' '}
+          <strong style={{ color: PLOTLY_COLORS.highlight }}>
+            r<sub>box</sub> − r<sub>PCP</sub>
+          </strong>{' '}
+          is approximately the options-implied SPX dividend yield, and its
+          wobble across the term structure is the spot-driven pricing noise
+          the box is specifically designed to wash out. If that instability
+          is itself tradable, here is where it becomes legible.
         </div>
       </div>
 
@@ -382,21 +535,26 @@ export default function SlotA() {
         }}
       >
         <StatCell
-          label="Nearest r"
-          value={formatPct(headline?.r, 2)}
+          label="Box r"
+          value={formatPct(headline?.rBox, 2)}
           sub={headline ? `${headline.expiration} · ${headline.dte.toFixed(1)}d` : '—'}
           accent={PLOTLY_COLORS.primary}
         />
         <StatCell
-          label="Median r"
-          value={formatPct(medianR, 2)}
-          sub={`${rows.length} expirations`}
-          accent={PLOTLY_COLORS.highlight}
+          label="Direct PCP r"
+          value={formatPct(headline?.rPcp, 2)}
+          sub="q = 0 assumed"
+          accent={PLOTLY_COLORS.secondary}
         />
         <StatCell
-          label="Range"
-          value={`${(rangeR.lo * 100).toFixed(2)}% – ${(rangeR.hi * 100).toFixed(2)}%`}
-          sub={`spread ${((rangeR.hi - rangeR.lo) * 100).toFixed(2)}%`}
+          label="Box − PCP · ≈ q"
+          value={formatPct(headline?.rDiff, 2)}
+          sub={
+            diffRange
+              ? `range ${formatPct(diffRange.lo, 2)} – ${formatPct(diffRange.hi, 2)}`
+              : '—'
+          }
+          accent={PLOTLY_COLORS.highlight}
         />
         <StatCell
           label="Spot"
@@ -405,7 +563,7 @@ export default function SlotA() {
         />
       </div>
 
-      <div ref={chartRef} style={{ width: '100%', height: mobile ? 320 : 420 }} />
+      <div ref={chartRef} style={{ width: '100%', height: mobile ? 380 : 480 }} />
 
       <div
         style={{
@@ -415,10 +573,17 @@ export default function SlotA() {
           lineHeight: 1.6,
         }}
       >
-        Hover any point for strikes, option marks, and box cost. Short-dated
-        points are the noisiest — the 1/T factor magnifies mark error at low
-        DTE, so the left edge should be read with that in mind. The flatter
-        the curve, the more consistently parity is holding across the board.
+        Hover any point for per-expiration strikes, option marks, and both
+        ATM-strike PCP rates. The amber line on the right axis tracks the box
+        − PCP spread: a roughly-flat line near the SPX implied dividend yield
+        (typically ~1.3%) is the null hypothesis; deviations from flat,
+        especially kinks and jumps, are per-strike pricing noise the box
+        construction eliminates by design. Short-dated points are the
+        noisiest because the 1/T factor magnifies mark error — read the left
+        edge with that in mind. The natural next step, which would expose the
+        spot-bouncing wobble most directly, is a cross-snapshot time series
+        of these same three quantities; that needs a persisted series rather
+        than a point-in-time snapshot and is a separate piece of work.
       </div>
     </div>
   );
