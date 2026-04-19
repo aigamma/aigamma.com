@@ -55,4 +55,4 @@ No data is shared with third parties because no user data is collected.
 
 ## Contact
 
-privacy@aigamma.com
+support@aigamma.com

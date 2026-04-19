@@ -42,4 +42,4 @@ No data is shared with third parties because no user data is collected.
 
 ## Contact
 
-ericallione@gmail.com
+support@aigamma.com

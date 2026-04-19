@@ -73,7 +73,7 @@ snapshot response.
    no content scripts, no remote code) it typically signs and publishes
    within minutes without manual review.
 5. Fill the listing metadata: name, summary, category (Productivity),
-   support email (ericallione@gmail.com), support URL (aigamma.com),
+   support email (support@aigamma.com), support URL (aigamma.com),
    license, and privacy policy URL
    (https://aigamma.com/extension-privacy). Source code submission is
    only required if the bundle contains minified or obfuscated code —
