@@ -225,6 +225,7 @@ export default function LevelsPanel({ levels, spotPrice, prevClose, expirationMe
               ? `PW ${alignmentArrow(overnightAlignment.dirs.put_wall)}  VF ${alignmentArrow(overnightAlignment.dirs.volatility_flip)}  CW ${alignmentArrow(overnightAlignment.dirs.call_wall)}`
               : null
           }
+          bold
         />
         <Stat
           label="P/C Ratio (Volume)"
