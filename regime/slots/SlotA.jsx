@@ -251,7 +251,7 @@ export default function SlotA() {
   const { data, loading, error } = useGexHistory();
 
   const returns = useMemo(() => {
-    const rows = buildLogReturns(data?.data || []);
+    const rows = buildLogReturns(data?.series || []);
     return rows.map((r) => r.r);
   }, [data]);
 

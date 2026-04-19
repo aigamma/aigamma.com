@@ -331,7 +331,7 @@ export default function SlotB() {
   const mobile = useIsMobile();
   const { data, loading, error } = useGexHistory();
 
-  const series = useMemo(() => buildLogReturns(data?.data || []), [data]);
+  const series = useMemo(() => buildLogReturns(data?.series || []), [data]);
   const returns = useMemo(() => series.map((r) => r.r), [series]);
   const fit = useMemo(() => fitMsm(returns), [returns]);
 
