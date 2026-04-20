@@ -3,12 +3,11 @@ import '../src/styles/lab.css';
 import ErrorBoundary from '../src/ErrorBoundary';
 import QuantMenu from '../src/components/QuantMenu';
 import Chat from '../src/components/Chat';
-import SlotA from './slots/SlotA';
 import SlotB from './slots/SlotB';
 import SlotC from './slots/SlotC';
 import SlotD from './slots/SlotD';
 
-// Local Volatility Lab — four-slot scratch pad dedicated to Dupire's
+// Local Volatility Lab — three-slot scratch pad dedicated to Dupire's
 // local-volatility framework end-to-end: extract σ_LV(K, T) from the
 // SVI slice set of today's SPX chain, price options under the Dupire
 // SDE dS = (r−q)·S dt + σ_LV(S, t)·S dW, visualize the surface from
@@ -23,14 +22,6 @@ import SlotD from './slots/SlotD';
 // between slots can only be a disagreement in reading — the numerics
 // come from one shared file (local/dupire.js).
 //
-//   SLOT A — Dupire Surface Extraction. Analytic SVI y-derivatives,
-//            finite-difference T-derivative, Gatheral 2006 eq. 1.10
-//            evaluated cell-by-cell on a (y, T) grid with per-cell
-//            flags for calendar arbitrage (∂w/∂T < 0), butterfly
-//            arbitrage (denominator N ≤ 0), and variance clipping.
-//            Coverage statistics show exactly where the surface is
-//            well-posed and where it is not.
-//
 //   SLOT B — Local Vol Pricing. Vectorized Monte Carlo under the
 //            Dupire SDE with bilinear σ_LV(S, t) look-up, Euler-
 //            Maruyama on log-price for numerical stability, and
@@ -41,13 +32,13 @@ import SlotD from './slots/SlotD';
 //            residual is MC noise plus discretization error, which
 //            is the self-check.
 //
-//   SLOT C — Local Vol Surface Viewer. Plotly 3D surface of the same
-//            σ_LV(y, T) grid SlotA renders as a heatmap, plus
-//            interactive slice selectors — fix T and sweep y to see
-//            the local-vol smile at a chosen tenor, or fix K and
-//            sweep T to see the local-vol term structure at a chosen
-//            strike. Complements SlotA (aggregate view) with local
-//            views at user-chosen cross-sections.
+//   SLOT C — Local Vol Surface Viewer. Plotly 3D surface of the
+//            σ_LV(y, T) grid plus interactive slice selectors — fix
+//            T and sweep y to see the local-vol smile at a chosen
+//            tenor, or fix K and sweep T to see the local-vol term
+//            structure at a chosen strike. The 3D mesh and the two
+//            slice panels are the actionable readings of the surface
+//            on this page.
 //
 //   SLOT D — Forward Smile Pathology. The textbook motivation for
 //            local-stochastic vol: pure LV reproduces today's smile
@@ -60,16 +51,16 @@ import SlotD from './slots/SlotD';
 //            The gap is the Gyöngy-projection artifact that LSV with
 //            a leverage function L(S, t) is constructed to cure.
 //
-// All four slots consume the same live /api/data snapshot through
-// useOptionsData, so the Dupire surface, the MC pricer, the 3D
-// viewer, and the forward-smile diagnostic are internally consistent
-// views of one point-in-time SPX chain. Unlike the other bookmark-
-// only labs, this page now carries active egress back to the main
-// dashboard at three redundant affordances: the logo in the header
-// is a hyperlink to `/`, a filled green RETURN HOME button sits
-// between the header and the first slot as an obvious call-to-
-// action, and the footer carries a bolded Return Home link for a
-// reader who has scrolled to the bottom of a long page.
+// All three slots consume the same live /api/data snapshot through
+// useOptionsData, so the MC pricer, the 3D viewer, and the forward-
+// smile diagnostic are internally consistent views of one point-in-
+// time SPX chain. Unlike the other bookmark-only labs, this page now
+// carries active egress back to the main dashboard at three
+// redundant affordances: the logo in the header is a hyperlink to
+// `/`, a filled green RETURN HOME button sits between the header
+// and the first slot as an obvious call-to-action, and the footer
+// carries a bolded Return Home link for a reader who has scrolled
+// to the bottom of a long page.
 export default function App() {
   return (
     <div className="app-shell lab-shell">
@@ -80,7 +71,7 @@ export default function App() {
           </a>
           <span
             className="lab-badge"
-            title="Local Vol Lab — Dupire extraction, pricing, viewer, forward-smile"
+            title="Local Vol Lab — Dupire pricing, viewer, forward-smile"
           >
             Local Vol Lab
           </span>
@@ -91,10 +82,6 @@ export default function App() {
       <div className="lab-home-row">
         <a href="/" className="lab-home-button">Return Home</a>
       </div>
-
-      <section className="lab-slot">
-        <ErrorBoundary><SlotA /></ErrorBoundary>
-      </section>
 
       <section className="lab-slot">
         <ErrorBoundary><SlotB /></ErrorBoundary>
@@ -113,7 +100,7 @@ export default function App() {
           context="local"
           welcome={{
             quick:
-              'Ask about Dupire local volatility, the four slots above, or how pure LV relates to stochastic vol, LSV, rough vol, and the rest of the model lineage. Chat stays on volatility, options, and quantitative finance.',
+              'Ask about Dupire local volatility, the three slots above, or how pure LV relates to stochastic vol, LSV, rough vol, and the rest of the model lineage. Chat stays on volatility, options, and quantitative finance.',
             deep:
               'Deep Analysis mode — longer and more structurally detailed responses on Dupire\'s formula, Gyöngy\'s mimicking theorem, the forward-smile flattening pathology, and the philosophy of a deterministic-diffusion coefficient calibrated to today\'s smile.',
           }}

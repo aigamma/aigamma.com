@@ -23,8 +23,8 @@ import {
 // ---------------------------------------------------------------------------
 // Slot C — Local Vol Surface Viewer.
 //
-// Complementary view to SlotA's heatmap. Three linked panels on the
-// same σ_LV(y, T) grid:
+// Three linked panels on the σ_LV(y, T) grid produced by
+// local/dupire.js:
 //   - A Plotly 3D surface plot that lets the reader rotate and zoom
 //     the surface as a mesh. Holes where Dupire extraction failed
 //     render as NaN cells that Plotly skips, so the topology of the

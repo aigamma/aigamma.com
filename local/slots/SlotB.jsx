@@ -35,8 +35,8 @@ import {
 // Any residual is Monte-Carlo noise plus Euler-Maruyama discretization
 // error, both of which shrink with more paths / finer time steps.
 //
-// The slot is therefore a self-check on SlotA: by pricing a strike
-// grid at four expirations under the extracted local-vol SDE and
+// The slot is therefore a self-check on the Dupire extraction: by
+// pricing a strike grid at four expirations under the local-vol SDE and
 // overlaying the MC-implied vol against the SVI-implied vol on the
 // same axes, the reader should see two curves that sit on top of each
 // other per expiration. The numeric RMSE across all (K, T) points is
@@ -47,7 +47,8 @@ import {
 //   - Antithetic sampling on the standard normal draws. With N_PATHS
 //     nominal paths and antithetics, the effective sample size is
 //     2·N_PATHS; pricing standard errors drop as 1/√(2·N_PATHS).
-//   - σ_LV looked up bilinearly from the same grid SlotA renders.
+//   - σ_LV looked up bilinearly from the (y, T) grid produced by
+//     local/dupire.js.
 //   - r = q = 0 matches the convention in src/lib/svi.js (the backend
 //     fitter also prices its own Breeden-Litzenberger calls at r = q
 //     = 0). The shape of the comparison is not sensitive to a 2-3%
