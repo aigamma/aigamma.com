@@ -89,22 +89,18 @@ export default function App() {
       </div>
 
       <section className="lab-slot">
-        <div className="lab-slot-label">SLOT A · MERTON JUMP DIFFUSION (1976)</div>
         <ErrorBoundary><SlotA /></ErrorBoundary>
       </section>
 
       <section className="lab-slot">
-        <div className="lab-slot-label">SLOT B · KOU DOUBLE EXPONENTIAL (2002)</div>
         <ErrorBoundary><SlotB /></ErrorBoundary>
       </section>
 
       <section className="lab-slot">
-        <div className="lab-slot-label">SLOT C · BATES SVJ (1996)</div>
         <ErrorBoundary><SlotC /></ErrorBoundary>
       </section>
 
       <section className="lab-slot">
-        <div className="lab-slot-label">SLOT D · VARIANCE GAMMA (MCC 1998)</div>
         <ErrorBoundary><SlotD /></ErrorBoundary>
       </section>
 

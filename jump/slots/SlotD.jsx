@@ -544,60 +544,17 @@ export default function SlotD() {
 
   return (
     <div className="card" style={{ padding: '1.25rem 1.25rem 1rem' }}>
-      <div style={{ marginBottom: '0.85rem' }}>
-        <div
-          style={{
-            fontFamily: 'Courier New, monospace',
-            fontSize: '0.7rem',
-            letterSpacing: '0.14em',
-            textTransform: 'uppercase',
-            color: 'var(--text-secondary)',
-            marginBottom: '0.35rem',
-          }}
-        >
-          model · variance gamma · pure-jump infinite-activity levy · 3 parameters
-        </div>
-        <div
-          style={{
-            fontSize: '0.95rem',
-            color: 'var(--text-secondary)',
-            lineHeight: 1.6,
-            maxWidth: '860px',
-          }}
-        >
-          <p style={{ margin: '0 0 0.75rem' }}>
-            Variance Gamma is a pure-jump model with no diffusive
-            component at all. The construction is conceptually elegant.
-            Take a Brownian motion, then run its clock not at constant
-            time but at a random rate given by an independent gamma
-            process. The result is a process that jumps at every instant
-            (infinite activity) and whose increments are heavy-tailed in
-            a way that calibrates well to options markets.
-          </p>
-          <p style={{ margin: '0 0 0.75rem' }}>
-            Three free parameters and they all have direct meaning. The
-            Brownian volatility{' '}
-            <strong style={{ color: PLOTLY_COLORS.primary }}>σ</strong>{' '}
-            sets the scale of the time-changed motion. The variance rate
-            of the gamma clock{' '}
-            <strong style={{ color: PLOTLY_COLORS.highlight }}>ν</strong>{' '}
-            controls the kurtosis (smile curvature). The drift parameter{' '}
-            <strong style={{ color: PLOTLY_COLORS.secondary }}>θ</strong>{' '}
-            controls the skew. With θ negative the model leans
-            asymmetrically toward downside log-returns, which is the
-            feature that lets it fit equity smiles cleanly.
-          </p>
-          <p style={{ margin: 0 }}>
-            The characteristic function is closed-form and short:{' '}
-            <code style={{ color: 'var(--text-primary)' }}>
-              (1 − iuθν + 0.5σ²νu²)^(−T/ν)
-            </code>
-            . Pricing is by Lewis (2001) inversion of that single
-            integrand. When θ goes to zero and ν goes to zero the model
-            collapses back to Black-Scholes, so VG nests BSM as a
-            limiting case.
-          </p>
-        </div>
+      <div
+        style={{
+          fontFamily: 'Courier New, monospace',
+          fontSize: '0.7rem',
+          letterSpacing: '0.14em',
+          textTransform: 'uppercase',
+          color: 'var(--text-secondary)',
+          marginBottom: '0.85rem',
+        }}
+      >
+        model · variance gamma · pure-jump infinite-activity levy · 3 parameters
       </div>
 
       <div
@@ -694,6 +651,38 @@ export default function SlotD() {
         }}
       >
         <p style={{ margin: '0 0 0.75rem' }}>
+          Variance Gamma is a pure-jump model with no diffusive
+          component at all. The construction is conceptually elegant.
+          Take a Brownian motion, then run its clock not at constant
+          time but at a random rate given by an independent gamma
+          process. The result is a process that jumps at every instant
+          (infinite activity) and whose increments are heavy-tailed in
+          a way that calibrates well to options markets.
+        </p>
+        <p style={{ margin: '0 0 0.75rem' }}>
+          Three free parameters and they all have direct meaning. The
+          Brownian volatility{' '}
+          <strong style={{ color: PLOTLY_COLORS.primary }}>σ</strong>{' '}
+          sets the scale of the time-changed motion. The variance rate
+          of the gamma clock{' '}
+          <strong style={{ color: PLOTLY_COLORS.highlight }}>ν</strong>{' '}
+          controls the kurtosis (smile curvature). The drift parameter{' '}
+          <strong style={{ color: PLOTLY_COLORS.secondary }}>θ</strong>{' '}
+          controls the skew. With θ negative the model leans
+          asymmetrically toward downside log-returns, which is the
+          feature that lets it fit equity smiles cleanly.
+        </p>
+        <p style={{ margin: '0 0 0.75rem' }}>
+          The characteristic function is closed-form and short:{' '}
+          <code style={{ color: 'var(--text-primary)' }}>
+            (1 − iuθν + 0.5σ²νu²)^(−T/ν)
+          </code>
+          . Pricing is by Lewis (2001) inversion of that single
+          integrand. When θ goes to zero and ν goes to zero the model
+          collapses back to Black-Scholes, so VG nests BSM as a
+          limiting case.
+        </p>
+        <p style={{ margin: '0 0 0.75rem' }}>
           <strong style={{ color: 'var(--text-primary)' }}>Reading.</strong>{' '}
           The{' '}
           <strong style={{ color: PLOTLY_COLORS.primary }}>blue dots</strong>{' '}
@@ -727,8 +716,9 @@ export default function SlotD() {
           What VG demonstrates conceptually is that diffusive volatility
           is not necessary to fit options markets. A pure-jump
           infinite-activity Levy process can do the same job. That is
-          the clean contrast with Slots A through C, all of which keep
-          a continuous diffusion piece somewhere in their dynamics.
+          the clean contrast with the other three models on this page,
+          all of which keep a continuous diffusion piece somewhere in
+          their dynamics.
         </p>
       </div>
     </div>

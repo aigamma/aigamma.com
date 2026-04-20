@@ -492,57 +492,17 @@ export default function SlotA() {
 
   return (
     <div className="card" style={{ padding: '1.25rem 1.25rem 1rem' }}>
-      <div style={{ marginBottom: '0.85rem' }}>
-        <div
-          style={{
-            fontFamily: 'Courier New, monospace',
-            fontSize: '0.7rem',
-            letterSpacing: '0.14em',
-            textTransform: 'uppercase',
-            color: 'var(--text-secondary)',
-            marginBottom: '0.35rem',
-          }}
-        >
-          model · merton · diffusion plus log-normal jumps · 4 free parameters
-        </div>
-        <div
-          style={{
-            fontSize: '0.95rem',
-            color: 'var(--text-secondary)',
-            lineHeight: 1.6,
-            maxWidth: '860px',
-          }}
-        >
-          <p style={{ margin: '0 0 0.75rem' }}>
-            Merton (1976) is the original answer to a problem Black-Scholes
-            could not solve. Constant-vol diffusion is too smooth. Real index
-            returns have heavy tails and an obvious left skew that no
-            single-σ lognormal can produce. Merton overlays a{' '}
-            <strong style={{ color: PLOTLY_COLORS.highlight }}>compound Poisson process</strong>{' '}
-            on top of GBM, so the spot occasionally takes a discrete jump
-            sized log-normally.
-          </p>
-          <p style={{ margin: '0 0 0.75rem' }}>
-            Four free parameters do the work. The diffusion volatility{' '}
-            <strong style={{ color: PLOTLY_COLORS.primary }}>σ</strong>{' '}
-            sets the day-to-day Brownian noise. The jump intensity{' '}
-            <strong style={{ color: PLOTLY_COLORS.highlight }}>λ</strong>{' '}
-            counts expected jumps per year. The jump-size distribution is
-            log-normal with{' '}
-            <strong style={{ color: PLOTLY_COLORS.secondary }}>mean μ_J</strong>{' '}
-            and{' '}
-            <strong style={{ color: PLOTLY_COLORS.secondary }}>standard deviation σ_J</strong>{' '}
-            in log space. A negative μ_J means jumps are crashes on average.
-          </p>
-          <p style={{ margin: 0 }}>
-            The European call price is a Poisson-weighted infinite series of
-            Black-Scholes calls, each priced with a per-jump-count adjusted
-            spot drift and variance. The series converges fast. Calibration
-            is a 4-parameter Nelder-Mead in IV-space against the same SPX
-            slice the Stochastic Vol Lab uses, so the smiles can be compared
-            side by side across labs.
-          </p>
-        </div>
+      <div
+        style={{
+          fontFamily: 'Courier New, monospace',
+          fontSize: '0.7rem',
+          letterSpacing: '0.14em',
+          textTransform: 'uppercase',
+          color: 'var(--text-secondary)',
+          marginBottom: '0.85rem',
+        }}
+      >
+        model · merton · diffusion plus log-normal jumps · 4 free parameters
       </div>
 
       <div
@@ -644,6 +604,35 @@ export default function SlotA() {
         }}
       >
         <p style={{ margin: '0 0 0.75rem' }}>
+          Merton (1976) is the original answer to a problem Black-Scholes
+          could not solve. Constant-vol diffusion is too smooth. Real index
+          returns have heavy tails and an obvious left skew that no
+          single-σ lognormal can produce. Merton overlays a{' '}
+          <strong style={{ color: PLOTLY_COLORS.highlight }}>compound Poisson process</strong>{' '}
+          on top of GBM, so the spot occasionally takes a discrete jump
+          sized log-normally.
+        </p>
+        <p style={{ margin: '0 0 0.75rem' }}>
+          Four free parameters do the work. The diffusion volatility{' '}
+          <strong style={{ color: PLOTLY_COLORS.primary }}>σ</strong>{' '}
+          sets the day-to-day Brownian noise. The jump intensity{' '}
+          <strong style={{ color: PLOTLY_COLORS.highlight }}>λ</strong>{' '}
+          counts expected jumps per year. The jump-size distribution is
+          log-normal with{' '}
+          <strong style={{ color: PLOTLY_COLORS.secondary }}>mean μ_J</strong>{' '}
+          and{' '}
+          <strong style={{ color: PLOTLY_COLORS.secondary }}>standard deviation σ_J</strong>{' '}
+          in log space. A negative μ_J means jumps are crashes on average.
+        </p>
+        <p style={{ margin: '0 0 0.75rem' }}>
+          The European call price is a Poisson-weighted infinite series of
+          Black-Scholes calls, each priced with a per-jump-count adjusted
+          spot drift and variance. The series converges fast. Calibration
+          is a 4-parameter Nelder-Mead in IV-space against the same SPX
+          slice the Stochastic Vol Lab uses, so the smiles can be compared
+          side by side across labs.
+        </p>
+        <p style={{ margin: '0 0 0.75rem' }}>
           <strong style={{ color: 'var(--text-primary)' }}>Reading.</strong>{' '}
           The{' '}
           <strong style={{ color: PLOTLY_COLORS.primary }}>blue dots</strong>{' '}
@@ -665,8 +654,8 @@ export default function SlotA() {
         <p style={{ margin: '0 0 0.75rem' }}>
           Where Merton struggles is the term structure. A constant λ
           and constant σ cannot bend the smile at one tenor without
-          flattening it at another. That motivates Slot C&apos;s Bates
-          model, which adds Heston-style stochastic variance underneath
+          flattening it at another. That motivates the Bates SVJ model
+          below, which adds Heston-style stochastic variance underneath
           the same Merton jump overlay.
         </p>
         <p style={{ margin: 0 }}>

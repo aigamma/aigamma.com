@@ -596,53 +596,17 @@ export default function SlotC() {
 
   return (
     <div className="card" style={{ padding: '1.25rem 1.25rem 1rem' }}>
-      <div style={{ marginBottom: '0.85rem' }}>
-        <div
-          style={{
-            fontFamily: 'Courier New, monospace',
-            fontSize: '0.7rem',
-            letterSpacing: '0.14em',
-            textTransform: 'uppercase',
-            color: 'var(--text-secondary)',
-            marginBottom: '0.35rem',
-          }}
-        >
-          model · bates svj · heston variance plus merton jumps · 8 parameters
-        </div>
-        <div
-          style={{
-            fontSize: '0.95rem',
-            color: 'var(--text-secondary)',
-            lineHeight: 1.6,
-            maxWidth: '860px',
-          }}
-        >
-          <p style={{ margin: '0 0 0.75rem' }}>
-            Bates (1996) is the answer to a problem that pure Heston could
-            not solve. Heston produces smile through diffusive correlation
-            ρ, but that mechanism vanishes as the tenor shrinks. Every
-            diffusion path is locally Gaussian, so a pure-Heston smile
-            flattens into a flat line as T approaches zero.
-          </p>
-          <p style={{ margin: '0 0 0.75rem' }}>
-            Bates fixes that by adding{' '}
-            <strong style={{ color: PLOTLY_COLORS.secondary }}>Merton-style log-normal jumps</strong>{' '}
-            to a{' '}
-            <strong style={{ color: PLOTLY_COLORS.highlight }}>Heston stochastic-variance core</strong>.
-            The jump component preserves skew at short tenor because a
-            jump is non-Gaussian even instantaneously. Heston still does
-            the heavy lifting at long tenor, where mean-reverting
-            variance produces the right term-structure shape.
-          </p>
-          <p style={{ margin: 0 }}>
-            Eight parameters: the five Heston parameters (κ, θ, ξ, ρ, v₀)
-            plus three jump parameters (λ, μ_J, σ_J). The characteristic
-            function factorizes cleanly. Pricing is by Lewis (2001)
-            single-integral inversion. Calibration is an 8-parameter
-            Nelder-Mead in IV-space against the same SPX slice the other
-            three slots use.
-          </p>
-        </div>
+      <div
+        style={{
+          fontFamily: 'Courier New, monospace',
+          fontSize: '0.7rem',
+          letterSpacing: '0.14em',
+          textTransform: 'uppercase',
+          color: 'var(--text-secondary)',
+          marginBottom: '0.85rem',
+        }}
+      >
+        model · bates svj · heston variance plus merton jumps · 8 parameters
       </div>
 
       <div
@@ -744,6 +708,31 @@ export default function SlotC() {
           lineHeight: 1.65,
         }}
       >
+        <p style={{ margin: '0 0 0.75rem' }}>
+          Bates (1996) is the answer to a problem that pure Heston could
+          not solve. Heston produces smile through diffusive correlation
+          ρ, but that mechanism vanishes as the tenor shrinks. Every
+          diffusion path is locally Gaussian, so a pure-Heston smile
+          flattens into a flat line as T approaches zero.
+        </p>
+        <p style={{ margin: '0 0 0.75rem' }}>
+          Bates fixes that by adding{' '}
+          <strong style={{ color: PLOTLY_COLORS.secondary }}>Merton-style log-normal jumps</strong>{' '}
+          to a{' '}
+          <strong style={{ color: PLOTLY_COLORS.highlight }}>Heston stochastic-variance core</strong>.
+          The jump component preserves skew at short tenor because a
+          jump is non-Gaussian even instantaneously. Heston still does
+          the heavy lifting at long tenor, where mean-reverting
+          variance produces the right term-structure shape.
+        </p>
+        <p style={{ margin: '0 0 0.75rem' }}>
+          Eight parameters: the five Heston parameters (κ, θ, ξ, ρ, v₀)
+          plus three jump parameters (λ, μ_J, σ_J). The characteristic
+          function factorizes cleanly. Pricing is by Lewis (2001)
+          single-integral inversion. Calibration is an 8-parameter
+          Nelder-Mead in IV-space against the same SPX slice the other
+          three models use.
+        </p>
         <p style={{ margin: '0 0 0.75rem' }}>
           <strong style={{ color: 'var(--text-primary)' }}>Reading.</strong>{' '}
           The{' '}

@@ -539,61 +539,17 @@ export default function SlotB() {
 
   return (
     <div className="card" style={{ padding: '1.25rem 1.25rem 1rem' }}>
-      <div style={{ marginBottom: '0.85rem' }}>
-        <div
-          style={{
-            fontFamily: 'Courier New, monospace',
-            fontSize: '0.7rem',
-            letterSpacing: '0.14em',
-            textTransform: 'uppercase',
-            color: 'var(--text-secondary)',
-            marginBottom: '0.35rem',
-          }}
-        >
-          model · kou · diffusion plus asymmetric exponential jumps · 5 parameters
-        </div>
-        <div
-          style={{
-            fontSize: '0.95rem',
-            color: 'var(--text-secondary)',
-            lineHeight: 1.6,
-            maxWidth: '860px',
-          }}
-        >
-          <p style={{ margin: '0 0 0.75rem' }}>
-            Kou (2002) keeps Merton&apos;s compound Poisson scaffolding but
-            replaces the single Gaussian jump distribution with an{' '}
-            <strong style={{ color: PLOTLY_COLORS.positive }}>asymmetric double exponential</strong>.
-            Up-jumps and down-jumps are drawn from two separate
-            exponential distributions with their own rates. The model
-            captures the well-documented stylized fact that equity crash
-            jumps are larger than rally jumps in a way that one Gaussian
-            cannot.
-          </p>
-          <p style={{ margin: '0 0 0.75rem' }}>
-            Five parameters. The diffusion volatility{' '}
-            <strong style={{ color: PLOTLY_COLORS.primary }}>σ</strong>{' '}
-            and jump intensity{' '}
-            <strong style={{ color: PLOTLY_COLORS.highlight }}>λ</strong>{' '}
-            play the same roles as in Merton. The new pieces are{' '}
-            <strong style={{ color: PLOTLY_COLORS.positive }}>p</strong>,
-            the probability that a given jump is upward, and the rates{' '}
-            <strong style={{ color: PLOTLY_COLORS.highlight }}>η₁</strong>{' '}
-            and{' '}
-            <strong style={{ color: PLOTLY_COLORS.secondary }}>η₂</strong>{' '}
-            of the up and down exponential tails. Larger η means thinner
-            tail. Equity calibrations almost always come back with η₂
-            smaller than η₁, which is the asymmetric crash-risk premium
-            written in the parameters.
-          </p>
-          <p style={{ margin: 0 }}>
-            The characteristic function is closed-form. Pricing uses the
-            Lewis (2001) single-integral inversion, which is numerically
-            stable across all maturities. Calibration is a 5-parameter
-            Nelder-Mead in IV-space against the same SPX slice Slot A
-            uses.
-          </p>
-        </div>
+      <div
+        style={{
+          fontFamily: 'Courier New, monospace',
+          fontSize: '0.7rem',
+          letterSpacing: '0.14em',
+          textTransform: 'uppercase',
+          color: 'var(--text-secondary)',
+          marginBottom: '0.85rem',
+        }}
+      >
+        model · kou · diffusion plus asymmetric exponential jumps · 5 parameters
       </div>
 
       <div
@@ -696,16 +652,49 @@ export default function SlotB() {
         }}
       >
         <p style={{ margin: '0 0 0.75rem' }}>
+          Kou (2002) keeps Merton&apos;s compound Poisson scaffolding but
+          replaces the single Gaussian jump distribution with an{' '}
+          <strong style={{ color: PLOTLY_COLORS.positive }}>asymmetric double exponential</strong>.
+          Up-jumps and down-jumps are drawn from two separate
+          exponential distributions with their own rates. The model
+          captures the well-documented stylized fact that equity crash
+          jumps are larger than rally jumps in a way that one Gaussian
+          cannot.
+        </p>
+        <p style={{ margin: '0 0 0.75rem' }}>
+          Five parameters. The diffusion volatility{' '}
+          <strong style={{ color: PLOTLY_COLORS.primary }}>σ</strong>{' '}
+          and jump intensity{' '}
+          <strong style={{ color: PLOTLY_COLORS.highlight }}>λ</strong>{' '}
+          play the same roles as in Merton. The new pieces are{' '}
+          <strong style={{ color: PLOTLY_COLORS.positive }}>p</strong>,
+          the probability that a given jump is upward, and the rates{' '}
+          <strong style={{ color: PLOTLY_COLORS.highlight }}>η₁</strong>{' '}
+          and{' '}
+          <strong style={{ color: PLOTLY_COLORS.secondary }}>η₂</strong>{' '}
+          of the up and down exponential tails. Larger η means thinner
+          tail. Equity calibrations almost always come back with η₂
+          smaller than η₁, which is the asymmetric crash-risk premium
+          written in the parameters.
+        </p>
+        <p style={{ margin: '0 0 0.75rem' }}>
+          The characteristic function is closed-form. Pricing uses the
+          Lewis (2001) single-integral inversion, which is numerically
+          stable across all maturities. Calibration is a 5-parameter
+          Nelder-Mead in IV-space against the same SPX slice the Merton
+          model uses.
+        </p>
+        <p style={{ margin: '0 0 0.75rem' }}>
           <strong style={{ color: 'var(--text-primary)' }}>Reading.</strong>{' '}
           The{' '}
           <strong style={{ color: PLOTLY_COLORS.primary }}>blue dots</strong>{' '}
           are the chain&apos;s observed IVs. The{' '}
           <strong style={{ color: PLOTLY_COLORS.positive }}>green curve</strong>{' '}
-          is the Kou fit. Where Merton in Slot A uses a single
-          symmetric Gaussian for jump sizes, Kou splits it into two
-          asymmetric exponentials, which is why Kou tends to produce a
-          steeper left wing on equity slices than Merton with the same
-          number of effective parameters.
+          is the Kou fit. Where Merton uses a single symmetric Gaussian
+          for jump sizes, Kou splits it into two asymmetric exponentials,
+          which is why Kou tends to produce a steeper left wing on
+          equity slices than Merton with the same number of effective
+          parameters.
         </p>
         <p style={{ margin: '0 0 0.75rem' }}>
           The{' '}
@@ -727,7 +716,7 @@ export default function SlotB() {
           Like Merton, Kou cannot produce the term-structure shape of
           the SPX surface from one slice. The single-slice fit captures
           today&apos;s smile but does not constrain how that smile
-          evolves with maturity. Slot C&apos;s Bates SVJ is the
+          evolves with maturity. The Bates SVJ model below is the
           combination that closes that gap.
         </p>
       </div>
