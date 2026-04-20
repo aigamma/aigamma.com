@@ -66,6 +66,17 @@ export function plotlyAxis(titleText, extras = {}) {
     : { text: '', font: PLOTLY_FONTS.axisTitle };
   return {
     title,
+    // automargin lets Plotly grow the chart margin to accommodate wide
+    // tick labels (e.g. "-6000.00%" or "7,200") so they don't overlap
+    // the rotated axis title. Without this, any chart whose data spans
+    // a wide-enough range to produce long tick strings will render the
+    // axis title on top of the tick labels — the main landing page is
+    // fine because its rates and IVs sit in tidy single-digit-percent
+    // ranges, but the lab directories (alpha, garch, regime, risk,
+    // etc.) routinely surface wider ranges where the collision shows.
+    // automargin only expands margins it never shrinks them, so this
+    // change is layout-safe for charts that already had enough room.
+    automargin: true,
     gridcolor: PLOTLY_COLORS.grid,
     zerolinecolor: PLOTLY_COLORS.zeroLine,
     tickfont: PLOTLY_FONTS.axisTick,
