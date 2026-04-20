@@ -72,7 +72,9 @@ export default function App() {
     <div className="app-shell lab-shell">
       <header className="lab-header">
         <div className="lab-brand">
-          <img src="/logo.webp" alt="aigamma.com" className="lab-logo" />
+          <a href="/" style={{ display: 'block' }}>
+            <img src="/logo.webp" alt="aigamma.com" className="lab-logo" />
+          </a>
           <span
             className="lab-badge"
             title="Discrete &amp; Parametric Vol Lab · binomial · trinomial · SVI raw · SVI natural · SVI-JW · SSVI"
