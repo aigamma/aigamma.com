@@ -2,6 +2,7 @@ import '../src/styles/theme.css';
 import '../src/styles/lab.css';
 import ErrorBoundary from '../src/ErrorBoundary';
 import QuantMenu from '../src/components/QuantMenu';
+import Chat from '../src/components/Chat';
 import SlotA from './slots/SlotA';
 import SlotB from './slots/SlotB';
 import SlotC from './slots/SlotC';
@@ -99,6 +100,18 @@ export default function App() {
         <div className="lab-slot-label">SLOT D · SECOND-ORDER GREEKS</div>
         <ErrorBoundary><SlotD /></ErrorBoundary>
       </section>
+
+      <ErrorBoundary>
+        <Chat
+          context="risk"
+          welcome={{
+            quick:
+              'Ask about cross-model Greeks, the four delta definitions, Vanna-Volga, and vanna/volga/charm across strikes, or about risk measurement as a modelling choice rather than a reading off the chain. Chat stays on volatility, options, and quantitative finance.',
+            deep:
+              'Deep Analysis mode — longer and more structurally detailed responses on Black-Scholes vs Bachelier vs Heston Greeks, sticky-strike vs sticky-delta vs minimum-variance hedging, the Castagna-Mercurio three-anchor FX smile method, and the second-order Greeks that carry the SPX vol book.',
+          }}
+        />
+      </ErrorBoundary>
 
       <footer className="lab-footer">
         <span className="lab-footer-line">
