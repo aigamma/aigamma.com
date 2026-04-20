@@ -501,8 +501,12 @@ export default function SlotA() {
         text: `median q ${medPct.toFixed(2)}%`,
         showarrow: false,
         font: { family: PLOTLY_FONT_FAMILY, color: PLOTLY_COLORS.highlight, size: 11 },
+        bgcolor: PLOTLY_COLORS.plot,
+        bordercolor: PLOTLY_COLORS.highlight,
+        borderwidth: 1,
+        borderpad: 3,
         xshift: -4,
-        yshift: 2,
+        yshift: 4,
       });
     }
 
@@ -531,8 +535,12 @@ export default function SlotA() {
         text: `S₀ ${S0.toLocaleString(undefined, { maximumFractionDigits: 2 })}`,
         showarrow: false,
         font: { family: PLOTLY_FONT_FAMILY, color: PLOTLY_COLORS.primarySoft, size: 11 },
+        bgcolor: PLOTLY_COLORS.plot,
+        bordercolor: PLOTLY_COLORS.primarySoft,
+        borderwidth: 1,
+        borderpad: 3,
         xshift: 4,
-        yshift: 2,
+        yshift: 4,
       });
     }
 
