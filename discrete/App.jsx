@@ -82,7 +82,10 @@ export default function App() {
             Discrete &amp; Parametric Vol Lab
           </span>
         </div>
-        <QuantMenu />
+        <div className="lab-nav-group">
+          <a href="/" className="lab-home-nav">Return Home</a>
+          <QuantMenu />
+        </div>
       </header>
 
       <section className="lab-slot">

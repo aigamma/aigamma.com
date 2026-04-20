@@ -46,20 +46,23 @@ import SlotC from './slots/SlotC';
 //
 // All three consume daily SPX closes through the existing useGexHistory
 // hook — same calendar axis as the /regime and /garch labs. Navigation
-// back to the homepage is provided in three redundant places so the path
-// out of the lab is unmissable: the logo in the upper-left of the header
-// is wrapped in an anchor to /, a prominent green "RETURN HOME" button
-// sits between the slot stack and the Chat panel, and the footer carries
-// a bold "Return Home" link on its own line. The QuantMenu in the
-// upper-right remains the cross-lab navigator for the nine integrated
-// Quant Menu labs; nothing on the main site's public nav points here, so
-// /rough is still reached by typing the URL or loading a bookmark.
+// back to the homepage is provided at three redundant affordances so the
+// path out of the lab is unmissable: the logo in the upper-left of the
+// header is wrapped in an anchor to /, a filled green "Return Home"
+// button sits inline in the header row between the Rough Vol Lab brand
+// on the left and the QuantMenu trigger on the right — horizontally
+// aligned with the other top-level nav items via the header's flex
+// space-between distribution — and the footer carries a bold "Return
+// Home" link on its own line. The QuantMenu in the upper-right remains
+// the cross-lab navigator for the nine integrated Quant Menu labs;
+// nothing on the main site's public nav points here, so /rough is
+// still reached by typing the URL or loading a bookmark.
 export default function App() {
   return (
     <div className="app-shell lab-shell">
       <header className="lab-header">
         <div className="lab-brand">
-          <a href="/" aria-label="aigamma.com home" style={{ display: 'block' }}>
+          <a href="/" className="lab-logo-link" aria-label="Return to aigamma.com homepage">
             <img src="/logo.webp" alt="aigamma.com" className="lab-logo" />
           </a>
           <span
@@ -69,6 +72,7 @@ export default function App() {
             Rough Vol Lab
           </span>
         </div>
+        <a href="/" className="lab-home-button lab-home-button--inline">Return Home</a>
         <QuantMenu />
       </header>
 
@@ -83,34 +87,6 @@ export default function App() {
       <section className="lab-slot">
         <ErrorBoundary><SlotC /></ErrorBoundary>
       </section>
-
-      <div
-        style={{
-          display: 'flex',
-          justifyContent: 'center',
-          margin: '1.5rem 0',
-        }}
-      >
-        <a
-          href="/"
-          style={{
-            display: 'inline-block',
-            padding: '0.85rem 2rem',
-            backgroundColor: 'var(--accent-green)',
-            color: '#0a0d14',
-            fontFamily: "'Courier New', monospace",
-            fontSize: '0.9rem',
-            fontWeight: 700,
-            letterSpacing: '0.18em',
-            textTransform: 'uppercase',
-            textDecoration: 'none',
-            borderRadius: '4px',
-            border: '1px solid var(--accent-green)',
-          }}
-        >
-          Return Home
-        </a>
-      </div>
 
       <ErrorBoundary>
         <Chat
@@ -128,11 +104,7 @@ export default function App() {
         <span className="lab-footer-line">
           AI Gamma LLC · rough vol lab · three-method zoo · v0.1.0
         </span>
-        <span className="lab-footer-line">
-          <a href="/" style={{ fontWeight: 700, color: 'var(--accent-green)' }}>
-            Return Home
-          </a>
-        </span>
+        <a href="/" className="lab-footer-home">Return Home</a>
       </footer>
     </div>
   );
