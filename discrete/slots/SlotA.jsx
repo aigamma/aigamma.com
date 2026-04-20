@@ -396,60 +396,17 @@ export default function SlotA() {
 
   return (
     <div className="card" style={{ padding: '1.25rem 1.25rem 1rem' }}>
-      <div style={{ marginBottom: '0.85rem' }}>
-        <div
-          style={{
-            fontFamily: 'Courier New, monospace',
-            fontSize: '0.7rem',
-            letterSpacing: '0.14em',
-            textTransform: 'uppercase',
-            color: 'var(--text-secondary)',
-            marginBottom: '0.35rem',
-          }}
-        >
-          model · cox ross rubinstein 1979 · two-branch recombining lattice
-        </div>
-        <div
-          style={{
-            fontSize: '0.95rem',
-            color: 'var(--text-secondary)',
-            lineHeight: 1.6,
-            maxWidth: '860px',
-          }}
-        >
-          <p style={{ margin: '0 0 0.75rem' }}>
-            The binomial tree is the oldest and most portable discrete pricer
-            in finance. It builds an option price from the bottom up by
-            walking a recombining lattice of up/down moves, then discounting
-            each node backward through{' '}
-            <code style={{ color: 'var(--text-primary)' }}>V = e^(-r·dt)·(p·V_up + (1-p)·V_down)</code>.
-            CRR picks u, d, p so that the one-step mean and variance match a
-            log-normal diffusion. As the step count N grows, the price
-            converges to Black-Scholes.
-          </p>
-          <p style={{ margin: '0 0 0.75rem' }}>
-            The chart below prices{' '}
-            <strong style={{ color: 'var(--text-primary)' }}>one ATM SPX option</strong>{' '}
-            from the live chain at tree depths from 5 to 400. The{' '}
-            <strong style={{ color: PLOTLY_COLORS.primary }}>blue curve</strong>{' '}
-            is the European tree price. The{' '}
-            <strong style={{ color: PLOTLY_COLORS.secondary }}>coral curve</strong>{' '}
-            is the same option priced under American early exercise. The{' '}
-            <strong style={{ color: PLOTLY_COLORS.highlight }}>amber line</strong>{' '}
-            is the Black-Scholes reference at the contract&apos;s quoted IV.
-          </p>
-          <p style={{ margin: 0 }}>
-            Two things are visible. First, the famous odd/even oscillation:
-            the tree alternates above and below BSM in a pattern that decays
-            roughly as 1/N. Second, the American-European gap is the{' '}
-            <strong style={{ color: PLOTLY_COLORS.secondary }}>early-exercise premium</strong>.
-            For SPX it is near zero because the index is cash-settled and
-            dividend flow is smooth, so there is no clean incentive to stop
-            early. Feeding the same machinery a dividend-paying single
-            name or a 30-year Treasury future produces a visibly non-zero
-            gap.
-          </p>
-        </div>
+      <div
+        style={{
+          fontFamily: 'Courier New, monospace',
+          fontSize: '0.7rem',
+          letterSpacing: '0.14em',
+          textTransform: 'uppercase',
+          color: 'var(--text-secondary)',
+          marginBottom: '0.85rem',
+        }}
+      >
+        model · cox ross rubinstein 1979 · two-branch recombining lattice
       </div>
 
       <div
@@ -587,6 +544,38 @@ export default function SlotA() {
           lineHeight: 1.65,
         }}
       >
+        <p style={{ margin: '0 0 0.75rem' }}>
+          The binomial tree is the oldest and most portable discrete pricer
+          in finance. It builds an option price from the bottom up by
+          walking a recombining lattice of up/down moves, then discounting
+          each node backward through{' '}
+          <code style={{ color: 'var(--text-primary)' }}>V = e^(-r·dt)·(p·V_up + (1-p)·V_down)</code>.
+          CRR picks u, d, p so that the one-step mean and variance match a
+          log-normal diffusion. As the step count N grows, the price
+          converges to Black-Scholes.
+        </p>
+        <p style={{ margin: '0 0 0.75rem' }}>
+          The chart above prices{' '}
+          <strong style={{ color: 'var(--text-primary)' }}>one ATM SPX option</strong>{' '}
+          from the live chain at tree depths from 5 to 400. The{' '}
+          <strong style={{ color: PLOTLY_COLORS.primary }}>blue curve</strong>{' '}
+          is the European tree price. The{' '}
+          <strong style={{ color: PLOTLY_COLORS.secondary }}>coral curve</strong>{' '}
+          is the same option priced under American early exercise. The{' '}
+          <strong style={{ color: PLOTLY_COLORS.highlight }}>amber line</strong>{' '}
+          is the Black-Scholes reference at the contract&apos;s quoted IV.
+        </p>
+        <p style={{ margin: '0 0 0.75rem' }}>
+          Two things are visible. First, the famous odd/even oscillation:
+          the tree alternates above and below BSM in a pattern that decays
+          roughly as 1/N. Second, the American-European gap is the{' '}
+          <strong style={{ color: PLOTLY_COLORS.secondary }}>early-exercise premium</strong>.
+          For SPX it is near zero because the index is cash-settled and
+          dividend flow is smooth, so there is no clean incentive to stop
+          early. Feeding the same machinery a dividend-paying single
+          name or a 30-year Treasury future produces a visibly non-zero
+          gap.
+        </p>
         <p style={{ margin: '0 0 0.75rem' }}>
           <strong style={{ color: 'var(--text-primary)' }}>Reading.</strong>{' '}
           At small N the{' '}

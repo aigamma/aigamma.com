@@ -331,57 +331,17 @@ export default function SlotD() {
 
   return (
     <div className="card" style={{ padding: '1.25rem 1.25rem 1rem' }}>
-      <div style={{ marginBottom: '0.85rem' }}>
-        <div
-          style={{
-            fontFamily: 'Courier New, monospace',
-            fontSize: '0.7rem',
-            letterSpacing: '0.14em',
-            textTransform: 'uppercase',
-            color: 'var(--text-secondary)',
-            marginBottom: '0.35rem',
-          }}
-        >
-          model · svi natural · reparameterized around the minimum
-        </div>
-        <div
-          style={{
-            fontSize: '0.95rem',
-            color: 'var(--text-secondary)',
-            lineHeight: 1.6,
-            maxWidth: '860px',
-          }}
-        >
-          <p style={{ margin: '0 0 0.75rem' }}>
-            Natural SVI is the same curve as Slot C with different axes
-            of thought. Instead of picking parameters that describe the
-            algebra of the formula{' '}
-            <code style={{ color: 'var(--text-primary)' }}>(a, b, m)</code>{' '}
-            it picks parameters that describe the geometry of the smile{' '}
-            <code style={{ color: 'var(--text-primary)' }}>(Δ, μ, ω, ζ)</code>{' '}
-            plus the shared skew ρ.
-          </p>
-          <p style={{ margin: '0 0 0.75rem' }}>
-            The{' '}
-            <strong style={{ color: PLOTLY_COLORS.secondary }}>red diamond</strong>{' '}
-            is the minimum of the total variance curve. Its horizontal
-            position is{' '}
-            <strong style={{ color: 'var(--text-primary)' }}>μ</strong>{' '}
-            (log-moneyness of the bottom) and its height is{' '}
-            <strong style={{ color: 'var(--text-primary)' }}>Δ</strong>{' '}
-            (floor of total variance). In raw SVI neither number is
-            directly a parameter; both require algebra.
-          </p>
-          <p style={{ margin: 0 }}>
-            The{' '}
-            <strong style={{ color: PLOTLY_COLORS.positive }}>green dashes</strong>{' '}
-            are the asymptotic wing slopes. Left slope is b(ρ−1), right
-            slope is b(ρ+1). ρ tilts the cup; ζ compresses it in k; ω
-            scales it in w. Natural SVI isolates these three knobs so
-            that changing one does not smear across the others the way it
-            does in raw.
-          </p>
-        </div>
+      <div
+        style={{
+          fontFamily: 'Courier New, monospace',
+          fontSize: '0.7rem',
+          letterSpacing: '0.14em',
+          textTransform: 'uppercase',
+          color: 'var(--text-secondary)',
+          marginBottom: '0.85rem',
+        }}
+      >
+        model · svi natural · reparameterized around the minimum
       </div>
 
       <div
@@ -482,6 +442,35 @@ export default function SlotD() {
           lineHeight: 1.65,
         }}
       >
+        <p style={{ margin: '0 0 0.75rem' }}>
+          Natural SVI is the same curve as Slot C with different axes
+          of thought. Instead of picking parameters that describe the
+          algebra of the formula{' '}
+          <code style={{ color: 'var(--text-primary)' }}>(a, b, m)</code>{' '}
+          it picks parameters that describe the geometry of the smile{' '}
+          <code style={{ color: 'var(--text-primary)' }}>(Δ, μ, ω, ζ)</code>{' '}
+          plus the shared skew ρ.
+        </p>
+        <p style={{ margin: '0 0 0.75rem' }}>
+          The{' '}
+          <strong style={{ color: PLOTLY_COLORS.secondary }}>red diamond</strong>{' '}
+          is the minimum of the total variance curve. Its horizontal
+          position is{' '}
+          <strong style={{ color: 'var(--text-primary)' }}>μ</strong>{' '}
+          (log-moneyness of the bottom) and its height is{' '}
+          <strong style={{ color: 'var(--text-primary)' }}>Δ</strong>{' '}
+          (floor of total variance). In raw SVI neither number is
+          directly a parameter; both require algebra.
+        </p>
+        <p style={{ margin: '0 0 0.75rem' }}>
+          The{' '}
+          <strong style={{ color: PLOTLY_COLORS.positive }}>green dashes</strong>{' '}
+          are the asymptotic wing slopes. Left slope is b(ρ−1), right
+          slope is b(ρ+1). ρ tilts the cup; ζ compresses it in k; ω
+          scales it in w. Natural SVI isolates these three knobs so
+          that changing one does not smear across the others the way it
+          does in raw.
+        </p>
         <p style={{ margin: '0 0 0.75rem' }}>
           <strong style={{ color: 'var(--text-primary)' }}>Reading.</strong>{' '}
           The y-axis here is total variance w(k), not implied vol, because

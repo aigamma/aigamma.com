@@ -339,56 +339,17 @@ export default function SlotC() {
 
   return (
     <div className="card" style={{ padding: '1.25rem 1.25rem 1rem' }}>
-      <div style={{ marginBottom: '0.85rem' }}>
-        <div
-          style={{
-            fontFamily: 'Courier New, monospace',
-            fontSize: '0.7rem',
-            letterSpacing: '0.14em',
-            textTransform: 'uppercase',
-            color: 'var(--text-secondary)',
-            marginBottom: '0.35rem',
-          }}
-        >
-          model · svi raw · 5 parameters · one expiration slice
-        </div>
-        <div
-          style={{
-            fontSize: '0.95rem',
-            color: 'var(--text-secondary)',
-            lineHeight: 1.6,
-            maxWidth: '860px',
-          }}
-        >
-          <p style={{ margin: '0 0 0.75rem' }}>
-            Raw SVI is the standard parametric form for a single-expiration
-            smile. Five numbers{' '}
-            <code style={{ color: 'var(--text-primary)' }}>(a, b, ρ, m, σ)</code>{' '}
-            pin down a convex-capable curve in total variance space. The
-            platform&apos;s stored SVI fits all live in this parameterization.
-          </p>
-          <p style={{ margin: '0 0 0.75rem' }}>
-            The{' '}
-            <strong style={{ color: PLOTLY_COLORS.primary }}>observed IVs</strong>{' '}
-            are the liquid OTM marks from the current SPX snapshot for the
-            selected expiration. The{' '}
-            <strong style={{ color: PLOTLY_COLORS.highlight }}>fitted curve</strong>{' '}
-            is the Levenberg-Marquardt solution to vega-weighted squared
-            residuals in total-variance space. The fit is the basis for
-            every smoothed IV number the site publishes.
-          </p>
-          <p style={{ margin: 0 }}>
-            The second chart below is Durrleman&apos;s g(k). Fits with{' '}
-            <strong style={{ color: PLOTLY_COLORS.positive }}>g(k) ≥ 0</strong>{' '}
-            everywhere imply a strictly non-negative risk-neutral density.
-            Fits that dip below the{' '}
-            <strong style={{ color: PLOTLY_COLORS.secondary }}>red dashed threshold</strong>{' '}
-            admit butterfly arbitrage somewhere in the wings and should be
-            treated as diagnostic warnings, not as fatal errors, because
-            thin data in the wings can legitimately break the test without
-            implying anything tradable.
-          </p>
-        </div>
+      <div
+        style={{
+          fontFamily: 'Courier New, monospace',
+          fontSize: '0.7rem',
+          letterSpacing: '0.14em',
+          textTransform: 'uppercase',
+          color: 'var(--text-secondary)',
+          marginBottom: '0.85rem',
+        }}
+      >
+        model · svi raw · 5 parameters · one expiration slice
       </div>
 
       <div
@@ -489,6 +450,34 @@ export default function SlotC() {
           lineHeight: 1.65,
         }}
       >
+        <p style={{ margin: '0 0 0.75rem' }}>
+          Raw SVI is the standard parametric form for a single-expiration
+          smile. Five numbers{' '}
+          <code style={{ color: 'var(--text-primary)' }}>(a, b, ρ, m, σ)</code>{' '}
+          pin down a convex-capable curve in total variance space. The
+          platform&apos;s stored SVI fits all live in this parameterization.
+        </p>
+        <p style={{ margin: '0 0 0.75rem' }}>
+          The{' '}
+          <strong style={{ color: PLOTLY_COLORS.primary }}>observed IVs</strong>{' '}
+          are the liquid OTM marks from the current SPX snapshot for the
+          selected expiration. The{' '}
+          <strong style={{ color: PLOTLY_COLORS.highlight }}>fitted curve</strong>{' '}
+          is the Levenberg-Marquardt solution to vega-weighted squared
+          residuals in total-variance space. The fit is the basis for
+          every smoothed IV number the site publishes.
+        </p>
+        <p style={{ margin: '0 0 0.75rem' }}>
+          The second chart above is Durrleman&apos;s g(k). Fits with{' '}
+          <strong style={{ color: PLOTLY_COLORS.positive }}>g(k) ≥ 0</strong>{' '}
+          everywhere imply a strictly non-negative risk-neutral density.
+          Fits that dip below the{' '}
+          <strong style={{ color: PLOTLY_COLORS.secondary }}>red dashed threshold</strong>{' '}
+          admit butterfly arbitrage somewhere in the wings and should be
+          treated as diagnostic warnings, not as fatal errors, because
+          thin data in the wings can legitimately break the test without
+          implying anything tradable.
+        </p>
         <p style={{ margin: '0 0 0.75rem' }}>
           <strong style={{ color: 'var(--text-primary)' }}>Reading.</strong>{' '}
           The upper chart is the fit. Good fits hug the blue dots with

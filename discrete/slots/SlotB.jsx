@@ -450,55 +450,17 @@ export default function SlotB() {
 
   return (
     <div className="card" style={{ padding: '1.25rem 1.25rem 1rem' }}>
-      <div style={{ marginBottom: '0.85rem' }}>
-        <div
-          style={{
-            fontFamily: 'Courier New, monospace',
-            fontSize: '0.7rem',
-            letterSpacing: '0.14em',
-            textTransform: 'uppercase',
-            color: 'var(--text-secondary)',
-            marginBottom: '0.35rem',
-          }}
-        >
-          model · boyle 1986 · kamrad-ritchken stretched · λ = √3
-        </div>
-        <div
-          style={{
-            fontSize: '0.95rem',
-            color: 'var(--text-secondary)',
-            lineHeight: 1.6,
-            maxWidth: '860px',
-          }}
-        >
-          <p style={{ margin: '0 0 0.75rem' }}>
-            Trinomial trees add a third branch: up, stay, down. The stay
-            branch absorbs drift cleanly and lines the terminal nodes up
-            with the forward regardless of N, which kills most of the
-            odd/even oscillation that binomial trees suffer from. At
-            λ = 1 the middle probability collapses and the lattice degenerates
-            back to binomial; at λ = √3 the spread is wide enough for the
-            fastest European convergence.
-          </p>
-          <p style={{ margin: '0 0 0.75rem' }}>
-            The chart prices the same ATM SPX contract Slot A priced, but
-            now with both lattices on the same axes. The{' '}
-            <strong style={{ color: PLOTLY_COLORS.primary }}>blue curve</strong>{' '}
-            is binomial, carried over from Slot A. The{' '}
-            <strong style={{ color: PLOTLY_COLORS.positive }}>green curve</strong>{' '}
-            is trinomial. The{' '}
-            <strong style={{ color: PLOTLY_COLORS.highlight }}>amber line</strong>{' '}
-            is Black-Scholes.
-          </p>
-          <p style={{ margin: 0 }}>
-            The green curve sits visibly closer to amber at every N, and the
-            low-N tail is much smoother. That is the trinomial win in one
-            picture: fewer steps for the same accuracy. For a production
-            pricer that has to run millions of lattices per second through a
-            scenario engine, a 3-4x step reduction at matched accuracy is
-            a meaningful cost.
-          </p>
-        </div>
+      <div
+        style={{
+          fontFamily: 'Courier New, monospace',
+          fontSize: '0.7rem',
+          letterSpacing: '0.14em',
+          textTransform: 'uppercase',
+          color: 'var(--text-secondary)',
+          marginBottom: '0.85rem',
+        }}
+      >
+        model · boyle 1986 · kamrad-ritchken stretched · λ = √3
       </div>
 
       <div
@@ -635,6 +597,33 @@ export default function SlotB() {
           lineHeight: 1.65,
         }}
       >
+        <p style={{ margin: '0 0 0.75rem' }}>
+          Trinomial trees add a third branch: up, stay, down. The stay
+          branch absorbs drift cleanly and lines the terminal nodes up
+          with the forward regardless of N, which kills most of the
+          odd/even oscillation that binomial trees suffer from. At
+          λ = 1 the middle probability collapses and the lattice degenerates
+          back to binomial; at λ = √3 the spread is wide enough for the
+          fastest European convergence.
+        </p>
+        <p style={{ margin: '0 0 0.75rem' }}>
+          The chart above prices the same ATM SPX contract Slot A priced, but
+          now with both lattices on the same axes. The{' '}
+          <strong style={{ color: PLOTLY_COLORS.primary }}>blue curve</strong>{' '}
+          is binomial, carried over from Slot A. The{' '}
+          <strong style={{ color: PLOTLY_COLORS.positive }}>green curve</strong>{' '}
+          is trinomial. The{' '}
+          <strong style={{ color: PLOTLY_COLORS.highlight }}>amber line</strong>{' '}
+          is Black-Scholes.
+        </p>
+        <p style={{ margin: '0 0 0.75rem' }}>
+          The green curve sits visibly closer to amber at every N, and the
+          low-N tail is much smoother. That is the trinomial win in one
+          picture: fewer steps for the same accuracy. For a production
+          pricer that has to run millions of lattices per second through a
+          scenario engine, a 3-4x step reduction at matched accuracy is
+          a meaningful cost.
+        </p>
         <p style={{ margin: '0 0 0.75rem' }}>
           <strong style={{ color: 'var(--text-primary)' }}>Reading.</strong>{' '}
           At N = 40 the{' '}

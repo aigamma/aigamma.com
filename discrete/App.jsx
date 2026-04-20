@@ -146,32 +146,26 @@ export default function App() {
       </div>
 
       <section className="lab-slot">
-        <div className="lab-slot-label">SLOT A · BINOMIAL TREE (CRR 1979)</div>
         <ErrorBoundary><SlotA /></ErrorBoundary>
       </section>
 
       <section className="lab-slot">
-        <div className="lab-slot-label">SLOT B · TRINOMIAL TREE (BOYLE 1986)</div>
         <ErrorBoundary><SlotB /></ErrorBoundary>
       </section>
 
       <section className="lab-slot">
-        <div className="lab-slot-label">SLOT C · SVI RAW (GATHERAL 2004)</div>
         <ErrorBoundary><SlotC /></ErrorBoundary>
       </section>
 
       <section className="lab-slot">
-        <div className="lab-slot-label">SLOT D · SVI NATURAL (GJ 2014)</div>
         <ErrorBoundary><SlotD /></ErrorBoundary>
       </section>
 
       <section className="lab-slot">
-        <div className="lab-slot-label">SLOT E · SVI-JW (GATHERAL 2004)</div>
         <ErrorBoundary><SlotE /></ErrorBoundary>
       </section>
 
       <section className="lab-slot">
-        <div className="lab-slot-label">SLOT F · SSVI (GJ 2014)</div>
         <ErrorBoundary><SlotF /></ErrorBoundary>
       </section>
 

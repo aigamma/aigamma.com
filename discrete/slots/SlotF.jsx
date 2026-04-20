@@ -555,63 +555,17 @@ export default function SlotF() {
 
   return (
     <div className="card" style={{ padding: '1.25rem 1.25rem 1rem' }}>
-      <div style={{ marginBottom: '0.85rem' }}>
-        <div
-          style={{
-            fontFamily: 'Courier New, monospace',
-            fontSize: '0.7rem',
-            letterSpacing: '0.14em',
-            textTransform: 'uppercase',
-            color: 'var(--text-secondary)',
-            marginBottom: '0.35rem',
-          }}
-        >
-          model · ssvi · joint surface fit across tenors
-        </div>
-        <div
-          style={{
-            fontSize: '0.95rem',
-            color: 'var(--text-secondary)',
-            lineHeight: 1.6,
-            maxWidth: '860px',
-          }}
-        >
-          <p style={{ margin: '0 0 0.75rem' }}>
-            SSVI fits one{' '}
-            <strong style={{ color: PLOTLY_COLORS.secondary }}>ρ</strong>,
-            one scale{' '}
-            <strong style={{ color: PLOTLY_COLORS.highlight }}>η</strong>,
-            and one decay{' '}
-            <strong style={{ color: PLOTLY_COLORS.positive }}>γ</strong>{' '}
-            across the entire surface, and lets the per-tenor ATM total
-            variance{' '}
-            <strong style={{ color: PLOTLY_COLORS.primary }}>θ_t</strong>{' '}
-            be the only slice-specific number. Three global parameters for
-            the whole smile, one scalar per tenor. That is the entire
-            surface.
-          </p>
-          <p style={{ margin: '0 0 0.75rem' }}>
-            This is the opposite end of the fitting spectrum from Slots C,
-            D, and E. Those are per-slice fits: five parameters per tenor,
-            each slice free to drift independently. SSVI trades local fit
-            quality for global consistency. On the calendar side the
-            consistency is a hard guarantee: every two-slice calendar
-            spread inside the fitted surface is free of arbitrage by
-            construction, as long as θ_t is non-decreasing in tenor and
-            the fitted φ is non-increasing in θ.
-          </p>
-          <p style={{ margin: 0 }}>
-            The chart overlays observed IVs (markers) and the SSVI curve
-            (line) for up to six tenors, color-coded from{' '}
-            <strong style={{ color: TENOR_PALETTE[0] }}>shortest blue</strong>{' '}
-            to{' '}
-            <strong style={{ color: TENOR_PALETTE[5] }}>longest coral</strong>.
-            Gaps between observed markers and SSVI lines are the cost of
-            the global fit: where raw SVI could bend a slice exactly onto
-            its own data, SSVI has to compromise that slice to keep every
-            other slice consistent with the same ρ and φ.
-          </p>
-        </div>
+      <div
+        style={{
+          fontFamily: 'Courier New, monospace',
+          fontSize: '0.7rem',
+          letterSpacing: '0.14em',
+          textTransform: 'uppercase',
+          color: 'var(--text-secondary)',
+          marginBottom: '0.85rem',
+        }}
+      >
+        model · ssvi · joint surface fit across tenors
       </div>
 
       <div
@@ -819,6 +773,41 @@ export default function SlotF() {
           lineHeight: 1.65,
         }}
       >
+        <p style={{ margin: '0 0 0.75rem' }}>
+          SSVI fits one{' '}
+          <strong style={{ color: PLOTLY_COLORS.secondary }}>ρ</strong>,
+          one scale{' '}
+          <strong style={{ color: PLOTLY_COLORS.highlight }}>η</strong>,
+          and one decay{' '}
+          <strong style={{ color: PLOTLY_COLORS.positive }}>γ</strong>{' '}
+          across the entire surface, and lets the per-tenor ATM total
+          variance{' '}
+          <strong style={{ color: PLOTLY_COLORS.primary }}>θ_t</strong>{' '}
+          be the only slice-specific number. Three global parameters for
+          the whole smile, one scalar per tenor. That is the entire
+          surface.
+        </p>
+        <p style={{ margin: '0 0 0.75rem' }}>
+          This is the opposite end of the fitting spectrum from Slots C,
+          D, and E. Those are per-slice fits: five parameters per tenor,
+          each slice free to drift independently. SSVI trades local fit
+          quality for global consistency. On the calendar side the
+          consistency is a hard guarantee: every two-slice calendar
+          spread inside the fitted surface is free of arbitrage by
+          construction, as long as θ_t is non-decreasing in tenor and
+          the fitted φ is non-increasing in θ.
+        </p>
+        <p style={{ margin: '0 0 0.75rem' }}>
+          The chart above overlays observed IVs (markers) and the SSVI curve
+          (line) for up to six tenors, color-coded from{' '}
+          <strong style={{ color: TENOR_PALETTE[0] }}>shortest blue</strong>{' '}
+          to{' '}
+          <strong style={{ color: TENOR_PALETTE[5] }}>longest coral</strong>.
+          Gaps between observed markers and SSVI lines are the cost of
+          the global fit: where raw SVI could bend a slice exactly onto
+          its own data, SSVI has to compromise that slice to keep every
+          other slice consistent with the same ρ and φ.
+        </p>
         <p style={{ margin: '0 0 0.75rem' }}>
           <strong style={{ color: 'var(--text-primary)' }}>Reading the fit.</strong>{' '}
           ρ is the single global skew. For SPX, a healthy fit sits in the

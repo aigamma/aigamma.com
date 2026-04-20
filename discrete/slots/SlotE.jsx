@@ -357,60 +357,17 @@ export default function SlotE() {
 
   return (
     <div className="card" style={{ padding: '1.25rem 1.25rem 1rem' }}>
-      <div style={{ marginBottom: '0.85rem' }}>
-        <div
-          style={{
-            fontFamily: 'Courier New, monospace',
-            fontSize: '0.7rem',
-            letterSpacing: '0.14em',
-            textTransform: 'uppercase',
-            color: 'var(--text-secondary)',
-            marginBottom: '0.35rem',
-          }}
-        >
-          model · svi-jw · trader-readable quoting convention
-        </div>
-        <div
-          style={{
-            fontSize: '0.95rem',
-            color: 'var(--text-secondary)',
-            lineHeight: 1.6,
-            maxWidth: '860px',
-          }}
-        >
-          <p style={{ margin: '0 0 0.75rem' }}>
-            JW is the same curve as Slots C and D with a third set of
-            names. The numbers are picked so each one corresponds to
-            something a vol trader already thinks about every day:{' '}
-            <strong style={{ color: PLOTLY_COLORS.secondary }}>v_t</strong>{' '}
-            is ATM variance,{' '}
-            <strong style={{ color: PLOTLY_COLORS.positive }}>ψ_t</strong>{' '}
-            is ATM skew,{' '}
-            <strong style={{ color: PLOTLY_COLORS.primary }}>p_t / c_t</strong>{' '}
-            are the put-wing and call-wing slopes, and{' '}
-            <strong style={{ color: PLOTLY_COLORS.axisText }}>ṽ_t</strong>{' '}
-            is the minimum variance floor.
-          </p>
-          <p style={{ margin: '0 0 0.75rem' }}>
-            Each of those quantities is a piece of the picture you can
-            point at on the chart. ATM variance is the height of the{' '}
-            <strong style={{ color: PLOTLY_COLORS.secondary }}>dashed red line</strong>{' '}
-            at k = 0. ATM skew is the slope of the{' '}
-            <strong style={{ color: PLOTLY_COLORS.positive }}>short green tangent</strong>{' '}
-            through k = 0. Wing slopes are the slopes of the{' '}
-            <strong style={{ color: PLOTLY_COLORS.primary }}>dotted blue rays</strong>{' '}
-            at the edges. The floor is the{' '}
-            <strong style={{ color: PLOTLY_COLORS.axisText }}>gray dashdot line</strong>{' '}
-            at the bottom.
-          </p>
-          <p style={{ margin: 0 }}>
-            JW is a communication format. You can send a five-tuple over
-            the tape and the receiver can redraw the smile. That is not
-            true of raw (Slot C) or natural (Slot D), where the numbers
-            are not pointed at anything the reader can see on a chart
-            without doing the algebra first.
-          </p>
-        </div>
+      <div
+        style={{
+          fontFamily: 'Courier New, monospace',
+          fontSize: '0.7rem',
+          letterSpacing: '0.14em',
+          textTransform: 'uppercase',
+          color: 'var(--text-secondary)',
+          marginBottom: '0.85rem',
+        }}
+      >
+        model · svi-jw · trader-readable quoting convention
       </div>
 
       <div
@@ -507,6 +464,38 @@ export default function SlotE() {
           lineHeight: 1.65,
         }}
       >
+        <p style={{ margin: '0 0 0.75rem' }}>
+          JW is the same curve as Slots C and D with a third set of
+          names. The numbers are picked so each one corresponds to
+          something a vol trader already thinks about every day:{' '}
+          <strong style={{ color: PLOTLY_COLORS.secondary }}>v_t</strong>{' '}
+          is ATM variance,{' '}
+          <strong style={{ color: PLOTLY_COLORS.positive }}>ψ_t</strong>{' '}
+          is ATM skew,{' '}
+          <strong style={{ color: PLOTLY_COLORS.primary }}>p_t / c_t</strong>{' '}
+          are the put-wing and call-wing slopes, and{' '}
+          <strong style={{ color: PLOTLY_COLORS.axisText }}>ṽ_t</strong>{' '}
+          is the minimum variance floor.
+        </p>
+        <p style={{ margin: '0 0 0.75rem' }}>
+          Each of those quantities is a piece of the picture you can
+          point at on the chart. ATM variance is the height of the{' '}
+          <strong style={{ color: PLOTLY_COLORS.secondary }}>dashed red line</strong>{' '}
+          at k = 0. ATM skew is the slope of the{' '}
+          <strong style={{ color: PLOTLY_COLORS.positive }}>short green tangent</strong>{' '}
+          through k = 0. Wing slopes are the slopes of the{' '}
+          <strong style={{ color: PLOTLY_COLORS.primary }}>dotted blue rays</strong>{' '}
+          at the edges. The floor is the{' '}
+          <strong style={{ color: PLOTLY_COLORS.axisText }}>gray dashdot line</strong>{' '}
+          at the bottom.
+        </p>
+        <p style={{ margin: '0 0 0.75rem' }}>
+          JW is a communication format. You can send a five-tuple over
+          the tape and the receiver can redraw the smile. That is not
+          true of raw (Slot C) or natural (Slot D), where the numbers
+          are not pointed at anything the reader can see on a chart
+          without doing the algebra first.
+        </p>
         <p style={{ margin: '0 0 0.75rem' }}>
           <strong style={{ color: 'var(--text-primary)' }}>Reading.</strong>{' '}
           ψ_t is the single most important number for an equity index. A
