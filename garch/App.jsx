@@ -2,6 +2,7 @@ import '../src/styles/theme.css';
 import '../src/styles/lab.css';
 import ErrorBoundary from '../src/ErrorBoundary';
 import QuantMenu from '../src/components/QuantMenu';
+import Chat from '../src/components/Chat';
 import GarchZoo from './slots/GarchZoo';
 
 // /garch/ — GARCH family zoo page, bookmark-only, peer to /alpha and /dev.
@@ -57,6 +58,18 @@ export default function App() {
         <div className="lab-slot-label">GARCH FAMILY</div>
         <ErrorBoundary><GarchZoo /></ErrorBoundary>
       </section>
+
+      <ErrorBoundary>
+        <Chat
+          context="garch"
+          welcome={{
+            quick:
+              'Ask about the GARCH family, the seventeen specifications, or the equal-weight ensemble above.',
+            deep:
+              'Deep Analysis mode — longer and more structurally detailed responses on GARCH theory, the specific specifications on this page, and the philosophy of fitting a family rather than a single model.',
+          }}
+        />
+      </ErrorBoundary>
 
       <footer className="lab-footer">
         <span className="lab-footer-line">

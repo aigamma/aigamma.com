@@ -8,12 +8,21 @@ import { useCallback, useEffect, useLayoutEffect, useRef, useState } from 'react
 // live dashboard, Sonnet is the faster and cheaper path under arbitrary
 // load; Opus is reserved for the user who has already engaged the chat
 // and wants a longer, structurally deeper response on the math. The
-// proxy injects the dashboard-focused system prompt server side, so this
-// component never sees the prompt or the API key. It just speaks the
-// wire format: POST { message, history, model } → SSE stream of
-// content_block_delta events. Per-tab message lists and histories are
-// held in local state and a ref respectively so a user can hop between
-// tabs without losing either conversation.
+// proxy injects a per-page system prompt server side, keyed by the
+// `context` prop / POST field; this component never sees the prompt or
+// the API key. It just speaks the wire format: POST { message, history,
+// model, context } → SSE stream of content_block_delta events. Per-tab
+// message lists and histories are held in local state and a ref
+// respectively so a user can hop between tabs without losing either
+// conversation.
+//
+// The component is designed to be mounted at the bottom of any directory
+// on aigamma.com. The `context` prop selects which server-side system
+// prompt the proxy uses; when omitted, it is inferred from the first
+// path segment of window.location.pathname (so `/garch/` → `garch`, `/`
+// → `main`). The `welcome` and `glowRgb` props override the default copy
+// and accent colors for per-page customization — most pages will accept
+// the defaults.
 //
 // Tab-switching is blocked while a response is streaming to prevent
 // interleaved completion into the wrong tab; once loading settles, the
@@ -33,18 +42,31 @@ const MODELS = {
 // border, the keyframe animation, and the focus ring. Warm yellow for
 // Quick (matches about.aigamma.com's Sonnet accent), site-accent blue
 // for Deep.
-const GLOW_RGB = {
+const DEFAULT_GLOW_RGB = {
   quick: '240, 192, 64',
   deep: '74, 158, 255',
 };
 
-const WELCOME = {
+const DEFAULT_WELCOME = {
   quick: 'What about this site would you like to explore?',
   deep:
     'Deep Analysis mode — responses are longer and explore the dashboard with greater structural depth and connective range across the underlying theory.',
 };
 
-export default function Chat() {
+// Infer the context slug from the URL when the host page does not pass
+// one explicitly. `/` → 'main', `/garch/` → 'garch', `/dev/foo` → 'dev'.
+// Anything unknown still falls through cleanly because the server-side
+// dispatch defaults to the main prompt for unknown keys.
+function inferContext() {
+  if (typeof window === 'undefined') return 'main';
+  const seg = window.location.pathname.split('/').filter(Boolean)[0];
+  return seg || 'main';
+}
+
+export default function Chat({ context, welcome, glowRgb } = {}) {
+  const resolvedContext = context || inferContext();
+  const mergedWelcome = { ...DEFAULT_WELCOME, ...(welcome || {}) };
+  const mergedGlowRgb = { ...DEFAULT_GLOW_RGB, ...(glowRgb || {}) };
   const [activeTab, setActiveTab] = useState('quick');
   const [messages, setMessages] = useState({ quick: [], deep: [] });
   const [input, setInput] = useState('');
@@ -246,6 +268,7 @@ export default function Chat() {
           message: text,
           history: historyRef.current[tab],
           model: MODELS[tab],
+          context: resolvedContext,
         }),
       });
 
@@ -355,7 +378,7 @@ export default function Chat() {
       setLoading(false);
       assistantRef.current = null;
     }
-  }, [activeTab, input, loading]);
+  }, [activeTab, input, loading, resolvedContext]);
 
   const onKeyDown = (e) => {
     if (e.key === 'Enter' && !e.shiftKey) {
@@ -365,7 +388,7 @@ export default function Chat() {
   };
 
   const currentMessages = messages[activeTab];
-  const cardStyle = { '--glow-rgb': GLOW_RGB[activeTab] };
+  const cardStyle = { '--glow-rgb': mergedGlowRgb[activeTab] };
   // Once the user has sent at least one prompt in the active tab, the chat
   // switches into "active" mode: the card swells to fill nearly the full
   // viewport (see .chat-card.chat-active .chat-body in theme.css) and the
@@ -405,7 +428,7 @@ export default function Chat() {
 
       <div className="chat-body" ref={bodyRef}>
         {currentMessages.length === 0 && (
-          <div className="chat-welcome">{WELCOME[activeTab]}</div>
+          <div className="chat-welcome">{mergedWelcome[activeTab]}</div>
         )}
 
         {currentMessages.map((m, i) => {
