@@ -33,11 +33,14 @@ import SlotC from './slots/SlotC';
 // scratch-pad labs at /alpha, /dev, and /beta, this page carries active
 // egress back to the main dashboard at three redundant affordances: the
 // logo in the header is a hyperlink to `/`, a filled green RETURN HOME
-// button sits between the header and the first slot as an obvious call-
-// to-action, and the footer carries a bolded Return Home link for a
-// reader who has scrolled past all three slots. Nothing on the main
-// site's public nav points here, so the page is still reached only by
-// typing /regime or loading a bookmark.
+// button sits in the header itself between the Regime Lab brand on the
+// left and the QuantMenu trigger on the right — centered horizontally
+// on the same row as the other nav items via the header's flex
+// space-between distribution — and the footer carries a bolded Return
+// Home link for a reader who has scrolled past all three slots and the
+// Chat panel. Nothing on the main site's public nav points here, so
+// the page is still reached only by typing /regime or loading a
+// bookmark.
 export default function App() {
   return (
     <div className="app-shell lab-shell">
@@ -53,12 +56,9 @@ export default function App() {
             Regime Lab
           </span>
         </div>
+        <a href="/" className="lab-home-button lab-home-button--inline">Return Home</a>
         <QuantMenu />
       </header>
-
-      <div className="lab-home-row">
-        <a href="/" className="lab-home-button">Return Home</a>
-      </div>
 
       <section className="lab-slot">
         <ErrorBoundary><SlotA /></ErrorBoundary>
