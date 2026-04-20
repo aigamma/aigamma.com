@@ -2,6 +2,7 @@ import '../src/styles/theme.css';
 import '../src/styles/lab.css';
 import ErrorBoundary from '../src/ErrorBoundary';
 import QuantMenu from '../src/components/QuantMenu';
+import Chat from '../src/components/Chat';
 import SlotA from './slots/SlotA';
 import SlotB from './slots/SlotB';
 import SlotC from './slots/SlotC';
@@ -95,6 +96,18 @@ export default function App() {
         <div className="lab-slot-label">SLOT C · HURST ESTIMATOR TRIANGULATION</div>
         <ErrorBoundary><SlotC /></ErrorBoundary>
       </section>
+
+      <ErrorBoundary>
+        <Chat
+          context="rough"
+          welcome={{
+            quick:
+              'Ask about rough volatility, the three methods above, or how the empirical Hurst signature, the rBergomi simulator, and the three-estimator triangulation corroborate or challenge each other. Chat stays on volatility, options, and rough-path modeling.',
+            deep:
+              'Deep Analysis mode — longer and more structurally detailed responses on fractional Brownian motion, Volterra volatility processes, short-end skew asymptotics, and the philosophy of measuring a single Hurst exponent three different ways.',
+          }}
+        />
+      </ErrorBoundary>
 
       <footer className="lab-footer">
         <span className="lab-footer-line">
