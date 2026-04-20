@@ -1,4 +1,14 @@
 :root {
+  /* color-scheme tells the browser to render native UI (range sliders,
+     scrollbars, checkboxes, selects, date pickers, the form-control
+     focus rings) in dark mode. Without this, native input[type=range]
+     instances (rough/SlotB, local/SlotC, local/SlotD) render with a
+     light gray track that reads as white against the dark cards even
+     though the inline `accent-color` style colors the thumb correctly.
+     The site is dark-mode-only, so declaring it once at the root is
+     the most targeted fix and avoids per-control CSS that has to
+     duplicate browser defaults across vendor pseudo-elements. */
+  color-scheme: dark;
   --bg-primary: #0d0f13;
   --bg-card: #141820;
   --bg-card-border: #1e2230;
