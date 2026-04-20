@@ -1,7 +1,9 @@
-import { useEffect, useMemo, useRef } from 'react';
+import { useEffect, useMemo, useRef, useState } from 'react';
 import usePlotly from '../../src/hooks/usePlotly';
 import useIsMobile from '../../src/hooks/useIsMobile';
 import useOptionsData from '../../src/hooks/useOptionsData';
+import RangeBrush from '../../src/components/RangeBrush';
+import ResetButton from '../../src/components/ResetButton';
 import {
   PLOTLY_COLORS,
   PLOTLY_FONTS,
@@ -170,10 +172,13 @@ function StatCell({ label, value, sub, accent }) {
   );
 }
 
+export const slotName = 'PUT-CALL PARITY · BOX-SPREAD IMPLIED RATE';
+
 export default function SlotB() {
   const chartRef = useRef(null);
   const { plotly: Plotly, error: plotlyError } = usePlotly();
   const mobile = useIsMobile();
+  const [dteRange, setDteRange] = useState(null);
   const { data, loading, error } = useOptionsData({
     underlying: 'SPX',
     snapshotType: 'intraday',
@@ -185,6 +190,16 @@ export default function SlotB() {
   );
 
   const medianR = useMemo(() => (rows.length ? median(rows.map((r) => r.r)) : null), [rows]);
+
+  // Stable data-driven max for the RangeBrush. The chart's visible
+  // x-axis range is driven by `dteRange` (null = full window); the
+  // brush itself anchors against this immutable data max so the track
+  // does not resize as the user drags handles.
+  const dteMaxData = useMemo(() => {
+    if (rows.length === 0) return 1;
+    return Math.max(...rows.map((r) => r.dte)) * 1.04 + 1;
+  }, [rows]);
+  const activeDteRange = dteRange || [0, dteMaxData];
 
   // Headline: prefer the first expiration ≥ 7 DTE so the displayed number
   // isn't skewed by the short-dated noise at the left edge of the curve.
@@ -209,8 +224,8 @@ export default function SlotB() {
         ].join('<br>'),
     );
 
-    const xMin = 0;
-    const xMax = Math.max(...xs) * 1.04 + 1;
+    const xMin = activeDteRange[0];
+    const xMax = activeDteRange[1];
     const yMin = Math.min(...ys);
     const yMax = Math.max(...ys);
     const ySpan = yMax - yMin;
@@ -288,7 +303,7 @@ export default function SlotB() {
       responsive: true,
       displayModeBar: false,
     });
-  }, [Plotly, rows, medianR, mobile]);
+  }, [Plotly, rows, medianR, mobile, activeDteRange[0], activeDteRange[1]]);
 
   if (loading && !data) {
     return (
@@ -418,7 +433,18 @@ export default function SlotB() {
         />
       </div>
 
-      <div ref={chartRef} style={{ width: '100%', height: mobile ? 320 : 420 }} />
+      <div style={{ position: 'relative' }}>
+        <ResetButton visible={dteRange != null} onClick={() => setDteRange(null)} />
+        <div ref={chartRef} style={{ width: '100%', height: mobile ? 320 : 420 }} />
+        <RangeBrush
+          min={0}
+          max={dteMaxData}
+          activeMin={activeDteRange[0]}
+          activeMax={activeDteRange[1]}
+          onChange={(newMin, newMax) => setDteRange([newMin, newMax])}
+          minWidth={5}
+        />
+      </div>
 
       <div
         style={{

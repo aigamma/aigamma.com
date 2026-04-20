@@ -1,8 +1,12 @@
-// SLOT C — replace the default export with the model under test.
+// Slot C — replace the default export with the model under test, and
+// update the `slotName` constant below so the lab-slot label reflects
+// the new model.
 //
 // Third and last slot. Using all three simultaneously is useful for
 // three-way comparisons (e.g., the same metric computed three different
 // ways) or for landing a stack of unrelated experiments on one page.
+
+export const slotName = '(empty)';
 
 export default function SlotC() {
   return (

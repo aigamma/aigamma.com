@@ -12,6 +12,8 @@ import {
 } from '../../src/lib/plotlyTheme';
 import { fitEnsemble, forecastEnsemble, annualize } from '../garch';
 
+export const slotName = 'GARCH ENSEMBLE';
+
 // -----------------------------------------------------------------------------
 // GARCH ensemble — dev-lab proof of concept
 //

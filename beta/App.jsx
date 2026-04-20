@@ -1,9 +1,9 @@
 import '../src/styles/theme.css';
 import '../src/styles/lab.css';
 import ErrorBoundary from '../src/ErrorBoundary';
-import SlotA from './slots/SlotA';
-import SlotB from './slots/SlotB';
-import SlotC from './slots/SlotC';
+import SlotA, { slotName as slotAName } from './slots/SlotA';
+import SlotB, { slotName as slotBName } from './slots/SlotB';
+import SlotC, { slotName as slotCName } from './slots/SlotC';
 
 // Beta Lab shell — three vertically stacked slots for models under test.
 // Visual language intentionally mirrors the production dashboard (dark card
@@ -43,17 +43,17 @@ export default function App() {
       </div>
 
       <section className="lab-slot">
-        <div className="lab-slot-label">SLOT A</div>
+        <div className="lab-slot-label">{slotAName}</div>
         <ErrorBoundary><SlotA /></ErrorBoundary>
       </section>
 
       <section className="lab-slot">
-        <div className="lab-slot-label">SLOT B</div>
+        <div className="lab-slot-label">{slotBName}</div>
         <ErrorBoundary><SlotB /></ErrorBoundary>
       </section>
 
       <section className="lab-slot">
-        <div className="lab-slot-label">SLOT C</div>
+        <div className="lab-slot-label">{slotCName}</div>
         <ErrorBoundary><SlotC /></ErrorBoundary>
       </section>
 

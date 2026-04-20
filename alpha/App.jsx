@@ -1,8 +1,8 @@
 import '../src/styles/theme.css';
 import '../src/styles/lab.css';
 import ErrorBoundary from '../src/ErrorBoundary';
-import SlotA from './slots/SlotA';
-import SlotB from './slots/SlotB';
+import SlotA, { slotName as slotAName } from './slots/SlotA';
+import SlotB, { slotName as slotBName } from './slots/SlotB';
 
 // Alpha — two-slot scratch pad, one step less ready than the beta lab
 // at /beta. "α" in the software-stage sense: the release letter that
@@ -12,18 +12,14 @@ import SlotB from './slots/SlotB';
 // the same terms. The second slot exists so an incremental change can
 // be tested in one slot while the baseline stays untouched in the other
 // — SlotA and SlotB start byte-identical and diverge over time as the
-// model under test iterates. The visible slot labels read "SFLUSH A"
-// and "SFLUSH B" rather than "SLOT A/B" because the alpha card
-// currently in Slot A was iterated through three rounds of feedback
-// from a Discord contributor named sflush, and naming the slots after
-// him is the cheapest possible way to make it visible that the work in
-// this lab is shaped by his input. The component identifiers (SlotA,
-// SlotB) stay generic because they are file paths, not labels — the
-// rename is purely a UI affordance and does not couple the lab to any
-// one contributor. Like /beta, this page has no ingress or egress
-// links: nothing on the main site points here, the logo is not a
-// hyperlink, and the shell carries no nav. Reachable only by typing
-// /alpha or loading a bookmark.
+// model under test iterates. The visible slot labels are sourced from
+// each slot file's exported `slotName` constant rather than typed
+// inline here, so the chrome dynamically reflects whatever model is
+// currently mounted in each slot — swap a slot's content and the
+// label updates from the same edit. Like /beta, this page has no
+// ingress or egress links: nothing on the main site points here, the
+// logo is not a hyperlink, and the shell carries no nav. Reachable
+// only by typing /alpha or loading a bookmark.
 export default function App() {
   return (
     <div className="app-shell lab-shell">
@@ -53,12 +49,12 @@ export default function App() {
       </div>
 
       <section className="lab-slot">
-        <div className="lab-slot-label">SFLUSH A</div>
+        <div className="lab-slot-label">{slotAName}</div>
         <ErrorBoundary><SlotA /></ErrorBoundary>
       </section>
 
       <section className="lab-slot">
-        <div className="lab-slot-label">SFLUSH B</div>
+        <div className="lab-slot-label">{slotBName}</div>
         <ErrorBoundary><SlotB /></ErrorBoundary>
       </section>
 

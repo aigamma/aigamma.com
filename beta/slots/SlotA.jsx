@@ -1,4 +1,6 @@
-// SLOT A — replace the default export with the model under test.
+// Slot A — replace the default export with the model under test, and
+// update the `slotName` constant below so the lab-slot label in
+// ../App.jsx reflects the new model.
 //
 // Anything imported from ../../src/hooks, ../../src/lib, or
 // ../../src/components is in scope. If the component needs the options
@@ -6,9 +8,11 @@
 // main site. If the component needs historical series, use the hooks in
 // ../../src/hooks/useHistoricalData.js.
 //
-// The surrounding lab-slot chrome (the amber "SLOT A" label and the
+// The surrounding lab-slot chrome (the amber slot label and the
 // per-slot ErrorBoundary) is applied by the shell in ../App.jsx — this
 // file is just the slot body.
+
+export const slotName = '(empty)';
 
 export default function SlotA() {
   return (

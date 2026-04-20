@@ -2,6 +2,8 @@ import { useEffect, useMemo, useRef, useState } from 'react';
 import usePlotly from '../../src/hooks/usePlotly';
 import useIsMobile from '../../src/hooks/useIsMobile';
 import useOptionsData from '../../src/hooks/useOptionsData';
+import RangeBrush from '../../src/components/RangeBrush';
+import ResetButton from '../../src/components/ResetButton';
 import {
   PLOTLY_COLORS,
   PLOTLY_FONTS,
@@ -270,11 +272,17 @@ function StatCell({ label, value, sub, accent }) {
   );
 }
 
+// slotName drives the visible "lab-slot-label" rendered by ../App.jsx so
+// the chrome reflects the model in the slot rather than the slot's letter
+// position. Update this string whenever the model under test changes.
+export const slotName = 'PUT-CALL PARITY · BOX VS DIRECT';
+
 export default function SlotA() {
   const chartRef = useRef(null);
   const { plotly: Plotly, error: plotlyError } = usePlotly();
   const mobile = useIsMobile();
   const [focus, setFocus] = useState('all');
+  const [dteRange, setDteRange] = useState(null);
   const { data, loading, error } = useOptionsData({
     underlying: 'SPX',
     snapshotType: 'intraday',
@@ -296,6 +304,16 @@ export default function SlotA() {
     return { lo: Math.min(...vals), hi: Math.max(...vals) };
   }, [rows]);
 
+  // Stable data-driven max for the RangeBrush. The chart's visible
+  // x-axis range is driven by `dteRange` (null = full window); the
+  // brush itself anchors against this immutable data max so the track
+  // does not resize as the user drags handles.
+  const dteMaxData = useMemo(() => {
+    if (rows.length === 0) return 1;
+    return Math.max(...rows.map((r) => r.dte)) * 1.04 + 1;
+  }, [rows]);
+  const activeDteRange = dteRange || [0, dteMaxData];
+
   // Headline picks the first expiration ≥ 7 DTE so the displayed numbers
   // aren't skewed by the short-dated noise at the left edge of the curve,
   // which is where 1/T magnifies mark error the most.
@@ -314,8 +332,8 @@ export default function SlotA() {
     const yDiff = rows.map((r) => (r.rDiff != null ? r.rDiff * 100 : null));
     const yFwd = rows.map((r) => r.fwd);
 
-    const xMin = 0;
-    const xMax = Math.max(...xs) * 1.04 + 1;
+    const xMin = activeDteRange[0];
+    const xMax = activeDteRange[1];
 
     const yRates = [...yBox, ...yPcp].filter((v) => v != null);
     const yMin = Math.min(...yRates);
@@ -618,7 +636,7 @@ export default function SlotA() {
       responsive: true,
       displayModeBar: false,
     });
-  }, [Plotly, rows, medianDiff, data, mobile, focus]);
+  }, [Plotly, rows, medianDiff, data, mobile, focus, activeDteRange[0], activeDteRange[1]]);
 
   if (loading && !data) {
     return (
@@ -840,7 +858,18 @@ export default function SlotA() {
         })}
       </div>
 
-      <div ref={chartRef} style={{ width: '100%', height: mobile ? 460 : 560 }} />
+      <div style={{ position: 'relative' }}>
+        <ResetButton visible={dteRange != null} onClick={() => setDteRange(null)} />
+        <div ref={chartRef} style={{ width: '100%', height: mobile ? 460 : 560 }} />
+        <RangeBrush
+          min={0}
+          max={dteMaxData}
+          activeMin={activeDteRange[0]}
+          activeMax={activeDteRange[1]}
+          onChange={(newMin, newMax) => setDteRange([newMin, newMax])}
+          minWidth={5}
+        />
+      </div>
 
       <div
         style={{

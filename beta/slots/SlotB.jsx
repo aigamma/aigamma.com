@@ -1,10 +1,14 @@
-// SLOT B — replace the default export with the model under test.
+// Slot B — replace the default export with the model under test, and
+// update the `slotName` constant below so the lab-slot label reflects
+// the new model.
 //
 // This slot is a peer of Slot A, intended for either a second independent
 // model or an alternate version of the same model mounted in A (for
 // side-by-side comparison). The three slots share no state with each
 // other by default, so "version X vs version Y" of one model means
 // importing both versions and rendering them in different slots.
+
+export const slotName = '(empty)';
 
 export default function SlotB() {
   return (

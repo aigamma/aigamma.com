@@ -1,8 +1,8 @@
 import '../src/styles/theme.css';
 import '../src/styles/lab.css';
 import ErrorBoundary from '../src/ErrorBoundary';
-import SlotA from './slots/SlotA';
-import SlotB from './slots/SlotB';
+import SlotA, { slotName as slotAName } from './slots/SlotA';
+import SlotB, { slotName as slotBName } from './slots/SlotB';
 
 // Dev — two-slot scratch pad, a peer to the alpha lab at /alpha. Same
 // pre-β release stage, independent concept. Keeping two sibling surfaces
@@ -48,12 +48,12 @@ export default function App() {
       </div>
 
       <section className="lab-slot">
-        <div className="lab-slot-label">SLOT A</div>
+        <div className="lab-slot-label">{slotAName}</div>
         <ErrorBoundary><SlotA /></ErrorBoundary>
       </section>
 
       <section className="lab-slot">
-        <div className="lab-slot-label">SLOT B</div>
+        <div className="lab-slot-label">{slotBName}</div>
         <ErrorBoundary><SlotB /></ErrorBoundary>
       </section>
 
