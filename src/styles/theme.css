@@ -426,6 +426,39 @@ body {
   border-color: rgba(74, 158, 255, 0.25);
 }
 
+/* Clamp user prompts to three visible lines by default so the assistant's
+   response has room to grow below the anchor. The max-height is computed
+   from the bubble's own padding (0.75rem top + 0.75rem bottom) plus three
+   lines of text (font 0.9rem × line-height 1.65). The toggle button
+   (.chat-msg-expand below) is rendered by Chat.jsx only when the
+   unclamped scrollHeight exceeds this clamped clientHeight, so a one-line
+   prompt renders with the clamp class but shows no affordance — the hard
+   overflow clip is a no-op when there is nothing to hide. */
+.chat-msg-bubble-clamped {
+  max-height: calc(0.75rem * 2 + 0.9rem * 1.65 * 3);
+  overflow: hidden;
+}
+
+.chat-msg-expand {
+  align-self: flex-end;
+  margin-top: 0.15rem;
+  background: transparent;
+  border: none;
+  padding: 0.1rem 0.25rem;
+  font-family: 'Courier New', monospace;
+  font-size: 0.62rem;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  color: var(--accent-blue);
+  cursor: pointer;
+  opacity: 0.7;
+  transition: opacity 0.15s ease;
+}
+
+.chat-msg-expand:hover {
+  opacity: 1;
+}
+
 .chat-typing-dots {
   display: inline-flex;
   gap: 0.3rem;

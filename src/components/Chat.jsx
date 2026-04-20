@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useRef, useState } from 'react';
+import { useCallback, useEffect, useLayoutEffect, useRef, useState } from 'react';
 
 // Interactive chat bound to /api/chat (the Netlify Function proxy to
 // Anthropic's streaming messages endpoint). Two tabs — Quick Analysis
@@ -70,6 +70,14 @@ export default function Chat() {
   // response would leave scrollHeight < clientHeight + userMsg.offsetTop
   // and scrollTop would clamp, so the prompt could not reach the top.
   const [spacerHeight, setSpacerHeight] = useState(0);
+  // User prompts are clamped to three lines by default so the response has
+  // room to grow below — expandedIds tracks per-id overrides where the user
+  // has clicked "Show more", and overflowIds tracks which bubbles actually
+  // have content beyond the clamp (so we only render the toggle when it does
+  // something). Both sets are keyed by message id (see pendingIdRef).
+  const [expandedIds, setExpandedIds] = useState(() => new Set());
+  const [overflowIds, setOverflowIds] = useState(() => new Set());
+  const bubbleRefs = useRef(new Map());
 
   // Anchor the most recent user prompt to the top of the chat body on each
   // *new turn* — i.e., whenever messages[activeTab].length changes (send
@@ -109,7 +117,15 @@ export default function Chat() {
         // scrolls are independent (window vs .chat-body) so both are needed.
         const cardEl = el.closest('.chat-card');
         if (cardEl) cardEl.scrollIntoView({ block: 'start', behavior: 'smooth' });
-        el.scrollTop = Math.max(0, lastUserEl.offsetTop - 8);
+        // Compute the internal-scroll delta from viewport rects rather than
+        // `offsetTop`, because `.chat-body` has no `position: relative` and
+        // offsetParent therefore walks up to <body> — giving a value in
+        // document coords that doesn't match scrollTop's chat-body-local
+        // coord system. Bounding rects are viewport-relative for both, so
+        // the delta is correct regardless of where the card sits in the page.
+        const bodyRect = el.getBoundingClientRect();
+        const userRect = lastUserEl.getBoundingClientRect();
+        el.scrollTop += (userRect.top - bodyRect.top) - 8;
       });
     });
 
@@ -118,6 +134,68 @@ export default function Chat() {
       cancelAnimationFrame(raf2);
     };
   }, [turnKey, activeTab]);
+
+  // Measure each user bubble to decide whether the "Show more" toggle is
+  // needed. A bubble is "overflowing" iff its scrollHeight exceeds its
+  // clamped clientHeight — the CSS class `chat-msg-bubble-clamped` caps
+  // height to three lines, so an unexpanded bubble reports its natural
+  // (pre-clip) scrollHeight, which makes the comparison meaningful. When
+  // expanded, clientHeight == scrollHeight (no clamp), so we can't detect
+  // overflow from the DOM; we preserve the prior flag for any message id
+  // that still exists in state (across both tabs) so expansion and tab
+  // switching don't orphan the toggle.
+  useLayoutEffect(() => {
+    setOverflowIds((prev) => {
+      const liveIds = new Set();
+      for (const tab of Object.keys(messages)) {
+        for (const m of messages[tab]) {
+          if (m.id != null) liveIds.add(m.id);
+        }
+      }
+      const next = new Set();
+      for (const id of prev) {
+        if (liveIds.has(id)) next.add(id);
+      }
+      bubbleRefs.current.forEach((el, id) => {
+        if (!el || expandedIds.has(id)) return;
+        if (el.scrollHeight > el.clientHeight + 1) next.add(id);
+      });
+      if (next.size !== prev.size) return next;
+      for (const id of next) if (!prev.has(id)) return next;
+      return prev;
+    });
+  }, [messages, activeTab, expandedIds]);
+
+  const setBubbleRef = useCallback((id) => (el) => {
+    if (el) bubbleRefs.current.set(id, el);
+    else bubbleRefs.current.delete(id);
+  }, []);
+
+  const toggleExpand = useCallback((id) => {
+    setExpandedIds((prev) => {
+      const next = new Set(prev);
+      if (next.has(id)) next.delete(id);
+      else next.add(id);
+      return next;
+    });
+    // After the expansion/collapse commits, re-anchor the toggled message to
+    // the top of the chat body — user expects "see the full prompt from the
+    // top" on expand, and on collapse the bubble's new height would otherwise
+    // leave the viewport pointing at unrelated content. Two RAFs so the layout
+    // settles before we measure.
+    requestAnimationFrame(() => {
+      requestAnimationFrame(() => {
+        const body = bodyRef.current;
+        const bubble = bubbleRefs.current.get(id);
+        if (!body || !bubble) return;
+        const msgEl = bubble.closest('.chat-msg');
+        if (!msgEl) return;
+        const bodyRect = body.getBoundingClientRect();
+        const msgRect = msgEl.getBoundingClientRect();
+        body.scrollTop += (msgRect.top - bodyRect.top) - 8;
+      });
+    });
+  }, []);
 
   const autoResize = useCallback(() => {
     const el = textareaRef.current;
@@ -144,16 +222,17 @@ export default function Chat() {
       textareaRef.current.style.height = 'auto';
     }
 
-    const id = ++pendingIdRef.current;
+    const userId = ++pendingIdRef.current;
+    const aiId = ++pendingIdRef.current;
     setMessages((prev) => ({
       ...prev,
       [tab]: [
         ...prev[tab],
-        { role: 'user', text },
-        { role: 'assistant', text: '', pending: true, id },
+        { role: 'user', text, id: userId },
+        { role: 'assistant', text: '', pending: true, id: aiId },
       ],
     }));
-    assistantRef.current = { tab, id };
+    assistantRef.current = { tab, id: aiId };
     setLoading(true);
 
     let fullResponse = '';
@@ -329,18 +408,40 @@ export default function Chat() {
           <div className="chat-welcome">{WELCOME[activeTab]}</div>
         )}
 
-        {currentMessages.map((m, i) => (
-          <div key={i} className={'chat-msg chat-msg-' + m.role}>
-            <div className="chat-msg-label">{m.role === 'user' ? 'YOU' : 'AI'}</div>
-            <div className="chat-msg-bubble">
-              {m.text || (m.pending ? (
-                <span className="chat-typing-dots" aria-hidden="true">
-                  <span></span><span></span><span></span>
-                </span>
-              ) : null)}
+        {currentMessages.map((m, i) => {
+          const isUser = m.role === 'user';
+          const key = m.id ?? `${m.role}-${i}`;
+          const isExpanded = isUser && expandedIds.has(m.id);
+          const canToggle = isUser && overflowIds.has(m.id);
+          return (
+            <div key={key} className={'chat-msg chat-msg-' + m.role}>
+              <div className="chat-msg-label">{isUser ? 'YOU' : 'AI'}</div>
+              <div
+                ref={isUser ? setBubbleRef(m.id) : undefined}
+                className={
+                  'chat-msg-bubble' +
+                  (isUser && !isExpanded ? ' chat-msg-bubble-clamped' : '')
+                }
+              >
+                {m.text || (m.pending ? (
+                  <span className="chat-typing-dots" aria-hidden="true">
+                    <span></span><span></span><span></span>
+                  </span>
+                ) : null)}
+              </div>
+              {canToggle && (
+                <button
+                  type="button"
+                  className="chat-msg-expand"
+                  onClick={() => toggleExpand(m.id)}
+                  aria-expanded={isExpanded}
+                >
+                  {isExpanded ? 'Show less' : 'Show more'}
+                </button>
+              )}
             </div>
-          </div>
-        ))}
+          );
+        })}
 
         {spacerHeight > 0 && (
           <div
