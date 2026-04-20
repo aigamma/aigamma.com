@@ -108,12 +108,27 @@ const FOCUS_MODES = [
   { key: 'forward', label: 'FORWARD', show: new Set(['fwd']) },
 ];
 
+// Prefer mid-of-NBBO as the per-contract mark. close_price is last-trade-
+// of-day per contract, which is asynchronous across the 4 legs of a box
+// and leaks staleness noise that 1/T·1/ΔK amplifiers blow up into
+// triple-digit rate errors. bid_price and ask_price are the current NBBO
+// at snapshot time — synchronous across the full response — so their
+// mid is the correct mark for cross-contract math. Fall back to
+// close_price for historical rows that predate the bid/ask ingest columns.
+function contractMark(c) {
+  if (c.bid_price > 0 && c.ask_price > 0 && c.ask_price >= c.bid_price) {
+    return (c.bid_price + c.ask_price) / 2;
+  }
+  return c.close_price > 0 ? c.close_price : null;
+}
+
 function groupByExpiration(contracts) {
   const byExp = new Map();
   for (const c of contracts) {
     if (!c.expiration_date) continue;
     if (c.strike_price == null || !Number.isFinite(c.strike_price)) continue;
-    if (!(c.close_price > 0)) continue;
+    const mark = contractMark(c);
+    if (!(mark > 0)) continue;
     const type = c.contract_type?.toLowerCase();
     if (type !== 'call' && type !== 'put') continue;
     if (!byExp.has(c.expiration_date)) {
@@ -121,7 +136,7 @@ function groupByExpiration(contracts) {
     }
     const bucket = byExp.get(c.expiration_date);
     const target = type === 'call' ? bucket.calls : bucket.puts;
-    target.set(c.strike_price, c.close_price);
+    target.set(c.strike_price, mark);
   }
   return byExp;
 }
