@@ -433,11 +433,11 @@ export default function SlotC() {
           fontSize: '0.7rem',
           letterSpacing: '0.14em',
           textTransform: 'uppercase',
-          color: 'var(--text-secondary)',
+          color: 'var(--accent-amber)',
           marginBottom: '0.85rem',
         }}
       >
-        model · Wasserstein K-means · rolling {WINDOW_SIZE}-day windows
+        Wasserstein K-means · rolling {WINDOW_SIZE}-day windows
       </div>
 
       <div
@@ -512,7 +512,7 @@ export default function SlotC() {
           models. When both the mixture and Markov models say calm but
           this one already has you in moderate or crisis, the{' '}
           {WINDOW_SIZE}-day shape has started drifting in a way the
-          pure-magnitude models have not yet flagged, and that drift
+          size-based models above have not yet flagged, and that drift
           is usually where the edge lives. The inverse works too: if
           this model says calm while the Markov model says crisis, the
           recent window shape is benign and the Markov flag is

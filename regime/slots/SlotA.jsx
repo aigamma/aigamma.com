@@ -419,11 +419,11 @@ export default function SlotA() {
           fontSize: '0.7rem',
           letterSpacing: '0.14em',
           textTransform: 'uppercase',
-          color: 'var(--text-secondary)',
+          color: 'var(--accent-amber)',
           marginBottom: '0.85rem',
         }}
       >
-        model · mixture lognormal · 2-component EM
+        mixture lognormal · 2-component EM
       </div>
 
       <div
@@ -501,12 +501,12 @@ export default function SlotA() {
           risk. The crisis weight above tells you how often that
           recalibration is actually live over the long run, typically
           about one day in four to five rather than the one-in-a-hundred
-          tail event a normal assumption implies. The fit-edge statistic
-          is a model-selection score derived from BIC; readings above
-          ten mean the two-mood view beats the single-mood view
-          decisively on the history shown, which is the empirical
-          license to trust the vol ratio instead of the static number
-          your risk book was calibrated on.
+          tail event a normal assumption implies. The fit-edge number
+          scores the two-mood view against a flat single-vol baseline;
+          readings above ten mean the two-mood view fits the history
+          decisively better, which is your go-ahead to trust the vol
+          ratio above the static number your risk book was calibrated
+          on.
         </p>
       </div>
     </div>

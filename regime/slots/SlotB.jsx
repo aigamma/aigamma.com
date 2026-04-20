@@ -463,11 +463,11 @@ export default function SlotB() {
           fontSize: '0.7rem',
           letterSpacing: '0.14em',
           textTransform: 'uppercase',
-          color: 'var(--text-secondary)',
+          color: 'var(--accent-amber)',
           marginBottom: '0.85rem',
         }}
       >
-        model · Hamilton MSM · 2-state Gaussian emissions
+        Hamilton MSM · 2-state Gaussian emissions
       </div>
 
       <div
