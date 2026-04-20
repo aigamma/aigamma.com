@@ -2,8 +2,8 @@ import '../src/styles/theme.css';
 import '../src/styles/lab.css';
 import ErrorBoundary from '../src/ErrorBoundary';
 import QuantMenu from '../src/components/QuantMenu';
-import SlotA, { slotName as slotAName } from './slots/SlotA';
-import SlotB, { slotName as slotBName } from './slots/SlotB';
+import SlotA from './slots/SlotA';
+import SlotB from './slots/SlotB';
 
 // Parity Lab. Two slots dedicated to put-call parity on the live SPX
 // chain — the v4 composite (box r vs direct PCP r at q = 0, plus the
@@ -19,11 +19,11 @@ import SlotB, { slotName as slotBName } from './slots/SlotB';
 // Slot A is the v4 composite, Slot B is the v1 baseline. Both consume
 // the same /api/data SPX snapshot, so any disagreement between them is
 // model-spec disagreement (one strike at q = 0 vs four-leg with q
-// cancelled) rather than a data-cut difference. The visible slot
-// labels are sourced from each slot file's exported `slotName`
-// constant rather than typed inline here, so the chrome dynamically
-// reflects what is mounted in each slot — swap a slot's content and
-// the label updates from the same edit.
+// cancelled) rather than a data-cut difference. Each slot renders its
+// own "lab-slot-label" below the chart (via the module-level `slotName`
+// constant in the slot file) rather than App.jsx rendering a header
+// label above the card — keeping the chrome out of the first-screen
+// viewport so the chart is the first thing the reader sees.
 //
 // CALIBRATION IN PROGRESS. The current implementation produces
 // implausible readings on the live SPX chain (median r ≈ −222%,
@@ -42,8 +42,12 @@ import SlotB, { slotName as slotBName } from './slots/SlotB';
 // top) rather than a trading strategy, so it sits at the bottom of
 // the sequence as the diagnostic anyone auditing the implied carry
 // can reach, not at the top as a headline. Box spreads are not the
-// desk's focus. The in-page warning banner makes the calibration
-// state explicit to readers who arrive here.
+// desk's focus. The calibration state is documented in the slot-
+// level intro paragraphs that render below each chart; the previous
+// full-width amber warning banner at the top of the page was removed
+// as part of a site-wide chrome-scrubbing pass so the chart itself
+// is the first thing in the viewport rather than the fold-pushing
+// banner.
 export default function App() {
   return (
     <div className="app-shell lab-shell">
@@ -69,28 +73,11 @@ export default function App() {
         </div>
       </header>
 
-      <div className="lab-warning">
-        <strong>Calibration in progress — not for use.</strong>{' '}
-        Current readings (median r ≈ −222%, nearest ≈ −87%) are
-        implausible for SPX, where a correctly calibrated put-call-
-        parity read should sit within a reasonable spread of the
-        risk-free rate (SOFR-adjacent, low single digits). Diagnosing
-        across box construction at the tightest ATM bracket, mark
-        quality on deep-ITM legs, sign and unit conventions, and
-        dividend treatment. Page is kept up as a diagnostic surface
-        but is not promoted to the QuantMenu until the nearest-expiry
-        rate converges to a plausible spread of SOFR and the median
-        across all expirations sits within a few tens of basis points
-        of treasury.
-      </div>
-
       <section className="lab-slot">
-        <div className="lab-slot-label">{slotAName}</div>
         <ErrorBoundary><SlotA /></ErrorBoundary>
       </section>
 
       <section className="lab-slot">
-        <div className="lab-slot-label">{slotBName}</div>
         <ErrorBoundary><SlotB /></ErrorBoundary>
       </section>
 

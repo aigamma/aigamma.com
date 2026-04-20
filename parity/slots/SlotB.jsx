@@ -187,6 +187,11 @@ function StatCell({ label, value, sub, accent }) {
   );
 }
 
+// slotName drives the visible "lab-slot-label" rendered inside the card
+// below the stats grid (above the eyebrow and intro text) so the chrome
+// reflects the model in the slot rather than the slot's letter position.
+// Export is retained so App.jsx (or any future orchestrator) can still
+// read the name off each slot file without opening the JSX.
 export const slotName = 'PUT-CALL PARITY · BOX-SPREAD IMPLIED RATE';
 
 export default function SlotB() {
@@ -207,14 +212,22 @@ export default function SlotB() {
   const medianR = useMemo(() => (rows.length ? median(rows.map((r) => r.r)) : null), [rows]);
 
   // Stable data-driven max for the RangeBrush. The chart's visible
-  // x-axis range is driven by `dteRange` (null = full window); the
-  // brush itself anchors against this immutable data max so the track
-  // does not resize as the user drags handles.
+  // x-axis range is driven by `dteRange` (null = the 15% left-anchored
+  // default below); the brush itself anchors against this immutable
+  // data max so the track does not resize as the user drags handles.
   const dteMaxData = useMemo(() => {
     if (rows.length === 0) return 1;
     return Math.max(...rows.map((r) => r.dte)) * 1.04 + 1;
   }, [rows]);
-  const activeDteRange = dteRange || [0, dteMaxData];
+
+  // Default view is the leftmost 15% of the DTE range (right edge of
+  // the brush pulled 85% of the way in toward zero). The header text
+  // explicitly flags the left edge as the noisiest part of the curve
+  // because the 1/T factor magnifies mark error at low DTE — which
+  // also makes it the part worth eyeballing up close by default. A
+  // 15%-wide left-anchored window is the most informative starting
+  // view; reset falls back here rather than the full 0-max span.
+  const activeDteRange = dteRange || [0, dteMaxData * 0.15];
 
   // Headline: prefer the first expiration ≥ 7 DTE so the displayed number
   // isn't skewed by the short-dated noise at the left edge of the curve.
@@ -372,6 +385,57 @@ export default function SlotB() {
 
   return (
     <div className="card" style={{ padding: '1.25rem 1.25rem 1rem' }}>
+      <div style={{ position: 'relative' }}>
+        <ResetButton visible={dteRange != null} onClick={() => setDteRange(null)} />
+        <div ref={chartRef} style={{ width: '100%', height: mobile ? 320 : 420 }} />
+        <RangeBrush
+          min={0}
+          max={dteMaxData}
+          activeMin={activeDteRange[0]}
+          activeMax={activeDteRange[1]}
+          onChange={(newMin, newMax) => setDteRange([newMin, newMax])}
+          minWidth={5}
+        />
+      </div>
+
+      <div
+        style={{
+          display: 'grid',
+          gridTemplateColumns: mobile ? 'repeat(2, 1fr)' : 'repeat(4, 1fr)',
+          gap: '1rem',
+          padding: '0.85rem 0',
+          borderTop: '1px solid var(--bg-card-border)',
+          borderBottom: '1px solid var(--bg-card-border)',
+          marginTop: '0.85rem',
+          marginBottom: '0.85rem',
+        }}
+      >
+        <StatCell
+          label="Nearest r"
+          value={formatPct(headline?.r, 2)}
+          sub={headline ? `${headline.expiration} · ${headline.dte.toFixed(1)}d` : '–'}
+          accent={PLOTLY_COLORS.primary}
+        />
+        <StatCell
+          label="Median r"
+          value={formatPct(medianR, 2)}
+          sub={`${rows.length} expirations`}
+          accent={PLOTLY_COLORS.highlight}
+        />
+        <StatCell
+          label="Range"
+          value={`${(rangeR.lo * 100).toFixed(2)}% – ${(rangeR.hi * 100).toFixed(2)}%`}
+          sub={`spread ${((rangeR.hi - rangeR.lo) * 100).toFixed(2)}%`}
+        />
+        <StatCell
+          label="Spot"
+          value={data?.spotPrice ? data.spotPrice.toFixed(2) : '–'}
+          sub="SPX index"
+        />
+      </div>
+
+      <div className="lab-slot-label">{slotName}</div>
+
       <div style={{ marginBottom: '0.85rem' }}>
         <div
           style={{
@@ -411,54 +475,6 @@ export default function SlotB() {
             there is nothing to do.
           </p>
         </div>
-      </div>
-
-      <div
-        style={{
-          display: 'grid',
-          gridTemplateColumns: mobile ? 'repeat(2, 1fr)' : 'repeat(4, 1fr)',
-          gap: '1rem',
-          padding: '0.85rem 0',
-          borderTop: '1px solid var(--bg-card-border)',
-          borderBottom: '1px solid var(--bg-card-border)',
-          marginBottom: '0.85rem',
-        }}
-      >
-        <StatCell
-          label="Nearest r"
-          value={formatPct(headline?.r, 2)}
-          sub={headline ? `${headline.expiration} · ${headline.dte.toFixed(1)}d` : '–'}
-          accent={PLOTLY_COLORS.primary}
-        />
-        <StatCell
-          label="Median r"
-          value={formatPct(medianR, 2)}
-          sub={`${rows.length} expirations`}
-          accent={PLOTLY_COLORS.highlight}
-        />
-        <StatCell
-          label="Range"
-          value={`${(rangeR.lo * 100).toFixed(2)}% – ${(rangeR.hi * 100).toFixed(2)}%`}
-          sub={`spread ${((rangeR.hi - rangeR.lo) * 100).toFixed(2)}%`}
-        />
-        <StatCell
-          label="Spot"
-          value={data?.spotPrice ? data.spotPrice.toFixed(2) : '–'}
-          sub="SPX index"
-        />
-      </div>
-
-      <div style={{ position: 'relative' }}>
-        <ResetButton visible={dteRange != null} onClick={() => setDteRange(null)} />
-        <div ref={chartRef} style={{ width: '100%', height: mobile ? 320 : 420 }} />
-        <RangeBrush
-          min={0}
-          max={dteMaxData}
-          activeMin={activeDteRange[0]}
-          activeMax={activeDteRange[1]}
-          onChange={(newMin, newMax) => setDteRange([newMin, newMax])}
-          minWidth={5}
-        />
       </div>
 
       <div

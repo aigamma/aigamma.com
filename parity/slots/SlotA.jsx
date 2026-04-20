@@ -290,9 +290,12 @@ function StatCell({ label, value, sub, accent }) {
   );
 }
 
-// slotName drives the visible "lab-slot-label" rendered by ../App.jsx so
-// the chrome reflects the model in the slot rather than the slot's letter
-// position. Update this string whenever the model under test changes.
+// slotName drives the visible "lab-slot-label" rendered inside the card
+// below the stats grid (above the eyebrow and intro text) so the chrome
+// reflects the model in the slot rather than the slot's letter position.
+// Export is retained so App.jsx (or any future orchestrator) can still
+// read the name off each slot file without opening the JSX. Update this
+// string whenever the model under test changes.
 export const slotName = 'PUT-CALL PARITY · BOX VS DIRECT';
 
 export default function SlotA() {
@@ -323,14 +326,23 @@ export default function SlotA() {
   }, [rows]);
 
   // Stable data-driven max for the RangeBrush. The chart's visible
-  // x-axis range is driven by `dteRange` (null = full window); the
-  // brush itself anchors against this immutable data max so the track
-  // does not resize as the user drags handles.
+  // x-axis range is driven by `dteRange` (null = the 15% left-anchored
+  // default below); the brush itself anchors against this immutable
+  // data max so the track does not resize as the user drags handles.
   const dteMaxData = useMemo(() => {
     if (rows.length === 0) return 1;
     return Math.max(...rows.map((r) => r.dte)) * 1.04 + 1;
   }, [rows]);
-  const activeDteRange = dteRange || [0, dteMaxData];
+
+  // Default view is the leftmost 15% of the DTE range (right edge of
+  // the brush pulled 85% of the way in toward zero). The interesting
+  // short-dated regime — 1/T amplification of mark error, box vs
+  // direct-PCP divergence, amber-spread kinks where a single leg is
+  // mispriced, and the nearest segment of the F(T) forward curve —
+  // all lives at the left edge of the term structure, so a 15%-wide
+  // left-anchored window is a more informative starting view than the
+  // full 0-max span. Reset falls back here rather than the full window.
+  const activeDteRange = dteRange || [0, dteMaxData * 0.15];
 
   // Headline picks the first expiration ≥ 7 DTE so the displayed numbers
   // aren't skewed by the short-dated noise at the left edge of the curve,
@@ -703,6 +715,122 @@ export default function SlotA() {
 
   return (
     <div className="card" style={{ padding: '1.25rem 1.25rem 1rem' }}>
+      <div style={{ position: 'relative' }}>
+        <ResetButton visible={dteRange != null} onClick={() => setDteRange(null)} />
+        <div ref={chartRef} style={{ width: '100%', height: mobile ? 460 : 560 }} />
+        <RangeBrush
+          min={0}
+          max={dteMaxData}
+          activeMin={activeDteRange[0]}
+          activeMax={activeDteRange[1]}
+          onChange={(newMin, newMax) => setDteRange([newMin, newMax])}
+          minWidth={5}
+        />
+      </div>
+
+      <div
+        role="group"
+        aria-label="Chart focus mode"
+        style={{
+          display: 'flex',
+          alignItems: 'center',
+          gap: '0.4rem',
+          flexWrap: 'wrap',
+          marginTop: '0.85rem',
+        }}
+      >
+        <span
+          style={{
+            fontFamily: 'Courier New, monospace',
+            fontSize: '0.7rem',
+            letterSpacing: '0.14em',
+            textTransform: 'uppercase',
+            color: 'var(--text-secondary)',
+            marginRight: '0.25rem',
+          }}
+        >
+          focus
+        </span>
+        {FOCUS_MODES.map(({ key, label }) => {
+          const active = focus === key;
+          return (
+            <button
+              key={key}
+              type="button"
+              onClick={() => setFocus(key)}
+              aria-pressed={active}
+              style={{
+                padding: '0.3rem 0.7rem',
+                fontFamily: 'Courier New, monospace',
+                fontSize: '0.7rem',
+                letterSpacing: '0.1em',
+                textTransform: 'uppercase',
+                background: active ? 'var(--text-primary)' : 'transparent',
+                color: active ? 'var(--bg-card)' : 'var(--text-primary)',
+                border: '1px solid var(--bg-card-border)',
+                borderRadius: '4px',
+                cursor: 'pointer',
+              }}
+            >
+              {label}
+            </button>
+          );
+        })}
+      </div>
+
+      <div
+        style={{
+          display: 'grid',
+          gridTemplateColumns: mobile ? 'repeat(2, 1fr)' : 'repeat(5, 1fr)',
+          gap: '1rem',
+          padding: '0.85rem 0',
+          borderTop: '1px solid var(--bg-card-border)',
+          borderBottom: '1px solid var(--bg-card-border)',
+          marginTop: '0.85rem',
+          marginBottom: '0.85rem',
+        }}
+      >
+        <StatCell
+          label="Box r"
+          value={formatPct(headline?.rBox, 2)}
+          sub={headline ? `${headline.expiration} · ${headline.dte.toFixed(1)}d` : '–'}
+          accent={PLOTLY_COLORS.primary}
+        />
+        <StatCell
+          label="Direct PCP r"
+          value={formatPct(headline?.rPcp, 2)}
+          sub="q = 0 assumed"
+          accent={PLOTLY_COLORS.secondary}
+        />
+        <StatCell
+          label="Box − PCP · ≈ q"
+          value={formatPct(headline?.rDiff, 2)}
+          sub={
+            diffRange
+              ? `range ${formatPct(diffRange.lo, 2)} – ${formatPct(diffRange.hi, 2)}`
+              : '–'
+          }
+          accent={PLOTLY_COLORS.highlight}
+        />
+        <StatCell
+          label="Fwd F(T)"
+          value={headline?.fwd ? headline.fwd.toFixed(2) : '–'}
+          sub={
+            headline?.fwd && data?.spotPrice
+              ? `F − S₀ ${headline.fwd - data.spotPrice >= 0 ? '+' : ''}${(headline.fwd - data.spotPrice).toFixed(2)}`
+              : 'PCP-implied'
+          }
+          accent={PLOTLY_COLORS.positive}
+        />
+        <StatCell
+          label="Spot"
+          value={data?.spotPrice ? data.spotPrice.toFixed(2) : '–'}
+          sub="SPX index"
+        />
+      </div>
+
+      <div className="lab-slot-label">{slotName}</div>
+
       <div style={{ marginBottom: '0.85rem' }}>
         <div
           style={{
@@ -774,119 +902,6 @@ export default function SlotA() {
             market-implied dividend drag.
           </p>
         </div>
-      </div>
-
-      <div
-        style={{
-          display: 'grid',
-          gridTemplateColumns: mobile ? 'repeat(2, 1fr)' : 'repeat(5, 1fr)',
-          gap: '1rem',
-          padding: '0.85rem 0',
-          borderTop: '1px solid var(--bg-card-border)',
-          borderBottom: '1px solid var(--bg-card-border)',
-          marginBottom: '0.85rem',
-        }}
-      >
-        <StatCell
-          label="Box r"
-          value={formatPct(headline?.rBox, 2)}
-          sub={headline ? `${headline.expiration} · ${headline.dte.toFixed(1)}d` : '–'}
-          accent={PLOTLY_COLORS.primary}
-        />
-        <StatCell
-          label="Direct PCP r"
-          value={formatPct(headline?.rPcp, 2)}
-          sub="q = 0 assumed"
-          accent={PLOTLY_COLORS.secondary}
-        />
-        <StatCell
-          label="Box − PCP · ≈ q"
-          value={formatPct(headline?.rDiff, 2)}
-          sub={
-            diffRange
-              ? `range ${formatPct(diffRange.lo, 2)} – ${formatPct(diffRange.hi, 2)}`
-              : '–'
-          }
-          accent={PLOTLY_COLORS.highlight}
-        />
-        <StatCell
-          label="Fwd F(T)"
-          value={headline?.fwd ? headline.fwd.toFixed(2) : '–'}
-          sub={
-            headline?.fwd && data?.spotPrice
-              ? `F − S₀ ${headline.fwd - data.spotPrice >= 0 ? '+' : ''}${(headline.fwd - data.spotPrice).toFixed(2)}`
-              : 'PCP-implied'
-          }
-          accent={PLOTLY_COLORS.positive}
-        />
-        <StatCell
-          label="Spot"
-          value={data?.spotPrice ? data.spotPrice.toFixed(2) : '–'}
-          sub="SPX index"
-        />
-      </div>
-
-      <div
-        role="group"
-        aria-label="Chart focus mode"
-        style={{
-          display: 'flex',
-          alignItems: 'center',
-          gap: '0.4rem',
-          flexWrap: 'wrap',
-          marginBottom: '0.6rem',
-        }}
-      >
-        <span
-          style={{
-            fontFamily: 'Courier New, monospace',
-            fontSize: '0.7rem',
-            letterSpacing: '0.14em',
-            textTransform: 'uppercase',
-            color: 'var(--text-secondary)',
-            marginRight: '0.25rem',
-          }}
-        >
-          focus
-        </span>
-        {FOCUS_MODES.map(({ key, label }) => {
-          const active = focus === key;
-          return (
-            <button
-              key={key}
-              type="button"
-              onClick={() => setFocus(key)}
-              aria-pressed={active}
-              style={{
-                padding: '0.3rem 0.7rem',
-                fontFamily: 'Courier New, monospace',
-                fontSize: '0.7rem',
-                letterSpacing: '0.1em',
-                textTransform: 'uppercase',
-                background: active ? 'var(--text-primary)' : 'transparent',
-                color: active ? 'var(--bg-card)' : 'var(--text-primary)',
-                border: '1px solid var(--bg-card-border)',
-                borderRadius: '4px',
-                cursor: 'pointer',
-              }}
-            >
-              {label}
-            </button>
-          );
-        })}
-      </div>
-
-      <div style={{ position: 'relative' }}>
-        <ResetButton visible={dteRange != null} onClick={() => setDteRange(null)} />
-        <div ref={chartRef} style={{ width: '100%', height: mobile ? 460 : 560 }} />
-        <RangeBrush
-          min={0}
-          max={dteMaxData}
-          activeMin={activeDteRange[0]}
-          activeMax={activeDteRange[1]}
-          onChange={(newMin, newMax) => setDteRange([newMin, newMax])}
-          minWidth={5}
-        />
       </div>
 
       <div
