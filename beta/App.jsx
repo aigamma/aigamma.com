@@ -2,6 +2,7 @@ import '../src/styles/theme.css';
 import '../src/styles/lab.css';
 import ErrorBoundary from '../src/ErrorBoundary';
 import Chat from '../src/components/Chat';
+import QuantMenu from '../src/components/QuantMenu';
 import SlotA, { slotName as slotAName } from './slots/SlotA';
 import SlotB, { slotName as slotBName } from './slots/SlotB';
 import SlotC, { slotName as slotCName } from './slots/SlotC';
@@ -13,28 +14,24 @@ import SlotC, { slotName as slotCName } from './slots/SlotC';
 // restyle. The amber badge and warning strip are the only signals that this
 // is a sandbox rather than the production dashboard.
 //
-// There are no ingress or egress links on purpose: nothing on the main site
-// links here, the logo is not a hyperlink, and there is no nav. This page
-// is reachable only by typing /beta in the URL bar or using a bookmark.
-// Crawlers are blocked via the noindex meta tag in index.html and the
-// robots.txt Disallow line.
+// The logo in the header links back to the homepage and the QuantMenu on
+// the right of the header opens the nine-lab directory, so the page is
+// reachable from and navigable to every other lab without leaving the
+// keyboard. Crawlers are still blocked via the noindex meta tag in
+// index.html and the robots.txt Disallow line.
 export default function App() {
   return (
     <div className="app-shell lab-shell">
       <header className="lab-header">
         <div className="lab-brand">
-          <img src="/logo.webp" alt="aigamma.com" className="lab-logo" />
-          <span className="lab-badge" title="Beta Lab — experimental, bookmark-only">
+          <a href="/" aria-label="aigamma.com home" style={{ display: 'block' }}>
+            <img src="/logo.webp" alt="aigamma.com" className="lab-logo" />
+          </a>
+          <span className="lab-badge" title="Beta Lab — experimental">
             BETA LAB
           </span>
         </div>
-        <div className="lab-meta">
-          <span className="lab-meta-line">bookmark-only</span>
-          <span className="lab-meta-sep">·</span>
-          <span className="lab-meta-line">3 slots</span>
-          <span className="lab-meta-sep">·</span>
-          <span className="lab-meta-line">experimental</span>
-        </div>
+        <QuantMenu />
       </header>
 
       <div className="lab-warning">
