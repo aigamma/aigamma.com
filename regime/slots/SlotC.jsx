@@ -12,7 +12,7 @@ import {
 } from '../../src/lib/plotlyTheme';
 
 // -----------------------------------------------------------------------------
-// Wasserstein K-Means — cluster rolling empirical return distributions.
+// Wasserstein K-Means: cluster rolling empirical return distributions.
 //
 // Mixture Lognormal (Slot A) treats every day as a draw from a pooled
 // 2-regime density. Markov Regime Switching (Slot B) assigns each day to
@@ -34,7 +34,7 @@ import {
 // their sorted values. This reduces the clustering inner loop to array
 // arithmetic and makes K=3 clusters over ~2000 windows tractable in-browser.
 // The barycenter update is the pointwise sorted mean of the assigned
-// members — the analogue of the centroid-mean update in ordinary
+// members, the analogue of the centroid-mean update in ordinary
 // Euclidean k-means, transported through the quantile function.
 //
 // Three clusters is a deliberate choice. Two would collapse into the
@@ -43,7 +43,7 @@ import {
 // that don't correspond to identifiable market states. Three gives room
 // for a calm / moderate / crisis triad where the moderate cluster
 // absorbs the boundary windows that don't cleanly belong to either
-// extreme — and those boundary windows are where the interesting
+// extreme, and those boundary windows are where the interesting
 // regime-transition behavior lives.
 // -----------------------------------------------------------------------------
 
@@ -68,7 +68,7 @@ function buildLogReturns(series) {
 }
 
 // Deterministic mulberry32 PRNG so initialization is reproducible across
-// renders — otherwise k-means can converge to slightly different labelings
+// renders; otherwise k-means can converge to slightly different labelings
 // per page load, which is distracting in a scratch pad
 function mulberry32(seed) {
   let a = seed >>> 0;
@@ -92,7 +92,7 @@ function wasserstein2SquaredSorted(a, b) {
   return s / n;
 }
 
-// Pointwise sorted mean — Wasserstein barycenter for equal-size 1D
+// Pointwise sorted mean, Wasserstein barycenter for equal-size 1D
 // empirical distributions
 function wassersteinBarycenter(sortedMembers) {
   const n = sortedMembers[0].length;
@@ -259,7 +259,7 @@ function fitWassersteinKMeans(returns, W = WINDOW_SIZE, K = K_CLUSTERS) {
 }
 
 function formatPct(v, digits = 2) {
-  if (v == null || !Number.isFinite(v)) return '—';
+  if (v == null || !Number.isFinite(v)) return 'n/a';
   return `${(v * 100).toFixed(digits)}%`;
 }
 
@@ -466,8 +466,8 @@ export default function SlotC() {
         })}
         <StatCell
           label="Current regime"
-          value={CLUSTER_LABELS[currentCluster] || '—'}
-          sub={`${fit.iters} iter${fit.converged ? ' · conv.' : ''} · inertia ${fit.inertia.toFixed(4)}`}
+          value={CLUSTER_LABELS[currentCluster] || 'n/a'}
+          sub={`${fit.iters} pass${fit.iters === 1 ? '' : 'es'}${fit.converged ? ' · converged' : ''}`}
           accent={CLUSTER_COLORS[currentCluster]}
         />
       </div>
@@ -483,37 +483,44 @@ export default function SlotC() {
         }}
       >
         <p style={{ margin: '0 0 0.75rem' }}>
-          Each day is represented by the trailing {WINDOW_SIZE}-day
-          empirical distribution of daily log returns ending that day,
-          then clustered into {K_CLUSTERS} groups under the 2-Wasserstein
-          metric on 1D distributions — equivalent to the L² distance
-          between sorted order statistics. Cluster centroids are
-          themselves {WINDOW_SIZE}-point empirical distributions, updated
-          as the Wasserstein barycenter (pointwise-sorted mean) of their
-          assigned windows. Unlike the Mixture Lognormal and Hamilton MSM
-          models above, no parametric form is assumed for the regime
-          distributions — the centroids are free to take any shape the
-          data implies. Cluster IDs are canonicalized by centroid standard
-          deviation so{' '}
+          Rather than fit a parametric distribution, this card
+          represents every day by the shape of the last {WINDOW_SIZE}{' '}
+          trading days of returns ending that day, then groups those
+          shapes into {K_CLUSTERS} buckets by how similar they look.
+          The buckets sort themselves by width and skew into{' '}
           <strong style={{ color: CLUSTER_COLORS[0] }}>calm</strong>,{' '}
-          <strong style={{ color: CLUSTER_COLORS[1] }}>moderate</strong>,{' '}
+          <strong style={{ color: CLUSTER_COLORS[1] }}>moderate</strong>,
           and{' '}
-          <strong style={{ color: CLUSTER_COLORS[2] }}>crisis</strong>{' '}
-          are stable labels across runs.
+          <strong style={{ color: CLUSTER_COLORS[2] }}>crisis</strong>.
+          This is pure pattern matching: a {WINDOW_SIZE}-day window
+          today gets placed next to its closest historical neighbors
+          in shape space, regardless of calendar year. If the current
+          window looks most like the late-2018 selloff shape or the
+          spring-2020 crash shape, it lands in the same cluster those
+          periods did, and the same distributional shape will always
+          land in the same cluster whether it appears in 2018, 2020,
+          or 2024.
         </p>
         <p style={{ margin: 0 }}>
-          <strong style={{ color: 'var(--text-primary)' }}>Reading.</strong>{' '}
-          Each marker is a trading day colored by the cluster its
-          trailing-{WINDOW_SIZE}-day distribution was assigned to. The
-          moderate cluster typically absorbs regime-transition windows that
-          blend calm and crisis days — density of yellow markers around a
-          cluster boundary is a rough proxy for transition activity. Because
-          the clustering is unsupervised and metric-based, the same
-          {' '}{WINDOW_SIZE}-day distributional <em>shape</em> recurs in the
-          same cluster whether it appears in 2018, 2020, or 2024 — the
-          boundary is in distribution space, not calendar space. K=3 is
-          fixed; varying K would be a natural next experiment and would
-          plug into the same barycenter update without restructuring.
+          <strong style={{ color: 'var(--text-primary)' }}>Practical use.</strong>{' '}
+          Watch the moderate cluster. It absorbs regime-transition
+          windows that blend calm and crisis behavior, so a streak of
+          moderate days ahead of a crisis-cluster entry is the kind of
+          early warning the Markov model above often misses until the
+          crisis is already underway. Use the current-regime label in
+          the stats row as a disagreement check against the other two
+          models. When both the mixture and Markov models say calm but
+          this one already has you in moderate or crisis, the{' '}
+          {WINDOW_SIZE}-day shape has started drifting in a way the
+          pure-magnitude models have not yet flagged, and that drift
+          is usually where the edge lives. The inverse works too: if
+          this model says calm while the Markov model says crisis, the
+          recent window shape is benign and the Markov flag is
+          probably being pulled by one or two outlier days that will
+          wash out. Three models disagreeing is more informative than
+          three agreeing, because the disagreement points at exactly
+          the days where the regime is genuinely ambiguous and where
+          the reward for a correct read is largest.
         </p>
       </div>
     </div>

@@ -12,7 +12,7 @@ import {
 } from '../../src/lib/plotlyTheme';
 
 // -----------------------------------------------------------------------------
-// Mixture Lognormal — 2-component Gaussian mixture on SPX daily log returns.
+// Mixture Lognormal, 2-component Gaussian mixture on SPX daily log returns.
 //
 // "Lognormal mixture" on return space is implemented as a Gaussian mixture
 // on log-return space, because if r = ln(S_t/S_{t-1}) is Gaussian mixture
@@ -20,13 +20,13 @@ import {
 // parameterization is what every downstream formula wants anyway and keeps
 // the EM updates in closed form.
 //
-// A single-Gaussian fit on SPX daily returns badly underestimates tail mass
-// — the empirical kurtosis is ~15 against a Gaussian 3, and a single normal
+// A single-Gaussian fit on SPX daily returns badly underestimates tail mass:
+// the empirical kurtosis is ~15 against a Gaussian 3, and a single normal
 // cannot produce that. A 2-component mixture is the simplest model that
 // can: one narrow "calm" component and one wide "crisis" component, with a
 // mixing weight that encodes how often each regime is active. The fit is
-// unsupervised — no regime labels are supplied, the EM algorithm recovers
-// the split from the data shape alone.
+// unsupervised, meaning no regime labels are supplied, and the EM algorithm
+// recovers the split from the data shape alone.
 //
 // EM for 2-component Gaussian mixture:
 //   E-step:   γ_ik = π_k φ(r_i; μ_k, σ_k) / Σ_j π_j φ(r_i; μ_j, σ_j)
@@ -35,8 +35,8 @@ import {
 //             μ_k = (Σ_i γ_ik r_i) / N_k
 //             σ²_k = (Σ_i γ_ik (r_i − μ_k)²) / N_k
 //
-// Initialization splits the sample at the median absolute return — the
-// calm component seeded from the small-|r| half, the crisis component
+// Initialization splits the sample at the median absolute return. The
+// calm component is seeded from the small-|r| half, the crisis component
 // from the large-|r| half. That starting point already carries the
 // right ordering of σ₁ < σ₂, so EM converges to the interpretable
 // labelling without needing post-hoc swaps.
@@ -203,12 +203,12 @@ function bic(logLik, k, n) {
 }
 
 function formatPct(v, digits = 2) {
-  if (v == null || !Number.isFinite(v)) return '—';
+  if (v == null || !Number.isFinite(v)) return 'n/a';
   return `${(v * 100).toFixed(digits)}%`;
 }
 
 function formatFixed(v, digits = 4) {
-  if (v == null || !Number.isFinite(v)) return '—';
+  if (v == null || !Number.isFinite(v)) return 'n/a';
   return v.toFixed(digits);
 }
 
@@ -293,7 +293,7 @@ export default function SlotA() {
         x: xs,
         y: d1,
         mode: 'lines',
-        name: `calm · π=${(fit.pi1 * 100).toFixed(1)}%`,
+        name: `calm · ${(fit.pi1 * 100).toFixed(1)}% of days`,
         line: { color: PLOTLY_COLORS.primary, width: 1.75 },
         hoverinfo: 'skip',
       },
@@ -301,7 +301,7 @@ export default function SlotA() {
         x: xs,
         y: d2,
         mode: 'lines',
-        name: `crisis · π=${(fit.pi2 * 100).toFixed(1)}%`,
+        name: `crisis · ${(fit.pi2 * 100).toFixed(1)}% of days`,
         line: { color: PLOTLY_COLORS.secondary, width: 1.75 },
         hoverinfo: 'skip',
       },
@@ -438,15 +438,15 @@ export default function SlotA() {
         }}
       >
         <StatCell
-          label="Calm σ (ann.)"
+          label="Calm vol (ann.)"
           value={formatPct(sigma1Ann, 1)}
-          sub={`μ=${formatFixed(fit.mu1 * TRADING_DAYS_YEAR, 3)} · w ${(fit.pi1 * 100).toFixed(1)}%`}
+          sub={`drift ${formatFixed(fit.mu1 * TRADING_DAYS_YEAR, 3)} · weight ${(fit.pi1 * 100).toFixed(1)}%`}
           accent={PLOTLY_COLORS.primary}
         />
         <StatCell
-          label="Crisis σ (ann.)"
+          label="Crisis vol (ann.)"
           value={formatPct(sigma2Ann, 1)}
-          sub={`μ=${formatFixed(fit.mu2 * TRADING_DAYS_YEAR, 3)} · w ${(fit.pi2 * 100).toFixed(1)}%`}
+          sub={`drift ${formatFixed(fit.mu2 * TRADING_DAYS_YEAR, 3)} · weight ${(fit.pi2 * 100).toFixed(1)}%`}
           accent={PLOTLY_COLORS.secondary}
         />
         <StatCell
@@ -455,9 +455,9 @@ export default function SlotA() {
           sub="crisis / calm"
         />
         <StatCell
-          label="BIC Δ vs 1-Gaussian"
-          value={bicDelta != null ? bicDelta.toFixed(1) : '—'}
-          sub={`n=${fit.n} · ${fit.iters} iter${fit.converged ? ' · conv.' : ''}`}
+          label="2-mood fit edge"
+          value={bicDelta != null ? bicDelta.toFixed(1) : 'n/a'}
+          sub={`${fit.n} days${fit.converged ? ' · converged' : ''}`}
           accent={bicDelta != null && bicDelta > 10 ? PLOTLY_COLORS.positive : undefined}
         />
       </div>
@@ -473,35 +473,40 @@ export default function SlotA() {
         }}
       >
         <p style={{ margin: '0 0 0.75rem' }}>
-          Two-component Gaussian mixture fit on SPX daily log returns by the
-          canonical EM algorithm. One{' '}
+          The market trades in two distinct moods. On{' '}
           <strong style={{ color: PLOTLY_COLORS.primary }}>calm</strong>{' '}
-          component with a tight distribution; one{' '}
+          days, daily moves cluster in a tight band. On{' '}
           <strong style={{ color: PLOTLY_COLORS.secondary }}>crisis</strong>{' '}
-          component with a fatter one. The{' '}
-          <strong style={{ color: PLOTLY_COLORS.highlight }}>mixture density</strong>{' '}
-          is what the market actually looks like; the{' '}
+          days, they fan out much wider. The{' '}
+          <strong style={{ color: PLOTLY_COLORS.highlight }}>mixture</strong>{' '}
+          curve is what the combined daily-return distribution actually
+          looks like across both moods. The{' '}
           <strong style={{ color: PLOTLY_COLORS.positive }}>1-Gaussian baseline</strong>{' '}
-          is what a single-regime model assumes. The visible gap between
-          the two around ±3σ of the single Gaussian is the tail mass that
-          a one-regime model cannot produce — which is why every serious
-          risk calculation that lives downstream of this distribution
-          (value-at-risk, expected shortfall, risk-neutral density fitting)
-          breaks in the same direction when a one-regime assumption is
-          used instead.
+          is what a single-volatility model assumes, the way most
+          textbook position-sizing and VaR systems are still built. The
+          visible gap between those two curves out in the tails is
+          exactly the loss you are not pricing when you use one
+          volatility for every market condition, and it is where
+          single-regime risk blows up every cycle.
         </p>
         <p style={{ margin: 0 }}>
-          <strong style={{ color: 'var(--text-primary)' }}>Reading.</strong>{' '}
-          A BIC gap of 10+ against the single-Gaussian baseline is the
-          conventional &ldquo;decisive&rdquo; threshold (Kass-Raftery 1995) —
-          the mixture is meaningfully preferred. The crisis-to-calm vol
-          ratio is the fattening factor a one-regime model is missing:
-          multiplying your single-regime VaR by that ratio on days when the
-          smoothed regime probability (see the Markov Regime Switching
-          model below) points to the crisis state is a rough first-cut
-          recalibration. EM is seeded from the split-at-median-|r|
-          partition, which already carries σ₁ &lt; σ₂, so the calm/crisis
-          labelling is invariant to run-to-run initialization jitter.
+          <strong style={{ color: 'var(--text-primary)' }}>Practical use.</strong>{' '}
+          The vol-ratio stat above is the scaling factor most
+          single-vol risk systems are missing. If your stop placement,
+          position sizing, or option-writing framework uses one
+          historical volatility, multiply that number by the vol ratio
+          on days when the Markov model below flags crisis probability
+          above fifty percent. That is a rough first-cut recalibration
+          and it closes the most expensive blind spot in single-regime
+          risk. The crisis weight above tells you how often that
+          recalibration is actually live over the long run, typically
+          about one day in four to five rather than the one-in-a-hundred
+          tail event a normal assumption implies. The fit-edge statistic
+          is a model-selection score derived from BIC; readings above
+          ten mean the two-mood view beats the single-mood view
+          decisively on the history shown, which is the empirical
+          license to trust the vol ratio instead of the static number
+          your risk book was calibrated on.
         </p>
       </div>
     </div>

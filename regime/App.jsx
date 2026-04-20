@@ -7,22 +7,22 @@ import SlotA from './slots/SlotA';
 import SlotB from './slots/SlotB';
 import SlotC from './slots/SlotC';
 
-// Regime Lab — three-slot scratch pad dedicated to regime-identification
+// Regime Lab, three-slot scratch pad dedicated to regime-identification
 // models on SPX daily log returns. The three slots are not A/B/C variants
-// of a single candidate — they are three distinct methods that answer the
+// of a single candidate; they are three distinct methods that answer the
 // same question three different ways:
 //
-//   SLOT A — Mixture Lognormal (2-component Gaussian mixture by EM on the
+//   SLOT A: Mixture Lognormal (2-component Gaussian mixture by EM on the
 //            pooled return distribution; identifies calm vs crisis regimes
 //            as two overlapping unimodal components and reports each
 //            component's mean, vol, and mixing weight).
 //
-//   SLOT B — Markov Regime Switching (2-state Hamilton MSM with Gaussian
+//   SLOT B: Markov Regime Switching (2-state Hamilton MSM with Gaussian
 //            emissions, fit by EM with the Hamilton filter + Kim smoother;
 //            produces a smoothed probability-of-high-vol-state trajectory
 //            through time and the regime transition matrix).
 //
-//   SLOT C — Wasserstein K-Means Clustering (K=3 clusters of rolling
+//   SLOT C: Wasserstein K-Means Clustering (K=3 clusters of rolling
 //            20-day empirical return distributions under the W₂ metric;
 //            each cluster centroid is itself a 20-point empirical
 //            distribution, updated as the pointwise-sorted barycenter of
@@ -30,7 +30,7 @@ import SlotC from './slots/SlotC';
 //
 // All three consume the same SPX daily closes via useGexHistory so the
 // answers line up on a common calendar axis. Like /alpha, /dev, /beta,
-// and /garch, this lab has no ingress or egress links — the logo is not
+// and /garch, this lab has no ingress or egress links; the logo is not
 // a hyperlink, nothing on the main site points here, and the page is
 // reachable only by typing /regime or loading a bookmark.
 export default function App() {
@@ -41,7 +41,7 @@ export default function App() {
           <img src="/logo.webp" alt="aigamma.com" className="lab-logo" />
           <span
             className="lab-badge"
-            title="Regime Lab — regime-identification model zoo"
+            title="Regime Lab · regime-identification model zoo"
           >
             Regime Lab
           </span>
@@ -60,10 +60,13 @@ export default function App() {
 
       <div className="lab-warning">
         <strong>Experimental.</strong>{' '}
-        A three-slot regime-model scratch pad. Mixture Lognormal, Markov
-        Regime Switching, and Wasserstein K-Means fit in-browser on daily
-        SPX log returns. Math, data, and rendering may be incomplete,
-        incorrect, or change without notice.
+        Three ways to answer the same question every trader eventually
+        asks: what regime is the market in today. A mixture model splits
+        calm from crisis by return shape, a Markov model tracks which is
+        active through time, and a distribution-clustering model groups
+        the last twenty days by pattern. All three fit live in your
+        browser on daily SPX data. Values and presentation may change
+        as the models evolve.
       </div>
 
       <section className="lab-slot">
@@ -83,9 +86,9 @@ export default function App() {
           context="regime"
           welcome={{
             quick:
-              'Ask about regime identification, the three methods above, or how they disagree at transition boundaries. Chat stays on volatility, options, and regime modeling.',
+              'Ask about the three regime models above, how they disagree near transitions, and how to turn a regime signal into an actual trade.',
             deep:
-              'Deep Analysis mode — longer and more structurally detailed responses on mixture models, Markov regime switching, Wasserstein clustering, and the philosophy of answering one question three ways.',
+              'Deep Analysis mode for longer and more structurally detailed responses on how each model works, how to read its output, and how to act on it in the SPX options market.',
           }}
         />
       </ErrorBoundary>

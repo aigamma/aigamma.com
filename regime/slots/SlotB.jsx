@@ -12,11 +12,11 @@ import {
 } from '../../src/lib/plotlyTheme';
 
 // -----------------------------------------------------------------------------
-// Markov Regime Switching — 2-state Hamilton MSM with Gaussian emissions.
+// Markov Regime Switching, 2-state Hamilton MSM with Gaussian emissions.
 //
 // Hamilton (1989) showed that letting the parameters of a time-series model
-// jump between a small number of hidden regimes — governed by a Markov
-// chain on the hidden state — captures the observed alternation between
+// jump between a small number of hidden regimes, governed by a Markov
+// chain on the hidden state, captures the observed alternation between
 // calm trending markets and volatile panic markets far better than any
 // single-regime model. The mixture model in Slot A identifies regimes from
 // the pooled return distribution with no temporal structure; the MSM adds
@@ -38,7 +38,7 @@ import {
 //
 // The filter runs in log-space to avoid underflow on long series (~2000 days).
 // Expected regime durations are 1 / (1 − p_kk) under the geometric holding
-// time of a 2-state Markov chain — a direct read on how "sticky" each
+// time of a 2-state Markov chain, a direct read on how "sticky" each
 // regime is, and the quantity a trader usually cares about most: a crisis
 // with a 20-day expected duration is a very different trade than a crisis
 // with a 3-day expected duration.
@@ -175,7 +175,7 @@ function fitMsm(returns) {
 
   let mu = [meanArr(calm), meanArr(crisis)];
   let sigma = [Math.max(stdArr(calm, mu[0]), 1e-6), Math.max(stdArr(crisis, mu[1]), 1e-6)];
-  // Sticky initial transitions — calm more persistent than crisis, which
+  // Sticky initial transitions: calm more persistent than crisis, which
   // matches the empirical prior and gives the filter a head start
   let P = [
     [0.98, 0.02],
@@ -194,7 +194,7 @@ function fitMsm(returns) {
     smoothed = kimSmoother(filtered.logAlpha, filtered.logP);
     const logLik = filtered.logLik;
 
-    // M-step — compute γ, ξ in linear space for parameter updates
+    // M-step: compute γ, ξ in linear space for parameter updates
     let N0 = 0;
     let N1 = 0;
     let sumR0 = 0;
@@ -284,12 +284,12 @@ function fitMsm(returns) {
 }
 
 function formatPct(v, digits = 2) {
-  if (v == null || !Number.isFinite(v)) return '—';
+  if (v == null || !Number.isFinite(v)) return 'n/a';
   return `${(v * 100).toFixed(digits)}%`;
 }
 
 function formatFixed(v, digits = 4) {
-  if (v == null || !Number.isFinite(v)) return '—';
+  if (v == null || !Number.isFinite(v)) return 'n/a';
   return v.toFixed(digits);
 }
 
@@ -359,7 +359,7 @@ export default function SlotB() {
         x: xs,
         y: gC,
         mode: 'lines',
-        name: 'Pr(crisis | data)',
+        name: 'Pr(crisis)',
         line: { color: PLOTLY_COLORS.secondary, width: 1.5 },
         fill: 'tozeroy',
         fillcolor: 'rgba(231, 76, 60, 0.12)',
@@ -484,24 +484,24 @@ export default function SlotB() {
         <StatCell
           label="Calm state"
           value={formatPct(sigma0Ann, 1)}
-          sub={`μ=${formatFixed(fit.mu[0] * TRADING_DAYS_YEAR, 3)} · dur ${dur0.toFixed(1)}d`}
+          sub={`drift ${formatFixed(fit.mu[0] * TRADING_DAYS_YEAR, 3)} · avg ${dur0.toFixed(1)}d`}
           accent={PLOTLY_COLORS.primary}
         />
         <StatCell
           label="Crisis state"
           value={formatPct(sigma1Ann, 1)}
-          sub={`μ=${formatFixed(fit.mu[1] * TRADING_DAYS_YEAR, 3)} · dur ${dur1.toFixed(1)}d`}
+          sub={`drift ${formatFixed(fit.mu[1] * TRADING_DAYS_YEAR, 3)} · avg ${dur1.toFixed(1)}d`}
           accent={PLOTLY_COLORS.secondary}
         />
         <StatCell
-          label="Transition P"
+          label="Stay rates"
           value={`${(fit.P[0][0] * 100).toFixed(1)}% · ${(fit.P[1][1] * 100).toFixed(1)}%`}
-          sub="p₀₀ calm-stay · p₁₁ crisis-stay"
+          sub="calm-stay · crisis-stay"
         />
         <StatCell
           label="Current Pr(crisis)"
-          value={currentCrisis != null ? (currentCrisis * 100).toFixed(1) + '%' : '—'}
-          sub={`n=${fit.n} · ${fit.iters} iter${fit.converged ? ' · conv.' : ''}`}
+          value={currentCrisis != null ? (currentCrisis * 100).toFixed(1) + '%' : 'n/a'}
+          sub={`${fit.n} days${fit.converged ? ' · converged' : ''}`}
           accent={currentCrisis != null && currentCrisis > 0.5 ? PLOTLY_COLORS.secondary : PLOTLY_COLORS.primary}
         />
       </div>
@@ -517,29 +517,40 @@ export default function SlotB() {
         }}
       >
         <p style={{ margin: '0 0 0.75rem' }}>
-          Two-state Markov regime switching model fit by EM (Hamilton
-          filter forward, Kim smoother backward). The Mixture Lognormal
-          model above identifies two regimes from the pooled return
-          distribution; the MSM adds temporal persistence via a transition
-          matrix and assigns a smoothed probability to each day. The{' '}
+          The mixture model above tells you the market has two moods.
+          This one adds the part that is actually tradeable: which mood
+          is active right now. The{' '}
           <strong style={{ color: PLOTLY_COLORS.secondary }}>coral fill</strong>{' '}
-          traces Pr(crisis | data) through time — peaks at COVID
-          (Feb–Apr 2020), the 2022 bear market, and the 2023 regional-bank
-          episode are visible without any event labels. Expected regime
-          durations in the stat row above are in trading days, computed as
-          1/(1 − p_kk) under the geometric holding-time implied by the
-          fitted Markov chain.
+          is the model's best estimate, day by day, of the probability
+          that the market sits in the crisis regime. The peaks line up
+          with the COVID crash in early 2020, the 2022 bear market, and
+          the 2023 regional-bank episode, and the model identifies them
+          from return magnitudes alone with no event labels supplied.
+          The average-duration numbers in the stats row are in trading
+          days and tell you how long each regime typically sticks
+          around once it arrives, which is the quantity that decides
+          whether a regime flip is a trade-around moment or a
+          book-adjusting moment.
         </p>
         <p style={{ margin: 0 }}>
-          <strong style={{ color: 'var(--text-primary)' }}>Reading.</strong>{' '}
-          The model is fit on the full history but the chart zooms to the
-          last ~800 trading days for legibility. Current Pr(crisis) is the
-          smoothed probability at the most recent observation — an elevated
-          value ahead of a confirmed crisis regime is the signal the MSM is
-          being asked for; a lagged response to volatility that has already
-          materialized is the typical failure mode. The two smoothed
-          probabilities sum to 1 by construction, so Pr(calm) is just the
-          reflection of the coral fill about 0.5.
+          <strong style={{ color: 'var(--text-primary)' }}>Practical use.</strong>{' '}
+          Rising crisis probability is a risk-off signal. When the
+          coral fill crosses fifty percent on the way up, treat it as a
+          prompt to widen stops, reduce position size, buy downside
+          protection, or rotate out of directly exposed books. The
+          average-duration numbers tell you how long the regime is
+          likely to hold: a crisis with a twenty-day expected duration
+          is a very different trade from a crisis with a three-day
+          duration, and the first wants proper hedges while the second
+          usually wants patience and a short-dated fade. Treat the tape
+          as mean-reverting and volatility-expanding when the current
+          probability in the stats row sits above fifty percent, and
+          fall back to the usual calm-regime playbook below it. The
+          characteristic failure mode is lag, because the smoother uses
+          the full history up to today rather than forecasting forward,
+          so pair it with faster reads such as realized-vol breakouts,
+          dealer-gamma flips, or your own flow monitors rather than
+          waiting on it alone.
         </p>
       </div>
     </div>
