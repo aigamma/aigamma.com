@@ -413,44 +413,17 @@ export default function SlotA() {
 
   return (
     <div className="card" style={{ padding: '1.25rem 1.25rem 1rem' }}>
-      <div style={{ marginBottom: '0.85rem' }}>
-        <div
-          style={{
-            fontFamily: 'Courier New, monospace',
-            fontSize: '0.7rem',
-            letterSpacing: '0.14em',
-            textTransform: 'uppercase',
-            color: 'var(--text-secondary)',
-            marginBottom: '0.35rem',
-          }}
-        >
-          model · mixture lognormal · 2-component EM
-        </div>
-        <div
-          style={{
-            fontSize: '0.88rem',
-            color: 'var(--text-secondary)',
-            lineHeight: 1.55,
-            maxWidth: '820px',
-          }}
-        >
-          Two-component Gaussian mixture fit on SPX daily log returns by the
-          canonical EM algorithm. One{' '}
-          <strong style={{ color: PLOTLY_COLORS.primary }}>calm</strong>{' '}
-          component with a tight distribution; one{' '}
-          <strong style={{ color: PLOTLY_COLORS.secondary }}>crisis</strong>{' '}
-          component with a fatter one. The{' '}
-          <strong style={{ color: PLOTLY_COLORS.highlight }}>mixture density</strong>{' '}
-          is what the market actually looks like; the{' '}
-          <strong style={{ color: PLOTLY_COLORS.positive }}>1-Gaussian baseline</strong>{' '}
-          is what a single-regime model assumes. The visible gap between
-          the two around ±3σ of the single Gaussian is the tail mass that
-          a one-regime model cannot produce — which is why every serious
-          risk calculation that lives downstream of this distribution
-          (value-at-risk, expected shortfall, risk-neutral density fitting)
-          breaks in the same direction when a one-regime assumption is
-          used instead.
-        </div>
+      <div
+        style={{
+          fontFamily: 'Courier New, monospace',
+          fontSize: '0.7rem',
+          letterSpacing: '0.14em',
+          textTransform: 'uppercase',
+          color: 'var(--text-secondary)',
+          marginBottom: '0.85rem',
+        }}
+      >
+        model · mixture lognormal · 2-component EM
       </div>
 
       <div
@@ -493,23 +466,43 @@ export default function SlotA() {
 
       <div
         style={{
-          marginTop: '0.65rem',
-          fontSize: '0.75rem',
+          marginTop: '0.8rem',
+          fontSize: '0.9rem',
           color: 'var(--text-secondary)',
-          lineHeight: 1.6,
+          lineHeight: 1.65,
         }}
       >
-        <strong style={{ color: 'var(--text-primary)' }}>Reading.</strong>{' '}
-        A BIC gap of 10+ against the single-Gaussian baseline is the
-        conventional &ldquo;decisive&rdquo; threshold (Kass-Raftery 1995) —
-        the mixture is meaningfully preferred. The crisis-to-calm vol
-        ratio is the fattening factor a one-regime model is missing:
-        multiplying your single-regime VaR by that ratio on days when the
-        smoothed regime probability (see Slot B) points to the crisis
-        state is a rough first-cut recalibration. EM is seeded from the
-        split-at-median-|r| partition, which already carries σ₁ &lt; σ₂,
-        so the calm/crisis labelling is invariant to run-to-run
-        initialization jitter.
+        <p style={{ margin: '0 0 0.75rem' }}>
+          Two-component Gaussian mixture fit on SPX daily log returns by the
+          canonical EM algorithm. One{' '}
+          <strong style={{ color: PLOTLY_COLORS.primary }}>calm</strong>{' '}
+          component with a tight distribution; one{' '}
+          <strong style={{ color: PLOTLY_COLORS.secondary }}>crisis</strong>{' '}
+          component with a fatter one. The{' '}
+          <strong style={{ color: PLOTLY_COLORS.highlight }}>mixture density</strong>{' '}
+          is what the market actually looks like; the{' '}
+          <strong style={{ color: PLOTLY_COLORS.positive }}>1-Gaussian baseline</strong>{' '}
+          is what a single-regime model assumes. The visible gap between
+          the two around ±3σ of the single Gaussian is the tail mass that
+          a one-regime model cannot produce — which is why every serious
+          risk calculation that lives downstream of this distribution
+          (value-at-risk, expected shortfall, risk-neutral density fitting)
+          breaks in the same direction when a one-regime assumption is
+          used instead.
+        </p>
+        <p style={{ margin: 0 }}>
+          <strong style={{ color: 'var(--text-primary)' }}>Reading.</strong>{' '}
+          A BIC gap of 10+ against the single-Gaussian baseline is the
+          conventional &ldquo;decisive&rdquo; threshold (Kass-Raftery 1995) —
+          the mixture is meaningfully preferred. The crisis-to-calm vol
+          ratio is the fattening factor a one-regime model is missing:
+          multiplying your single-regime VaR by that ratio on days when the
+          smoothed regime probability (see the Markov Regime Switching
+          model below) points to the crisis state is a rough first-cut
+          recalibration. EM is seeded from the split-at-median-|r|
+          partition, which already carries σ₁ &lt; σ₂, so the calm/crisis
+          labelling is invariant to run-to-run initialization jitter.
+        </p>
       </div>
     </div>
   );

@@ -457,40 +457,17 @@ export default function SlotB() {
 
   return (
     <div className="card" style={{ padding: '1.25rem 1.25rem 1rem' }}>
-      <div style={{ marginBottom: '0.85rem' }}>
-        <div
-          style={{
-            fontFamily: 'Courier New, monospace',
-            fontSize: '0.7rem',
-            letterSpacing: '0.14em',
-            textTransform: 'uppercase',
-            color: 'var(--text-secondary)',
-            marginBottom: '0.35rem',
-          }}
-        >
-          model · Hamilton MSM · 2-state Gaussian emissions
-        </div>
-        <div
-          style={{
-            fontSize: '0.88rem',
-            color: 'var(--text-secondary)',
-            lineHeight: 1.55,
-            maxWidth: '820px',
-          }}
-        >
-          Two-state Markov regime switching model fit by EM (Hamilton
-          filter forward, Kim smoother backward). The mixture model in Slot
-          A identifies two regimes from the pooled return distribution; the
-          MSM adds temporal persistence via a transition matrix and assigns
-          a smoothed probability to each day. The{' '}
-          <strong style={{ color: PLOTLY_COLORS.secondary }}>coral fill</strong>{' '}
-          below traces Pr(crisis | data) through time — peaks at COVID
-          (Feb–Apr 2020), the 2022 bear market, and the 2023 regional-bank
-          episode are visible without any event labels. Expected regime
-          durations below are in trading days, computed as 1/(1 − p_kk)
-          under the geometric holding-time implied by the fitted Markov
-          chain.
-        </div>
+      <div
+        style={{
+          fontFamily: 'Courier New, monospace',
+          fontSize: '0.7rem',
+          letterSpacing: '0.14em',
+          textTransform: 'uppercase',
+          color: 'var(--text-secondary)',
+          marginBottom: '0.85rem',
+        }}
+      >
+        model · Hamilton MSM · 2-state Gaussian emissions
       </div>
 
       <div
@@ -533,21 +510,37 @@ export default function SlotB() {
 
       <div
         style={{
-          marginTop: '0.65rem',
-          fontSize: '0.75rem',
+          marginTop: '0.8rem',
+          fontSize: '0.9rem',
           color: 'var(--text-secondary)',
-          lineHeight: 1.6,
+          lineHeight: 1.65,
         }}
       >
-        <strong style={{ color: 'var(--text-primary)' }}>Reading.</strong>{' '}
-        The model is fit on the full history but the chart zooms to the
-        last ~800 trading days for legibility. Current Pr(crisis) is the
-        smoothed probability at the most recent observation — an elevated
-        value ahead of a confirmed crisis regime is the signal the MSM is
-        being asked for; a lagged response to volatility that has already
-        materialized is the typical failure mode. The two smoothed
-        probabilities sum to 1 by construction, so Pr(calm) is just the
-        reflection of the coral fill about 0.5.
+        <p style={{ margin: '0 0 0.75rem' }}>
+          Two-state Markov regime switching model fit by EM (Hamilton
+          filter forward, Kim smoother backward). The Mixture Lognormal
+          model above identifies two regimes from the pooled return
+          distribution; the MSM adds temporal persistence via a transition
+          matrix and assigns a smoothed probability to each day. The{' '}
+          <strong style={{ color: PLOTLY_COLORS.secondary }}>coral fill</strong>{' '}
+          traces Pr(crisis | data) through time — peaks at COVID
+          (Feb–Apr 2020), the 2022 bear market, and the 2023 regional-bank
+          episode are visible without any event labels. Expected regime
+          durations in the stat row above are in trading days, computed as
+          1/(1 − p_kk) under the geometric holding-time implied by the
+          fitted Markov chain.
+        </p>
+        <p style={{ margin: 0 }}>
+          <strong style={{ color: 'var(--text-primary)' }}>Reading.</strong>{' '}
+          The model is fit on the full history but the chart zooms to the
+          last ~800 trading days for legibility. Current Pr(crisis) is the
+          smoothed probability at the most recent observation — an elevated
+          value ahead of a confirmed crisis regime is the signal the MSM is
+          being asked for; a lagged response to volatility that has already
+          materialized is the typical failure mode. The two smoothed
+          probabilities sum to 1 by construction, so Pr(calm) is just the
+          reflection of the coral fill about 0.5.
+        </p>
       </div>
     </div>
   );

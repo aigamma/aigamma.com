@@ -67,17 +67,14 @@ export default function App() {
       </div>
 
       <section className="lab-slot">
-        <div className="lab-slot-label">SLOT A · MIXTURE LOGNORMAL</div>
         <ErrorBoundary><SlotA /></ErrorBoundary>
       </section>
 
       <section className="lab-slot">
-        <div className="lab-slot-label">SLOT B · MARKOV REGIME SWITCHING</div>
         <ErrorBoundary><SlotB /></ErrorBoundary>
       </section>
 
       <section className="lab-slot">
-        <div className="lab-slot-label">SLOT C · WASSERSTEIN K-MEANS</div>
         <ErrorBoundary><SlotC /></ErrorBoundary>
       </section>
 

@@ -427,44 +427,17 @@ export default function SlotC() {
 
   return (
     <div className="card" style={{ padding: '1.25rem 1.25rem 1rem' }}>
-      <div style={{ marginBottom: '0.85rem' }}>
-        <div
-          style={{
-            fontFamily: 'Courier New, monospace',
-            fontSize: '0.7rem',
-            letterSpacing: '0.14em',
-            textTransform: 'uppercase',
-            color: 'var(--text-secondary)',
-            marginBottom: '0.35rem',
-          }}
-        >
-          model · Wasserstein K-means · rolling {WINDOW_SIZE}-day windows
-        </div>
-        <div
-          style={{
-            fontSize: '0.88rem',
-            color: 'var(--text-secondary)',
-            lineHeight: 1.55,
-            maxWidth: '820px',
-          }}
-        >
-          Each day is represented by the trailing {WINDOW_SIZE}-day
-          empirical distribution of daily log returns ending that day,
-          then clustered into {K_CLUSTERS} groups under the 2-Wasserstein
-          metric on 1D distributions — equivalent to the L² distance
-          between sorted order statistics. Cluster centroids are
-          themselves {WINDOW_SIZE}-point empirical distributions, updated
-          as the Wasserstein barycenter (pointwise-sorted mean) of their
-          assigned windows. Unlike Slots A and B, no parametric form is
-          assumed for the regime distributions — the centroids are free
-          to take any shape the data implies. Cluster IDs are canonicalized
-          by centroid standard deviation so{' '}
-          <strong style={{ color: CLUSTER_COLORS[0] }}>calm</strong>,{' '}
-          <strong style={{ color: CLUSTER_COLORS[1] }}>moderate</strong>,{' '}
-          and{' '}
-          <strong style={{ color: CLUSTER_COLORS[2] }}>crisis</strong>{' '}
-          are stable labels across runs.
-        </div>
+      <div
+        style={{
+          fontFamily: 'Courier New, monospace',
+          fontSize: '0.7rem',
+          letterSpacing: '0.14em',
+          textTransform: 'uppercase',
+          color: 'var(--text-secondary)',
+          marginBottom: '0.85rem',
+        }}
+      >
+        model · Wasserstein K-means · rolling {WINDOW_SIZE}-day windows
       </div>
 
       <div
@@ -503,24 +476,45 @@ export default function SlotC() {
 
       <div
         style={{
-          marginTop: '0.65rem',
-          fontSize: '0.75rem',
+          marginTop: '0.8rem',
+          fontSize: '0.9rem',
           color: 'var(--text-secondary)',
-          lineHeight: 1.6,
+          lineHeight: 1.65,
         }}
       >
-        <strong style={{ color: 'var(--text-primary)' }}>Reading.</strong>{' '}
-        Each marker is a trading day colored by the cluster its
-        trailing-{WINDOW_SIZE}-day distribution was assigned to. The
-        moderate cluster typically absorbs regime-transition windows that
-        blend calm and crisis days — density of yellow markers around a
-        cluster boundary is a rough proxy for transition activity. Because
-        the clustering is unsupervised and metric-based, the same
-        {' '}{WINDOW_SIZE}-day distributional <em>shape</em> recurs in the
-        same cluster whether it appears in 2018, 2020, or 2024 — the
-        boundary is in distribution space, not calendar space. K=3 is
-        fixed; varying K would be a natural next experiment and would
-        plug into the same barycenter update without restructuring.
+        <p style={{ margin: '0 0 0.75rem' }}>
+          Each day is represented by the trailing {WINDOW_SIZE}-day
+          empirical distribution of daily log returns ending that day,
+          then clustered into {K_CLUSTERS} groups under the 2-Wasserstein
+          metric on 1D distributions — equivalent to the L² distance
+          between sorted order statistics. Cluster centroids are
+          themselves {WINDOW_SIZE}-point empirical distributions, updated
+          as the Wasserstein barycenter (pointwise-sorted mean) of their
+          assigned windows. Unlike the Mixture Lognormal and Hamilton MSM
+          models above, no parametric form is assumed for the regime
+          distributions — the centroids are free to take any shape the
+          data implies. Cluster IDs are canonicalized by centroid standard
+          deviation so{' '}
+          <strong style={{ color: CLUSTER_COLORS[0] }}>calm</strong>,{' '}
+          <strong style={{ color: CLUSTER_COLORS[1] }}>moderate</strong>,{' '}
+          and{' '}
+          <strong style={{ color: CLUSTER_COLORS[2] }}>crisis</strong>{' '}
+          are stable labels across runs.
+        </p>
+        <p style={{ margin: 0 }}>
+          <strong style={{ color: 'var(--text-primary)' }}>Reading.</strong>{' '}
+          Each marker is a trading day colored by the cluster its
+          trailing-{WINDOW_SIZE}-day distribution was assigned to. The
+          moderate cluster typically absorbs regime-transition windows that
+          blend calm and crisis days — density of yellow markers around a
+          cluster boundary is a rough proxy for transition activity. Because
+          the clustering is unsupervised and metric-based, the same
+          {' '}{WINDOW_SIZE}-day distributional <em>shape</em> recurs in the
+          same cluster whether it appears in 2018, 2020, or 2024 — the
+          boundary is in distribution space, not calendar space. K=3 is
+          fixed; varying K would be a natural next experiment and would
+          plug into the same barycenter update without restructuring.
+        </p>
       </div>
     </div>
   );
