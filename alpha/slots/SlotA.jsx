@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useRef } from 'react';
+import { useEffect, useMemo, useRef, useState } from 'react';
 import usePlotly from '../../src/hooks/usePlotly';
 import useIsMobile from '../../src/hooks/useIsMobile';
 import useOptionsData from '../../src/hooks/useOptionsData';
@@ -79,7 +79,32 @@ import { daysToExpiration } from '../../src/lib/dates';
 // a single moment. The richer time-series view — how each method's r and
 // F(T) wobble from snapshot to snapshot as S₀ moves between 5-minute
 // ingests — needs a persisted series and is a separate piece of work.
+//
+// v4 adds a focus-mode pill row that sits directly above the chart and
+// lets a viewer collapse the composite onto one layer at a time. ALL is
+// the v3 default; RATES drops the amber spread and the green forward so
+// only r_box and r_PCP remain in the top panel; SPREAD keeps only the
+// amber box − PCP trace; FORWARD keeps only the green F(T) curve in the
+// bottom panel. Hidden traces are set to Plotly's `visible: 'legendonly'`
+// rather than removed from the spec, so each curve still occupies a row
+// in the legend and a single legend click can re-add any one trace
+// without leaving the focus mode. Built in response to sflush's v3
+// follow-up — "why is r from PCP a straight horizontal line?" — because
+// the math answer (Taylor-expanding ln(K/(S₀−C+P))/T at q=0 gives
+// r_PCP ≈ (r−q) + ½(r−q)²·T + O(T²), so the leading term is T-independent
+// by construction) is most legible when the two r curves sit alone in
+// the top panel without the amber spread or the green forward competing
+// for visual weight. The same affordance generalizes: any future layer
+// added to this card can join the pill row without redesigning the
+// composite.
 // -----------------------------------------------------------------------------
+
+const FOCUS_MODES = [
+  { key: 'all',     label: 'ALL',     show: new Set(['rBox', 'rPcp', 'rDiff', 'fwd']) },
+  { key: 'rates',   label: 'RATES',   show: new Set(['rBox', 'rPcp']) },
+  { key: 'spread',  label: 'SPREAD',  show: new Set(['rDiff']) },
+  { key: 'forward', label: 'FORWARD', show: new Set(['fwd']) },
+];
 
 function groupByExpiration(contracts) {
   const byExp = new Map();
@@ -249,6 +274,7 @@ export default function SlotA() {
   const chartRef = useRef(null);
   const { plotly: Plotly, error: plotlyError } = usePlotly();
   const mobile = useIsMobile();
+  const [focus, setFocus] = useState('all');
   const { data, loading, error } = useOptionsData({
     underlying: 'SPX',
     snapshotType: 'intraday',
@@ -279,6 +305,8 @@ export default function SlotA() {
     if (!Plotly || !chartRef.current || rows.length === 0) return;
 
     const S0 = data?.spotPrice;
+    const activeFocus = FOCUS_MODES.find((m) => m.key === focus) || FOCUS_MODES[0];
+    const visibleFor = (key) => (activeFocus.show.has(key) ? true : 'legendonly');
 
     const xs = rows.map((r) => r.dte);
     const yBox = rows.map((r) => r.rBox * 100);
@@ -389,6 +417,7 @@ export default function SlotA() {
         marker: { color: PLOTLY_COLORS.primary, size: mobile ? 6 : 8, line: { width: 0 } },
         hoverinfo: 'text',
         text: hoverBox,
+        visible: visibleFor('rBox'),
       },
       {
         x: xs,
@@ -406,6 +435,7 @@ export default function SlotA() {
         hoverinfo: 'text',
         text: hoverPcp,
         connectgaps: false,
+        visible: visibleFor('rPcp'),
       },
       {
         x: xs,
@@ -424,6 +454,7 @@ export default function SlotA() {
         text: hoverDiff,
         yaxis: 'y2',
         connectgaps: false,
+        visible: visibleFor('rDiff'),
       },
       {
         x: xs,
@@ -442,6 +473,7 @@ export default function SlotA() {
         text: hoverFwd,
         xaxis: 'x2',
         yaxis: 'y3',
+        visible: visibleFor('fwd'),
       },
     ];
 
@@ -578,7 +610,7 @@ export default function SlotA() {
       responsive: true,
       displayModeBar: false,
     });
-  }, [Plotly, rows, medianDiff, data, mobile]);
+  }, [Plotly, rows, medianDiff, data, mobile, focus]);
 
   if (loading && !data) {
     return (
@@ -748,6 +780,56 @@ export default function SlotA() {
           value={data?.spotPrice ? data.spotPrice.toFixed(2) : '–'}
           sub="SPX index"
         />
+      </div>
+
+      <div
+        role="group"
+        aria-label="Chart focus mode"
+        style={{
+          display: 'flex',
+          alignItems: 'center',
+          gap: '0.4rem',
+          flexWrap: 'wrap',
+          marginBottom: '0.6rem',
+        }}
+      >
+        <span
+          style={{
+            fontFamily: 'Courier New, monospace',
+            fontSize: '0.7rem',
+            letterSpacing: '0.14em',
+            textTransform: 'uppercase',
+            color: 'var(--text-secondary)',
+            marginRight: '0.25rem',
+          }}
+        >
+          focus
+        </span>
+        {FOCUS_MODES.map(({ key, label }) => {
+          const active = focus === key;
+          return (
+            <button
+              key={key}
+              type="button"
+              onClick={() => setFocus(key)}
+              aria-pressed={active}
+              style={{
+                padding: '0.3rem 0.7rem',
+                fontFamily: 'Courier New, monospace',
+                fontSize: '0.7rem',
+                letterSpacing: '0.1em',
+                textTransform: 'uppercase',
+                background: active ? 'var(--text-primary)' : 'transparent',
+                color: active ? 'var(--bg-card)' : 'var(--text-primary)',
+                border: '1px solid var(--bg-card-border)',
+                borderRadius: '4px',
+                cursor: 'pointer',
+              }}
+            >
+              {label}
+            </button>
+          );
+        })}
       </div>
 
       <div ref={chartRef} style={{ width: '100%', height: mobile ? 460 : 560 }} />
