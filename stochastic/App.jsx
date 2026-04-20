@@ -57,11 +57,15 @@ import SlotD from './slots/SlotD';
 // All four consume the same live /api/data snapshot so the Heston
 // fit, the SABR fit, the Dupire surface, and the rough-vol skew
 // regression are internally consistent views of one point-in-time
-// chain. Navigation back to the homepage is surfaced in three
+// chain. Navigation back to the homepage is surfaced in four
 // redundant ways so the reader never has to retype the URL: the
-// logo in the upper-left is a hyperlink to /, a centered green
-// "RETURN HOME" button sits between the SABR and LSV slots as an
-// obvious mid-page escape hatch, and the footer carries a bolded
+// logo in the upper-left is a hyperlink to /, a filled green
+// "RETURN HOME" button sits in the lab-header row horizontally
+// aligned with the QuantMenu trigger so it reads as a primary
+// top-level nav affordance from the first viewport, a second
+// centered green "RETURN HOME" button sits between the SABR and
+// LSV slots as a mid-page escape hatch for readers who have
+// scrolled past the header, and the footer carries a bolded
 // Return Home link as a last-line fallback. The QuantMenu in the
 // upper-right continues to expose the cross-lab directory.
 export default function App() {
@@ -79,6 +83,7 @@ export default function App() {
             Stochastic Vol Lab
           </span>
         </div>
+        <a href="/" className="lab-home-button lab-home-button--inline">Return Home</a>
         <QuantMenu />
       </header>
 
