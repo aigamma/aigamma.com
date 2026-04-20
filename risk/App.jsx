@@ -46,10 +46,12 @@ import SlotD from './slots/SlotD';
 // chain. Unlike the bookmark-only lab surfaces, this page carries
 // active egress back to the main dashboard at three redundant
 // affordances: the logo in the header is a hyperlink to `/`, a filled
-// green RETURN HOME button sits between the header and the first slot
-// as an obvious call-to-action, and the footer carries a bolded
-// Return Home link for a reader who has scrolled to the bottom of a
-// long page.
+// green RETURN HOME button sits inside the header row itself as the
+// first child of a lab-nav-group cluster on the right — horizontally
+// aligned with and immediately preceding the QuantMenu trigger so the
+// two read as a single two-button nav cluster on the right edge of
+// the header — and the footer carries a bolded Return Home link for
+// a reader who has scrolled to the bottom of a long page.
 export default function App() {
   return (
     <div className="app-shell lab-shell">
@@ -65,12 +67,11 @@ export default function App() {
             Risk Lab
           </span>
         </div>
-        <QuantMenu />
+        <div className="lab-nav-group">
+          <a href="/" className="lab-home-button lab-home-button--inline">Return Home</a>
+          <QuantMenu />
+        </div>
       </header>
-
-      <div className="lab-home-row">
-        <a href="/" className="lab-home-button">Return Home</a>
-      </div>
 
       <section className="lab-slot">
         <ErrorBoundary><SlotA /></ErrorBoundary>
