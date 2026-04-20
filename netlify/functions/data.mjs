@@ -100,7 +100,7 @@ export default async function handler(request) {
     const snapParams = new URLSearchParams({
       run_id: `eq.${run.id}`,
       select:
-        'expiration_date,strike,contract_type,implied_volatility,delta,gamma,theta,vega,open_interest,volume,close_price',
+        'expiration_date,strike,contract_type,implied_volatility,delta,gamma,theta,vega,open_interest,volume,close_price,bid_price,ask_price',
       order: 'expiration_date.asc,strike.asc',
     });
     if (expirationFilter) snapParams.set('expiration_date', `eq.${expirationFilter}`);
@@ -230,6 +230,8 @@ export default async function handler(request) {
       open_interest: c.open_interest,
       volume: c.volume,
       close_price: toNum(c.close_price),
+      bid_price: toNum(c.bid_price),
+      ask_price: toNum(c.ask_price),
     }));
 
     const rawGammaProfile = levelsRows.length > 0 ? levelsRows[0].gamma_profile : null;
