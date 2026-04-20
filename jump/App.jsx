@@ -52,15 +52,21 @@ import SlotD from './slots/SlotD';
 //
 // All four consume the same live /api/data snapshot so the four fits
 // describe the same point-in-time chain through different process
-// assumptions. Like the other labs on the site, this page has no
-// ingress or egress links. The logo is not a hyperlink. Reach the
-// page only by typing /jump or loading a bookmark.
+// assumptions. Unlike the other bookmark-only labs, this page carries
+// active egress back to the main dashboard at three redundant
+// affordances: the logo in the header is a hyperlink to `/`, a filled
+// green RETURN HOME button sits between the header and the first slot
+// as an obvious call-to-action, and the footer carries a bolded
+// Return Home link for a reader who has scrolled to the bottom of a
+// long page.
 export default function App() {
   return (
     <div className="app-shell lab-shell">
       <header className="lab-header">
         <div className="lab-brand">
-          <img src="/logo.webp" alt="aigamma.com" className="lab-logo" />
+          <a href="/" className="lab-logo-link" aria-label="Return to aigamma.com homepage">
+            <img src="/logo.webp" alt="aigamma.com" className="lab-logo" />
+          </a>
           <span
             className="lab-badge"
             title="Jump Lab · Merton, Kou, Bates SVJ, Variance Gamma"
@@ -70,6 +76,10 @@ export default function App() {
         </div>
         <QuantMenu />
       </header>
+
+      <div className="lab-home-row">
+        <a href="/" className="lab-home-button">Return Home</a>
+      </div>
 
       <section className="lab-slot">
         <ErrorBoundary><SlotA /></ErrorBoundary>
@@ -103,6 +113,7 @@ export default function App() {
         <span className="lab-footer-line">
           AI Gamma LLC · jump lab · four-model lineage · v0.1.0
         </span>
+        <a href="/" className="lab-footer-home">Return Home</a>
       </footer>
     </div>
   );
