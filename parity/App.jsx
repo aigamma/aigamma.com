@@ -49,12 +49,22 @@ import SlotB from './slots/SlotB';
 // as part of a site-wide chrome-scrubbing pass so the chart itself
 // is the first thing in the viewport rather than the fold-pushing
 // banner.
+//
+// Egress back to the main dashboard is provided at three redundant
+// affordances matching the pattern already landed on /local/ and
+// /jump/: the logo in the header is wrapped in a hyperlink to `/`, a
+// filled green RETURN HOME button sits between the header and the
+// first slot as an obvious call-to-action, and the footer carries a
+// bolded Return Home link for a reader who has scrolled past both
+// slots and the Chat panel.
 export default function App() {
   return (
     <div className="app-shell lab-shell">
       <header className="lab-header">
         <div className="lab-brand">
-          <img src="/logo.webp" alt="aigamma.com" className="lab-logo" />
+          <a href="/" className="lab-logo-link" aria-label="Return to aigamma.com homepage">
+            <img src="/logo.webp" alt="aigamma.com" className="lab-logo" />
+          </a>
           <span
             className="lab-badge"
             title="Parity Lab · put-call parity, box vs direct PCP, implied SPX forward"
@@ -69,6 +79,10 @@ export default function App() {
           </div>
         </div>
       </header>
+
+      <div className="lab-home-row">
+        <a href="/" className="lab-home-button">Return Home</a>
+      </div>
 
       <section className="lab-slot">
         <ErrorBoundary><SlotA /></ErrorBoundary>
@@ -94,6 +108,7 @@ export default function App() {
         <span className="lab-footer-line">
           AI Gamma LLC · parity lab · v1.0.0
         </span>
+        <a href="/" className="lab-footer-home">Return Home</a>
       </footer>
     </div>
   );
