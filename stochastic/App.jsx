@@ -2,6 +2,7 @@ import '../src/styles/theme.css';
 import '../src/styles/lab.css';
 import ErrorBoundary from '../src/ErrorBoundary';
 import QuantMenu from '../src/components/QuantMenu';
+import Chat from '../src/components/Chat';
 import SlotA from './slots/SlotA';
 import SlotB from './slots/SlotB';
 import SlotC from './slots/SlotC';
@@ -112,6 +113,18 @@ export default function App() {
         <div className="lab-slot-label">SLOT D · ROUGH BERGOMI (BFG 2016)</div>
         <ErrorBoundary><SlotD /></ErrorBoundary>
       </section>
+
+      <ErrorBoundary>
+        <Chat
+          context="stochastic"
+          welcome={{
+            quick:
+              'Ask about the Heston, SABR, Local Stochastic Vol, and Rough Bergomi slots above, where each model misses the observed SPX smile, or how the lineage maps onto three decades of responses to the short-end skew anomaly. Chat stays on volatility, options, and stochastic-vol modeling.',
+            deep:
+              'Deep Analysis mode — longer and more structurally detailed responses on affine characteristic functions, the Hagan SABR expansion, Dupire local vol and Gyöngy projection, fractional Brownian motion, and the philosophy of calibrating a four-model lineage to one chain snapshot.',
+          }}
+        />
+      </ErrorBoundary>
 
       <footer className="lab-footer">
         <span className="lab-footer-line">
