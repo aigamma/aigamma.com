@@ -51,12 +51,17 @@ import SlotB from './slots/SlotB';
 // banner.
 //
 // Egress back to the main dashboard is provided at three redundant
-// affordances matching the pattern already landed on /local/ and
-// /jump/: the logo in the header is wrapped in a hyperlink to `/`, a
-// filled green RETURN HOME button sits between the header and the
-// first slot as an obvious call-to-action, and the footer carries a
-// bolded Return Home link for a reader who has scrolled past both
-// slots and the Chat panel.
+// affordances: the logo in the header is wrapped in a hyperlink to
+// `/`, a filled green RETURN HOME button sits in the header itself
+// between the Parity Lab brand on the left and the QuantMenu
+// trigger on the right — centered horizontally on the same row as
+// the other nav items via the header's flex space-between
+// distribution — and the footer carries a bolded Return Home link
+// for a reader who has scrolled past both slots and the Chat
+// panel. The lab-meta "put-call parity" strip that previously sat
+// in the upper-right of the header nav was deleted as redundant
+// with the "Parity Lab" amber badge already visible on the left
+// side of the same header.
 export default function App() {
   return (
     <div className="app-shell lab-shell">
@@ -72,17 +77,9 @@ export default function App() {
             Parity Lab
           </span>
         </div>
-        <div className="lab-nav-group">
-          <QuantMenu />
-          <div className="lab-meta">
-            <span className="lab-meta-line">put-call parity</span>
-          </div>
-        </div>
+        <a href="/" className="lab-home-button lab-home-button--inline">Return Home</a>
+        <QuantMenu />
       </header>
-
-      <div className="lab-home-row">
-        <a href="/" className="lab-home-button">Return Home</a>
-      </div>
 
       <section className="lab-slot">
         <ErrorBoundary><SlotA /></ErrorBoundary>
