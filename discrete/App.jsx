@@ -92,16 +92,31 @@ export default function App() {
         </div>
       </header>
 
-      <div className="lab-warning">
-        <strong>Experimental.</strong>{' '}
-        A six-slot lab on the two complementary schools of volatility
-        fitting. Discrete pricing engines (trees) and parametric
-        surfaces (SVI family) fit in-browser on live SPX option data.
-        Math, data, and rendering may be incomplete, incorrect, or
-        change without notice.
-      </div>
+      <section className="lab-slot">
+        <ErrorBoundary><SlotA /></ErrorBoundary>
+      </section>
 
-      <div className="card" style={{ padding: '1.1rem 1.25rem', marginBottom: '1.25rem' }}>
+      <section className="lab-slot">
+        <ErrorBoundary><SlotB /></ErrorBoundary>
+      </section>
+
+      <section className="lab-slot">
+        <ErrorBoundary><SlotC /></ErrorBoundary>
+      </section>
+
+      <section className="lab-slot">
+        <ErrorBoundary><SlotD /></ErrorBoundary>
+      </section>
+
+      <section className="lab-slot">
+        <ErrorBoundary><SlotE /></ErrorBoundary>
+      </section>
+
+      <section className="lab-slot">
+        <ErrorBoundary><SlotF /></ErrorBoundary>
+      </section>
+
+      <div className="card" style={{ padding: '1.1rem 1.25rem', margin: '1.25rem 0' }}>
         <div
           style={{
             fontFamily: 'Courier New, monospace',
@@ -144,30 +159,6 @@ export default function App() {
           </p>
         </div>
       </div>
-
-      <section className="lab-slot">
-        <ErrorBoundary><SlotA /></ErrorBoundary>
-      </section>
-
-      <section className="lab-slot">
-        <ErrorBoundary><SlotB /></ErrorBoundary>
-      </section>
-
-      <section className="lab-slot">
-        <ErrorBoundary><SlotC /></ErrorBoundary>
-      </section>
-
-      <section className="lab-slot">
-        <ErrorBoundary><SlotD /></ErrorBoundary>
-      </section>
-
-      <section className="lab-slot">
-        <ErrorBoundary><SlotE /></ErrorBoundary>
-      </section>
-
-      <section className="lab-slot">
-        <ErrorBoundary><SlotF /></ErrorBoundary>
-      </section>
 
       <ErrorBoundary>
         <Chat
