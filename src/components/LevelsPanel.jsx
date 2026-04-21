@@ -67,13 +67,13 @@ function alignmentAccent(score) {
 
 function alignmentArrow(dir) {
   if (dir == null) return '?';
-  if (dir.sign > 0) return '\u2191';
-  if (dir.sign < 0) return '\u2193';
-  return '\u2014';
+  if (dir.sign > 0) return '↑';
+  if (dir.sign < 0) return '↓';
+  return '—';
 }
 
 function alignmentValue(score) {
-  if (score == null) return '\u2014';
+  if (score == null) return '—';
   const prefix = score > 0 ? '+' : '';
   return `${prefix}${score}`;
 }
@@ -190,6 +190,17 @@ export default function LevelsPanel({ levels, spotPrice, prevClose, expirationMe
     <div className="card" style={{ marginBottom: '1rem' }}>
       <div className={ROW_GRID_CLASS}>
         <Stat
+          label="Overnight Alignment"
+          value={alignmentValue(overnightAlignment?.score)}
+          accent={alignmentAccent(overnightAlignment?.score)}
+          sub={
+            overnightAlignment
+              ? `PW ${alignmentArrow(overnightAlignment.dirs.put_wall)}  VF ${alignmentArrow(overnightAlignment.dirs.volatility_flip)}  CW ${alignmentArrow(overnightAlignment.dirs.call_wall)}`
+              : null
+          }
+          bold
+        />
+        <Stat
           label="Put Wall"
           value={formatInteger(levels.put_wall)}
           accent="var(--accent-coral)"
@@ -208,50 +219,39 @@ export default function LevelsPanel({ levels, spotPrice, prevClose, expirationMe
           accent="var(--accent-green)"
           sub={callWallSub}
         />
-        <Stat
-          label="Dist from Risk Off"
-          value={flipDist != null ? `${aboveFlip ? '+' : ''}${flipDist.toFixed(2)}` : '\u2014'}
-          accent="var(--accent-amber)"
-          sub={flipDist != null ? `${((flipDist / spotPrice) * 100).toFixed(2)}%` : null}
-        />
       </div>
 
       <Divider />
 
       <div className={ROW_GRID_CLASS}>
         <Stat
+          label="Gamma Index"
+          value={gammaIndexValue(levels.gamma_index)}
+          accent={gammaIndexAccent(levels.gamma_index)}
+          sub={levels.gamma_index_date ? `as of ${levels.gamma_index_date}` : null}
+          bold
+        />
+        <Stat
+          label="Dist from Risk Off"
+          value={flipDist != null ? `${aboveFlip ? '+' : ''}${flipDist.toFixed(2)}` : '—'}
+          accent="var(--accent-amber)"
+          sub={flipDist != null ? `${((flipDist / spotPrice) * 100).toFixed(2)}%` : null}
+        />
+        <Stat
           label="VRP"
-          value={vrpMetric ? `${vrpMetric.vrp > 0 ? '+' : ''}${vrpMetric.vrp.toFixed(2)}%` : '\u2014'}
+          value={vrpMetric ? `${vrpMetric.vrp > 0 ? '+' : ''}${vrpMetric.vrp.toFixed(2)}%` : '—'}
           accent="var(--accent-cyan)"
           sub={vrpMetric ? `IV ${vrpMetric.iv.toFixed(1)}% / RV ${vrpMetric.rv.toFixed(1)}%` : null}
         />
         <Stat
           label="IV Rank"
-          value={vrpMetric?.ivRank != null ? `${vrpMetric.ivRank.toFixed(1)}%` : '\u2014'}
+          value={vrpMetric?.ivRank != null ? `${vrpMetric.ivRank.toFixed(1)}%` : '—'}
           accent="var(--accent-cyan)"
           sub={
             vrpMetric?.ivRankLow != null && vrpMetric?.ivRankHigh != null
               ? `252d: ${vrpMetric.ivRankLow.toFixed(1)}% – ${vrpMetric.ivRankHigh.toFixed(1)}%`
               : null
           }
-        />
-        <Stat
-          label="Overnight Alignment"
-          value={alignmentValue(overnightAlignment?.score)}
-          accent={alignmentAccent(overnightAlignment?.score)}
-          sub={
-            overnightAlignment
-              ? `PW ${alignmentArrow(overnightAlignment.dirs.put_wall)}  VF ${alignmentArrow(overnightAlignment.dirs.volatility_flip)}  CW ${alignmentArrow(overnightAlignment.dirs.call_wall)}`
-              : null
-          }
-          bold
-        />
-        <Stat
-          label="Gamma Index"
-          value={gammaIndexValue(levels.gamma_index)}
-          accent={gammaIndexAccent(levels.gamma_index)}
-          sub={levels.gamma_index_date ? `as of ${levels.gamma_index_date}` : null}
-          bold
         />
         <Stat
           label="P/C Ratio (Volume)"
