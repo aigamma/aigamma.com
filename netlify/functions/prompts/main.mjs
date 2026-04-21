@@ -22,7 +22,7 @@ The Gamma Inflection chart plots the dealer gamma profile as a function of strik
 
 The GEX Profile chart plots gamma exposure by strike with Put Wall and Call Wall highlighted as strike concentrations that act as magnets or barriers for spot under the dealer-hedging assumption. The previous day's profile is overlaid as a shadow to show how positioning has shifted overnight, which is often where the actionable information lives.
 
-The Gamma Throttle Scatter plots the percentile rank of realized move against the percentile rank of dealer gamma, showing the nonlinear dampening relationship where high positive gamma suppresses realized variance and high negative gamma enables realized-vol breakouts.
+The Gamma Index Scatter plots the percentile rank of realized move against the percentile rank of dealer gamma, showing the nonlinear dampening relationship where high positive gamma suppresses realized variance and high negative gamma enables realized-vol breakouts.
 
 The Fixed-Strike IV Matrix renders a strike-by-expiration grid of implied vols with day-over-day IV changes exposed, which is how smile steepening, term-structure re-pricing, and strike-level re-pricing events become visible without squinting at chart overlays.
 

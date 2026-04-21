@@ -9,7 +9,7 @@ import FixedStrikeIvMatrix from './components/FixedStrikeIvMatrix';
 import RiskNeutralDensity from './components/RiskNeutralDensity';
 import VolatilityRiskPremium from './components/VolatilityRiskPremium';
 import DealerGammaRegime from './components/DealerGammaRegime';
-import GammaThrottleScatter from './components/GammaThrottleScatter';
+import GammaIndexScatter from './components/GammaIndexScatter';
 import Chat from './components/Chat';
 import QuantMenu from './components/QuantMenu';
 import useOptionsData from './hooks/useOptionsData';
@@ -475,7 +475,7 @@ export default function App() {
             />
           </ErrorBoundary>
 
-          <ErrorBoundary><GammaThrottleScatter /></ErrorBoundary>
+          <ErrorBoundary><GammaIndexScatter /></ErrorBoundary>
 
           <ErrorBoundary>
             <FixedStrikeIvMatrix

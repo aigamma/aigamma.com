@@ -11,21 +11,23 @@ import {
 } from '../lib/plotlyTheme';
 import ResetButton from './ResetButton';
 
-// Scatter of gamma throttle (x) vs 10-day realized volatility (y).
-// Each dot is one trading day, colored on a continuous scale by throttle
-// value: coral (deep negative gamma) through amber (neutral) to blue
-// (strong positive gamma). A custom HTML/CSS date-brush below the scatter
-// controls which historical window is included — dragging the handles or
-// the window body re-filters the scatter. An exponential fit curve shows
-// the structural negative correlation between gamma positioning and
-// realized vol. The brush is a plain div-based control rather than
-// Plotly's rangeslider because the scatter's x-axis is linear (gamma
-// throttle), not a date; embedding a date rangeslider requires a separate
-// strip chart, and Plotly's rangeslider silently fails to render in thin
-// strips (<~76px of main-plot area above the slider), which burned
-// several sessions before this was rewritten as a standalone widget.
+// Scatter of gamma index (x) vs 10-day realized volatility (y). The
+// gamma index is (call_gex − put_gex) / (call_gex + put_gex), a unitless
+// ratio bounded [-1, +1]. Each dot is one trading day, colored on a
+// continuous scale by index value: coral (deep negative gamma) through
+// amber (neutral) to blue (strong positive gamma). A custom HTML/CSS
+// date-brush below the scatter controls which historical window is
+// included — dragging the handles or the window body re-filters the
+// scatter. An exponential fit curve shows the structural negative
+// correlation between gamma positioning and realized vol. The brush is a
+// plain div-based control rather than Plotly's rangeslider because the
+// scatter's x-axis is linear (gamma index), not a date; embedding a date
+// rangeslider requires a separate strip chart, and Plotly's rangeslider
+// silently fails to render in thin strips (<~76px of main-plot area
+// above the slider), which burned several sessions before this was
+// rewritten as a standalone widget.
 
-const THROTTLE_COLORSCALE = [
+const GAMMA_INDEX_COLORSCALE = [
   [0.0, '#e74c3c'],
   [0.3, '#f39c12'],
   [0.45, '#f1c40f'],
@@ -206,7 +208,7 @@ function DateRangeBrush({ firstDate, lastDate, activeRange, onChange, height = 4
   );
 }
 
-export default function GammaThrottleScatter() {
+export default function GammaIndexScatter() {
   const scatterRef = useRef(null);
   const { plotly: Plotly, error: plotlyError } = usePlotly();
   const { data, loading, error } = useGexHistory({});
@@ -215,7 +217,7 @@ export default function GammaThrottleScatter() {
   const fullSeries = useMemo(() => {
     if (!data?.series) return [];
     return data.series.filter(
-      (r) => r.gamma_throttle != null && r.hv_10d != null && r.hv_10d > 0 && r.spx_close != null,
+      (r) => r.gamma_index != null && r.hv_10d != null && r.hv_10d > 0 && r.spx_close != null,
     );
   }, [data]);
 
@@ -256,7 +258,7 @@ export default function GammaThrottleScatter() {
 
   const fitCurve = useMemo(() => {
     if (filtered.length < 10) return null;
-    const xs = filtered.map((r) => r.gamma_throttle);
+    const xs = filtered.map((r) => r.gamma_index);
     const ys = filtered.map((r) => r.hv_10d * 100);
     const fit = exponentialFit(xs, ys);
     if (!fit) return null;
@@ -284,33 +286,33 @@ export default function GammaThrottleScatter() {
   useEffect(() => {
     if (!Plotly || !scatterRef.current || filtered.length === 0) return;
 
-    const throttleVals = filtered.map((r) => r.gamma_throttle);
+    const indexVals = filtered.map((r) => r.gamma_index);
     const rvVals = filtered.map((r) => r.hv_10d * 100);
-    const colorVals = filtered.map((r) => r.gamma_throttle);
+    const colorVals = filtered.map((r) => r.gamma_index);
     const hoverText = filtered.map(
       (r) =>
-        `${r.trading_date}<br>Vol Flip: ${r.gamma_throttle.toFixed(1)}<br>10d RV: ${(r.hv_10d * 100).toFixed(1)}%<br>${r.regime === 'positive' ? 'Positive' : 'Negative'} Gamma`,
+        `${r.trading_date}<br>Gamma Index: ${r.gamma_index.toFixed(3)}<br>10d RV: ${(r.hv_10d * 100).toFixed(1)}%<br>${r.regime === 'positive' ? 'Positive' : 'Negative'} Gamma`,
     );
 
-    const cmin = Math.max(Math.min(...colorVals, -10), -80);
-    const cmax = Math.min(Math.max(...colorVals, 10), 60);
+    const cmin = Math.max(Math.min(...colorVals, -0.1), -0.8);
+    const cmax = Math.min(Math.max(...colorVals, 0.1), 0.6);
 
-    const xMin = Math.min(...throttleVals);
-    const xMax = Math.max(...throttleVals);
-    const xPad = Math.max((xMax - xMin) * 0.05, 2);
+    const xMin = Math.min(...indexVals);
+    const xMax = Math.max(...indexVals);
+    const xPad = Math.max((xMax - xMin) * 0.05, 0.02);
     const yMax = Math.max(...rvVals);
 
     const traces = [];
 
     traces.push({
-      x: throttleVals,
+      x: indexVals,
       y: rvVals,
       mode: 'markers',
       type: 'scatter',
       marker: {
         size: mobile ? 5 : 6,
         color: colorVals,
-        colorscale: THROTTLE_COLORSCALE,
+        colorscale: GAMMA_INDEX_COLORSCALE,
         cmin,
         cmax,
         opacity: 0.8,
@@ -335,7 +337,7 @@ export default function GammaThrottleScatter() {
 
     if (lastPoint) {
       traces.push({
-        x: [lastPoint.gamma_throttle],
+        x: [lastPoint.gamma_index],
         y: [lastPoint.hv_10d * 100],
         mode: 'markers+text',
         type: 'scatter',
@@ -350,14 +352,14 @@ export default function GammaThrottleScatter() {
         textfont: { family: PLOTLY_FONT_FAMILY, color: PLOTLY_COLORS.titleText, size: 13 },
         showlegend: false,
         hovertemplate:
-          `${lastPoint.trading_date}<br>Vol Flip: ${lastPoint.gamma_throttle.toFixed(2)}<br>10d RV: ${(lastPoint.hv_10d * 100).toFixed(2)}%<extra></extra>`,
+          `${lastPoint.trading_date}<br>Gamma Index: ${lastPoint.gamma_index.toFixed(3)}<br>10d RV: ${(lastPoint.hv_10d * 100).toFixed(2)}%<extra></extra>`,
       });
     }
 
     const annotations = [];
     if (lastPoint) {
       const lines = [
-        `Vol Flip: ${lastPoint.gamma_throttle.toFixed(2)}`,
+        `Gamma Index: ${lastPoint.gamma_index.toFixed(3)}`,
         `10d RV: ${(lastPoint.hv_10d * 100).toFixed(2)}%`,
       ];
       if (stats.total > 0) {
@@ -384,12 +386,12 @@ export default function GammaThrottleScatter() {
     const layout = plotly2DChartLayout({
       margin: mobile ? { t: 45, r: 15, b: 40, l: 50 } : { t: 80, r: 30, b: 45, l: 70 },
       title: {
-        ...plotlyTitle(mobile ? 'Vol Flip vs. 10d RV' : 'Volatility Flip vs. 10d RV'),
+        ...plotlyTitle('Gamma Index vs. 10d RV'),
         y: 0.97,
         yref: 'container',
         yanchor: 'top',
       },
-      xaxis: plotlyAxis('', {
+      xaxis: plotlyAxis(mobile ? '' : 'Gamma Index', {
         type: 'linear',
         range: [xMin - xPad, xMax + xPad],
         autorange: false,

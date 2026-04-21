@@ -13,7 +13,7 @@ import GarchZoo from './slots/GarchZoo';
 //
 // The multivariate fitters (CCC / DCC / BEKK / OGARCH) stay in the
 // garch.js library but are not invoked on this page. They had been paired
-// with gamma_throttle's daily first-difference as a second series to
+// with gamma_index's daily first-difference as a second series to
 // produce an SPX-vs-positioning ρ₁₂(t) time series, but that trace had no
 // actionable reading attached, so the correlation chart was removed and
 // the freed space was redirected into a taller main chart.
