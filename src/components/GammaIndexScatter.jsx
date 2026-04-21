@@ -297,9 +297,6 @@ export default function GammaIndexScatter() {
     const cmin = Math.max(Math.min(...colorVals, -1), -8);
     const cmax = Math.min(Math.max(...colorVals, 1), 6);
 
-    const xMin = Math.min(...indexVals);
-    const xMax = Math.max(...indexVals);
-    const xPad = Math.max((xMax - xMin) * 0.05, 0.2);
     const yMax = Math.max(...rvVals);
 
     const traces = [];
@@ -393,8 +390,9 @@ export default function GammaIndexScatter() {
       },
       xaxis: plotlyAxis(mobile ? '' : 'Gamma Index', {
         type: 'linear',
-        range: [xMin - xPad, xMax + xPad],
+        range: [-10, 10],
         autorange: false,
+        tickvals: [-10, -5, 0, 5, 10],
         zeroline: true,
         zerolinecolor: PLOTLY_COLORS.zeroLine,
         zerolinewidth: 1,
