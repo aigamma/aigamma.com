@@ -13,6 +13,16 @@
 // Put-side GEX is negative (dealer-short-puts creates destabilizing hedging).
 // Net GEX = call_gex - put_gex; positive net = positive gamma regime.
 //
+// vol_flip_strike comes from the γ(Ŝ) zero-crossing of the dealer
+// gamma profile swept across ±15% of spot (see gamma-profile.mjs and
+// src/lib/gammaProfile.js). The pre-2026-04-20 version of this file
+// took the zero crossing of per-strike (call_gex − put_gex) walking the
+// strike axis, which is a different statistic and disagreed with the
+// live main page's regime chip ~30% of the time — see the 2026-04-20
+// migration commit for the historical backfill that corrected the
+// whole series in daily_gex_stats. Keeping both code paths on the
+// shared module prevents that drift from reappearing.
+//
 // Usage:
 //   SUPABASE_URL=... SUPABASE_SERVICE_KEY=... \
 //   node scripts/backfill/compute-gex-history.mjs [--start YYYY-MM-DD] [--end YYYY-MM-DD] [--force]
@@ -22,6 +32,7 @@
 import process from 'node:process';
 import { createBackfillWriter } from './supabase-writer.mjs';
 import { tradingDaysBetween } from './trading-days.mjs';
+import { expirationToIso, computeGammaProfile, findFlipFromProfile } from './gamma-profile.mjs';
 
 const DEFAULT_START = '2017-01-03';
 const DEFAULT_END   = '2026-04-16';
@@ -112,7 +123,7 @@ async function fetchGreeks(baseUrl, symbol, date) {
   const url = `${baseUrl}/v3/option/history/greeks/eod?symbol=${symbol}&expiration=*&start_date=${compact}&end_date=${compact}`;
   const text = await fetchTextWithRetry(url, `greeks ${symbol} ${date}`);
   if (text === null) return [];
-  return parseCsv(text, ['expiration', 'strike', 'right', 'gamma', 'underlying_price']);
+  return parseCsv(text, ['expiration', 'strike', 'right', 'gamma', 'implied_vol', 'underlying_price']);
 }
 
 async function fetchOI(baseUrl, symbol, date) {
@@ -135,56 +146,56 @@ function joinGreeksAndOI(greeks, oiRows) {
     const key = `${g.expiration}|${g.strike}|${right}`;
     const oi = oiMap.get(key);
     const gamma = Number(g.gamma);
+    const sigma = Number(g.implied_vol);
     if (!(gamma > 0) || !(oi > 0)) continue;
-    joined.push({ strike: Number(g.strike), right, gamma, open_interest: oi, underlyingPrice: Number(g.underlying_price) });
+    joined.push({
+      strike: Number(g.strike),
+      right,
+      gamma,
+      sigma,
+      oi,
+      open_interest: oi,
+      expiration: expirationToIso(g.expiration),
+      underlyingPrice: Number(g.underlying_price),
+    });
   }
   return joined;
 }
 
-function computeDailyGex(contracts) {
+function computeDailyGex(contracts, tradingDate) {
   if (!contracts || contracts.length === 0) return null;
   let spotPrice = null;
   for (const c of contracts) { if (c.underlyingPrice > 0) { spotPrice = c.underlyingPrice; break; } }
   if (!spotPrice) return null;
 
   const mult = spotPrice * spotPrice * 0.01 * 100;
-  const byStrike = new Map();
   let totalCallGex = 0, totalPutGex = 0;
 
   for (const c of contracts) {
     const gex = c.gamma * c.open_interest * mult;
-    const key = c.strike;
-    if (!byStrike.has(key)) byStrike.set(key, { callGex: 0, putGex: 0 });
-    const entry = byStrike.get(key);
     const isCall = c.right === 'C' || c.right === 'CALL';
     const isPut = c.right === 'P' || c.right === 'PUT';
-    if (isCall) { entry.callGex += gex; totalCallGex += gex; }
-    else if (isPut) { entry.putGex += gex; totalPutGex += gex; }
+    if (isCall) totalCallGex += gex;
+    else if (isPut) totalPutGex += gex;
   }
 
   const netGex = totalCallGex - totalPutGex;
-  const strikes = Array.from(byStrike.keys()).sort((a, b) => a - b);
-  let volFlip = null, bestScore = -Infinity;
 
-  for (let i = 1; i < strikes.length; i++) {
-    const prevS = strikes[i - 1], currS = strikes[i];
-    const prevNet = byStrike.get(prevS).callGex - byStrike.get(prevS).putGex;
-    const currNet = byStrike.get(currS).callGex - byStrike.get(currS).putGex;
-    if ((prevNet < 0 && currNet >= 0) || (prevNet > 0 && currNet <= 0)) {
-      const t = Math.abs(prevNet) / (Math.abs(prevNet) + Math.abs(currNet));
-      const cross = prevS + t * (currS - prevS);
-      let below = 0, above = 0;
-      for (const s of strikes) {
-        const e = byStrike.get(s);
-        const net = e.callGex - e.putGex;
-        if (s <= cross) below += Math.abs(net); else above += Math.abs(net);
-      }
-      const score = Math.min(below, above);
-      if (score > bestScore) { bestScore = score; volFlip = Math.round(cross); }
-    }
-  }
+  // Vol flip = zero crossing of γ(Ŝ) swept across ±15% of spot, matching
+  // the live main page. Uses implied_vol from the EOD greeks CSV to
+  // reprice BS gamma at each hypothetical spot.
+  const profile = computeGammaProfile(contracts, spotPrice, tradingDate);
+  const flip = findFlipFromProfile(profile);
+  const volFlip = flip == null ? null : Math.round(flip);
 
-  return { spx_close: spotPrice, net_gex: netGex, call_gex: totalCallGex, put_gex: totalPutGex, vol_flip_strike: volFlip, contract_count: contracts.length };
+  return {
+    spx_close: spotPrice,
+    net_gex: netGex,
+    call_gex: totalCallGex,
+    put_gex: totalPutGex,
+    vol_flip_strike: volFlip,
+    contract_count: contracts.length,
+  };
 }
 
 async function main() {
@@ -219,7 +230,7 @@ async function main() {
         allContracts.push(...joinGreeksAndOI(greeks, oi));
       }
       await new Promise(r => setTimeout(r, 150));
-      const result = computeDailyGex(allContracts);
+      const result = computeDailyGex(allContracts, day);
       if (!result) { log('gex.skip_no_data', { date: day }); continue; }
 
       batch.push({ trading_date: day, ...result });
