@@ -60,7 +60,7 @@ function ivDeltaSub(current, prior) {
 // carried a null for that field).
 function alignmentAccent(score) {
   if (score == null) return undefined;
-  if (score >= 2) return 'var(--accent-green)';
+  if (score >= 2) return '#02A29F';
   if (score <= -2) return 'var(--accent-coral)';
   return 'var(--accent-amber)';
 }
@@ -86,7 +86,7 @@ function alignmentValue(score) {
 // paints amber.
 function gammaIndexAccent(value) {
   if (value == null) return undefined;
-  if (value >= 2) return 'var(--accent-green)';
+  if (value >= 2) return '#02A29F';
   if (value <= -2) return 'var(--accent-coral)';
   return 'var(--accent-amber)';
 }
