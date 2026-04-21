@@ -26,7 +26,7 @@ const PLOTLY_LAYOUT_BASE = {
 
 const SHADOW_OPACITY = 0.2;
 
-function LevelLabel({ name, value, color }) {
+function LevelLabel({ name, value, color, format = formatInteger }) {
   if (value == null) return null;
   return (
     <div
@@ -54,7 +54,7 @@ function LevelLabel({ name, value, color }) {
           fontWeight: 'bold',
         }}
       >
-        {formatInteger(value)}
+        {format(value)}
       </span>
     </div>
   );
@@ -278,38 +278,6 @@ export default function GexProfile({ contracts, spotPrice, levels, prevContracts
             position: 'relative',
           }}
         >
-          {levels?.put_call_ratio_oi != null && (
-            <div
-              style={{
-                position: 'absolute',
-                left: 0,
-                display: 'flex',
-                alignItems: 'baseline',
-                gap: '0.5rem',
-                fontFamily: 'Courier New, monospace',
-              }}
-            >
-              <span
-                style={{
-                  color: 'var(--text-secondary)',
-                  fontSize: '0.75rem',
-                  textTransform: 'uppercase',
-                  letterSpacing: '0.08em',
-                }}
-              >
-                P/C (OI)
-              </span>
-              <span
-                style={{
-                  color: 'var(--accent-cyan)',
-                  fontSize: '1rem',
-                  fontWeight: 'bold',
-                }}
-              >
-                {formatRatio(levels.put_call_ratio_oi)}
-              </span>
-            </div>
-          )}
           <span
             style={{
               color: PLOTLY_COLORS.titleText,
@@ -342,6 +310,12 @@ export default function GexProfile({ contracts, spotPrice, levels, prevContracts
           <LevelLabel name="Flip" value={levels?.volatility_flip} color={PLOTLY_COLORS.highlight} />
           <LevelLabel name="SPX" value={spotPrice} color={PLOTLY_COLORS.primary} />
           <LevelLabel name="Call Wall" value={levels?.call_wall} color={PLOTLY_COLORS.positive} />
+          <LevelLabel
+            name="P/C (OI)"
+            value={levels?.put_call_ratio_oi}
+            color="var(--accent-purple)"
+            format={formatRatio}
+          />
         </div>
       </div>
       <div

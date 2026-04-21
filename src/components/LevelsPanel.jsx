@@ -240,13 +240,13 @@ export default function LevelsPanel({ levels, spotPrice, prevClose, expirationMe
         <Stat
           label="VRP"
           value={vrpMetric ? `${vrpMetric.vrp > 0 ? '+' : ''}${vrpMetric.vrp.toFixed(2)}%` : '—'}
-          accent="var(--accent-cyan)"
+          accent="var(--accent-purple)"
           sub={vrpMetric ? `IV ${vrpMetric.iv.toFixed(1)}% / RV ${vrpMetric.rv.toFixed(1)}%` : null}
         />
         <Stat
           label="IV Rank"
           value={vrpMetric?.ivRank != null ? `${vrpMetric.ivRank.toFixed(1)}%` : '—'}
-          accent="var(--accent-cyan)"
+          accent="var(--accent-purple)"
           sub={
             vrpMetric?.ivRankLow != null && vrpMetric?.ivRankHigh != null
               ? `252d: ${vrpMetric.ivRankLow.toFixed(1)}% – ${vrpMetric.ivRankHigh.toFixed(1)}%`
@@ -256,7 +256,7 @@ export default function LevelsPanel({ levels, spotPrice, prevClose, expirationMe
         <Stat
           label="P/C Ratio (Volume)"
           value={formatRatio(levels.put_call_ratio_volume)}
-          accent="var(--accent-cyan)"
+          accent="var(--accent-purple)"
           sub={
             levels.total_put_volume != null && levels.total_call_volume != null
               ? `${formatGamma(levels.total_put_volume)}P / ${formatGamma(levels.total_call_volume)}C`
