@@ -49,12 +49,12 @@
   outline-offset: 2px;
 }
 
-/* Filled green call-to-action placed between the header and the first
+/* Outlined green call-to-action placed between the header and the first
    slot on a lab page that wants a prominent Return-Home affordance.
-   Filled rather than outlined so it reads as a primary action, sized
-   a step larger than the site-about-link so it is obvious from the
-   first screen. Hover inverts to transparent-on-green-border so the
-   hover state stays within the same color token. */
+   Outlined rather than filled so the button reads as the same chrome
+   family as the adjacent QuantMenu trigger (both are green-text on
+   dark-background with a green border); hover flips to filled green
+   so the active affordance still stays within the same color token. */
 .lab-home-row {
   display: flex;
   justify-content: center;
@@ -71,8 +71,8 @@
   text-transform: uppercase;
   text-decoration: none;
   padding: 0.85rem 1.75rem;
-  background: var(--accent-green);
-  color: #0d1016;
+  background: transparent;
+  color: var(--accent-green);
   border: 1px solid var(--accent-green);
   border-radius: 3px;
   font-weight: 700;
@@ -81,8 +81,8 @@
 
 .lab-home-button:hover,
 .lab-home-button:focus-visible {
-  background: transparent;
-  color: var(--accent-green);
+  background: var(--accent-green);
+  color: #0d1016;
   outline: none;
 }
 
