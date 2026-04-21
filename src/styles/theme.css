@@ -169,7 +169,7 @@ body {
   letter-spacing: normal;
   text-transform: none;
   text-decoration: none;
-  color: var(--text-primary);
+  color: var(--accent-purple);
   border: none;
   border-left: 2px solid transparent;
   border-radius: 0;
@@ -179,7 +179,7 @@ body {
 
 .quant-menu .quant-menu-item:hover,
 .quant-menu .quant-menu-item:focus-visible {
-  background-color: rgba(191, 127, 255, 0.08);
+  background-color: rgba(191, 127, 255, 0.12);
   border-left-color: var(--accent-purple);
 }
 
@@ -190,7 +190,7 @@ body {
 }
 
 .quant-menu .quant-menu-desc {
-  color: var(--text-secondary);
+  color: rgba(191, 127, 255, 0.7);
   font-size: 0.72rem;
   text-align: right;
   line-height: 1.4;
