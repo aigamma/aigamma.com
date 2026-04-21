@@ -201,16 +201,16 @@ export default function LevelsPanel({ levels, spotPrice, prevClose, expirationMe
           bold
         />
         <Stat
-          label="Put Wall"
-          value={formatInteger(levels.put_wall)}
-          accent="var(--accent-coral)"
-          sub={putWallSub}
-        />
-        <Stat
           label="Vol Flip"
           value={formatInteger(levels.volatility_flip)}
           accent="var(--accent-amber)"
           sub={volFlipSub}
+        />
+        <Stat
+          label="Put Wall"
+          value={formatInteger(levels.put_wall)}
+          accent="var(--accent-coral)"
+          sub={putWallSub}
         />
         <Stat label="SPX" value={formatInteger(spotPrice)} accent="var(--accent-blue)" sub={spotDeltaSub(spotPrice, prevClose)} />
         <Stat
