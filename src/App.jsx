@@ -59,24 +59,28 @@ const REGIME_COLORS = {
 // the 32 px asset under upscaling; neutral ships at all four sizes natively.
 // NEAR FLIP (amber tone on the dashboard) collapses to neutral here so the
 // tab icon matches what the approved Chrome Store extension already shows.
+// ?v=2 cache-buster busts Chrome's favicon cache across deploys. Bump
+// whenever the icon artwork changes so installed users re-fetch rather
+// than staying on whatever their browser cached previously — Chrome's
+// favicon cache is stubborn and survives Ctrl+F5 without a URL change.
 const FAVICON_PATHS = {
   positive: {
-    16: '/favicons/positive/icon16.png',
-    32: '/favicons/positive/icon32.png',
-    48: '/favicons/positive/icon32.png',
-    128: '/favicons/positive/icon32.png',
+    16: '/favicons/positive/icon16.png?v=2',
+    32: '/favicons/positive/icon32.png?v=2',
+    48: '/favicons/positive/icon32.png?v=2',
+    128: '/favicons/positive/icon32.png?v=2',
   },
   negative: {
-    16: '/favicons/negative/icon16.png',
-    32: '/favicons/negative/icon32.png',
-    48: '/favicons/negative/icon32.png',
-    128: '/favicons/negative/icon32.png',
+    16: '/favicons/negative/icon16.png?v=2',
+    32: '/favicons/negative/icon32.png?v=2',
+    48: '/favicons/negative/icon32.png?v=2',
+    128: '/favicons/negative/icon32.png?v=2',
   },
   neutral: {
-    16: '/favicons/neutral/icon16.png',
-    32: '/favicons/neutral/icon32.png',
-    48: '/favicons/neutral/icon48.png',
-    128: '/favicons/neutral/icon128.png',
+    16: '/favicons/neutral/icon16.png?v=2',
+    32: '/favicons/neutral/icon32.png?v=2',
+    48: '/favicons/neutral/icon48.png?v=2',
+    128: '/favicons/neutral/icon128.png?v=2',
   },
 };
 
