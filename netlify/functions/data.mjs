@@ -139,7 +139,7 @@ export default async function handler(request) {
     // and put_gex aggregates but the dealer positioning book the market
     // is facing today is whatever last night's EOD sweep produced.
     const dailyGexRes = fetchWithTimeout(
-      `${supabaseUrl}/rest/v1/daily_gex_stats?select=trading_date,call_gex,put_gex,contract_count&order=trading_date.desc&limit=1`,
+      `${supabaseUrl}/rest/v1/daily_gex_stats?select=trading_date,call_gex,put_gex,atm_call_gex,atm_put_gex,atm_contract_count,contract_count&order=trading_date.desc&limit=1`,
       { headers },
       'daily_gex_stats_latest'
     );
@@ -263,8 +263,18 @@ export default async function handler(request) {
     if (dailyGex) {
       const cg = toNum(dailyGex.call_gex);
       const pg = toNum(dailyGex.put_gex);
+      const acg = toNum(dailyGex.atm_call_gex);
+      const apg = toNum(dailyGex.atm_put_gex);
+      const acc = dailyGex.atm_contract_count != null ? Number(dailyGex.atm_contract_count) : 0;
       const cc = dailyGex.contract_count != null ? Number(dailyGex.contract_count) : 0;
-      if (cg != null && pg != null && (cg + pg) > 0 && cc >= 1000) {
+      // Prefer the ATM-focused ratio (|delta| in [0.40, 0.60]) when the
+      // backfill has populated it. Fall back to the whole-chain version for
+      // rows pre-backfill so the Levels Panel cell stays populated during
+      // the 9h backfill window.
+      if (acg != null && apg != null && (acg + apg) > 0 && acc >= 50) {
+        gammaIndex = Math.round(((acg - apg) / (acg + apg)) * 10 * 1000) / 1000;
+        gammaIndexDate = dailyGex.trading_date;
+      } else if (cg != null && pg != null && (cg + pg) > 0 && cc >= 1000) {
         gammaIndex = Math.round(((cg - pg) / (cg + pg)) * 10 * 1000) / 1000;
         gammaIndexDate = dailyGex.trading_date;
       }

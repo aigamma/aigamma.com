@@ -419,6 +419,26 @@ function computeGex(pages, targets, startedAt, partial, partialReason = null) {
   }
   const gammaTilt = totalPutGamma > 0 ? totalCallGamma / totalPutGamma : null;
 
+  // ATM bucket aggregation for the Gamma Index oscillator. Restricts the
+  // call/put GEX sums to contracts with |delta| in [0.40, 0.60] so the
+  // downstream (atm_call_gex − atm_put_gex) / (atm_call_gex + atm_put_gex)
+  // ratio is driven by peak-gamma strikes dealers actively hedge rather
+  // than diluted by wing-OI that doesn't rebalance tick-to-tick. Mirrors
+  // the same delta window used by scripts/backfill/compute-gex-history.mjs
+  // so the live and EOD paths agree on methodology.
+  let atmCallGex = 0, atmPutGex = 0, atmContractCount = 0;
+  for (const c of contracts) {
+    const d = c.delta;
+    if (d == null) continue;
+    const isCall = c.contract_type === 'call';
+    const inBucket = isCall ? (d >= 0.40 && d <= 0.60) : (d >= -0.60 && d <= -0.40);
+    if (!inBucket) continue;
+    const gex = c.gamma * c.open_interest * 100 * spotPrice * spotPrice * 0.01;
+    if (isCall) atmCallGex += gex;
+    else atmPutGex += gex;
+    atmContractCount++;
+  }
+
   let totalCallOi = 0, totalPutOi = 0, totalCallVolume = 0, totalPutVolume = 0;
   let netVannaNotional = 0, netCharmNotional = 0;
   for (const c of contracts) {
@@ -518,6 +538,9 @@ function computeGex(pages, targets, startedAt, partial, partialReason = null) {
     volatility_flip: volatilityFlip != null ? round(volatilityFlip, 2) : null,
     gamma_profile: gammaProfile,
     gamma_tilt: gammaTilt != null ? round(gammaTilt, 6) : null,
+    atm_call_gex: round(atmCallGex, 2),
+    atm_put_gex: round(atmPutGex, 2),
+    atm_contract_count: atmContractCount,
     max_pain_strike: maxPainStrike,
     put_call_ratio_oi: putCallRatioOi != null ? round(putCallRatioOi, 4) : null,
     put_call_ratio_volume: putCallRatioVolume != null ? round(putCallRatioVolume, 4) : null,

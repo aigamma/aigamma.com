@@ -102,7 +102,7 @@ export default async function handler(request) {
   const fetchFrom = leadDate.toISOString().slice(0, 10);
 
   const params = new URLSearchParams({
-    select: 'trading_date,spx_close,net_gex,call_gex,put_gex,vol_flip_strike,contract_count',
+    select: 'trading_date,spx_close,net_gex,call_gex,put_gex,atm_call_gex,atm_put_gex,atm_contract_count,vol_flip_strike,contract_count',
     trading_date: `gte.${fetchFrom}`,
     order: 'trading_date.asc',
   });
@@ -138,17 +138,25 @@ export default async function handler(request) {
 
       const callGex = toNum(r.call_gex);
       const putGex = toNum(r.put_gex);
+      const atmCallGex = toNum(r.atm_call_gex);
+      const atmPutGex = toNum(r.atm_put_gex);
       const netGex = toNum(r.net_gex);
       const volFlip = toNum(r.vol_flip_strike);
       const spxClose = toNum(r.spx_close);
 
-      // Gamma index: ratio of net to total, scaled ×10 so the oscillator
-      // reads in [-10, +10]. Null out for days with very low contract
-      // counts (early-close sessions, sparse data) where the aggregate
-      // GEX is unreliable.
+      // Gamma Index: ATM-focused version sourced from atm_call_gex and
+      // atm_put_gex (|delta| in [0.40, 0.60]) when available. Peak-gamma
+      // strikes drive dealer hedging reactivity — the whole-chain sum dilutes
+      // the signal with far-OTM put OI that does not rebalance tick-to-tick.
+      // Scaled ×10 so the oscillator reads in [-10, +10]. Falls back to the
+      // whole-chain ratio for rows pre-backfill (atm_* NULL) so the historical
+      // series stays contiguous while the ATM backfill is in flight.
+      const atmCount = r.atm_contract_count != null ? Number(r.atm_contract_count) : 0;
       const contractCount = r.contract_count != null ? Number(r.contract_count) : 0;
       let gammaIndex = null;
-      if (callGex != null && putGex != null && (callGex + putGex) > 0 && contractCount >= 1000) {
+      if (atmCallGex != null && atmPutGex != null && (atmCallGex + atmPutGex) > 0 && atmCount >= 50) {
+        gammaIndex = ((atmCallGex - atmPutGex) / (atmCallGex + atmPutGex)) * 10;
+      } else if (callGex != null && putGex != null && (callGex + putGex) > 0 && contractCount >= 1000) {
         gammaIndex = ((callGex - putGex) / (callGex + putGex)) * 10;
       }
 

@@ -123,7 +123,7 @@ async function fetchGreeks(baseUrl, symbol, date) {
   const url = `${baseUrl}/v3/option/history/greeks/eod?symbol=${symbol}&expiration=*&start_date=${compact}&end_date=${compact}`;
   const text = await fetchTextWithRetry(url, `greeks ${symbol} ${date}`);
   if (text === null) return [];
-  return parseCsv(text, ['expiration', 'strike', 'right', 'gamma', 'implied_vol', 'underlying_price']);
+  return parseCsv(text, ['expiration', 'strike', 'right', 'delta', 'gamma', 'implied_vol', 'underlying_price']);
 }
 
 async function fetchOI(baseUrl, symbol, date) {
@@ -147,12 +147,14 @@ function joinGreeksAndOI(greeks, oiRows) {
     const oi = oiMap.get(key);
     const gamma = Number(g.gamma);
     const sigma = Number(g.implied_vol);
+    const delta = Number(g.delta);
     if (!(gamma > 0) || !(oi > 0)) continue;
     joined.push({
       strike: Number(g.strike),
       right,
       gamma,
       sigma,
+      delta: Number.isFinite(delta) ? delta : null,
       oi,
       open_interest: oi,
       expiration: expirationToIso(g.expiration),
@@ -170,13 +172,29 @@ function computeDailyGex(contracts, tradingDate) {
 
   const mult = spotPrice * spotPrice * 0.01 * 100;
   let totalCallGex = 0, totalPutGex = 0;
+  // ATM bucket: |delta| in [0.40, 0.60]. Restricts the sum to peak-gamma
+  // strikes where dealer hedging is reactive to spot moves, stripping out
+  // the wing-OI asymmetry that drags the whole-chain ratio toward the put
+  // side even when the near-spot book is call-dominated.
+  let atmCallGex = 0, atmPutGex = 0, atmContractCount = 0;
 
   for (const c of contracts) {
     const gex = c.gamma * c.open_interest * mult;
     const isCall = c.right === 'C' || c.right === 'CALL';
     const isPut = c.right === 'P' || c.right === 'PUT';
-    if (isCall) totalCallGex += gex;
-    else if (isPut) totalPutGex += gex;
+    if (isCall) {
+      totalCallGex += gex;
+      if (c.delta != null && c.delta >= 0.40 && c.delta <= 0.60) {
+        atmCallGex += gex;
+        atmContractCount++;
+      }
+    } else if (isPut) {
+      totalPutGex += gex;
+      if (c.delta != null && c.delta >= -0.60 && c.delta <= -0.40) {
+        atmPutGex += gex;
+        atmContractCount++;
+      }
+    }
   }
 
   const netGex = totalCallGex - totalPutGex;
@@ -193,6 +211,9 @@ function computeDailyGex(contracts, tradingDate) {
     net_gex: netGex,
     call_gex: totalCallGex,
     put_gex: totalPutGex,
+    atm_call_gex: atmCallGex,
+    atm_put_gex: atmPutGex,
+    atm_contract_count: atmContractCount,
     vol_flip_strike: volFlip,
     contract_count: contracts.length,
   };
