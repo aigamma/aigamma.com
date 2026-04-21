@@ -48,7 +48,7 @@ function classifyGammaRegime(levels, spotPrice) {
 }
 
 const REGIME_COLORS = {
-  green: 'var(--accent-green)',
+  green: '#04A29F',
   coral: 'var(--accent-coral)',
   amber: 'var(--accent-amber)',
 };
