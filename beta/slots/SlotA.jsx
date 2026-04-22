@@ -487,6 +487,8 @@ export default function SlotA() {
   const [expiration, setExpiration] = useState(null);
   const activeExp = expiration || defaultExpiration;
 
+  const [visible, setVisible] = useState({ heston: true, merton: true, svi: true });
+
   const { slice, contracts: sliceContracts } = useMemo(() => {
     if (!data || !activeExp) return { slice: [], contracts: [] };
     return sliceObservations(data.contracts, activeExp, data.spotPrice);
@@ -557,11 +559,14 @@ export default function SlotA() {
         })
       : gridK.map(() => null);
 
+    // y-range spans only the dots plus whatever fits are currently toggled
+    // on, so hiding a wider-spread fit lets the chart zoom into the remaining
+    // traces rather than leaving dead vertical space from the hidden one.
     const allIv = [
       ...ivs,
-      ...gridHeston.filter((v) => v != null),
-      ...gridMerton.filter((v) => v != null),
-      ...gridSvi.filter((v) => v != null),
+      ...(visible.heston ? gridHeston.filter((v) => v != null) : []),
+      ...(visible.merton ? gridMerton.filter((v) => v != null) : []),
+      ...(visible.svi ? gridSvi.filter((v) => v != null) : []),
     ];
     const yMin = Math.min(...allIv);
     const yMax = Math.max(...allIv);
@@ -580,33 +585,45 @@ export default function SlotA() {
         },
         hovertemplate: 'K %{x}<br>σ %{y:.2f}%<extra></extra>',
       },
-      {
-        x: gridK,
-        y: gridHeston,
-        mode: 'lines',
-        name: 'Heston Smile Fit',
-        line: { color: PLOTLY_COLORS.positive, width: 2 },
-        hoverinfo: 'skip',
-        connectgaps: false,
-      },
-      {
-        x: gridK,
-        y: gridMerton,
-        mode: 'lines',
-        name: 'Merton Jump Fit',
-        line: { color: PLOTLY_COLORS.highlight, width: 2 },
-        hoverinfo: 'skip',
-        connectgaps: false,
-      },
-      {
-        x: gridK,
-        y: gridSvi,
-        mode: 'lines',
-        name: 'SVI Raw Fit',
-        line: { color: '#BF7FFF', width: 2 },
-        hoverinfo: 'skip',
-        connectgaps: false,
-      },
+      ...(visible.heston
+        ? [
+            {
+              x: gridK,
+              y: gridHeston,
+              mode: 'lines',
+              name: 'Heston Smile Fit',
+              line: { color: PLOTLY_COLORS.positive, width: 2 },
+              hoverinfo: 'skip',
+              connectgaps: false,
+            },
+          ]
+        : []),
+      ...(visible.merton
+        ? [
+            {
+              x: gridK,
+              y: gridMerton,
+              mode: 'lines',
+              name: 'Merton Jump Fit',
+              line: { color: PLOTLY_COLORS.highlight, width: 2 },
+              hoverinfo: 'skip',
+              connectgaps: false,
+            },
+          ]
+        : []),
+      ...(visible.svi
+        ? [
+            {
+              x: gridK,
+              y: gridSvi,
+              mode: 'lines',
+              name: 'SVI Raw Fit',
+              line: { color: '#BF7FFF', width: 2 },
+              hoverinfo: 'skip',
+              connectgaps: false,
+            },
+          ]
+        : []),
       {
         x: [data.spotPrice, data.spotPrice],
         y: [yMin - pad, yMax + pad],
@@ -651,7 +668,7 @@ export default function SlotA() {
       responsive: true,
       displayModeBar: false,
     });
-  }, [Plotly, fits, slice, T, data, mobile]);
+  }, [Plotly, fits, slice, T, data, mobile, visible]);
 
   if (loading && !data) {
     return (
@@ -772,6 +789,59 @@ export default function SlotA() {
           value={fits?.svi ? formatPct(fits.svi.rmse, 2) : '-'}
           accent="#BF7FFF"
         />
+      </div>
+
+      <div
+        style={{
+          display: 'flex',
+          flexWrap: 'wrap',
+          gap: '0.5rem',
+          marginBottom: '0.75rem',
+          alignItems: 'center',
+        }}
+      >
+        <span
+          style={{
+            fontSize: '0.7rem',
+            color: 'var(--text-secondary)',
+            textTransform: 'uppercase',
+            letterSpacing: '0.1em',
+            marginRight: '0.2rem',
+          }}
+        >
+          Show:
+        </span>
+        {[
+          { key: 'heston', label: 'Heston', color: PLOTLY_COLORS.positive },
+          { key: 'merton', label: 'Merton', color: PLOTLY_COLORS.highlight },
+          { key: 'svi', label: 'SVI', color: '#BF7FFF' },
+        ].map(({ key, label, color }) => {
+          const on = visible[key];
+          return (
+            <button
+              key={key}
+              type="button"
+              onClick={() =>
+                setVisible((prev) => ({ ...prev, [key]: !prev[key] }))
+              }
+              aria-pressed={on}
+              style={{
+                border: `1px solid ${on ? color : 'var(--bg-card-border)'}`,
+                background: on ? `${color}22` : 'transparent',
+                color: on ? color : 'var(--text-secondary)',
+                padding: '0.3rem 0.7rem',
+                fontFamily: 'Courier New, monospace',
+                fontSize: '0.75rem',
+                letterSpacing: '0.05em',
+                cursor: 'pointer',
+                borderRadius: 0,
+                transition: 'background 0.15s, color 0.15s, border-color 0.15s',
+              }}
+            >
+              {on ? '●' : '○'} {label}
+            </button>
+          );
+        })}
       </div>
 
       <div ref={chartRef} style={{ width: '100%', height: mobile ? 380 : 460 }} />
