@@ -224,6 +224,15 @@ body {
   line-height: 1.4;
 }
 
+/* Base .site-timestamp layout is defined here rather than inline in
+   App.jsx because the mobile media query below needs to override
+   display to none, and an inline style wins against a class-scoped
+   media query on specificity (1,0,0,0 vs 0,2,0). Keeping display in
+   the class lets the @media rule take effect. */
+.site-timestamp {
+  display: flex;
+}
+
 /* Mobile dashboard header reorganization. The four-token desktop
    layout (logo+regime / QuantMenu / About / timestamp) was still
    colliding at phone widths even after swapping the text regime pill

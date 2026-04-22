@@ -383,7 +383,6 @@ export default function App() {
               fontFamily: 'Courier New, monospace',
               fontSize: '0.8rem',
               color: 'var(--text-secondary)',
-              display: 'flex',
               alignItems: 'center',
               gap: '0.5rem',
             }}
