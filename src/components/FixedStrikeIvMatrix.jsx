@@ -13,8 +13,8 @@ import {
 import RangeBrush from './RangeBrush';
 import ResetButton from './ResetButton';
 
-const NUM_STRIKE_ROWS = 11;
-const HALF_ROWS = Math.floor(NUM_STRIKE_ROWS / 2);
+const NUM_STRIKE_ROWS_MOBILE = 11;
+const NUM_STRIKE_ROWS_DESKTOP = 13;
 const STRIKE_INCREMENT_CANDIDATES = [5, 10, 25, 50, 100, 250, 500, 1000];
 
 const MONTH_ABBR = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
@@ -75,10 +75,11 @@ function niceStrikeIncrement(spot) {
   );
 }
 
-function buildStrikeLadder(spot) {
+function buildStrikeLadder(spot, numRows) {
   const inc = niceStrikeIncrement(spot);
   const center = Math.round(spot / inc) * inc;
-  return Array.from({ length: NUM_STRIKE_ROWS }, (_, i) => center + (i - HALF_ROWS) * inc);
+  const halfRows = Math.floor(numRows / 2);
+  return Array.from({ length: numRows }, (_, i) => center + (i - halfRows) * inc);
 }
 
 function groupByExpiration(contracts) {
@@ -123,12 +124,13 @@ export default function FixedStrikeIvMatrix({ contracts, spotPrice, expirations,
       return { levelMatrix: null, changeMatrix: null };
     }
 
+    const numRows = mobile ? NUM_STRIKE_ROWS_MOBILE : NUM_STRIKE_ROWS_DESKTOP;
     const byExp = groupByExpiration(contracts);
     const prevByExp = groupByExpiration(prevContracts);
 
     const sortedExps = [...expirations].sort();
     const xLabels = sortedExps.map(formatExpLabel);
-    const strikes = buildStrikeLadder(spotPrice);
+    const strikes = buildStrikeLadder(spotPrice, numRows);
     const yLabels = strikes.map((s) => s.toString());
 
     const zLevel = strikes.map(() => []);
@@ -175,7 +177,7 @@ export default function FixedStrikeIvMatrix({ contracts, spotPrice, expirations,
     const level = { xLabels, yLabels, z: zLevel, textCells: textLevel };
     const change = hasAnyChange ? { xLabels, yLabels, z: zChange, textCells: textChange } : null;
     return { levelMatrix: level, changeMatrix: change };
-  }, [contracts, spotPrice, expirations, prevContracts]);
+  }, [contracts, spotPrice, expirations, prevContracts, mobile]);
 
   const hasPrev = changeMatrix != null;
   // On mobile the toggle is hidden to avoid colliding with the section
@@ -339,7 +341,7 @@ export default function FixedStrikeIvMatrix({ contracts, spotPrice, expirations,
           </div>
         )}
       </div>
-      <div ref={chartRef} style={{ width: '100%', height: '440px', backgroundColor: 'var(--bg-card)' }} />
+      <div ref={chartRef} style={{ width: '100%', height: mobile ? '440px' : '510px', backgroundColor: 'var(--bg-card)' }} />
       {activeMatrix && activeMatrix.xLabels.length > 1 && (
         <RangeBrush
           min={brushMin}
