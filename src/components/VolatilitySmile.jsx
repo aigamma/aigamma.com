@@ -701,12 +701,12 @@ export default function VolatilitySmile({
           Expiration:
         </label>
         <select
+          className="expiration-picker"
           value={activeExp || ''}
           onChange={(e) => setExpiration(e.target.value)}
           style={{
             background: 'var(--bg-card)',
             color: 'var(--text-primary)',
-            border: '1px solid var(--bg-card-border)',
             padding: '0.3rem 0.5rem',
             fontFamily: 'Courier New, monospace',
             fontSize: '0.85rem',

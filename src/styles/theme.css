@@ -577,6 +577,32 @@ body {
   cursor: not-allowed;
 }
 
+/* Expiration picker <select> elements on the dashboard (VolatilitySmile,
+   LevelsPanel) reuse the chat-input's pulsing ambient glow so the two
+   primary user affordances on the page — pick an expiration, talk to the
+   bot — read as members of the same interactive-element family. The
+   accent is site blue (74, 158, 255) rather than the chat's per-tab
+   yellow/blue, since the pickers live on model cards rather than inside
+   the chat card and there's no tab concept to re-tint between. */
+.expiration-picker {
+  --glow-rgb: 74, 158, 255;
+  border: 1px solid rgba(var(--glow-rgb), 0.3);
+  border-radius: 4px;
+  outline: none;
+  transition: border-color 0.2s ease, box-shadow 0.2s ease;
+  animation: chatInputGlow 4s ease-in-out infinite;
+}
+
+.expiration-picker:focus {
+  border-color: rgba(var(--glow-rgb), 0.7);
+  box-shadow: 0 0 12px rgba(var(--glow-rgb), 0.4);
+  animation: none;
+}
+
+.expiration-picker:hover {
+  border-color: rgba(var(--glow-rgb), 0.5);
+}
+
 .chat-send {
   padding: 0 1.1rem;
   height: 42px;

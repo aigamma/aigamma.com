@@ -299,14 +299,13 @@ export default function LevelsPanel({ levels, spotPrice, prevClose, expirationMe
                 Expiration
               </label>
               <select
+                className="expiration-picker"
                 id="expiration-select"
                 value={selectedExpiration || ''}
                 onChange={(e) => onExpirationChange?.(e.target.value)}
                 style={{
                   background: 'var(--bg-primary)',
                   color: 'var(--text-primary)',
-                  border: '1px solid var(--bg-card-border)',
-                  borderRadius: '4px',
                   padding: '0.35rem 0.5rem',
                   fontFamily: 'Courier New, monospace',
                   fontSize: '0.9rem',
