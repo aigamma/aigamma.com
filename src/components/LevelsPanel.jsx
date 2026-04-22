@@ -97,6 +97,21 @@ function gammaIndexValue(value) {
   return `${prefix}${value.toFixed(2)}`;
 }
 
+// Dist from Risk Off paints with the dealer-gamma regime color: positive
+// (SPX above Vol Flip, dealers long gamma) reads in the same greenish teal
+// the Gamma Index cell uses for clearly-positive readings and the browser
+// extension uses for its POSITIVE status pill; negative flips to coral red,
+// matching the extension's NEGATIVE pill. Binary split by sign (no amber
+// middle band) because the sign itself is the regime — there is no
+// "near-zero neutral" region the way there is for the bounded ±10 gamma
+// index oscillator. Null returns undefined so the Stat falls back to the
+// default text color rather than inheriting a stale accent.
+function flipDistAccent(dist) {
+  if (dist == null) return undefined;
+  if (dist >= 0) return '#02A29F';
+  return 'var(--accent-coral)';
+}
+
 function Stat({ label, value, accent, sub, bold }) {
   return (
     <div style={{ minWidth: 0 }}>
@@ -234,7 +249,7 @@ export default function LevelsPanel({ levels, spotPrice, prevClose, expirationMe
         <Stat
           label="Dist from Risk Off"
           value={flipDist != null ? `${aboveFlip ? '+' : ''}${flipDist.toFixed(2)}` : '—'}
-          accent="var(--accent-amber)"
+          accent={flipDistAccent(flipDist)}
           sub={flipDist != null ? `${((flipDist / spotPrice) * 100).toFixed(2)}%` : null}
         />
         <Stat
