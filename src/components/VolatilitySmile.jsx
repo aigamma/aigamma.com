@@ -416,6 +416,7 @@ function sliceObservations(contracts, expiration, spotPrice) {
     rows.push({
       strike,
       iv: src.implied_volatility,
+      delta: src.delta,
       side: strike >= spotPrice ? 'call' : 'put',
     });
   }
@@ -572,6 +573,9 @@ export default function VolatilitySmile({
       {
         x: strikes,
         y: ivs,
+        customdata: slice.map((r) => [
+          r.delta != null && Number.isFinite(r.delta) ? r.delta.toFixed(3) : '—',
+        ]),
         mode: 'markers',
         name: 'observed IV',
         marker: {
@@ -579,7 +583,8 @@ export default function VolatilitySmile({
           size: mobile ? 7 : 9,
           line: { width: 0 },
         },
-        hovertemplate: 'K %{x}<br>σ %{y:.2f}%<extra></extra>',
+        hovertemplate:
+          'K %{x}<br>σ %{y:.2f}%<br>Δ %{customdata[0]}<extra></extra>',
       },
       ...(visible.heston
         ? [
