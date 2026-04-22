@@ -82,7 +82,14 @@ export default function App() {
             Local Vol Lab
           </span>
         </div>
-        <a href="/" className="lab-home-button lab-home-button--inline">Return Home</a>
+        <a
+          href="/"
+          className="lab-home-button lab-home-button--inline lab-home-button--split"
+          aria-label="Return Home"
+        >
+          <span className="lab-home-button__desktop-text">Return Home</span>
+          <span className="lab-home-button__mobile-text">Home</span>
+        </a>
         <QuantMenu />
       </header>
 

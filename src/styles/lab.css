@@ -100,6 +100,22 @@
   box-sizing: border-box;
 }
 
+/* Split-label variant of the inline Return-Home button used on labs
+   that opt into a DOM-based long/short swap rather than the shared
+   font-size-zero plus ::before pseudo trick. The trick failed visibly
+   on the /local/ lab (both "HOME" from the pseudo and "RETURN HOME"
+   from the text node rendered side-by-side) so this variant carries
+   two spans — one for desktop copy, one for mobile copy — and the
+   mobile block below toggles them via display: none, which cannot
+   fail silently the way font-size: 0 did. */
+.lab-home-button__mobile-text {
+  display: none;
+}
+
+.lab-home-button__desktop-text {
+  display: inline;
+}
+
 .lab-badge {
   font-family: 'Courier New', monospace;
   font-size: 1.25rem;
@@ -349,6 +365,27 @@
     letter-spacing: 0.08em;
   }
 
+  /* --split variant cancels the font-size-zero / ::before trick and
+     reveals the short mobile span via display toggle. Double-class
+     specificity (0,2,0) beats the shared single-class font-size: 0
+     rule above regardless of source order. */
+  .lab-home-button--inline.lab-home-button--split {
+    font-size: 1rem;
+    letter-spacing: 0.08em;
+  }
+
+  .lab-home-button--inline.lab-home-button--split::before {
+    content: none;
+  }
+
+  .lab-home-button--split .lab-home-button__desktop-text {
+    display: none;
+  }
+
+  .lab-home-button--split .lab-home-button__mobile-text {
+    display: inline;
+  }
+
   .lab-footer-home {
     font-size: 0.82rem;
     margin-top: 0.6rem;
@@ -420,6 +457,14 @@
   }
 
   .lab-home-button--inline::before {
+    font-size: 0.85rem;
+    letter-spacing: 0.06em;
+  }
+
+  /* Scale the split variant down a second step to match the 2.4rem
+     height and tighter letter-spacing the other lab-header chrome
+     uses at phone widths. */
+  .lab-home-button--inline.lab-home-button--split {
     font-size: 0.85rem;
     letter-spacing: 0.06em;
   }
