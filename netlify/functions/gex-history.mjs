@@ -102,7 +102,7 @@ export default async function handler(request) {
   const fetchFrom = leadDate.toISOString().slice(0, 10);
 
   const params = new URLSearchParams({
-    select: 'trading_date,spx_close,net_gex,call_gex,put_gex,atm_call_gex,atm_put_gex,atm_contract_count,vol_flip_strike,contract_count',
+    select: 'trading_date,spx_close,net_gex,call_gex,put_gex,atm_call_gex,atm_put_gex,atm_contract_count,vol_flip_strike,call_wall_strike,put_wall_strike,contract_count',
     trading_date: `gte.${fetchFrom}`,
     order: 'trading_date.asc',
   });
@@ -142,6 +142,8 @@ export default async function handler(request) {
       const atmPutGex = toNum(r.atm_put_gex);
       const netGex = toNum(r.net_gex);
       const volFlip = toNum(r.vol_flip_strike);
+      const callWall = toNum(r.call_wall_strike);
+      const putWall = toNum(r.put_wall_strike);
       const spxClose = toNum(r.spx_close);
 
       // Gamma Index: ATM-focused version sourced from atm_call_gex and
@@ -174,6 +176,8 @@ export default async function handler(request) {
         net_gex: netGex,
         gamma_index: gammaIndex != null ? Math.round(gammaIndex * 1000) / 1000 : null,
         vol_flip: volFlip,
+        call_wall: callWall,
+        put_wall: putWall,
         regime,
         hv_10d: rv10[i] != null ? Math.round(rv10[i] * 10000) / 10000 : null,
       });

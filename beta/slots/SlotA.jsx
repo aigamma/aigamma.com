@@ -44,6 +44,8 @@ const RED_FILL = 'rgba(216, 90, 48, 0.30)';
 const BLUE_LINE = PLOTLY_COLORS.primary;
 const RED_LINE = '#d85a30';
 const FLIP_LINE = PLOTLY_COLORS.highlight;
+const CALL_WALL_LINE = PLOTLY_COLORS.positive;
+const PUT_WALL_LINE = PLOTLY_COLORS.negative;
 const HISTORY_FROM = '2022-01-03';
 
 function isoToMs(iso) {
@@ -158,19 +160,29 @@ function segmentLineTrace(segment, color, showLegend, name, legendgroup) {
   };
 }
 
-// Compute a tight y-axis range (5% padded) over only the (spot, flip)
-// pairs whose date falls inside [xStart, xEnd] inclusive. Returns null
-// if no points fall in the window so callers can leave the existing
-// range alone rather than collapsing the axis to a degenerate span.
+// Compute a tight y-axis range (5% padded) over the (spot, flip, call
+// wall, put wall) values whose date falls inside [xStart, xEnd]
+// inclusive. Call Wall and Put Wall are often outside the spot-vs-flip
+// band — Call Wall typically sits 2-5% above spot and Put Wall 3-8%
+// below — so including both in the range calculation guarantees the
+// full span of the four visible series is always inside the plot area
+// no matter how the brush is positioned. Returns null if nothing falls
+// in the window so callers can leave the existing range alone rather
+// than collapsing the axis to a degenerate span.
 function computeYRange(series, xStart, xEnd) {
   let yMin = Infinity;
   let yMax = -Infinity;
+  const consider = (v) => {
+    if (!Number.isFinite(v)) return;
+    if (v < yMin) yMin = v;
+    if (v > yMax) yMax = v;
+  };
   for (const r of series) {
     if (r.t < xStart || r.t > xEnd) continue;
-    if (r.s < yMin) yMin = r.s;
-    if (r.s > yMax) yMax = r.s;
-    if (r.f < yMin) yMin = r.f;
-    if (r.f > yMax) yMax = r.f;
+    consider(r.s);
+    consider(r.f);
+    consider(r.cw);
+    consider(r.pw);
   }
   if (!Number.isFinite(yMin) || !Number.isFinite(yMax)) return null;
   if (yMax === yMin) {
@@ -193,7 +205,13 @@ export default function SlotA() {
   const series = useMemo(() => {
     if (!data?.series) return [];
     return data.series
-      .map((r) => ({ t: r.trading_date, s: r.spx_close, f: r.vol_flip }))
+      .map((r) => ({
+        t: r.trading_date,
+        s: r.spx_close,
+        f: r.vol_flip,
+        cw: Number.isFinite(r.call_wall) ? r.call_wall : null,
+        pw: Number.isFinite(r.put_wall) ? r.put_wall : null,
+      }))
       .filter((r) => r.t && Number.isFinite(r.s) && Number.isFinite(r.f));
   }, [data]);
 
@@ -234,6 +252,41 @@ export default function SlotA() {
       hovertemplate: '%{x|%b %d, %Y}<br>Vol Flip: %{y:,.2f}<extra></extra>',
     };
 
+    // Put Wall and Call Wall are daily EOD levels computed from the
+    // per-strike net GEX peaks of the full SPX chain: Call Wall is the
+    // strike maximizing (callGex - putGex) — the "ceiling above spot"
+    // where dealers are most long gamma — and Put Wall is the strike
+    // minimizing it — the "floor below spot" where dealers are most
+    // short gamma. Both render as step lines with shape='hv' like the
+    // Vol Flip so the horizontal plateaus and vertical jumps carry the
+    // same piecewise-constant semantics. Colors follow GexProfile's
+    // convention: Call Wall = positive green, Put Wall = negative red.
+    // Values are null for days where the /api/gex-history endpoint
+    // hasn't received the backfill yet — Plotly gaps the line at null
+    // points rather than interpolating across them.
+    const callWallValues = series.map((r) => r.cw);
+    const putWallValues = series.map((r) => r.pw);
+    const callWallTrace = {
+      x: times,
+      y: callWallValues,
+      mode: 'lines',
+      type: 'scatter',
+      line: { color: CALL_WALL_LINE, width: 1.5, shape: 'hv' },
+      name: '<b>Call Wall</b>',
+      hovertemplate: '%{x|%b %d, %Y}<br>Call Wall: %{y:,.0f}<extra></extra>',
+      connectgaps: false,
+    };
+    const putWallTrace = {
+      x: times,
+      y: putWallValues,
+      mode: 'lines',
+      type: 'scatter',
+      line: { color: PUT_WALL_LINE, width: 1.5, shape: 'hv' },
+      name: '<b>Put Wall</b>',
+      hovertemplate: '%{x|%b %d, %Y}<br>Put Wall: %{y:,.0f}<extra></extra>',
+      connectgaps: false,
+    };
+
     let aboveLegendShown = false;
     let belowLegendShown = false;
     const lineTraces = [];
@@ -264,7 +317,7 @@ export default function SlotA() {
       }
     }
 
-    const traces = [...fillTraces, flipTrace, ...lineTraces];
+    const traces = [...fillTraces, flipTrace, callWallTrace, putWallTrace, ...lineTraces];
 
     const yRange = computeYRange(series, windowStart, windowEnd);
 
