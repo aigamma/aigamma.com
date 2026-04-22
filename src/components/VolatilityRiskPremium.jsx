@@ -256,12 +256,24 @@ export default function VolatilityRiskPremium({ spotPrice, capturedAt }) {
       hovertemplate: '%{x}<br>IV: %{y:.2f}%<extra></extra>',
     };
 
+    // Trace order encodes z-order in Plotly: later traces render on top of
+    // earlier ones. The SPX area fill stays first so it sits behind the VRP
+    // ribbon as context background, but the SPX line itself is pushed to the
+    // END of the list so it renders on top of the RV/IV lines and the VRP
+    // polygons wherever their paths cross. The chart's default y-axis layout
+    // keeps SPX pinned to the upper ~15-20% of the frame (spxLo anchored at
+    // 0.95x the full-backfill min, which sits well below any recent SPX
+    // level), so collisions with the IV/RV ribbon are uncommon — but when
+    // the ribbon expands into the upper band on a high-vol session or SPX
+    // dips into the ribbon on a drawdown, the blue line stays clearly
+    // visible as the primary price reference rather than getting visually
+    // buried under the colored vol lines.
     const traces = [
       spxAreaTrace,
-      spxLineTrace,
       ...vrpTraces,
       rvLine,
       ivLine,
+      spxLineTrace,
     ];
 
     // Vol axis is windowed to the active zoom (unlike the SPX axis, which
