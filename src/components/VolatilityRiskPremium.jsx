@@ -200,8 +200,21 @@ export default function VolatilityRiskPremium({ spotPrice, capturedAt }) {
 
     const spxMin = Math.min(...spxSource.map((r) => r.spx_close));
     const spxMax = Math.max(...spxSource.map((r) => r.spx_close));
-    const spxLo = spxMin * 0.95;
-    const spxHi = spxMax * 1.06;
+    // Push the SPX trace into the top ~40% of the plot so its path doesn't
+    // cross the IV/RV ribbon below. Stretching the axis floor 2.5 data-spans
+    // below spxMax (with a light 0.2-span headroom above) maps SPX data to
+    // roughly 55%–93% of chart height regardless of how much SPX has moved
+    // across the window. The Math.max(..., 1) guard prevents a zero-range
+    // axis on the degenerate flat-SPX case.
+    const spxSpan = Math.max(spxMax - spxMin, 1);
+    const spxLo = Math.max(0, spxMax - 2.5 * spxSpan);
+    const spxHi = spxMax + 0.2 * spxSpan;
+    // Anchor the translucent SPX context fill at the window minimum rather
+    // than the axis floor — with spxLo now sitting well below the data,
+    // filling to spxLo would paint a full-chart wash over the vol ribbon.
+    // Anchoring at spxMin makes the fill a wedge that tracks the rally
+    // above the window low, which keeps the vol band below unobscured.
+    const spxAreaFloor = spxMin;
 
     // Closed polygon for the SPX area — close series along the top,
     // constant axis-floor along the bottom. `fill: 'toself'` + the
@@ -214,7 +227,7 @@ export default function VolatilityRiskPremium({ spotPrice, capturedAt }) {
     const spxClose = spxSource.map((r) => r.spx_close);
     const spxAreaTrace = {
       x: [...spxDates, ...spxDates.slice().reverse()],
-      y: [...spxClose, ...spxClose.map(() => spxLo)],
+      y: [...spxClose, ...spxClose.map(() => spxAreaFloor)],
       fill: 'toself',
       fillcolor: SPX_AREA_FILL,
       line: { color: 'rgba(0,0,0,0)', width: 0 },
