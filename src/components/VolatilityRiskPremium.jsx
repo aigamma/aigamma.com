@@ -187,7 +187,7 @@ export default function VolatilityRiskPremium() {
     const spxMin = Math.min(...spxSource.map((r) => r.spx_close));
     const spxMax = Math.max(...spxSource.map((r) => r.spx_close));
     const spxLo = spxMin * 0.95;
-    const spxHi = spxMax * 1.02;
+    const spxHi = spxMax * 1.06;
 
     // Closed polygon for the SPX area — close series along the top,
     // constant axis-floor along the bottom. `fill: 'toself'` + the
@@ -382,7 +382,7 @@ export default function VolatilityRiskPremium() {
     );
   }
   if (loading) {
-    return <div className="skeleton-card" style={{ height: '640px', marginBottom: '1rem' }} />;
+    return <div className="skeleton-card" style={{ height: '720px', marginBottom: '1rem' }} />;
   }
   if (!data || series.length === 0) {
     return (
@@ -402,7 +402,7 @@ export default function VolatilityRiskPremium() {
   return (
     <div className="card" style={{ marginBottom: '1rem', position: 'relative' }}>
       <ResetButton visible={timeRange != null} onClick={() => setTimeRange(null)} />
-      <div ref={chartRef} style={{ width: '100%', height: '600px', backgroundColor: 'var(--bg-card)' }} />
+      <div ref={chartRef} style={{ width: '100%', height: '680px', backgroundColor: 'var(--bg-card)' }} />
       <RangeBrush
         min={isoToMs(firstDate)}
         max={isoToMs(lastDate)}
