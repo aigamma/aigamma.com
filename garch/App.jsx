@@ -39,10 +39,18 @@ export default function App() {
             className="lab-badge"
             title="GARCH: 17-model univariate family zoo with equal-weight ensemble and a family picker"
           >
-            GARCH LAB
+            <span className="lab-badge__desktop-text">GARCH LAB</span>
+            <span className="lab-badge__mobile-text">GARCH</span>
           </span>
         </div>
-        <a href="/" className="lab-home-button lab-home-button--inline">Return Home</a>
+        <a
+          href="/"
+          className="lab-home-button lab-home-button--inline lab-home-button--split"
+          aria-label="Return Home"
+        >
+          <span className="lab-home-button__desktop-text">Return Home</span>
+          <span className="lab-home-button__mobile-text">Home</span>
+        </a>
         <QuantMenu />
       </header>
 
