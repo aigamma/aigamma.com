@@ -249,10 +249,6 @@ body {
   .site-header .site-timestamp {
     display: none;
   }
-
-  .site-header .quant-menu {
-    order: 1;
-  }
 }
 
 .app-shell {
