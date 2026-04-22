@@ -514,19 +514,19 @@ export default function App() {
           <ErrorBoundary><GammaIndexScatter /></ErrorBoundary>
 
           <ErrorBoundary>
+            <RiskNeutralDensity
+              fits={sviFits.byExpiration}
+              spotPrice={data.spotPrice}
+              capturedAt={data.capturedAt}
+            />
+          </ErrorBoundary>
+
+          <ErrorBoundary>
             <FixedStrikeIvMatrix
               contracts={data.contracts}
               spotPrice={data.spotPrice}
               expirations={data.expirations}
               prevContracts={prevDayData?.contracts}
-            />
-          </ErrorBoundary>
-
-          <ErrorBoundary>
-            <RiskNeutralDensity
-              fits={sviFits.byExpiration}
-              spotPrice={data.spotPrice}
-              capturedAt={data.capturedAt}
             />
           </ErrorBoundary>
         </>
