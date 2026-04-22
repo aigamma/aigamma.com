@@ -181,53 +181,26 @@ export default function VolatilityRiskPremium({ spotPrice, capturedAt }) {
     const windowStart = timeRange ? timeRange[0] : defaultStart;
     const windowEnd = timeRange ? timeRange[1] : lastDate;
 
-    // Fit both y-axes to the rows visible in the active window, not the
-    // full backfill. SPX has climbed ~50% off the Jan-2022 low that sits
-    // at the start of the Index-Standard history, so sourcing the left
-    // axis range from the full series used to trap the visible SPX line
-    // in a thin strip at the top of the chart at any zoom that did not
-    // already include the 2022 lows — which forced the chart to carry
-    // 720px of vertical budget just to keep the line legible. The same
-    // compression hit the vol axis, where historical shocks at 60-80%
-    // pushed typical 15-25% IV and RV into a sliver near the floor.
-    // RangeBrush only emits onChange on pointer release, so the range
-    // recomputation fires once per drag — no mid-drag jitter.
-    const inWindow = (d) => d >= windowStart && d <= windowEnd;
-    const windowedSpx = spxSeries.filter((r) => inWindow(r.trading_date));
-    const windowedSeries = series.filter((r) => inWindow(r.trading_date));
-    const spxSource = windowedSpx.length > 0 ? windowedSpx : spxSeries;
-    const volSource = windowedSeries.length > 0 ? windowedSeries : series;
-
-    const spxMin = Math.min(...spxSource.map((r) => r.spx_close));
-    const spxMax = Math.max(...spxSource.map((r) => r.spx_close));
-    // Push the SPX trace into the top ~40% of the plot so its path doesn't
-    // cross the IV/RV ribbon below. Stretching the axis floor 2.5 data-spans
-    // below spxMax (with a light 0.2-span headroom above) maps SPX data to
-    // roughly 55%–93% of chart height regardless of how much SPX has moved
-    // across the window. The Math.max(..., 1) guard prevents a zero-range
-    // axis on the degenerate flat-SPX case.
-    const spxSpan = Math.max(spxMax - spxMin, 1);
-    const spxLo = Math.max(0, spxMax - 2.5 * spxSpan);
-    const spxHi = spxMax + 0.2 * spxSpan;
-    // Anchor the translucent SPX context fill at the window minimum rather
-    // than the axis floor — with spxLo now sitting well below the data,
-    // filling to spxLo would paint a full-chart wash over the vol ribbon.
-    // Anchoring at spxMin makes the fill a wedge that tracks the rally
-    // above the window low, which keeps the vol band below unobscured.
-    const spxAreaFloor = spxMin;
+    // Compute y-axis ranges from the full series (back to the ThetaData
+    // Index Standard floor at 2022-01-03 when SPX was ~3577). With spxMin
+    // anchored at that historical low, the 0.95 padding puts spxLo well
+    // below any value in a recent zoom, which naturally pins the SPX line
+    // to the top ~15-20% of the chart — the visual layout that separates
+    // SPX context cleanly from the IV/RV ribbon below.
+    const spxMin = Math.min(...spxSeries.map((r) => r.spx_close));
+    const spxMax = Math.max(...spxSeries.map((r) => r.spx_close));
+    const spxLo = spxMin * 0.95;
+    const spxHi = spxMax * 1.02;
 
     // Closed polygon for the SPX area — close series along the top,
     // constant axis-floor along the bottom. `fill: 'toself'` + the
     // reversed-x trick avoids the y=0 waste that `fill: 'tozeroy'`
     // would produce on a chart whose y-axis floor sits far above zero.
-    // Pre-filter to the window so SPX values outside the brush cannot
-    // produce inverted polygon regions when older SPX sits below the
-    // windowed floor.
-    const spxDates = spxSource.map((r) => r.trading_date);
-    const spxClose = spxSource.map((r) => r.spx_close);
+    const spxDates = spxSeries.map((r) => r.trading_date);
+    const spxClose = spxSeries.map((r) => r.spx_close);
     const spxAreaTrace = {
       x: [...spxDates, ...spxDates.slice().reverse()],
-      y: [...spxClose, ...spxClose.map(() => spxAreaFloor)],
+      y: [...spxClose, ...spxClose.map(() => spxLo)],
       fill: 'toself',
       fillcolor: SPX_AREA_FILL,
       line: { color: 'rgba(0,0,0,0)', width: 0 },
@@ -291,11 +264,11 @@ export default function VolatilityRiskPremium({ spotPrice, capturedAt }) {
       ivLine,
     ];
 
-    const volValues = volSource.flatMap((r) => [r.iv, r.hv]);
+    const volValues = series.flatMap((r) => [r.iv, r.hv]);
     const volMin = Math.min(...volValues);
     const volMax = Math.max(...volValues);
     const volLo = Math.max(0, volMin * 0.85);
-    const volHi = volMax * 1.5;
+    const volHi = volMax * 1.1;
 
     // Top margin has to hold both the chart title and the horizontal legend
     // row, so it's noticeably taller than the 50px used on single-row-title
@@ -409,7 +382,7 @@ export default function VolatilityRiskPremium({ spotPrice, capturedAt }) {
     );
   }
   if (loading) {
-    return <div className="skeleton-card" style={{ height: '720px', marginBottom: '1rem' }} />;
+    return <div className="skeleton-card" style={{ height: '580px', marginBottom: '1rem' }} />;
   }
   if (!data || series.length === 0) {
     return (
@@ -429,7 +402,7 @@ export default function VolatilityRiskPremium({ spotPrice, capturedAt }) {
   return (
     <div className="card" style={{ marginBottom: '1rem', position: 'relative' }}>
       <ResetButton visible={timeRange != null} onClick={() => setTimeRange(null)} />
-      <div ref={chartRef} style={{ width: '100%', height: '680px', backgroundColor: 'var(--bg-card)' }} />
+      <div ref={chartRef} style={{ width: '100%', height: '540px', backgroundColor: 'var(--bg-card)' }} />
       <RangeBrush
         min={isoToMs(firstDate)}
         max={isoToMs(lastDate)}
