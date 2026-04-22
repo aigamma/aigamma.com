@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useRef } from 'react';
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import usePlotly from '../../src/hooks/usePlotly';
 import useIsMobile from '../../src/hooks/useIsMobile';
 import { useGexHistory } from '../../src/hooks/useHistoricalData';
@@ -9,6 +9,8 @@ import {
   plotlyAxis,
   plotlyTitle,
 } from '../../src/lib/plotlyTheme';
+import RangeBrush from '../../src/components/RangeBrush';
+import ResetButton from '../../src/components/ResetButton';
 
 // Daily SPX EOD close against the daily Vol Flip level with two-color shading
 // between them — blue where SPX closed above the flip (positive dealer gamma
@@ -29,6 +31,13 @@ import {
 // uses for its positive/negative-VRP shading, which keeps the fill clipped
 // to the band between the two lines rather than dropping to the axis floor
 // that a fill:'tonexty' pair with null gaps would leak into.
+//
+// The card ships with the site-wide RangeBrush below the plot and a
+// ResetButton in the upper-left corner, matching DealerGammaRegime's
+// interaction model: default window is the trailing 6 months of the
+// series, the brush exposes the full history for expansion, and the
+// y-axis tightens to the visible window on every brush commit so zoomed
+// regions don't sit flattened against distant out-of-view extrema.
 
 const BLUE_FILL = 'rgba(74, 158, 255, 0.28)';
 const RED_FILL = 'rgba(216, 90, 48, 0.30)';
@@ -36,6 +45,20 @@ const BLUE_LINE = PLOTLY_COLORS.primary;
 const RED_LINE = '#d85a30';
 const FLIP_LINE = 'rgba(224, 224, 224, 0.55)';
 const HISTORY_FROM = '2022-01-03';
+
+function isoToMs(iso) {
+  return new Date(`${iso}T00:00:00Z`).getTime();
+}
+
+function msToIso(ms) {
+  return new Date(ms).toISOString().slice(0, 10);
+}
+
+function addMonthsIso(iso, months) {
+  const d = new Date(`${iso}T00:00:00Z`);
+  d.setUTCMonth(d.getUTCMonth() + months);
+  return d.toISOString().slice(0, 10);
+}
 
 function buildSegments(series) {
   const segments = [];
@@ -110,6 +133,29 @@ function segmentLineTrace(segment, color, showLegend, name, legendgroup) {
   };
 }
 
+// Compute a tight y-axis range (5% padded) over only the (spot, flip)
+// pairs whose date falls inside [xStart, xEnd] inclusive. Returns null
+// if no points fall in the window so callers can leave the existing
+// range alone rather than collapsing the axis to a degenerate span.
+function computeYRange(series, xStart, xEnd) {
+  let yMin = Infinity;
+  let yMax = -Infinity;
+  for (const r of series) {
+    if (r.t < xStart || r.t > xEnd) continue;
+    if (r.s < yMin) yMin = r.s;
+    if (r.s > yMax) yMax = r.s;
+    if (r.f < yMin) yMin = r.f;
+    if (r.f > yMax) yMax = r.f;
+  }
+  if (!Number.isFinite(yMin) || !Number.isFinite(yMax)) return null;
+  if (yMax === yMin) {
+    const pad = Math.max(yMin * 0.01, 1);
+    return [yMin - pad, yMax + pad];
+  }
+  const pad = (yMax - yMin) * 0.05;
+  return [yMin - pad, yMax + pad];
+}
+
 export const slotName = 'SPX vs Vol Flip · Daily Gamma Regime';
 
 export default function SlotA() {
@@ -117,6 +163,7 @@ export default function SlotA() {
   const { plotly: Plotly, error: plotlyError } = usePlotly();
   const { data, loading, error } = useGexHistory({ from: HISTORY_FROM });
   const mobile = useIsMobile();
+  const [timeRange, setTimeRange] = useState(null);
 
   const series = useMemo(() => {
     if (!data?.series) return [];
@@ -127,8 +174,21 @@ export default function SlotA() {
 
   const segments = useMemo(() => buildSegments(series), [series]);
 
+  const firstDate = series.length > 0 ? series[0].t : null;
+  const lastDate = series.length > 0 ? series[series.length - 1].t : null;
+
+  const defaultRange = useMemo(() => {
+    if (!firstDate || !lastDate) return null;
+    const sixMonthsBack = addMonthsIso(lastDate, -6);
+    return [sixMonthsBack >= firstDate ? sixMonthsBack : firstDate, lastDate];
+  }, [firstDate, lastDate]);
+
+  const activeRange = timeRange || defaultRange;
+
   useEffect(() => {
-    if (!Plotly || !chartRef.current || series.length === 0) return;
+    if (!Plotly || !chartRef.current || series.length === 0 || !activeRange) return;
+
+    const [windowStart, windowEnd] = activeRange;
 
     const times = series.map((r) => r.t);
     const flip = series.map((r) => r.f);
@@ -181,11 +241,7 @@ export default function SlotA() {
 
     const traces = [...fillTraces, flipTrace, ...lineTraces];
 
-    const spot = series.map((r) => r.s);
-    const allY = [...spot, ...flip];
-    const yMin = Math.min(...allY);
-    const yMax = Math.max(...allY);
-    const pad = Math.max((yMax - yMin) * 0.05, 1);
+    const yRange = computeYRange(series, windowStart, windowEnd);
 
     const legendFont = {
       family: PLOTLY_FONT_FAMILY,
@@ -202,11 +258,12 @@ export default function SlotA() {
       },
       xaxis: plotlyAxis('', {
         type: 'date',
+        range: [windowStart, windowEnd],
+        autorange: false,
       }),
       yaxis: plotlyAxis(mobile ? '' : 'SPX', {
         tickformat: ',.0f',
-        range: [yMin - pad, yMax + pad],
-        autorange: false,
+        ...(yRange ? { range: yRange, autorange: false } : {}),
       }),
       showlegend: !mobile,
       legend: {
@@ -226,7 +283,11 @@ export default function SlotA() {
       responsive: true,
       displayModeBar: false,
     });
-  }, [Plotly, series, segments, mobile]);
+  }, [Plotly, series, segments, mobile, activeRange]);
+
+  const handleBrushChange = useCallback((minMs, maxMs) => {
+    setTimeRange([msToIso(minMs), msToIso(maxMs)]);
+  }, []);
 
   if (plotlyError) {
     return (
@@ -243,7 +304,7 @@ export default function SlotA() {
     );
   }
   if (loading) {
-    return <div className="skeleton-card" style={{ height: '560px' }} />;
+    return <div className="skeleton-card" style={{ height: '600px' }} />;
   }
   if (!data || series.length === 0) {
     return (
@@ -255,10 +316,20 @@ export default function SlotA() {
 
   return (
     <div className="card" style={{ position: 'relative' }}>
+      <ResetButton visible={timeRange != null} onClick={() => setTimeRange(null)} />
       <div
         ref={chartRef}
         style={{ width: '100%', height: '560px', backgroundColor: 'var(--bg-card)' }}
       />
+      {activeRange && firstDate && lastDate && (
+        <RangeBrush
+          min={isoToMs(firstDate)}
+          max={isoToMs(lastDate)}
+          activeMin={isoToMs(activeRange[0])}
+          activeMax={isoToMs(activeRange[1])}
+          onChange={handleBrushChange}
+        />
+      )}
     </div>
   );
 }
