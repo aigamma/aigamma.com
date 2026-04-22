@@ -79,7 +79,7 @@ export default function App() {
             className="lab-badge"
             title="Local Vol Lab — Dupire pricing, viewer, forward-smile"
           >
-            Local Vol Lab
+            Local Vol
           </span>
         </div>
         <a
