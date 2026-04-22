@@ -330,9 +330,21 @@
     letter-spacing: 0.12em;
   }
 
+  /* Shorten "Return Home" to "HOME" on mobile to reclaim header
+     width. font-size: 0 zeroes the DOM text node visually while the
+     ::before pseudo-element injects the compact label. The anchor's
+     accessible name ("Return Home") stays intact for screen readers
+     because pseudo-element content is typically ignored by AT and the
+     real text node still sits in the DOM. */
   .lab-home-button--inline {
     height: 2.8rem;
     padding: 0 0.75rem;
+    font-size: 0;
+    letter-spacing: 0;
+  }
+
+  .lab-home-button--inline::before {
+    content: "HOME";
     font-size: 1rem;
     letter-spacing: 0.08em;
   }
@@ -405,6 +417,9 @@
   .lab-home-button--inline {
     height: 2.4rem;
     padding: 0 0.6rem;
+  }
+
+  .lab-home-button--inline::before {
     font-size: 0.85rem;
     letter-spacing: 0.06em;
   }
