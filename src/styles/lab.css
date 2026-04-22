@@ -116,6 +116,19 @@
   display: inline;
 }
 
+/* Two-span splitter for the lab-badge pill used on labs with a long
+   brand title (for example "Discrete & Parametric Vol Lab") that
+   crowds the mobile header. Desktop renders the full string, the
+   max-width 768px block below swaps to the short form via
+   display: none rather than any font-size trick. */
+.lab-badge__mobile-text {
+  display: none;
+}
+
+.lab-badge__desktop-text {
+  display: inline;
+}
+
 .lab-badge {
   font-family: 'Courier New', monospace;
   font-size: 1.25rem;
@@ -383,6 +396,18 @@
   }
 
   .lab-home-button--split .lab-home-button__mobile-text {
+    display: inline;
+  }
+
+  /* Swap the long and short badge labels at mobile widths. Lab pages
+     that opt into the splitter wrap the badge text in two spans; the
+     base rules above hide the short span and show the long span,
+     this rule reverses that at ≤768px. */
+  .lab-badge .lab-badge__desktop-text {
+    display: none;
+  }
+
+  .lab-badge .lab-badge__mobile-text {
     display: inline;
   }
 
