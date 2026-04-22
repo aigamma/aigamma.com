@@ -74,10 +74,18 @@ export default function App() {
             className="lab-badge"
             title="Parity Lab · put-call parity, box vs direct PCP, implied SPX forward"
           >
-            Parity Lab
+            <span className="lab-badge__desktop-text">Parity Lab</span>
+            <span className="lab-badge__mobile-text">Parity</span>
           </span>
         </div>
-        <a href="/" className="lab-home-button lab-home-button--inline">Return Home</a>
+        <a
+          href="/"
+          className="lab-home-button lab-home-button--inline lab-home-button--split"
+          aria-label="Return Home"
+        >
+          <span className="lab-home-button__desktop-text">Return Home</span>
+          <span className="lab-home-button__mobile-text">Home</span>
+        </a>
         <QuantMenu />
       </header>
 
