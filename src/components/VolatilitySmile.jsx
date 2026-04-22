@@ -574,7 +574,7 @@ export default function VolatilitySmile({
         x: strikes,
         y: ivs,
         customdata: slice.map((r) => [
-          r.delta != null && Number.isFinite(r.delta) ? r.delta.toFixed(3) : '—',
+          r.delta != null && Number.isFinite(r.delta) ? (r.delta * 100).toFixed(1) : '—',
         ]),
         mode: 'markers',
         name: 'observed IV',
