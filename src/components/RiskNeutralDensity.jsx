@@ -105,7 +105,7 @@ function isMonthlyExpiration(dateStr, expirationSet) {
   return false;
 }
 
-export default function RiskNeutralDensity({ fits, spotPrice, capturedAt }) {
+export default function RiskNeutralDensity({ fits, spotPrice, capturedAt, loading = false }) {
   const chartRef = useRef(null);
   const { plotly: Plotly, error: plotlyError } = usePlotly();
   const mobile = useIsMobile();
@@ -289,6 +289,24 @@ export default function RiskNeutralDensity({ fits, spotPrice, capturedAt }) {
     );
   }
   if (!sortedExps || sortedExps.length === 0) {
+    // Distinguish "SVI fits are still being computed in a concurrent
+    // background render" from "fits are genuinely unavailable for this
+    // run". When App.jsx flagged loading=true, the urgent render just
+    // committed with the deferred (stale-null) contracts value and the
+    // background render is running fitSviSlice across the expirations;
+    // paint a skeleton that matches the rendered chart height instead of
+    // the "unavailable" card, which would otherwise flicker in for the
+    // ~100-300 ms the background render is in flight.
+    if (loading) {
+      return (
+        <div
+          className="skeleton-card"
+          style={{ height: '560px', marginBottom: '1rem' }}
+          aria-busy="true"
+          aria-label="Computing risk-neutral density"
+        />
+      );
+    }
     return (
       <div className="card text-muted" style={{ padding: '1rem', marginBottom: '1rem' }}>
         Risk-neutral density unavailable — SVI fits required.

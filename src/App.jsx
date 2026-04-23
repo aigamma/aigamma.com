@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from 'react';
+import { useDeferredValue, useEffect, useMemo, useState } from 'react';
 import './styles/theme.css';
 import ErrorBoundary from './ErrorBoundary';
 import LevelsPanel from './components/LevelsPanel';
@@ -212,12 +212,29 @@ export default function App() {
     }
   }, [selectedExpiration]);
 
+  // Defer the SVI fit (one fitSviSlice call per expiration, ~31 expirations
+  // on a live SPX chain, ~100-300 ms total on a modern laptop) into a
+  // concurrent background render so the other eleven charts above
+  // RiskNeutralDensity in the page flow paint first. useDeferredValue
+  // returns the previous value (initially null → null) in urgent renders
+  // and schedules a lower-priority background render with the new value;
+  // React paints after the urgent render commits, so the below-the-fold
+  // RND waits one extra render for its density while the stats grid and
+  // the gamma/term-structure charts above it hit the screen as soon as
+  // the data lands. RND shows a skeleton during that window (see
+  // RiskNeutralDensity.jsx) rather than the "unavailable" card that used
+  // to render when fits was empty.
+  const deferredContracts = useDeferredValue(data?.contracts);
+  const deferredSpot = useDeferredValue(data?.spotPrice);
+  const deferredCapturedAt = useDeferredValue(data?.capturedAt);
+  const deferredBackendFits = useDeferredValue(data?.sviFits);
   const sviFits = useSviFits({
-    contracts: data?.contracts,
-    spotPrice: data?.spotPrice,
-    capturedAt: data?.capturedAt,
-    backendFits: data?.sviFits,
+    contracts: deferredContracts,
+    spotPrice: deferredSpot,
+    capturedAt: deferredCapturedAt,
+    backendFits: deferredBackendFits,
   });
+  const sviLoading = deferredContracts !== data?.contracts;
 
   // Client-side override of the gamma inflection profile and volatility flip.
   // The backend pass that writes `gamma_profile` and recomputes
@@ -517,6 +534,7 @@ export default function App() {
               fits={sviFits.byExpiration}
               spotPrice={data.spotPrice}
               capturedAt={data.capturedAt}
+              loading={sviLoading}
             />
           </ErrorBoundary>
 
