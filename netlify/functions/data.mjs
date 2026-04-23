@@ -52,21 +52,24 @@ export default async function handler(request) {
 
   try {
     // In prev-day mode, resolve the prior trading_date in one Supabase RTT
-    // by fetching the 20 most recent trading_dates (with duplicates because
-    // each trading day typically has ~80 intraday runs at the 5-minute
-    // cadence) and picking the second distinct date client-side. The prior
-    // implementation used two serialized queries — first a limit=1 to get
-    // the latest trading_date, then a limit=1 with trading_date=lt.{that}
-    // to get the prev — which cost two round-trips (~20-80 ms total
-    // depending on Supabase latency). The combined query retrieves at most
-    // ~20 rows of a single date column (~300 bytes raw) so the larger
-    // result set is essentially free compared to the saved round-trip.
+    // by fetching enough recent trading_date rows to reliably span two
+    // distinct days. Intraday SPX ingest runs fire every 5 minutes during
+    // market hours, so a single trading day carries ~80 runs (6.5 hours
+    // × 12/hour); to guarantee the result set covers at least the latest
+    // trading_date AND the one before, we fetch limit=200 which spans
+    // 2.5 trading-days-worth. A linear scan finds the first row whose
+    // trading_date is strictly less than the latest — same semantics as
+    // the prior lt.{latest} second query, evaluated in JS on a ~3 KB
+    // result set rather than as a separate PostgREST round-trip. Saves
+    // ~15-40 ms on the prev-day cold path (the pre-existing 2-query
+    // implementation was a "fetch latest, then lt. that" pair that
+    // serialized naturally).
     if (wantPrevDay) {
       const prevResolveParams = new URLSearchParams({
         underlying: `eq.${underlying}`,
         snapshot_type: `eq.${snapshotType}`,
         order: 'trading_date.desc',
-        limit: '20',
+        limit: '200',
         select: 'trading_date',
       });
       const prevResolveRes = await fetchWithTimeout(
