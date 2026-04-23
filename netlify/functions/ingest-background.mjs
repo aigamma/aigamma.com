@@ -513,12 +513,22 @@ function computeGex(pages, targets, startedAt, partial, partialReason = null) {
       .filter((c) => c.contract_type === 'put' && c.delta < -0.15 && c.delta > -0.35)
       .sort((a, b) => Math.abs(Math.abs(a.delta) - 0.25) - Math.abs(Math.abs(b.delta) - 0.25))[0];
 
+    const put25dIv = put25d ? put25d.implied_volatility : null;
+    const call25dIv = call25d ? call25d.implied_volatility : null;
+    // 25-delta risk reversal (call - put). Negative = put-side richer than
+    // call-side (typical equity-index skew), positive = call-skew. Cheap to
+    // persist now that both legs are already computed, even though no live
+    // reader surfaces it yet — removes a null trap for any future consumer.
+    const skew25dRr =
+      put25dIv != null && call25dIv != null ? call25dIv - put25dIv : null;
+
     expirationMetrics.push({
       expiration_date: exp,
       atm_iv: atmIv,
       atm_strike: atmStrike,
-      put_25d_iv: put25d ? put25d.implied_volatility : null,
-      call_25d_iv: call25d ? call25d.implied_volatility : null,
+      put_25d_iv: put25dIv,
+      call_25d_iv: call25dIv,
+      skew_25d_rr: skew25dRr,
       max_pain_strike: computeMaxPain(expContracts),
       contract_count: expContracts.length,
     });
