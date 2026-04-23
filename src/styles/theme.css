@@ -590,7 +590,7 @@ body {
   border-radius: 4px;
   outline: none;
   transition: border-color 0.2s ease, box-shadow 0.2s ease;
-  animation: chatInputGlow 4s ease-in-out infinite;
+  animation: chatInputGlow 8s ease-in-out infinite;
 }
 
 .expiration-picker:focus {
