@@ -54,22 +54,35 @@ import ResetButton from './ResetButton';
 //   color and outlined in titleText white so it pops above the fills.
 // • Density ribbon on the right margin — a vertical Gaussian KDE of the
 //   full-history gamma index, split at zero into green-above / red-below
-//   halves that match the oscillator's regime fills, with a white line
-//   across the ribbon at the current-value y-position so the reader can
-//   read "where does today sit in the distribution" directly off the
-//   ribbon shape. The ribbon shares the main plot's y-axis so the KDE
-//   y-positions align to the oscillator line-by-line, and the ribbon's
-//   xaxis2 is a hidden [0, 1.05]-normalized density axis. Bandwidth is
-//   Scott's-rule (1.06σn^-1/5) with a 0.15 floor so ultra-narrow
-//   distributions don't collapse to a spike.
+//   halves rendered at lower opacity than the oscillator's regime fills
+//   (see the RIBBON_*_FILL / RIBBON_*_OUTLINE constants below) so the
+//   ribbon reads as ambient distribution context on the right margin
+//   rather than competing for visual weight with the live oscillator
+//   line and fills on the left. A white line across the ribbon at the
+//   current-value y-position lets the reader read "where does today
+//   sit in the distribution" directly off the silhouette. The ribbon
+//   shares the main plot's y-axis so the KDE y-positions align to the
+//   oscillator line-by-line, and the ribbon's xaxis2 is a hidden
+//   [0, 1.05]-normalized density axis. Bandwidth is Scott's-rule
+//   (1.06σn^-1/5) with a 0.15 floor so ultra-narrow distributions
+//   don't collapse to a spike.
 // • Site-wide RangeBrush below the plot and ResetButton in the
 //   upper-left corner, matching DealerGammaRegime: default window is
 //   the trailing 6 months, brush exposes full history for expansion.
 
 const GREEN_FILL = 'rgba(46, 204, 113, 0.32)';
 const RED_FILL = 'rgba(231, 76, 60, 0.32)';
-const RIBBON_GREEN_FILL = 'rgba(46, 204, 113, 0.45)';
-const RIBBON_RED_FILL = 'rgba(231, 76, 60, 0.45)';
+// Ribbon fills and outlines render at lower opacity than the oscillator's
+// regime fills so the right-margin KDE reads as ambient distribution
+// context rather than as a second primary signal that competes for visual
+// weight with the main line+fill on the left. Fills sit at 0.20 (well
+// under the oscillator's 0.32) and outlines drop from solid color to
+// 0.55 alpha so the silhouette's edges still define a readable shape
+// without painting hard green/red strokes alongside the live regime line.
+const RIBBON_GREEN_FILL = 'rgba(46, 204, 113, 0.20)';
+const RIBBON_RED_FILL = 'rgba(231, 76, 60, 0.20)';
+const RIBBON_GREEN_OUTLINE = 'rgba(46, 204, 113, 0.55)';
+const RIBBON_RED_OUTLINE = 'rgba(231, 76, 60, 0.55)';
 const GREEN_LINE = PLOTLY_COLORS.positive;
 const RED_LINE = PLOTLY_COLORS.negative;
 const ZERO_LINE_COLOR = 'rgba(224, 224, 224, 0.5)';
@@ -422,7 +435,7 @@ export default function GammaIndexOscillator() {
         type: 'scatter',
         fill: 'tozerox',
         fillcolor: RIBBON_GREEN_FILL,
-        line: { color: GREEN_LINE, width: 1 },
+        line: { color: RIBBON_GREEN_OUTLINE, width: 1 },
         hoverinfo: 'skip',
         showlegend: false,
       });
@@ -435,7 +448,7 @@ export default function GammaIndexOscillator() {
         type: 'scatter',
         fill: 'tozerox',
         fillcolor: RIBBON_RED_FILL,
-        line: { color: RED_LINE, width: 1 },
+        line: { color: RIBBON_RED_OUTLINE, width: 1 },
         hoverinfo: 'skip',
         showlegend: false,
       });
