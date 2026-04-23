@@ -189,7 +189,11 @@ export default async function handler(request) {
         status: 200,
         headers: {
           'Content-Type': 'application/json',
-          'Cache-Control': 'public, max-age=300, stale-while-revalidate=1800',
+          // EOD-only dataset: only changes once per trading day after the
+          // vol-stats cron writes the new row. 30-minute edge TTL + 24-hour
+          // SWR lets repeat visits in the same session serve from cache
+          // without ever going back to Supabase.
+          'Cache-Control': 'public, max-age=1800, stale-while-revalidate=86400',
         },
       }
     );

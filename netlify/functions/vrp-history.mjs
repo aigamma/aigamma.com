@@ -94,9 +94,10 @@ export default async function handler(request) {
         status: 200,
         headers: {
           'Content-Type': 'application/json',
-          // Longer cache than the intraday endpoint — this is EOD-only data
-          // that only changes once per trading day after the vol-stats cron.
-          'Cache-Control': 'public, max-age=300, stale-while-revalidate=1800',
+          // EOD-only data that only changes once per trading day after the
+          // vol-stats cron. 30-minute edge TTL + 24-hour SWR lets repeat
+          // visits serve from the CDN without retouching Supabase.
+          'Cache-Control': 'public, max-age=1800, stale-while-revalidate=86400',
         },
       }
     );
