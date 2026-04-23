@@ -421,17 +421,25 @@ export default async function handler(request) {
     // derives a trading date from capturedAt). Drop DTE rows that
     // have no underlying samples so the frontend doesn't have to
     // filter holes out of its polygon paths.
+    // Percentile IVs carry ~15 decimal places of IEEE-754 float noise
+    // coming out of PostgREST's JSON serialization of the underlying numeric
+    // column (values like "iv_p90: 0.20269000000000004"); 5 decimal places
+    // is resolution of 1e-5 = 0.001 IV points, two orders of magnitude
+    // below the smoothing-window sampling noise on the underlying rolling-
+    // percentile estimator. sample_count is dropped from the wire entirely
+    // because no frontend consumer reads it — TermStructure.jsx only reads
+    // dte and the five iv_p* fields. The filter upstream already guarantees
+    // sample_count > 0 for every row that makes it into this array.
     const cloudBands = cloudBandsRows
+      .filter((b) => b.sample_count > 0 && b.iv_p50 != null)
       .map((b) => ({
         dte: b.dte,
-        iv_p10: toNum(b.iv_p10),
-        iv_p30: toNum(b.iv_p30),
-        iv_p50: toNum(b.iv_p50),
-        iv_p70: toNum(b.iv_p70),
-        iv_p90: toNum(b.iv_p90),
-        sample_count: b.sample_count,
-      }))
-      .filter((b) => b.sample_count > 0 && b.iv_p50 != null);
+        iv_p10: roundTo(toNum(b.iv_p10), 5),
+        iv_p30: roundTo(toNum(b.iv_p30), 5),
+        iv_p50: roundTo(toNum(b.iv_p50), 5),
+        iv_p70: roundTo(toNum(b.iv_p70), 5),
+        iv_p90: roundTo(toNum(b.iv_p90), 5),
+      }));
 
     const payload = {
       underlying: run.underlying,
@@ -489,8 +497,10 @@ function toNum(value) {
 // same resolution, matches the natural precision of the underlying
 // numerical solver). Returns a primitive Number rather than a string so
 // JSON.stringify doesn't wrap it in quotes and doesn't re-introduce trailing
-// zeros we just stripped.
+// zeros we just stripped. Preserves null so callers that pipe a possibly-
+// null toNum result through don't accidentally coerce missing values to 0.
 function roundTo(value, decimals) {
+  if (value == null) return null;
   const f = 10 ** decimals;
   return Math.round(value * f) / f;
 }
