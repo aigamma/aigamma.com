@@ -163,7 +163,19 @@ export default async function handler(request) {
     });
     if (expirationFilter) snapParams.set('expiration_date', `eq.${expirationFilter}`);
 
-    const prevCloseParamsStr = run.trading_date
+    // Prior-day responses (prev_day=1) drop three queries that the frontend
+    // never reads from the prev-day payload: the prev-close lookup (App.jsx
+    // reads prevClose / prevTradingDate only from today's payload, not from
+    // the prior day's), the cloud-bands two-step (TermStructure.jsx is
+    // passed today's cloudBands only — the prior day isn't rendered against
+    // the same chart), and the daily-gex-stats snapshot that produces the
+    // gamma_index field (LevelsPanel.jsx reads gamma_index from today's
+    // levels only, again not from prev-day). Skipping them on prev_day
+    // requests shaves three Supabase round-trips off the prior-day function
+    // cold path (~50-150 ms of tail latency off the prev-day fetch) and
+    // eliminates ~35 KB raw / ~5 KB gzipped of cloudBands payload on the
+    // prev-day wire response that was going to be discarded client-side.
+    const prevCloseParamsStr = (run.trading_date && !wantPrevDay)
       ? new URLSearchParams({
           underlying: `eq.${underlying}`,
           snapshot_type: `eq.${snapshotType}`,
@@ -182,8 +194,9 @@ export default async function handler(request) {
     // intraday run on a day whose EOD reconcile hasn't happened yet
     // still gets yesterday's frozen bands as historical context. A 404
     // or empty response is non-fatal: the frontend just skips the
-    // overlay and renders the observed curve alone.
-    const cloudBandsDateRes = run.trading_date
+    // overlay and renders the observed curve alone. Skipped on prev_day
+    // fetches — only today's payload feeds TermStructure.
+    const cloudBandsDateRes = (run.trading_date && !wantPrevDay)
       ? fetchWithTimeout(
           `${supabaseUrl}/rest/v1/daily_cloud_bands?trading_date=lte.${run.trading_date}&select=trading_date&order=trading_date.desc&limit=1`,
           { headers },
@@ -196,11 +209,15 @@ export default async function handler(request) {
     // fixed through the session; intraday IV/spot drift the live call_gex
     // and put_gex aggregates but the dealer positioning book the market
     // is facing today is whatever last night's EOD sweep produced.
-    const dailyGexRes = fetchWithTimeout(
-      `${supabaseUrl}/rest/v1/daily_gex_stats?select=trading_date,call_gex,put_gex,atm_call_gex,atm_put_gex,atm_contract_count,contract_count&order=trading_date.desc&limit=1`,
-      { headers },
-      'daily_gex_stats_latest'
-    );
+    // Skipped on prev_day fetches — LevelsPanel reads gamma_index from
+    // today's levels only, the prev-day payload's copy would be unused.
+    const dailyGexRes = wantPrevDay
+      ? Promise.resolve(null)
+      : fetchWithTimeout(
+          `${supabaseUrl}/rest/v1/daily_gex_stats?select=trading_date,call_gex,put_gex,atm_call_gex,atm_put_gex,atm_contract_count,contract_count&order=trading_date.desc&limit=1`,
+          { headers },
+          'daily_gex_stats_latest'
+        );
 
     const [levelsRes, expMetricsRes, prevCloseRes, cloudBandsDateResolved, dailyGexResolved] = await Promise.all([
       fetchWithTimeout(
