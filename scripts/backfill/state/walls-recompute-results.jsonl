@@ -917,3 +917,12 @@
 {"date":"2025-08-28","call_wall":6500,"put_wall":6000,"spot":6501.86,"contracts":12425,"strike_count":401,"computed_at":"2026-04-23T05:25:00.957Z"}
 {"date":"2025-08-29","call_wall":6460,"put_wall":6465,"spot":6460.26,"contracts":12559,"strike_count":411,"computed_at":"2026-04-23T05:25:10.103Z"}
 {"date":"2025-09-02","call_wall":6600,"put_wall":6415,"spot":6415.54,"contracts":12702,"strike_count":439,"computed_at":"2026-04-23T05:25:21.993Z"}
+{"date":"2025-09-03","call_wall":6450,"put_wall":6300,"spot":6448.26,"contracts":12598,"strike_count":414,"computed_at":"2026-04-23T05:25:36.265Z"}
+{"date":"2025-09-04","call_wall":6505,"put_wall":6250,"spot":6502.0799,"contracts":12293,"strike_count":397,"computed_at":"2026-04-23T05:25:44.378Z"}
+{"date":"2025-09-05","call_wall":6500,"put_wall":6480,"spot":6481.5,"contracts":12140,"strike_count":405,"computed_at":"2026-04-23T05:25:51.232Z"}
+{"date":"2025-09-08","call_wall":6500,"put_wall":6495,"spot":6495.15,"contracts":12221,"strike_count":396,"computed_at":"2026-04-23T05:25:57.604Z"}
+{"date":"2025-09-09","call_wall":6515,"put_wall":6450,"spot":6512.61,"contracts":12491,"strike_count":419,"computed_at":"2026-04-23T05:26:04.465Z"}
+{"date":"2025-09-10","call_wall":6530,"put_wall":6000,"spot":6532.04,"contracts":12132,"strike_count":392,"computed_at":"2026-04-23T05:26:12.633Z"}
+{"date":"2025-09-11","call_wall":6600,"put_wall":6000,"spot":6587.47,"contracts":11624,"strike_count":379,"computed_at":"2026-04-23T05:26:24.676Z"}
+{"date":"2025-09-12","call_wall":6585,"put_wall":6000,"spot":6584.29,"contracts":11946,"strike_count":382,"computed_at":"2026-04-23T05:26:39.328Z"}
+{"date":"2025-09-15","call_wall":6615,"put_wall":6300,"spot":6615.2799,"contracts":12102,"strike_count":382,"computed_at":"2026-04-23T05:27:03.239Z"}
