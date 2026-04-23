@@ -89,10 +89,25 @@ function useHistory(endpoint, params) {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
 
-  useEffect(() => {
-    let cancelled = false;
+  // Reset loading / error during render when the URL changes. React 19's
+  // react-hooks/set-state-in-effect rule flags a setLoading(true) inside
+  // the useEffect body, and the adjust-state-during-render pattern here
+  // (tracking prevUrl as state) is the React-sanctioned way to express
+  // "reset state in response to a prop change". The effect below only
+  // sets state from async fetch callbacks, which is the subscribe-to-
+  // external-system pattern the lint rule permits. Data is left stale
+  // (not reset to null) so a chart that's mid-render with a valid prior
+  // response doesn't blank on intraday refreshes — it keeps painting the
+  // previous series until the new one arrives.
+  const [prevUrl, setPrevUrl] = useState(url);
+  if (prevUrl !== url) {
+    setPrevUrl(url);
     setLoading(true);
     setError(null);
+  }
+
+  useEffect(() => {
+    let cancelled = false;
     sharedFetch(url)
       .then((json) => {
         if (!cancelled) setData(json);
