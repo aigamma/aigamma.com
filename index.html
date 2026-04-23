@@ -39,6 +39,33 @@
   </head>
   <body>
     <div id="root"></div>
+    <script>
+      // Kick off the two /api/data fetches (today and the prior trading day)
+      // as soon as the HTML parser reaches this inline script, rather than
+      // waiting for the main bundle to download and parse, React to hydrate,
+      // and useOptionsData's useEffect to fire. Both URLs are identical
+      // byte-for-byte to the ones useOptionsData.js constructs on a cold
+      // mount with no expiration / tradingDate overrides and v=2 matching
+      // WIRE_VERSION in the hook. The hook drains window.__apiBoot.today /
+      // prevDay on its first fetch; on rejection or on retryCount > 0 the
+      // hook falls through to a regular fetch. The .catch() tails silence
+      // the uncaught-promise warning between the early fetch failing and
+      // the hook taking over to surface the error through setError.
+      (function () {
+        var base = '/api/data?underlying=SPX&snapshot_type=intraday&v=2';
+        function boot(url) {
+          return fetch(url).then(function (r) {
+            if (!r.ok) return r.text().then(function (t) { throw new Error('API ' + r.status + ': ' + t); });
+            return r.json();
+          });
+        }
+        var p1 = boot(base);
+        var p2 = boot('/api/data?underlying=SPX&snapshot_type=intraday&prev_day=1&v=2');
+        p1.catch(function () {});
+        p2.catch(function () {});
+        window.__apiBoot = { today: p1, prevDay: p2 };
+      })();
+    </script>
     <script type="module" src="/src/main.jsx"></script>
   </body>
 </html>

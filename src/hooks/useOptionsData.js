@@ -53,6 +53,27 @@ function rehydrateContracts(payload) {
   delete payload.contractCols;
 }
 
+// Pull (and consume) the early-boot promise if this mount matches the shape
+// the inline boot script in index.html pre-fetched: cold retry, default SPX
+// / intraday params, no expiration or trading-date override, WIRE_VERSION
+// matches. Any mismatch (historical date, manual retry after a failure, a
+// future underlying) falls through to a regular fetch. The promise is
+// consumed on the first read so a later refetch() or a remount issues fresh
+// bytes.
+function consumeBootPromise({ underlying, snapshotType, expiration, tradingDate, prevDay, retryCount }) {
+  if (typeof window === 'undefined') return null;
+  if (retryCount !== 0) return null;
+  if (expiration || tradingDate) return null;
+  if (underlying !== 'SPX' || snapshotType !== 'intraday') return null;
+  const boot = window.__apiBoot;
+  if (!boot) return null;
+  const key = prevDay ? 'prevDay' : 'today';
+  const promise = boot[key];
+  if (!promise) return null;
+  boot[key] = null;
+  return promise;
+}
+
 export default function useOptionsData({ underlying = 'SPX', snapshotType = 'intraday', expiration = null, tradingDate = null, prevDay = false, enabled = true } = {}) {
   const [data, setData] = useState(null);
   const [loading, setLoading] = useState(enabled);
@@ -69,19 +90,33 @@ export default function useOptionsData({ underlying = 'SPX', snapshotType = 'int
       setError(null);
 
       try {
-        const params = new URLSearchParams({ underlying, snapshot_type: snapshotType });
-        if (expiration) params.set('expiration', expiration);
-        if (tradingDate) params.set('date', tradingDate);
-        if (prevDay && !tradingDate) params.set('prev_day', '1');
-        params.set('v', String(WIRE_VERSION));
-
-        const response = await fetch(`/api/data?${params}`);
-        if (!response.ok) {
-          const text = await response.text();
-          throw new Error(`API ${response.status}: ${text}`);
+        const booted = consumeBootPromise({ underlying, snapshotType, expiration, tradingDate, prevDay, retryCount });
+        let json;
+        if (booted) {
+          try {
+            json = await booted;
+          } catch (bootErr) {
+            // Boot fetch failed (network glitch, 5xx from the edge during a
+            // deploy). Fall through to a fresh fetch — the booted promise is
+            // already drained, so this is the hook's only remaining path.
+            booted.finalBootError = bootErr;
+            json = null;
+          }
         }
+        if (!json) {
+          const params = new URLSearchParams({ underlying, snapshot_type: snapshotType });
+          if (expiration) params.set('expiration', expiration);
+          if (tradingDate) params.set('date', tradingDate);
+          if (prevDay && !tradingDate) params.set('prev_day', '1');
+          params.set('v', String(WIRE_VERSION));
 
-        const json = await response.json();
+          const response = await fetch(`/api/data?${params}`);
+          if (!response.ok) {
+            const text = await response.text();
+            throw new Error(`API ${response.status}: ${text}`);
+          }
+          json = await response.json();
+        }
         rehydrateContracts(json);
         if (!cancelled) {
           setData(json);

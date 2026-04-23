@@ -358,3 +358,17 @@
 {"date":"2023-06-06","call_wall":4285,"put_wall":3900,"spot":4283.85,"contracts":10595,"strike_count":326,"computed_at":"2026-04-23T02:10:01.611Z"}
 {"date":"2023-06-07","call_wall":4300,"put_wall":3900,"spot":4267.52,"contracts":10468,"strike_count":327,"computed_at":"2026-04-23T02:10:18.550Z"}
 {"date":"2023-06-08","call_wall":4300,"put_wall":4000,"spot":4293.93,"contracts":10128,"strike_count":328,"computed_at":"2026-04-23T02:10:29.677Z"}
+{"date":"2023-06-09","call_wall":4300,"put_wall":3900,"spot":4298.8599,"contracts":10475,"strike_count":327,"computed_at":"2026-04-23T02:10:35.239Z"}
+{"date":"2023-06-12","call_wall":4340,"put_wall":4000,"spot":4338.93,"contracts":10381,"strike_count":325,"computed_at":"2026-04-23T02:10:42.273Z"}
+{"date":"2023-06-13","call_wall":4370,"put_wall":4000,"spot":4369.01,"contracts":10354,"strike_count":324,"computed_at":"2026-04-23T02:10:49.616Z"}
+{"date":"2023-06-14","call_wall":4375,"put_wall":3800,"spot":4372.59,"contracts":10707,"strike_count":325,"computed_at":"2026-04-23T02:10:57.007Z"}
+{"date":"2023-06-15","call_wall":4425,"put_wall":4000,"spot":4425.84,"contracts":9402,"strike_count":319,"computed_at":"2026-04-23T02:11:06.830Z"}
+{"date":"2023-06-16","call_wall":4410,"put_wall":3900,"spot":4409.59,"contracts":10566,"strike_count":319,"computed_at":"2026-04-23T02:11:17.444Z"}
+{"date":"2023-06-20","call_wall":4500,"put_wall":4200,"spot":4388.71,"contracts":10004,"strike_count":324,"computed_at":"2026-04-23T02:11:54.812Z"}
+{"date":"2023-06-21","call_wall":4500,"put_wall":4365,"spot":4365.69,"contracts":10723,"strike_count":322,"computed_at":"2026-04-23T02:12:11.381Z"}
+{"date":"2023-06-22","call_wall":4500,"put_wall":4380,"spot":4381.89,"contracts":10440,"strike_count":319,"computed_at":"2026-04-23T02:12:48.112Z"}
+{"date":"2023-06-23","call_wall":4320,"put_wall":4350,"spot":4348.33,"contracts":10409,"strike_count":324,"computed_at":"2026-04-23T02:13:11.681Z"}
+{"date":"2023-06-26","call_wall":4400,"put_wall":4340,"spot":4328.8199,"contracts":10754,"strike_count":331,"computed_at":"2026-04-23T02:13:36.372Z"}
+{"date":"2023-06-27","call_wall":4400,"put_wall":4000,"spot":4378.41,"contracts":9991,"strike_count":319,"computed_at":"2026-04-23T02:13:45.744Z"}
+{"date":"2023-06-28","call_wall":4500,"put_wall":4200,"spot":4376.8599,"contracts":10749,"strike_count":321,"computed_at":"2026-04-23T02:13:56.616Z"}
+{"date":"2023-06-29","call_wall":4400,"put_wall":4200,"spot":4396.44,"contracts":10325,"strike_count":316,"computed_at":"2026-04-23T02:14:04.567Z"}
