@@ -328,7 +328,7 @@ export default function GammaInflectionChart({ spotPrice, levels }) {
       <div style={{ position: 'relative' }}>
         <div
           ref={chartRef}
-          style={{ width: '100%', height: '700px', backgroundColor: 'var(--bg-card)' }}
+          style={{ width: '100%', height: '560px', backgroundColor: 'var(--bg-card)' }}
         />
         {activeRange && dataMin != null && dataMax != null && (
           <RangeBrush
