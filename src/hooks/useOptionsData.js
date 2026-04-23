@@ -25,6 +25,14 @@ function rehydrateContracts(payload) {
   const expirations = Array.isArray(payload.expirations) ? payload.expirations : [];
   const n = cols.strike.length;
   const contracts = new Array(n);
+  // `vol` may be absent from the server payload — grep across src/ confirmed
+  // no downstream consumer reads per-contract volume (LevelsPanel reads the
+  // pre-aggregated put_call_ratio_volume scalar, not this column), so data.mjs
+  // omits the column from both the Supabase SELECT and the columnar wire
+  // shape. Keep the rehydrator tolerant of the missing array so a hypothetical
+  // future re-introduction of the column (defensive decoders are cheap) can
+  // land without another wire-version bump.
+  const volCol = Array.isArray(cols.vol) ? cols.vol : null;
   for (let i = 0; i < n; i++) {
     const expIdx = cols.exp[i];
     contracts[i] = {
@@ -35,7 +43,7 @@ function rehydrateContracts(payload) {
       delta: cols.delta[i],
       gamma: cols.gamma[i],
       open_interest: cols.oi[i],
-      volume: cols.vol[i],
+      volume: volCol ? volCol[i] : null,
       close_price: cols.px[i],
     };
   }

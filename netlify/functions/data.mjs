@@ -149,10 +149,16 @@ export default async function handler(request) {
       // endpoint. bid_price/ask_price/charm/vanna were dropped from the table
       // entirely in the null-column cleanup; root_symbol is written for the
       // SPX/SPXW disambiguation during ingest but no frontend surface reads
-      // it. The fields that remain in snapshots after the cleanup are fully
-      // enumerated below.
+      // it. Also omits volume: a grep across src/ found zero consumers that
+      // read the per-contract volume (LevelsPanel reads the pre-aggregated
+      // put_call_ratio_volume / total_call_volume / total_put_volume scalars
+      // from computed_levels, not the per-contract column). Dropping volume
+      // from the SELECT shaves bytes off the Supabase→function wire and off
+      // the rendered columnar payload (~17 KB gzipped saving on the browser
+      // wire). The fields that remain in snapshots after the cleanup are
+      // fully enumerated below.
       select:
-        'expiration_date,strike,contract_type,implied_volatility,delta,gamma,open_interest,volume,close_price',
+        'expiration_date,strike,contract_type,implied_volatility,delta,gamma,open_interest,close_price',
       order: 'expiration_date.asc,strike.asc',
     });
     if (expirationFilter) snapParams.set('expiration_date', `eq.${expirationFilter}`);
@@ -319,7 +325,6 @@ export default async function handler(request) {
     const colDelta = new Array(n);
     const colGamma = new Array(n);
     const colOi = new Array(n);
-    const colVol = new Array(n);
     const colPx = new Array(n);
     for (let i = 0; i < n; i++) {
       const c = contractRows[i];
@@ -333,7 +338,6 @@ export default async function handler(request) {
       const g = toNum(c.gamma);
       colGamma[i] = g == null ? null : toSigFig(g, 6);
       colOi[i] = c.open_interest;
-      colVol[i] = c.volume;
       colPx[i] = toNum(c.close_price);
     }
     const contractCols = {
@@ -344,7 +348,6 @@ export default async function handler(request) {
       delta: colDelta,
       gamma: colGamma,
       oi: colOi,
-      vol: colVol,
       px: colPx,
     };
 
