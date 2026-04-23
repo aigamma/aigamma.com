@@ -220,6 +220,7 @@ export default function LevelsPanel({ levels, spotPrice, prevClose, expirationMe
           value={formatInteger(levels.volatility_flip)}
           accent="var(--accent-amber)"
           sub={volFlipSub}
+          bold
         />
         <Stat label="SPX" value={formatInteger(spotPrice)} accent="var(--accent-blue)" sub={spotDeltaSub(spotPrice, prevClose)} />
         <Stat
@@ -251,6 +252,7 @@ export default function LevelsPanel({ levels, spotPrice, prevClose, expirationMe
           value={flipDist != null ? `${aboveFlip ? '+' : ''}${flipDist.toFixed(2)}` : '—'}
           accent={flipDistAccent(flipDist)}
           sub={flipDist != null ? `${((flipDist / spotPrice) * 100).toFixed(2)}%` : null}
+          bold
         />
         <Stat
           label="VRP"
