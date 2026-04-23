@@ -1,4 +1,4 @@
-import { useDeferredValue, useEffect, useMemo, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import './styles/theme.css';
 import ErrorBoundary from './ErrorBoundary';
 import LevelsPanel from './components/LevelsPanel';
@@ -213,29 +213,23 @@ export default function App() {
     }
   }, [selectedExpiration]);
 
-  // Defer the SVI fit (one fitSviSlice call per expiration, ~31 expirations
-  // on a live SPX chain, ~100-300 ms total on a modern laptop) into a
-  // concurrent background render so the other eleven charts above
-  // RiskNeutralDensity in the page flow paint first. useDeferredValue
-  // returns the previous value (initially null → null) in urgent renders
-  // and schedules a lower-priority background render with the new value;
-  // React paints after the urgent render commits, so the below-the-fold
-  // RND waits one extra render for its density while the stats grid and
-  // the gamma/term-structure charts above it hit the screen as soon as
-  // the data lands. RND shows a skeleton during that window (see
-  // RiskNeutralDensity.jsx) rather than the "unavailable" card that used
-  // to render when fits was empty.
-  const deferredContracts = useDeferredValue(data?.contracts);
-  const deferredSpot = useDeferredValue(data?.spotPrice);
-  const deferredCapturedAt = useDeferredValue(data?.capturedAt);
-  const deferredBackendFits = useDeferredValue(data?.sviFits);
+  // The SVI fit (~31 expirations × one Levenberg-Marquardt solve each,
+  // ~100-300 ms on a modern laptop) runs in a Web Worker — see
+  // src/workers/sviFits.worker.js and src/hooks/useSviFits.js for the
+  // dispatch protocol. The main thread stays responsive during the fit
+  // window (scroll, hover, click all continue to work), and the hook
+  // returns a `loading` flag while a dispatch is in flight. The prior
+  // useDeferredValue-based concurrent render pattern is no longer needed
+  // because the computation is off-thread: the hook returns immediately
+  // with stale fits (or empty on first mount) and setState-updates once
+  // the worker responds.
   const sviFits = useSviFits({
-    contracts: deferredContracts,
-    spotPrice: deferredSpot,
-    capturedAt: deferredCapturedAt,
-    backendFits: deferredBackendFits,
+    contracts: data?.contracts,
+    spotPrice: data?.spotPrice,
+    capturedAt: data?.capturedAt,
+    backendFits: data?.sviFits,
   });
-  const sviLoading = deferredContracts !== data?.contracts;
+  const sviLoading = sviFits.loading;
 
   // Client-side override of the gamma inflection profile and volatility flip.
   // The backend pass that writes `gamma_profile` and recomputes
