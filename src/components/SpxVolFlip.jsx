@@ -271,16 +271,33 @@ export default function SpxVolFlip() {
     // which toggles it to fully visible without needing a separate
     // control surface. Legend entries render grayed-out when hidden so
     // the affordance is obvious.
+    // customdata carries a pre-formatted "±x.x%" string per point so the
+    // hover can surface each wall's distance from that day's SPX close
+    // without Plotly arithmetic. Sign convention: (wall - spot) / spot,
+    // so Call Wall reads positive above spot (typical) and Put Wall reads
+    // negative below spot (typical). On days where either value is null
+    // the customdata entry is [null] and the hovertemplate falls through
+    // to "N/A" for the delta cell.
+    const formatDistance = (wall, spot) => {
+      if (!Number.isFinite(wall) || !Number.isFinite(spot) || spot === 0) return 'N/A';
+      const pct = ((wall - spot) / spot) * 100;
+      const sign = pct >= 0 ? '+' : '';
+      return `${sign}${pct.toFixed(1)}%`;
+    };
     const callWallValues = series.map((r) => r.cw);
     const putWallValues = series.map((r) => r.pw);
+    const callWallCustomData = series.map((r) => [formatDistance(r.cw, r.s)]);
+    const putWallCustomData = series.map((r) => [formatDistance(r.pw, r.s)]);
     const callWallTrace = {
       x: times,
       y: callWallValues,
+      customdata: callWallCustomData,
       mode: 'lines',
       type: 'scatter',
       line: { color: CALL_WALL_LINE, width: 1.5, shape: 'hv' },
       name: '<b>Call Wall</b>',
-      hovertemplate: '%{x|%b %d, %Y}<br>Call Wall: %{y:,.0f}<extra></extra>',
+      hovertemplate:
+        '%{x|%b %d, %Y}<br>Call Wall: %{y:,.0f} (%{customdata[0]} vs SPX)<extra></extra>',
       connectgaps: false,
       showlegend: true,
       visible: 'legendonly',
@@ -288,11 +305,13 @@ export default function SpxVolFlip() {
     const putWallTrace = {
       x: times,
       y: putWallValues,
+      customdata: putWallCustomData,
       mode: 'lines',
       type: 'scatter',
       line: { color: PUT_WALL_LINE, width: 1.5, shape: 'hv' },
       name: '<b>Put Wall</b>',
-      hovertemplate: '%{x|%b %d, %Y}<br>Put Wall: %{y:,.0f}<extra></extra>',
+      hovertemplate:
+        '%{x|%b %d, %Y}<br>Put Wall: %{y:,.0f} (%{customdata[0]} vs SPX)<extra></extra>',
       connectgaps: false,
       showlegend: true,
       visible: 'legendonly',
