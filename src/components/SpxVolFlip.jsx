@@ -38,6 +38,18 @@ import ResetButton from './ResetButton';
 // the series, the brush exposes the full history for expansion, and the
 // y-axis tightens to the visible window on every brush commit so zoomed
 // regions don't sit flattened against distant out-of-view extrema.
+//
+// The upper-left also hosts dedicated Call Wall / Put Wall toggle
+// buttons that sit alongside the ResetButton in a single flex cluster.
+// The buttons control visibility of the daily Call Wall (positive
+// green) and Put Wall (negative red) step lines — both off by default.
+// Active buttons render with a filled tinted background and
+// full-saturation border; inactive buttons are outline-only gray so
+// the pressed/unpressed state is obvious without having to compare
+// legend-entry brightness (the prior "visible:'legendonly'" approach).
+// Hiding a wall also physically tightens the y-axis to the spot/flip
+// band so the regime narrative reads at higher vertical resolution
+// when the walls are off.
 
 const BLUE_FILL = 'rgba(74, 158, 255, 0.28)';
 const RED_FILL = 'rgba(216, 90, 48, 0.30)';
@@ -160,16 +172,18 @@ function segmentLineTrace(segment, color, showLegend, name, legendgroup) {
   };
 }
 
-// Compute a tight y-axis range (5% padded) over the (spot, flip, call
-// wall, put wall) values whose date falls inside [xStart, xEnd]
-// inclusive. Call Wall and Put Wall are often outside the spot-vs-flip
-// band — Call Wall typically sits 2-5% above spot and Put Wall 3-8%
-// below — so including both in the range calculation guarantees the
-// full span of the four visible series is always inside the plot area
-// no matter how the brush is positioned. Returns null if nothing falls
-// in the window so callers can leave the existing range alone rather
-// than collapsing the axis to a degenerate span.
-function computeYRange(series, xStart, xEnd) {
+// Compute a tight y-axis range (5% padded) over the (spot, flip, and
+// optionally call wall / put wall) values whose date falls inside
+// [xStart, xEnd] inclusive. Call Wall typically sits 2-5% above spot
+// and Put Wall 3-8% below, so when either is visible the axis must
+// span them too; when both are hidden the axis tightens to just the
+// spot-vs-flip band so the regime narrative reads at a larger vertical
+// resolution. `includeCallWall` and `includePutWall` track the toggle
+// state so hiding a wall also physically tightens the axis rather than
+// just hiding the line. Returns null if nothing falls in the window so
+// callers can leave the existing range alone rather than collapsing
+// the axis to a degenerate span.
+function computeYRange(series, xStart, xEnd, includeCallWall, includePutWall) {
   let yMin = Infinity;
   let yMax = -Infinity;
   const consider = (v) => {
@@ -181,8 +195,8 @@ function computeYRange(series, xStart, xEnd) {
     if (r.t < xStart || r.t > xEnd) continue;
     consider(r.s);
     consider(r.f);
-    consider(r.cw);
-    consider(r.pw);
+    if (includeCallWall) consider(r.cw);
+    if (includePutWall) consider(r.pw);
   }
   if (!Number.isFinite(yMin) || !Number.isFinite(yMax)) return null;
   if (yMax === yMin) {
@@ -193,12 +207,50 @@ function computeYRange(series, xStart, xEnd) {
   return [yMin - pad, yMax + pad];
 }
 
+// Button with a pressed (active) / unpressed (inactive) look, styled
+// to match the ResetButton visual language (Courier New, uppercase,
+// letter-spaced) but keyed to a color pair rather than a single fixed
+// tint. Active renders with a filled background at ~0.22 alpha of the
+// active color, a full-saturation border, and bright white text; the
+// inactive state is a flat transparent box with a muted gray outline
+// and dimmed text. The border+fill contrast when active vs the outline
+// alone when inactive makes the on/off state obvious at a glance,
+// which is the whole reason these exist in place of the prior
+// "legendonly" grayed-out legend entries.
+function ToggleButton({ active, onClick, label, activeBg, activeBorder, mobile }) {
+  return (
+    <button
+      type="button"
+      onClick={onClick}
+      aria-pressed={active}
+      style={{
+        background: active ? activeBg : 'transparent',
+        border: `1px solid ${active ? activeBorder : 'rgba(138,143,156,0.35)'}`,
+        borderRadius: '3px',
+        padding: mobile ? '0.1rem 0.4rem' : '0.2rem 0.55rem',
+        fontFamily: PLOTLY_FONT_FAMILY,
+        fontSize: mobile ? '0.7rem' : '0.75rem',
+        letterSpacing: '0.08em',
+        textTransform: 'uppercase',
+        cursor: 'pointer',
+        color: active ? '#e0e0e0' : '#8a8f9c',
+        lineHeight: 1,
+        whiteSpace: 'nowrap',
+      }}
+    >
+      {label}
+    </button>
+  );
+}
+
 export default function SpxVolFlip() {
   const chartRef = useRef(null);
   const { plotly: Plotly, error: plotlyError } = usePlotly();
   const { data, loading, error } = useGexHistory({ from: HISTORY_FROM });
   const mobile = useIsMobile();
   const [timeRange, setTimeRange] = useState(null);
+  const [showCallWall, setShowCallWall] = useState(false);
+  const [showPutWall, setShowPutWall] = useState(false);
 
   const series = useMemo(() => {
     if (!data?.series) return [];
@@ -248,6 +300,11 @@ export default function SpxVolFlip() {
       line: { color: FLIP_LINE, width: 1.5, shape: 'hv' },
       name: '<b>Vol Flip</b>',
       hovertemplate: '%{x|%b %d, %Y}<br>Vol Flip: %{y:,.2f}<extra></extra>',
+      // legendrank 2 sandwiches Vol Flip between SPX above (rank 1)
+      // and SPX below (rank 3) in the centered horizontal legend, so
+      // the reference level reads visually as the center of the
+      // three-way regime narrative rather than as the first entry.
+      legendrank: 2,
     };
 
     // Put Wall and Call Wall are daily EOD levels computed from the
@@ -261,16 +318,23 @@ export default function SpxVolFlip() {
     // convention: Call Wall = positive green, Put Wall = negative red.
     // Values are null for days where the /api/gex-history endpoint
     // hasn't received the backfill yet — Plotly gaps the line at null
-    // points rather than interpolating across them. Off by default
-    // (visible:'legendonly') with a clickable legend entry — the SPX /
-    // Vol Flip story is the primary narrative of this card, and the
-    // walls crowd the chart with two additional step lines that often
-    // sit well outside the spot-vs-flip band (Call Wall 2-5% above
-    // spot, Put Wall 3-8% below) and stretch the y-axis vertically.
-    // The reader opts in to either wall by clicking the legend entry,
-    // which toggles it to fully visible without needing a separate
-    // control surface. Legend entries render grayed-out when hidden so
-    // the affordance is obvious.
+    // points rather than interpolating across them. Off by default —
+    // the SPX / Vol Flip story is the primary narrative of this card,
+    // and the walls crowd the chart with two additional step lines
+    // that often sit well outside the spot-vs-flip band (Call Wall
+    // 2-5% above spot, Put Wall 3-8% below) and stretch the y-axis
+    // vertically. The reader opts in via dedicated toggle buttons in
+    // the upper-left corner of the card, which replaces the earlier
+    // "legendonly" approach where the walls appeared as grayed-out
+    // legend entries that toggled to full visibility on click. The
+    // explicit button metaphor makes the on/off state immediately
+    // obvious (filled green or red when active, outline-only gray
+    // when inactive) without requiring the reader to notice that a
+    // legend entry is rendered dimmer than its neighbors. The
+    // corresponding yRange calculation also respects the toggle state
+    // so hiding a wall physically tightens the y-axis rather than
+    // just hiding the line, which gives the spot/flip band a larger
+    // fraction of the vertical real estate when walls are off.
     // customdata carries a pre-formatted "±x.x%" string per point so the
     // hover can surface each wall's distance from that day's SPX close
     // without Plotly arithmetic. Sign convention: (wall - spot) / spot,
@@ -299,8 +363,7 @@ export default function SpxVolFlip() {
       hovertemplate:
         '%{x|%b %d, %Y}<br>Call Wall: %{y:,.0f} (%{customdata[0]} vs SPX)<extra></extra>',
       connectgaps: false,
-      showlegend: true,
-      visible: 'legendonly',
+      showlegend: false,
     };
     const putWallTrace = {
       x: times,
@@ -313,8 +376,7 @@ export default function SpxVolFlip() {
       hovertemplate:
         '%{x|%b %d, %Y}<br>Put Wall: %{y:,.0f} (%{customdata[0]} vs SPX)<extra></extra>',
       connectgaps: false,
-      showlegend: true,
-      visible: 'legendonly',
+      showlegend: false,
     };
 
     let aboveLegendShown = false;
@@ -323,33 +385,39 @@ export default function SpxVolFlip() {
     for (const seg of segments) {
       if (seg.ts.length < 2) continue;
       if (seg.kind === 'above') {
-        lineTraces.push(
-          segmentLineTrace(
-            seg,
-            BLUE_LINE,
-            !aboveLegendShown,
-            '<b>SPX · above Flip</b>',
-            'spx-above',
-          ),
+        const trace = segmentLineTrace(
+          seg,
+          BLUE_LINE,
+          !aboveLegendShown,
+          '<b>SPX · above Flip</b>',
+          'spx-above',
         );
+        if (!aboveLegendShown) trace.legendrank = 1;
+        lineTraces.push(trace);
         aboveLegendShown = true;
       } else {
-        lineTraces.push(
-          segmentLineTrace(
-            seg,
-            RED_LINE,
-            !belowLegendShown,
-            '<b>SPX · below Flip</b>',
-            'spx-below',
-          ),
+        const trace = segmentLineTrace(
+          seg,
+          RED_LINE,
+          !belowLegendShown,
+          '<b>SPX · below Flip</b>',
+          'spx-below',
         );
+        if (!belowLegendShown) trace.legendrank = 3;
+        lineTraces.push(trace);
         belowLegendShown = true;
       }
     }
 
-    const traces = [...fillTraces, flipTrace, callWallTrace, putWallTrace, ...lineTraces];
+    const traces = [
+      ...fillTraces,
+      flipTrace,
+      ...(showCallWall ? [callWallTrace] : []),
+      ...(showPutWall ? [putWallTrace] : []),
+      ...lineTraces,
+    ];
 
-    const yRange = computeYRange(series, windowStart, windowEnd);
+    const yRange = computeYRange(series, windowStart, windowEnd, showCallWall, showPutWall);
 
     const legendFont = {
       family: PLOTLY_FONT_FAMILY,
@@ -391,7 +459,7 @@ export default function SpxVolFlip() {
       responsive: true,
       displayModeBar: false,
     });
-  }, [Plotly, series, segments, mobile, activeRange]);
+  }, [Plotly, series, segments, mobile, activeRange, showCallWall, showPutWall]);
 
   const handleBrushChange = useCallback((minMs, maxMs) => {
     setTimeRange([msToIso(minMs), msToIso(maxMs)]);
@@ -424,7 +492,35 @@ export default function SpxVolFlip() {
 
   return (
     <div className="card" style={{ position: 'relative' }}>
-      <ResetButton visible={timeRange != null} onClick={() => setTimeRange(null)} />
+      <div
+        style={{
+          position: 'absolute',
+          top: mobile ? '0.3rem' : '0.5rem',
+          left: mobile ? '0.3rem' : '0.5rem',
+          zIndex: 5,
+          display: 'flex',
+          gap: '0.4rem',
+          alignItems: 'center',
+        }}
+      >
+        <ToggleButton
+          active={showCallWall}
+          onClick={() => setShowCallWall((v) => !v)}
+          label="Call Wall"
+          activeBg="rgba(46,204,113,0.22)"
+          activeBorder="rgba(46,204,113,0.85)"
+          mobile={mobile}
+        />
+        <ToggleButton
+          active={showPutWall}
+          onClick={() => setShowPutWall((v) => !v)}
+          label="Put Wall"
+          activeBg="rgba(231,76,60,0.22)"
+          activeBorder="rgba(231,76,60,0.85)"
+          mobile={mobile}
+        />
+        <ResetButton visible={timeRange != null} onClick={() => setTimeRange(null)} inline />
+      </div>
       <div
         ref={chartRef}
         style={{ width: '100%', height: '560px', backgroundColor: 'var(--bg-card)' }}

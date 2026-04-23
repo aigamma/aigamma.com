@@ -7,9 +7,23 @@ import { PLOTLY_FONT_FAMILY } from '../lib/plotlyTheme';
 // state has diverged from the default — so the button does not linger on
 // cards that are already at rest. Mobile collapses the "RESET" label to
 // a circular-arrow glyph so the icon does not crowd the chart title.
-export default function ResetButton({ onClick, visible = true, top, left }) {
+//
+// `inline` strips the absolute positioning so the button can sit inside
+// a parent flex/grid cluster, used by cards that group Reset alongside
+// other controls (e.g. SpxVolFlip's wall-toggle row) where the default
+// corner-pinned behavior would fight the cluster's layout.
+export default function ResetButton({ onClick, visible = true, top, left, inline = false }) {
   const mobile = useIsMobile();
   if (!visible) return null;
+
+  const positionStyles = inline
+    ? {}
+    : {
+        position: 'absolute',
+        top: top ?? (mobile ? '0.3rem' : '0.5rem'),
+        left: left ?? (mobile ? '0.3rem' : '0.5rem'),
+        zIndex: 5,
+      };
 
   return (
     <button
@@ -18,10 +32,7 @@ export default function ResetButton({ onClick, visible = true, top, left }) {
       title="Reset view"
       aria-label="Reset view"
       style={{
-        position: 'absolute',
-        top: top ?? (mobile ? '0.3rem' : '0.5rem'),
-        left: left ?? (mobile ? '0.3rem' : '0.5rem'),
-        zIndex: 5,
+        ...positionStyles,
         background: 'rgba(74,158,255,0.12)',
         border: '1px solid rgba(74,158,255,0.4)',
         borderRadius: '3px',
