@@ -26,7 +26,12 @@ function loadPlotly() {
       return;
     }
     const script = document.createElement('script');
-    script.src = 'https://cdn.plot.ly/plotly-2.35.2.min.js';
+    // Cartesian bundle (scatter/bar/heatmap/histogram/contour/box/pie) covers
+    // every trace type on the site and ships ~447 KB gzipped vs ~1.33 MB for
+    // the full plotly build — a ~890 KB first-visit saving. Keep the URL in
+    // sync with the <link rel="preload"> tag in index.html so the browser
+    // reuses the preloaded response instead of firing a second request.
+    script.src = 'https://cdn.plot.ly/plotly-cartesian-2.35.2.min.js';
     script.setAttribute('data-plotly-cdn', 'true');
     script.onload = () => resolve({ plotly: window.Plotly, error: null });
     script.onerror = () => {
