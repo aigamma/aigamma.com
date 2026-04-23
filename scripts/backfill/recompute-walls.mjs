@@ -40,6 +40,28 @@ const DEFAULT_THETA = 'http://127.0.0.1:25503';
 const ROOTS = ['SPXW', 'SPX'];
 const RESULTS_FILE = path.resolve('scripts/backfill/state/walls-recompute-results.jsonl');
 
+// Wall candidates must sit within ±15% of spot. The reason this gate is
+// necessary for EOD historical data but is effectively a no-op on live
+// intraday snapshots is that ThetaData's EOD Open Interest carries
+// deep-OTM legacy positions that never unwound (years-old calendar
+// hedges, expired-LEAPS tail, round-strike notionals at psychological
+// levels like SPX=5000 that keep accumulating residual OI through
+// multiple regimes) — on 2025-05-13 with spot at 5886 the raw argmin
+// landed at the 5000-strike put because that strike had enough residual
+// gamma*OI from pre-2024 positions to dominate the per-strike net GEX
+// minimum even though no active hedger was sitting at that level today.
+// The live ingest's intraday chain doesn't have this problem because
+// Massive's chain snapshot is a "what's open right now" view that a
+// professional desk would actually hedge against; ThetaData EOD is a
+// settlement-time roster that includes the historical residue. A 15%
+// window keeps everything inside roughly ±3σ of 20-day realized vol at
+// any reasonable VIX level and excludes only the far-wing stale-OI
+// winners. 95th-percentile wall distance pre-filter is 9-11% of spot
+// (per the SQL analysis that motivated this filter), so the 15%
+// threshold leaves all legitimate wall positions intact and cuts only
+// the long tail of spurious deep-OTM winners.
+const MAX_DISTANCE_PCT = 0.15;
+
 function parseArgs(argv) {
   const out = { start: DEFAULT_START, end: DEFAULT_END, verifyDate: null };
   for (let i = 0; i < argv.length; i++) {
@@ -187,11 +209,13 @@ function pickSpotPrice(contracts) {
 // maximizing (putGex - callGex) — the peak of the negative-net-gamma
 // valley, the "floor below spot" where dealer hedging amplifies moves.
 //
-// Identical convention to ingest-background.mjs::388-404 so the
-// historical backfill lines up with the live intraday wall series
-// without a discontinuity at the 2026-04-11 handoff.
+// Matches ingest-background.mjs::388-404 up to the MAX_DISTANCE_PCT gate
+// that excludes stale-OI deep-OTM winners — see the MAX_DISTANCE_PCT
+// constant's docstring above for the rationale.
 function findWalls(contracts, spotPrice) {
   const mult = spotPrice * spotPrice * 0.01 * 100;
+  const minStrike = spotPrice * (1 - MAX_DISTANCE_PCT);
+  const maxStrike = spotPrice * (1 + MAX_DISTANCE_PCT);
   const byStrike = new Map();
   for (const c of contracts) {
     const bucket = byStrike.get(c.strike) || { callGex: 0, putGex: 0 };
@@ -204,7 +228,10 @@ function findWalls(contracts, spotPrice) {
   }
   let callWallStrike = null, callWallNet = -Infinity;
   let putWallStrike = null, putWallNet = Infinity;
+  let eligibleStrikeCount = 0;
   for (const [K, { callGex, putGex }] of byStrike) {
+    if (K < minStrike || K > maxStrike) continue;
+    eligibleStrikeCount++;
     const net = callGex - putGex;
     if (net > callWallNet) { callWallNet = net; callWallStrike = K; }
     if (net < putWallNet) { putWallNet = net; putWallStrike = K; }
@@ -213,6 +240,7 @@ function findWalls(contracts, spotPrice) {
     callWall: callWallStrike,
     putWall: putWallStrike,
     strikeCount: byStrike.size,
+    eligibleStrikeCount,
   };
 }
 
@@ -243,6 +271,7 @@ async function recomputeOneDay(baseUrl, date) {
     contracts: allContracts.length,
     spot,
     strikeCount: walls.strikeCount,
+    eligibleStrikeCount: walls.eligibleStrikeCount,
   };
 }
 

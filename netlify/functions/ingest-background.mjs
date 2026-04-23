@@ -384,7 +384,25 @@ function computeGex(pages, targets, startedAt, partial, partialReason = null) {
   const strikes = Object.keys(gexByStrike).map(Number).sort((a, b) => a - b);
 
   // Walls use signed net GEX so call and put walls can't collide at the same
-  // strike. Abs gamma strike uses gross GEX.
+  // strike. Abs gamma strike uses gross GEX. Wall candidates are constrained
+  // to strikes within ±15% of spot to exclude stale-OI deep-OTM winners
+  // that can spuriously dominate the argmin/argmax on days where a legacy
+  // round-number strike (SPX=5000, 4000, etc.) carries residual OI from
+  // multiple expired regimes — on historical EOD data this pathology is
+  // visible 4-7% of days, and although it's rarer in live intraday chains
+  // (Massive only ships currently-open contracts) the bound is a cheap
+  // safety net that also keeps the historical-backfill methodology in
+  // scripts/backfill/recompute-walls.mjs methodologically identical to the
+  // live path. Abs gamma strike stays unconstrained because it's the
+  // gross-gamma peak (sum, not difference) and rarely suffers the same
+  // stale-OI pathology — a deep-OTM strike's gross gamma × OI has to
+  // exceed every near-spot strike's to win the argmax, which takes
+  // genuinely enormous residual positions that don't materialize in
+  // practice.
+  const WALL_WINDOW_PCT = 0.15;
+  const wallMinStrike = spotPrice * (1 - WALL_WINDOW_PCT);
+  const wallMaxStrike = spotPrice * (1 + WALL_WINDOW_PCT);
+
   let callWallStrike = null, callWallNet = -Infinity;
   let putWallStrike = null, putWallNet = Infinity;
   let absGammaStrike = null, absGammaMax = 0;
@@ -397,8 +415,10 @@ function computeGex(pages, targets, startedAt, partial, partialReason = null) {
     const netGex = cg - pg;
     netGammaNotional += netGex;
     netGexArray.push({ strike: K, netGex });
-    if (netGex > callWallNet) { callWallNet = netGex; callWallStrike = K; }
-    if (netGex < putWallNet) { putWallNet = netGex; putWallStrike = K; }
+    if (K >= wallMinStrike && K <= wallMaxStrike) {
+      if (netGex > callWallNet) { callWallNet = netGex; callWallStrike = K; }
+      if (netGex < putWallNet) { putWallNet = netGex; putWallStrike = K; }
+    }
     const absGex = cg + pg;
     if (absGex > absGammaMax) { absGammaMax = absGex; absGammaStrike = K; }
   }
