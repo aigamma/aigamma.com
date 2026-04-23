@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
 
-export default function useOptionsData({ underlying = 'SPX', snapshotType = 'intraday', expiration = null, tradingDate = null, enabled = true } = {}) {
+export default function useOptionsData({ underlying = 'SPX', snapshotType = 'intraday', expiration = null, tradingDate = null, prevDay = false, enabled = true } = {}) {
   const [data, setData] = useState(null);
   const [loading, setLoading] = useState(enabled);
   const [error, setError] = useState(null);
@@ -19,6 +19,7 @@ export default function useOptionsData({ underlying = 'SPX', snapshotType = 'int
         const params = new URLSearchParams({ underlying, snapshot_type: snapshotType });
         if (expiration) params.set('expiration', expiration);
         if (tradingDate) params.set('date', tradingDate);
+        if (prevDay && !tradingDate) params.set('prev_day', '1');
 
         const response = await fetch(`/api/data?${params}`);
         if (!response.ok) {
@@ -45,7 +46,7 @@ export default function useOptionsData({ underlying = 'SPX', snapshotType = 'int
     return () => {
       cancelled = true;
     };
-  }, [underlying, snapshotType, expiration, tradingDate, retryCount, enabled]);
+  }, [underlying, snapshotType, expiration, tradingDate, prevDay, retryCount, enabled]);
 
   return { data, loading: enabled && loading, error, refetch: () => setRetryCount((c) => c + 1) };
 }

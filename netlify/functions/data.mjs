@@ -28,8 +28,14 @@ export default async function handler(request) {
   const url = new URL(request.url);
   const underlying = url.searchParams.get('underlying') || 'SPX';
   const snapshotType = url.searchParams.get('snapshot_type') || 'intraday';
-  const tradingDate = url.searchParams.get('date');
+  let tradingDate = url.searchParams.get('date');
   const expirationFilter = url.searchParams.get('expiration');
+  // prev_day=1 lets the browser request the previous trading day's run
+  // without having to wait on today's /api/data to resolve first and
+  // hand back prevTradingDate. The server resolves the prev date from
+  // ingest_runs internally, so today's and yesterday's payloads can be
+  // fetched in parallel from the client. Ignored when `date` is set.
+  const wantPrevDay = !tradingDate && url.searchParams.get('prev_day') === '1';
 
   const supabaseUrl = process.env.SUPABASE_URL;
   const supabaseKey = process.env.SUPABASE_KEY;
@@ -45,6 +51,52 @@ export default async function handler(request) {
   };
 
   try {
+    // In prev-day mode, first resolve the actual trading_date we want: the
+    // most recent distinct trading_date strictly before the latest intraday
+    // run's trading_date. One cheap single-column query that returns at most
+    // a handful of rows.
+    if (wantPrevDay) {
+      const latestParams = new URLSearchParams({
+        underlying: `eq.${underlying}`,
+        snapshot_type: `eq.${snapshotType}`,
+        order: 'trading_date.desc',
+        limit: '1',
+        select: 'trading_date',
+      });
+      const latestRes = await fetchWithTimeout(
+        `${supabaseUrl}/rest/v1/ingest_runs?${latestParams}`,
+        { headers },
+        'latest_trading_date'
+      );
+      if (!latestRes.ok) throw new Error(`latest_trading_date query failed: ${latestRes.status}`);
+      const latestRows = await latestRes.json();
+      const latestDate = Array.isArray(latestRows) && latestRows[0]?.trading_date;
+      if (latestDate) {
+        const prevParams = new URLSearchParams({
+          underlying: `eq.${underlying}`,
+          snapshot_type: `eq.${snapshotType}`,
+          trading_date: `lt.${latestDate}`,
+          order: 'trading_date.desc',
+          limit: '1',
+          select: 'trading_date',
+        });
+        const prevRes = await fetchWithTimeout(
+          `${supabaseUrl}/rest/v1/ingest_runs?${prevParams}`,
+          { headers },
+          'prev_trading_date'
+        );
+        if (prevRes.ok) {
+          const prevRows = await prevRes.json();
+          if (Array.isArray(prevRows) && prevRows[0]?.trading_date) {
+            tradingDate = prevRows[0].trading_date;
+          }
+        }
+      }
+      if (!tradingDate) {
+        return jsonError(404, `No prior-day ${snapshotType} run found for ${underlying}`);
+      }
+    }
+
     const runParams = new URLSearchParams({
       underlying: `eq.${underlying}`,
       snapshot_type: `eq.${snapshotType}`,
@@ -347,11 +399,21 @@ export default async function handler(request) {
       cloudBandsTradingDate,
     };
 
+    // Today's live run changes every ~5 minutes; serve with a short TTL
+    // plus a longer SWR so a warm edge responds instantly. Prior-day runs
+    // are frozen — once a run's trading_date is in the past, the payload
+    // won't change, so the edge can hold it for an hour without any
+    // staleness risk.
+    const isFrozen = Boolean(tradingDate);
+    const cacheControl = isFrozen
+      ? 'public, max-age=3600, stale-while-revalidate=86400'
+      : 'public, max-age=60, stale-while-revalidate=300';
+
     return new Response(JSON.stringify(payload), {
       status: 200,
       headers: {
         'Content-Type': 'application/json',
-        'Cache-Control': 'public, max-age=60, stale-while-revalidate=300',
+        'Cache-Control': cacheControl,
       },
     });
   } catch (err) {

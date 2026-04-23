@@ -107,11 +107,15 @@ export default function App() {
     underlying: 'SPX',
     snapshotType: 'intraday',
   });
+  // Prior-day snapshot fetched in parallel with today's. The server
+  // resolves the prev trading date internally, so this request doesn't
+  // have to wait for the primary /api/data to resolve and hand back
+  // prevTradingDate — both hit the CDN at mount, cutting ~600-1200 ms
+  // off the old serial-refetch path.
   const { data: prevDayData } = useOptionsData({
     underlying: 'SPX',
     snapshotType: 'intraday',
-    tradingDate: data?.prevTradingDate,
-    enabled: !!data?.prevTradingDate,
+    prevDay: true,
   });
   const { data: vrpData } = useVrpHistory({});
   const vrpMetric = useMemo(() => {

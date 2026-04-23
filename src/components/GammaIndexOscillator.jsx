@@ -39,7 +39,7 @@ import ResetButton from './ResetButton';
 // • Translucent fill from each segment down/up to zero, clipped as a
 //   closed `toself` polygon so fills don't bleed across sign flips the
 //   way a `tozeroy` + null-mask approach would.
-// • 20-day EMA overlaid in amber dashed to separate regime
+// • 20-day EMA overlaid as a solid amber line to separate regime
 //   persistence (EMA slow to cross) from short-term oscillation (index
 //   fast to cross). EMA rather than SMA so the overlay reacts to
 //   recent regime shifts without waiting for a lagging observation to
@@ -420,7 +420,7 @@ export default function GammaIndexOscillator() {
       y: ema,
       mode: 'lines',
       type: 'scatter',
-      line: { color: EMA_LINE, width: 1.5, dash: 'dash' },
+      line: { color: EMA_LINE, width: 1.5 },
       name: `<b>${EMA_WINDOW}d EMA</b>`,
       hovertemplate: `%{x|%b %d, %Y}<br>${EMA_WINDOW}d EMA: %{y:.2f}<extra></extra>`,
       connectgaps: false,
