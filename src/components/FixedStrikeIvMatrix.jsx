@@ -128,7 +128,10 @@ export default function FixedStrikeIvMatrix({ contracts, spotPrice, expirations,
     const byExp = groupByExpiration(contracts);
     const prevByExp = groupByExpiration(prevContracts);
 
-    const sortedExps = [...expirations].sort();
+    // Drop the nearest expiration (the 0DTE column during trading hours):
+    // same-day IV is dominated by gamma-scalping noise and pinning effects
+    // that distort the term-structure story the rest of the grid is telling.
+    const sortedExps = [...expirations].sort().slice(1);
     const xLabels = sortedExps.map(formatExpLabel);
     const strikes = buildStrikeLadder(spotPrice, numRows);
     const yLabels = strikes.map((s) => s.toString());
