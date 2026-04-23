@@ -95,17 +95,32 @@ export default async function handler(request) {
       }
     }
 
+    // Pick the newest successful run that reports a non-zero contract_count,
+    // pushed entirely into the PostgREST filter so we fetch exactly one row
+    // instead of the prior limit=10 "fetch and client-side find()" pattern.
+    // status=eq.success + contract_count=gt.0 narrows the server-side scan
+    // to the healthy-rows-only subset, and limit=1 + order=captured_at.desc
+    // collapses that to the single newest healthy run. Saves ~400 bytes of
+    // wire (10 rows → 1 row) and removes the client-side fallback find()
+    // scan. If no healthy run exists (only possible in the cold-start
+    // window before the first ingest landed successfully, or during a
+    // sustained outage), the query returns zero rows and we 404, which is
+    // the same terminal state the old implementation would reach via its
+    // fallback to runRows[0] followed by the downstream snapshots query
+    // returning an empty chain.
     const runParams = new URLSearchParams({
       underlying: `eq.${underlying}`,
       snapshot_type: `eq.${snapshotType}`,
+      status: 'eq.success',
+      contract_count: 'gt.0',
       order: 'captured_at.desc',
-      limit: '10',
+      limit: '1',
       // Explicit projection skips error_message (TEXT, can hold a multi-kB
       // stack trace from a prior failed run) and created_at (unused on the
-      // wire). Every remaining field feeds either the run-selection
-      // heuristic below or the final payload.
+      // wire). Every remaining field feeds the final payload — status and
+      // contract_count are filter-only so they're not in the projection.
       select:
-        'id,captured_at,trading_date,underlying,snapshot_type,spot_price,contract_count,status,source',
+        'id,captured_at,trading_date,underlying,snapshot_type,spot_price,contract_count,source',
     });
     if (tradingDate) runParams.set('trading_date', `eq.${tradingDate}`);
 
@@ -124,19 +139,7 @@ export default async function handler(request) {
         `No ${snapshotType} run found for ${underlying}${tradingDate ? ` on ${tradingDate}` : ''}`
       );
     }
-    // Pick the newest successful run that reports a non-zero contract_count.
-    // The prior implementation probed each candidate with a serial single-row
-    // SELECT against snapshots to defend against a failure mode where the run
-    // header landed but the batched INSERT into snapshots didn't. That mode
-    // hasn't recurred in the current stable ingest path, and the probe loop
-    // was costing up to 10 sequential Supabase round-trips on every page
-    // load. If a header-with-no-body run ever slips through again, the symptom
-    // is a single 60-second-cache window serving an empty chain until the
-    // next 5-minute cron writes a healthy run — acceptable degradation
-    // relative to paying the probe cost on every successful load.
-    const run =
-      runRows.find((r) => r.status === 'success' && (r.contract_count ?? 0) > 0) ||
-      runRows[0];
+    const run = runRows[0];
 
     const snapParams = new URLSearchParams({
       run_id: `eq.${run.id}`,
