@@ -417,15 +417,9 @@ function computeGex(pages, targets, startedAt, partial, partialReason = null) {
   // derivation. Operating on the smooth profile instead of the raw per-strike
   // net GEX avoids the round-strike anchor pathology that made the previous
   // algorithm latch onto single-strike anomalies like the 6600/6605 boundary.
-  const gammaProfile = computeGammaProfile(contracts, spotPrice, capturedAtMs);
-  const volatilityFlip = findFlipFromProfile(gammaProfile);
-
-  let totalCallGamma = 0, totalPutGamma = 0;
-  for (const K of strikes) {
-    totalCallGamma += gexByStrike[K].callGex;
-    totalPutGamma += gexByStrike[K].putGex;
-  }
-  const gammaTilt = totalPutGamma > 0 ? totalCallGamma / totalPutGamma : null;
+  const volatilityFlip = findFlipFromProfile(
+    computeGammaProfile(contracts, spotPrice, capturedAtMs)
+  );
 
   // ATM bucket aggregation for the Gamma Index oscillator. Restricts the
   // call/put GEX sums to contracts with |delta| in [0.40, 0.60] so the
@@ -471,7 +465,6 @@ function computeGex(pages, targets, startedAt, partial, partialReason = null) {
 
   const putCallRatioOi = totalCallOi > 0 ? totalPutOi / totalCallOi : null;
   const putCallRatioVolume = totalCallVolume > 0 ? totalPutVolume / totalCallVolume : null;
-  const maxPainStrike = computeMaxPain(contracts);
 
   // Per-expiration metrics
   const contractsByExp = {};
@@ -529,7 +522,6 @@ function computeGex(pages, targets, startedAt, partial, partialReason = null) {
       put_25d_iv: put25dIv,
       call_25d_iv: call25dIv,
       skew_25d_rr: skew25dRr,
-      max_pain_strike: computeMaxPain(expContracts),
       contract_count: expContracts.length,
     });
   }
@@ -554,12 +546,9 @@ function computeGex(pages, targets, startedAt, partial, partialReason = null) {
     put_wall_strike: putWallStrike,
     abs_gamma_strike: absGammaStrike,
     volatility_flip: volatilityFlip != null ? round(volatilityFlip, 2) : null,
-    gamma_profile: gammaProfile,
-    gamma_tilt: gammaTilt != null ? round(gammaTilt, 6) : null,
     atm_call_gex: round(atmCallGex, 2),
     atm_put_gex: round(atmPutGex, 2),
     atm_contract_count: atmContractCount,
-    max_pain_strike: maxPainStrike,
     put_call_ratio_oi: putCallRatioOi != null ? round(putCallRatioOi, 4) : null,
     put_call_ratio_volume: putCallRatioVolume != null ? round(putCallRatioVolume, 4) : null,
     total_call_oi: totalCallOi,
@@ -836,29 +825,6 @@ function findFlipFromProfile(profile) {
     }
   }
   return bestFlip;
-}
-
-function computeMaxPain(contracts) {
-  if (!contracts || contracts.length === 0) return null;
-  const strikeSet = new Set();
-  for (const c of contracts) strikeSet.add(c.strike);
-  const strikes = [...strikeSet].sort((a, b) => a - b);
-  let minPain = Infinity;
-  let maxPainStrike = null;
-  for (const candidate of strikes) {
-    let totalPain = 0;
-    for (const c of contracts) {
-      const oi = c.open_interest || 0;
-      if (oi === 0) continue;
-      if (c.contract_type === 'call') {
-        totalPain += Math.max(candidate - c.strike, 0) * oi * 100;
-      } else {
-        totalPain += Math.max(c.strike - candidate, 0) * oi * 100;
-      }
-    }
-    if (totalPain < minPain) { minPain = totalPain; maxPainStrike = candidate; }
-  }
-  return maxPainStrike;
 }
 
 // -----------------------------------------------------------------------------

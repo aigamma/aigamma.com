@@ -13,23 +13,23 @@ Project ID: `tbxhvpoyyyhbvoyefggu`. All tables have RLS enabled. Netlify functio
 - FK targets: snapshots, computed_levels, expiration_metrics, svi_fits
 
 **snapshots** — Contract-level data. PK: `id` (bigserial). FK: `run_id` → ingest_runs.
-- `expiration_date` (date), `strike` (numeric), `contract_type` (varchar)
-- `implied_volatility`, `delta`, `gamma`, `theta`, `vega`, `charm`, `vanna` (all numeric, nullable)
+- `expiration_date` (date), `strike` (numeric), `contract_type` (varchar), `root_symbol` (varchar, nullable)
+- `implied_volatility`, `delta`, `gamma`, `theta`, `vega` (all numeric, nullable)
 - `open_interest` (int), `volume` (int), `close_price` (numeric)
-- ~1.9M rows
+- ~5.1M rows
 
 **computed_levels** — Aggregate metrics per run. PK: `id`. FK: `run_id` → ingest_runs (unique).
 - `call_wall_strike`, `put_wall_strike`, `abs_gamma_strike`, `volatility_flip` (numeric)
-- `net_gamma_notional`, `gamma_tilt`, `max_pain_strike` (numeric)
+- `net_gamma_notional` (numeric)
+- `atm_call_gex`, `atm_put_gex` (numeric), `atm_contract_count` (int) — ATM-bucket (|δ|∈[0.40, 0.60])
 - `put_call_ratio_oi`, `put_call_ratio_volume` (numeric)
 - `total_call_oi`, `total_put_oi`, `total_call_volume`, `total_put_volume` (bigint)
 - `net_vanna_notional`, `net_charm_notional` (numeric)
-- `gamma_profile` (jsonb)
 
 **expiration_metrics** — Per-expiration skew. PK: `id`. FK: `run_id` → ingest_runs.
 - `expiration_date` (date), `atm_iv`, `atm_strike` (numeric)
 - `put_25d_iv`, `call_25d_iv`, `skew_25d_rr` (numeric)
-- `contract_count` (int), `max_pain_strike` (numeric)
+- `contract_count` (int)
 
 **svi_fits** — Gatheral raw-SVI fits + Breeden-Litzenberger density. PK: `id`. FK: `run_id` → ingest_runs.
 - `expiration_date` (date), `t_years`, `forward_price` (numeric)

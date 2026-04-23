@@ -198,11 +198,9 @@ export default async function handler(request) {
 
     const [levelsRes, expMetricsRes, prevCloseRes, cloudBandsDateResolved, dailyGexResolved] = await Promise.all([
       fetchWithTimeout(
-        // Explicit projection — computed_levels has 21 columns including a
-        // gamma_profile JSONB blob (~5.2 kB per row) that App.jsx recomputes
-        // client-side and discards. Listing only the seven fields the wire
-        // payload exposes skips the blob entirely and shrinks the response
-        // to a few hundred bytes.
+        // Explicit projection — lists only the seven fields the wire payload
+        // exposes. Prevents accidental regressions where a future widening
+        // column pulls kilobytes of unused data into every response.
         `${supabaseUrl}/rest/v1/computed_levels?run_id=eq.${run.id}&select=call_wall_strike,put_wall_strike,volatility_flip,put_call_ratio_oi,put_call_ratio_volume,total_call_volume,total_put_volume`,
         { headers },
         'computed_levels'
@@ -309,11 +307,6 @@ export default async function handler(request) {
       close_price: toNum(c.close_price),
     }));
 
-    // Note: the gamma_profile column is no longer read or shipped. The
-    // frontend recomputes the profile client-side from contracts + spot in
-    // App.jsx (see the correctedLevels useMemo around line 228), which
-    // overwrites any server-shipped profile, so projecting it onto the
-    // wire was ~15 KB per response of dead weight.
     let dailyGex = null;
     if (dailyGexResolved?.ok) {
       const rows = await dailyGexResolved.json();
