@@ -3,6 +3,11 @@
   publish = "dist"
   functions = "netlify/functions"
 
+# Netlify project "aigamma" builds production aigamma.com from this repo's
+# default branch; branch deploys read the same netlify.toml. The sibling
+# about.aigamma.com site is a separate Netlify project (aboutaigamma) backed
+# by github.com/aigamma/about.aigamma.com instead of this repository.
+
 # Specific /api/snapshot.json redirect MUST come before the /api/* wildcard —
 # otherwise the wildcard expands :splat to `snapshot.json` and Netlify looks
 # for a function literally named `snapshot.json` (which doesn't exist). The
