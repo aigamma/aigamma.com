@@ -13,8 +13,8 @@ import {
 import RangeBrush from './RangeBrush';
 import ResetButton from './ResetButton';
 
-const NUM_STRIKE_ROWS_MOBILE = 11;
-const NUM_STRIKE_ROWS_DESKTOP = 13;
+const NUM_STRIKE_ROWS_MOBILE = 13;
+const NUM_STRIKE_ROWS_DESKTOP = 15;
 const STRIKE_INCREMENT_CANDIDATES = [5, 10, 25, 50, 100, 250, 500, 1000];
 
 const MONTH_ABBR = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
