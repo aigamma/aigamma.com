@@ -42,6 +42,7 @@ CLAUDE.md
 # ThetaData terminal credentials and binaries
 creds.txt
 lib/*.jar
+*.jar
 
 # Kiro workspace settings (trust/approval prefs are local)
 .vscode/settings.json
