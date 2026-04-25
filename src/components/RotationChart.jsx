@@ -1,0 +1,332 @@
+import { useEffect, useMemo, useRef, useState } from 'react';
+import usePlotly from '../hooks/usePlotly';
+import {
+  plotly2DChartLayout,
+  plotlyAxis,
+  PLOTLY_COLORS,
+  PLOTLY_FONT_FAMILY,
+} from '../lib/plotlyTheme';
+
+// Relative Sector Rotation chart. Renders the /api/rotations payload as a
+// four-quadrant scatter where each component's recent trail is plotted
+// against an SPX benchmark via standardized relative-strength math:
+// rotation ratio on the x-axis (>100 = component leading benchmark on
+// price), rotation momentum on the y-axis (>100 = component's rotation
+// ratio is rising). The four quadrants tint the background and lend
+// their color to the trail of any component whose latest point sits
+// inside them — Leading green top-right, Weakening amber bottom-right,
+// Lagging coral bottom-left, Improving blue top-left. Each component
+// renders as one Plotly scatter trace with mode='lines+markers+text':
+// the tail is a thin line with small dot markers, the most-recent point
+// is a larger filled circle plus the symbol label, and hover text
+// reports date / ratio / momentum on every dot.
+//
+// Data source: ThetaData /v3/index/history/eod via public.index_daily_eod
+// → /api/rotations. The benchmark and component universe are determined
+// server-side from the symbols backfilled into index_daily_eod; on the
+// initial build that's SPX as the benchmark plus 13 components (cap-
+// weight peers OEX / RUI / RUT / DJX, plus nine CBOE-published S&P 500
+// derivative-strategy indices BXM / BXY / BXMC / BXMD / PUT / PPUT /
+// CLL / CMBO / CNDR). Adding a symbol to scripts/backfill/index-daily-
+// eod.mjs's DEFAULT_SYMBOLS list and re-running the backfill will surface
+// it on the chart automatically with no client-side edits.
+
+const QUADRANT_FILL = {
+  leading:   'rgba(46, 204, 113, 0.10)',
+  weakening: 'rgba(240, 160, 48, 0.10)',
+  lagging:   'rgba(231, 76, 60, 0.10)',
+  improving: 'rgba(74, 158, 255, 0.10)',
+};
+
+// Solid color for each quadrant — used for the trail line + endpoint
+// dot of any component whose latest point lands in that quadrant.
+const QUADRANT_INK = {
+  leading:   '#2ecc71',
+  weakening: '#f0a030',
+  lagging:   '#e74c3c',
+  improving: '#4a9eff',
+};
+
+function quadrantOf(ratio, momentum) {
+  if (ratio >= 100 && momentum >= 100) return 'leading';
+  if (ratio >= 100 && momentum < 100)  return 'weakening';
+  if (ratio < 100  && momentum < 100)  return 'lagging';
+  return 'improving';
+}
+
+function formatDateLabel(iso) {
+  if (!iso || typeof iso !== 'string') return iso ?? '';
+  const [y, m, d] = iso.split('-').map(Number);
+  if (!y || !m || !d) return iso;
+  return `${m}/${d}/${y}`;
+}
+
+export default function RotationChart() {
+  const chartRef = useRef(null);
+  const { plotly: Plotly, error: plotlyError } = usePlotly();
+  const [payload, setPayload] = useState(null);
+  const [fetchError, setFetchError] = useState(null);
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    let cancelled = false;
+    async function load() {
+      try {
+        const res = await fetch('/api/rotations?tail=10');
+        if (!res.ok) throw new Error(`rotations fetch failed: ${res.status}`);
+        const json = await res.json();
+        if (!cancelled) {
+          setPayload(json);
+          setLoading(false);
+        }
+      } catch (err) {
+        if (!cancelled) {
+          setFetchError(String(err?.message || err));
+          setLoading(false);
+        }
+      }
+    }
+    load();
+    return () => { cancelled = true; };
+  }, []);
+
+  // Pre-compute axis ranges and trace data once payload is in hand.
+  // The axis is symmetric around 100 with at least ±1.5 of half-extent
+  // so flat-regime data still reads as four populated quadrants rather
+  // than a tight cluster squashed against the zero-crossing.
+  const chartData = useMemo(() => {
+    if (!payload?.components) return null;
+
+    const xs = [], ys = [];
+    for (const c of payload.components) {
+      for (const p of c.points) {
+        if (Number.isFinite(p.rs_ratio)) xs.push(p.rs_ratio);
+        if (Number.isFinite(p.rs_momentum)) ys.push(p.rs_momentum);
+      }
+    }
+    if (xs.length === 0 || ys.length === 0) return null;
+
+    const xExt = Math.max(
+      Math.abs(100 - Math.min(...xs)),
+      Math.abs(Math.max(...xs) - 100),
+      1.5,
+    ) * 1.18;
+    const yExt = Math.max(
+      Math.abs(100 - Math.min(...ys)),
+      Math.abs(Math.max(...ys) - 100),
+      1.5,
+    ) * 1.18;
+    const xRange = [100 - xExt, 100 + xExt];
+    const yRange = [100 - yExt, 100 + yExt];
+
+    return { xRange, yRange };
+  }, [payload]);
+
+  useEffect(() => {
+    if (!Plotly || !chartRef.current || !payload || !chartData) return;
+
+    const { xRange, yRange } = chartData;
+
+    // Per-component trace: tail line + small dot markers + a larger
+    // endpoint dot with the symbol label. marker.size as an array gives
+    // every point its own size; text matches that — non-empty only at
+    // the latest index so the tail dots stay unlabeled and don't cause
+    // visual clutter.
+    const traces = payload.components.map((c) => {
+      const last = c.points[c.points.length - 1];
+      const quad = quadrantOf(last.rs_ratio, last.rs_momentum);
+      const color = QUADRANT_INK[quad];
+
+      const x = c.points.map((p) => p.rs_ratio);
+      const y = c.points.map((p) => p.rs_momentum);
+      const sizes = c.points.map((_, i) =>
+        i === c.points.length - 1 ? 14 : 6,
+      );
+      const texts = c.points.map((_, i) =>
+        i === c.points.length - 1 ? `<b>${c.symbol}</b>` : '',
+      );
+      const hoverTexts = c.points.map(
+        (p) =>
+          `<b>${c.symbol}</b><br>${formatDateLabel(p.date)}<br>` +
+          `Ratio: ${p.rs_ratio.toFixed(2)}<br>` +
+          `Momentum: ${p.rs_momentum.toFixed(2)}`,
+      );
+
+      return {
+        x,
+        y,
+        mode: 'lines+markers+text',
+        type: 'scatter',
+        name: c.symbol,
+        line: { color, width: 1.7, shape: 'spline', smoothing: 0.6 },
+        marker: {
+          color,
+          size: sizes,
+          line: { color: '#0d1016', width: 1.5 },
+        },
+        text: texts,
+        textposition: 'middle right',
+        textfont: {
+          family: PLOTLY_FONT_FAMILY,
+          color: PLOTLY_COLORS.titleText,
+          size: 12,
+        },
+        hoverinfo: 'text',
+        hovertext: hoverTexts,
+        showlegend: false,
+      };
+    });
+
+    // Background quadrant rectangles + the two cross-hair lines through
+    // 100 / 100. layer: 'below' keeps the rectangles behind the data;
+    // the cross-hair lines render above the rectangles but below the
+    // traces by virtue of being the last shape entries (Plotly draws
+    // shapes in array order with traces on top).
+    const shapes = [
+      {
+        type: 'rect',
+        xref: 'x', yref: 'y',
+        x0: xRange[0], x1: 100, y0: 100, y1: yRange[1],
+        fillcolor: QUADRANT_FILL.improving,
+        line: { width: 0 },
+        layer: 'below',
+      },
+      {
+        type: 'rect',
+        xref: 'x', yref: 'y',
+        x0: 100, x1: xRange[1], y0: 100, y1: yRange[1],
+        fillcolor: QUADRANT_FILL.leading,
+        line: { width: 0 },
+        layer: 'below',
+      },
+      {
+        type: 'rect',
+        xref: 'x', yref: 'y',
+        x0: xRange[0], x1: 100, y0: yRange[0], y1: 100,
+        fillcolor: QUADRANT_FILL.lagging,
+        line: { width: 0 },
+        layer: 'below',
+      },
+      {
+        type: 'rect',
+        xref: 'x', yref: 'y',
+        x0: 100, x1: xRange[1], y0: yRange[0], y1: 100,
+        fillcolor: QUADRANT_FILL.weakening,
+        line: { width: 0 },
+        layer: 'below',
+      },
+      {
+        type: 'line',
+        xref: 'x', yref: 'y',
+        x0: 100, x1: 100, y0: yRange[0], y1: yRange[1],
+        line: { color: PLOTLY_COLORS.titleText, width: 1.2 },
+      },
+      {
+        type: 'line',
+        xref: 'x', yref: 'y',
+        x0: xRange[0], x1: xRange[1], y0: 100, y1: 100,
+        line: { color: PLOTLY_COLORS.titleText, width: 1.2 },
+      },
+    ];
+
+    // Quadrant text labels in the four corners. These are rendered with
+    // each quadrant's own color so the chart's color language is
+    // legible without a separate legend.
+    const labelOffset = (range) => (range[1] - range[0]) * 0.025;
+    const annotations = [
+      {
+        x: xRange[1] - labelOffset(xRange),
+        y: yRange[1] - labelOffset(yRange),
+        xref: 'x', yref: 'y',
+        xanchor: 'right', yanchor: 'top',
+        text: '<b>Leading</b>',
+        showarrow: false,
+        font: { color: QUADRANT_INK.leading, size: 14, family: PLOTLY_FONT_FAMILY },
+      },
+      {
+        x: xRange[0] + labelOffset(xRange),
+        y: yRange[1] - labelOffset(yRange),
+        xref: 'x', yref: 'y',
+        xanchor: 'left', yanchor: 'top',
+        text: '<b>Improving</b>',
+        showarrow: false,
+        font: { color: QUADRANT_INK.improving, size: 14, family: PLOTLY_FONT_FAMILY },
+      },
+      {
+        x: xRange[0] + labelOffset(xRange),
+        y: yRange[0] + labelOffset(yRange),
+        xref: 'x', yref: 'y',
+        xanchor: 'left', yanchor: 'bottom',
+        text: '<b>Lagging</b>',
+        showarrow: false,
+        font: { color: QUADRANT_INK.lagging, size: 14, family: PLOTLY_FONT_FAMILY },
+      },
+      {
+        x: xRange[1] - labelOffset(xRange),
+        y: yRange[0] + labelOffset(yRange),
+        xref: 'x', yref: 'y',
+        xanchor: 'right', yanchor: 'bottom',
+        text: '<b>Weakening</b>',
+        showarrow: false,
+        font: { color: QUADRANT_INK.weakening, size: 14, family: PLOTLY_FONT_FAMILY },
+      },
+    ];
+
+    const layout = plotly2DChartLayout({
+      xaxis: plotlyAxis('Rotation Ratio', {
+        range: xRange,
+        zeroline: false,
+        showgrid: true,
+        gridcolor: 'rgba(255,255,255,0.05)',
+      }),
+      yaxis: plotlyAxis('Rotation Momentum', {
+        range: yRange,
+        zeroline: false,
+        showgrid: true,
+        gridcolor: 'rgba(255,255,255,0.05)',
+      }),
+      shapes,
+      annotations,
+      margin: { t: 30, r: 30, b: 70, l: 70 },
+      hovermode: 'closest',
+    });
+
+    Plotly.react(chartRef.current, traces, layout, {
+      displayModeBar: false,
+      responsive: true,
+    });
+  }, [Plotly, payload, chartData]);
+
+  if (loading) {
+    return (
+      <div className="card rotation-card">
+        <div className="rotation-status">Loading rotation chart…</div>
+      </div>
+    );
+  }
+
+  if (fetchError || plotlyError || !payload) {
+    return (
+      <div className="card rotation-card">
+        <div className="rotation-status rotation-status--error">
+          {fetchError || plotlyError || 'No rotation data available.'}
+        </div>
+      </div>
+    );
+  }
+
+  return (
+    <div className="card rotation-card">
+      <div className="rotation-meta">
+        <span className="rotation-ticker">{payload.benchmark?.symbol}</span>
+        <span className="rotation-meta-line">
+          {payload.tail} periods · {payload.components.length} components
+        </span>
+        <span className="rotation-asof">
+          Through {formatDateLabel(payload.asOf)}
+        </span>
+      </div>
+      <div ref={chartRef} className="rotation-chart" />
+    </div>
+  );
+}

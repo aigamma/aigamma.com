@@ -12,6 +12,7 @@ const LAB_ITEMS = [
   { path: '/parity/',      desc: 'Put-call parity, box-spread rate, implied forward' },
   { path: '/regime/',      desc: 'Mixture, Markov, Wasserstein regimes' },
   { path: '/risk/',        desc: 'Cross-model Greeks, Vanna-Volga, second-order' },
+  { path: '/rotations/',   desc: 'Relative sector rotation chart' },
   { path: '/rough/',       desc: 'Rough Bergomi and rough vol exploration' },
   { path: '/seasonality/', desc: 'SPX 30-minute intraday seasonality grid' },
   { path: '/stochastic/',  desc: 'Heston, SABR, LSV, rough Bergomi' },

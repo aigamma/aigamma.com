@@ -718,3 +718,79 @@
     min-width: 84px;
   }
 }
+
+/* Relative Sector Rotation lab. The card holds a meta line (benchmark
+   ticker, periods/components count, "Through M/D/YYYY" stamp) and a
+   single Plotly-rendered 600px-tall scatter that draws the four-
+   quadrant rotation plane. The card chrome reuses the seasonality
+   card's padding rhythm so the two surfaces feel like siblings; the
+   chart-specific layout lives entirely inside Plotly. */
+.rotation-card {
+  padding: 1rem 1.1rem 1.25rem;
+  display: flex;
+  flex-direction: column;
+  gap: 0.9rem;
+}
+
+.rotation-meta {
+  display: flex;
+  align-items: baseline;
+  gap: 0.7rem;
+  flex-wrap: wrap;
+  font-family: 'Courier New', monospace;
+  letter-spacing: 0.04em;
+}
+
+.rotation-ticker {
+  font-size: 1.6rem;
+  color: var(--accent-blue);
+  font-weight: 700;
+  letter-spacing: 0.06em;
+}
+
+.rotation-meta-line {
+  font-size: 0.75rem;
+  color: var(--text-secondary);
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+}
+
+.rotation-asof {
+  font-size: 0.75rem;
+  color: var(--text-secondary);
+  text-transform: uppercase;
+  margin-left: auto;
+}
+
+.rotation-chart {
+  width: 100%;
+  height: 640px;
+}
+
+.rotation-status {
+  padding: 4rem 1rem;
+  text-align: center;
+  color: var(--text-secondary);
+  font-family: 'Courier New', monospace;
+  font-size: 0.95rem;
+  letter-spacing: 0.04em;
+}
+
+.rotation-status--error {
+  color: var(--accent-coral);
+}
+
+@media (max-width: 768px) {
+  .rotation-chart {
+    height: 520px;
+  }
+  .rotation-ticker {
+    font-size: 1.3rem;
+  }
+}
+
+@media (max-width: 480px) {
+  .rotation-chart {
+    height: 460px;
+  }
+}
