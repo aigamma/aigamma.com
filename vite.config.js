@@ -124,7 +124,7 @@ function lazyChunkPreloadPlugin() {
 // originated in /alpha as a Discord-prompted prototype: a v4
 // composite of box-spread r vs direct-PCP r at q = 0 stacked over the
 // PCP-recovered SPX forward, paired with the v1 box-spread baseline.
-// The parity entry is linked from QuantMenu as the tail item — it is
+// The parity entry is linked from the Menu as the tail item — it is
 // a measurement surface (no-arbitrage diagnostic that reads r, q, and
 // F off the chain with no pricer on top), not a trading strategy
 // (box spreads are not the desk's focus), so it sits at the bottom

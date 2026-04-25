@@ -1,7 +1,7 @@
 import '../src/styles/theme.css';
 import '../src/styles/lab.css';
 import ErrorBoundary from '../src/ErrorBoundary';
-import QuantMenu from '../src/components/QuantMenu';
+import Menu from '../src/components/Menu';
 import SlotA, { slotName as slotAName } from './slots/SlotA';
 import SlotB, { slotName as slotBName } from './slots/SlotB';
 
@@ -17,8 +17,8 @@ import SlotB, { slotName as slotBName } from './slots/SlotB';
 // maturing in either surface can promote into a beta slot on identical
 // terms because the shell, theme, and warning strip are shared verbatim.
 // The logo in the upper-left links back to the homepage and the
-// QuantMenu in the upper-right opens the cross-lab navigator, matching
-// the chrome on the integrated Quant Menu labs; nothing on the main
+// Menu in the upper-right opens the cross-lab navigator, matching
+// the chrome on the integrated Menu labs; nothing on the main
 // site points here, so the page is still reached only by typing /dev
 // or loading a bookmark.
 export default function App() {
@@ -36,7 +36,7 @@ export default function App() {
             DEV LAB
           </span>
         </div>
-        <QuantMenu />
+        <Menu />
       </header>
 
       <div className="lab-warning">

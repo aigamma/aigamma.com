@@ -1,11 +1,11 @@
 import '../src/styles/theme.css';
 import '../src/styles/lab.css';
 import ErrorBoundary from '../src/ErrorBoundary';
-import QuantMenu from '../src/components/QuantMenu';
+import Menu from '../src/components/Menu';
 import Chat from '../src/components/Chat';
 import GarchZoo from './slots/GarchZoo';
 
-// /garch/ — GARCH Ensemble page, an integrated Quant Menu lab.
+// /garch/ — GARCH Ensemble page, an integrated Menu lab.
 // Single slot rendering 17 univariate GARCH-family specifications plus an
 // equal-weight master ensemble on daily SPX log returns, with a family
 // picker above the chart that lets a viewer hide a family — the ensemble
@@ -22,7 +22,7 @@ import GarchZoo from './slots/GarchZoo';
 // redundant affordances, matching the /parity/ and /jump/ pattern: the
 // logo in the header is a hyperlink to `/`, a filled green RETURN HOME
 // button sits in the header itself between the GARCH LAB brand on the
-// left and the QuantMenu trigger on the right — centered horizontally
+// left and the Menu trigger on the right — centered horizontally
 // on the same row as the other nav items via the header's flex
 // space-between distribution — and the footer carries a bolded Return
 // Home link for a reader who has scrolled past the slot and the Chat
@@ -51,7 +51,7 @@ export default function App() {
           <span className="lab-home-button__desktop-text">Return Home</span>
           <span className="lab-home-button__mobile-text">Home</span>
         </a>
-        <QuantMenu />
+        <Menu />
       </header>
 
       <section className="lab-slot">

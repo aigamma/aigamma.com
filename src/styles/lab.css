@@ -52,7 +52,7 @@
 /* Outlined green call-to-action placed between the header and the first
    slot on a lab page that wants a prominent Return-Home affordance.
    Outlined rather than filled so the button reads as the same chrome
-   family as the adjacent QuantMenu trigger (both are green-text on
+   family as the adjacent Menu trigger (both are green-text on
    dark-background with a green border); hover flips to filled green
    so the active affordance still stays within the same color token. */
 .lab-home-row {
@@ -88,9 +88,9 @@
 
 /* Inline variant of the Return-Home button used on labs that drop
    the button directly into the lab-header row alongside the
-   QuantMenu trigger rather than floating it in its own centered row
+   Menu trigger rather than floating it in its own centered row
    below the header. Matches the 3.2rem / 1.1rem / 1rem-padding
-   sizing of .quant-menu-trigger so the two sit on the same
+   sizing of .menu-trigger so the two sit on the same
    horizontal baseline with identical vertical chrome weight. */
 .lab-home-button--inline {
   height: 3.2rem;
@@ -157,7 +157,7 @@
   text-transform: uppercase;
 }
 
-/* Cluster the QuantMenu trigger with the lab-meta block so the right
+/* Cluster the Menu trigger with the lab-meta block so the right
    side of the lab header reads as one group. The gap matches the
    header's own 0.75rem inter-item gap for visual continuity. */
 .lab-nav-group {
@@ -437,11 +437,11 @@
     font-size: 0.68rem;
   }
 
-  /* Inside the lab-shell, scale the QuantMenu trigger a second step to
+  /* Inside the lab-shell, scale the Menu trigger a second step to
      match the 2.4rem lab-badge / lab-logo sizing at phone widths. The
      trigger selector outside of lab-shell stays at the 2.8rem width set
      by the 768px block in theme.css. */
-  .lab-shell .quant-menu-trigger {
+  .lab-shell .menu-trigger {
     font-size: 0.85rem;
     height: 2.4rem;
     padding: 0 0.6rem;
@@ -766,7 +766,7 @@
    band. Buttons share a single accent-blue border with internal
    separators so the cluster reads as one segmented control rather than
    three disconnected pills, matching the segmented-control idiom used
-   by the QuantMenu trigger and the lab-home-button family elsewhere on
+   by the Menu trigger and the lab-home-button family elsewhere on
    the lab pages. The active button reverses to a filled accent-blue
    background with dark text so the current step is unambiguous; hover
    on inactive buttons tints them lightly. The compact 0.75rem font

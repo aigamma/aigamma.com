@@ -1,7 +1,7 @@
 import '../src/styles/theme.css';
 import '../src/styles/lab.css';
 import ErrorBoundary from '../src/ErrorBoundary';
-import QuantMenu from '../src/components/QuantMenu';
+import Menu from '../src/components/Menu';
 import Chat from '../src/components/Chat';
 import SlotA from './slots/SlotA';
 import SlotB from './slots/SlotB';
@@ -50,11 +50,11 @@ import SlotC from './slots/SlotC';
 // path out of the lab is unmissable: the logo in the upper-left of the
 // header is wrapped in an anchor to /, a filled green "Return Home"
 // button sits inline in the header row between the Rough Vol Lab brand
-// on the left and the QuantMenu trigger on the right — horizontally
+// on the left and the Menu trigger on the right — horizontally
 // aligned with the other top-level nav items via the header's flex
 // space-between distribution — and the footer carries a bold "Return
-// Home" link on its own line. The QuantMenu in the upper-right remains
-// the cross-lab navigator for the nine integrated Quant Menu labs;
+// Home" link on its own line. The Menu in the upper-right remains
+// the cross-lab navigator for the nine integrated Menu labs;
 // nothing on the main site's public nav points here, so /rough is
 // still reached by typing the URL or loading a bookmark.
 export default function App() {
@@ -81,7 +81,7 @@ export default function App() {
           <span className="lab-home-button__desktop-text">Return Home</span>
           <span className="lab-home-button__mobile-text">Home</span>
         </a>
-        <QuantMenu />
+        <Menu />
       </header>
 
       <section className="lab-slot">

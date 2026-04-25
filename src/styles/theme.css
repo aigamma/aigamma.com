@@ -66,11 +66,11 @@ body {
 /* About button on the landing page header. A direct child of the <header>
    flex container (not wrapped in a .site-nav group anymore) so the header's
    `justify-content: space-between` can distribute four equal gaps across
-   four items — logo+status, QuantMenu, About, timestamp — which places
-   QuantMenu's center exactly at the midpoint between the status group's
+   four items — logo+status, Menu, About, timestamp — which places
+   Menu's center exactly at the midpoint between the status group's
    right edge and About's left edge. Color is text-primary (white) rather
    than accent-blue so it reads as the secondary off-site exit against the
-   purple QuantMenu trigger's primary on-site nav. Border and hover use
+   purple Menu trigger's primary on-site nav. Border and hover use
    currentColor so the 1px stroke tracks the text color and the hover tint
    is a low-alpha white wash that works against the dark header. */
 .site-about-link {
@@ -122,10 +122,10 @@ body {
   }
 }
 
-/* ===== QUANT MENU =====
-   Dropdown nav exposing the eight bookmark-only lab directories from
-   every page header. Purple accent matches the Expected Move metric in
-   the main dashboard's levels panel (var(--accent-purple) = #BF7FFF) so
+/* ===== MENU =====
+   Dropdown nav exposing the bookmark-only lab directories from every
+   page header. Purple accent matches the Expected Move metric in the
+   main dashboard's levels panel (var(--accent-purple) = #BF7FFF) so
    the token reads distinct from the existing About button's accent-blue
    without inventing a new color. Trigger visual weight matches the
    other header buttons (3.2rem tall, Courier New 1.1rem, 3px radius,
@@ -135,12 +135,12 @@ body {
    layout readable at the narrowest desktop width. Hover and focus-visible
    share the same ~8% tinted background so keyboard and mouse users see
    the same affordance. */
-.quant-menu {
+.menu {
   position: relative;
   display: inline-flex;
 }
 
-.quant-menu-trigger {
+.menu-trigger {
   font-family: 'Courier New', monospace;
   font-size: 1.1rem;
   letter-spacing: 0.08em;
@@ -160,24 +160,24 @@ body {
   transition: background-color 0.2s ease;
 }
 
-.quant-menu-trigger:hover,
-.quant-menu-trigger:focus-visible {
+.menu-trigger:hover,
+.menu-trigger:focus-visible {
   background-color: rgba(191, 127, 255, 0.08);
   outline: none;
 }
 
-.quant-menu-caret {
+.menu-caret {
   display: inline-block;
   transition: transform 0.2s ease;
   font-size: 0.75em;
   line-height: 1;
 }
 
-.quant-menu-caret.is-open {
+.menu-caret.is-open {
   transform: rotate(180deg);
 }
 
-.quant-menu-panel {
+.menu-panel {
   position: absolute;
   top: calc(100% + 4px);
   right: 0;
@@ -190,14 +190,14 @@ body {
   z-index: 40;
 }
 
-/* The QuantMenu trigger lives inside the main dashboard's <nav class="site-nav">,
+/* The Menu trigger lives inside the main dashboard's <nav class="site-nav">,
    which styles all <a> descendants via .site-nav a at specificity (0,1,1).
    The menu items are <a> tags inside the absolute-positioned panel but still
    descendants of .site-nav in the DOM tree, so their color / height /
    padding would be overridden without a more-specific selector. The
-   .quant-menu ancestor prefix brings specificity to (0,2,0), which wins
+   .menu ancestor prefix brings specificity to (0,2,0), which wins
    across every existing site-nav rule. */
-.quant-menu .quant-menu-item {
+.menu .menu-item {
   display: flex;
   align-items: baseline;
   justify-content: space-between;
@@ -217,19 +217,19 @@ body {
   outline: none;
 }
 
-.quant-menu .quant-menu-item:hover,
-.quant-menu .quant-menu-item:focus-visible {
+.menu .menu-item:hover,
+.menu .menu-item:focus-visible {
   background-color: rgba(191, 127, 255, 0.12);
   border-left-color: var(--accent-purple);
 }
 
-.quant-menu .quant-menu-path {
+.menu .menu-path {
   color: var(--accent-purple);
   font-size: 0.95rem;
   white-space: nowrap;
 }
 
-.quant-menu .quant-menu-desc {
+.menu .menu-desc {
   color: rgba(191, 127, 255, 0.7);
   font-size: 0.72rem;
   text-align: right;
@@ -246,16 +246,16 @@ body {
 }
 
 /* Mobile dashboard header reorganization. The four-token desktop
-   layout (logo+regime / QuantMenu / About / timestamp) was still
+   layout (logo+regime / Menu / About / timestamp) was still
    colliding at phone widths even after swapping the text regime pill
-   for the 3.2rem icon and shortening "QUANT MENU" to "QUANT". Below
-   768px (the main dashboard mobile breakpoint) we drop the timestamp
-   entirely because freshness is carried by the live metric cards
-   themselves, and we swap the visual order of About and QuantMenu
-   via flex order so the row reads logo+icon / About / QuantMenu with
+   for the 3.2rem icon and shortening the dropdown trigger to a single
+   "MENU" word. Below 768px (the main dashboard mobile breakpoint) we
+   drop the timestamp entirely because freshness is carried by the live
+   metric cards themselves, and we swap the visual order of About and
+   Menu via flex order so the row reads logo+icon / About / Menu with
    justify-content: space-between distributing the three tokens across
-   the viewport — About lands in the centre and QuantMenu anchors to
-   the right edge, which leaves the About link's text at the natural
+   the viewport — About lands in the centre and Menu anchors to the
+   right edge, which leaves the About link's text at the natural
    reading position between the brand mark and the dropdown trigger. */
 @media (max-width: 768px) {
   .site-header .site-timestamp {
@@ -657,13 +657,13 @@ body {
     padding: 0 0.75rem;
   }
 
-  .quant-menu-trigger {
+  .menu-trigger {
     font-size: 0.95rem;
     height: 2.8rem;
     padding: 0 0.75rem;
   }
 
-  .quant-menu-panel {
+  .menu-panel {
     min-width: min(320px, calc(100vw - 1.5rem));
   }
 

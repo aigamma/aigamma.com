@@ -1,9 +1,9 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
 
-// Shared quant-menu dropdown. Rendered in the main dashboard header and
-// in every lab header so the nine bookmark-only labs are reachable from
-// any page without touching the URL bar. Items are alphabetized by path
-// so users get a stable scan order across every surface that mounts it.
+// Shared menu dropdown. Rendered in the main dashboard header and in
+// every lab header so the bookmark-only labs are reachable from any
+// page without touching the URL bar. Items are alphabetized by path so
+// users get a stable scan order across every surface that mounts it.
 const LAB_ITEMS = [
   { path: '/discrete/',    desc: 'Binomial and trinomial trees, SVI and SSVI surfaces' },
   { path: '/garch/',       desc: 'GARCH family and ensemble forecasts' },
@@ -18,7 +18,7 @@ const LAB_ITEMS = [
   { path: '/stochastic/',  desc: 'Heston, SABR, LSV, rough Bergomi' },
 ];
 
-export default function QuantMenu() {
+export default function Menu() {
   const [isOpen, setIsOpen] = useState(false);
   const [activeIndex, setActiveIndex] = useState(-1);
   const triggerRef = useRef(null);
@@ -105,19 +105,19 @@ export default function QuantMenu() {
   };
 
   return (
-    <div className="quant-menu">
+    <div className="menu">
       <button
         ref={triggerRef}
         type="button"
-        className="quant-menu-trigger"
+        className="menu-trigger"
         onClick={handleToggle}
         aria-expanded={isOpen}
         aria-haspopup="menu"
-        aria-label="Quant menu"
+        aria-label="Menu"
       >
-        <span>QUANT</span>
+        <span>MENU</span>
         <span
-          className={`quant-menu-caret${isOpen ? ' is-open' : ''}`}
+          className={`menu-caret${isOpen ? ' is-open' : ''}`}
           aria-hidden="true"
         >
           &#x25BE;
@@ -126,9 +126,9 @@ export default function QuantMenu() {
       {isOpen && (
         <div
           ref={panelRef}
-          className="quant-menu-panel"
+          className="menu-panel"
           role="menu"
-          aria-label="Quantitative labs"
+          aria-label="Lab navigation"
         >
           {LAB_ITEMS.map((item, idx) => (
             <a
@@ -137,11 +137,11 @@ export default function QuantMenu() {
               role="menuitem"
               tabIndex={activeIndex === idx ? 0 : -1}
               href={item.path}
-              className="quant-menu-item"
+              className="menu-item"
               onClick={() => close(false)}
             >
-              <span className="quant-menu-path">{item.path}</span>
-              <span className="quant-menu-desc">{item.desc}</span>
+              <span className="menu-path">{item.path}</span>
+              <span className="menu-desc">{item.desc}</span>
             </a>
           ))}
         </div>

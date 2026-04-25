@@ -4,7 +4,7 @@ import ErrorBoundary from './ErrorBoundary';
 import LevelsPanel from './components/LevelsPanel';
 import TermStructure from './components/TermStructure';
 import VolatilityRiskPremium from './components/VolatilityRiskPremium';
-import QuantMenu from './components/QuantMenu';
+import Menu from './components/Menu';
 import LazyMount from './components/LazyMount';
 // Below-the-fold charts are code-split via React.lazy so their source bytes
 // do not land in the main chunk. Each becomes its own Vite chunk that the
@@ -18,7 +18,7 @@ import LazyMount from './components/LazyMount';
 // Cache-Control header set in netlify.toml, so repeat visits skip the
 // re-download entirely and the ~30-100 ms chunk-fetch only happens on cold
 // first-visit scroll. The three above-the-fold components (LevelsPanel,
-// VolatilityRiskPremium, TermStructure) and QuantMenu / LazyMount stay as
+// VolatilityRiskPremium, TermStructure) and Menu / LazyMount stay as
 // static imports because they render before any scroll-based gating
 // triggers — splitting them would force a serial chunk-fetch between
 // React mount and first paint rather than saving any of it.
@@ -507,14 +507,14 @@ export default function App() {
           )}
         </div>
 
-        {/* QuantMenu and About are direct children of the header (rather
+        {/* Menu and About are direct children of the header (rather
             than grouped inside a .site-nav wrapper) so the header's
             `justify-content: space-between` distributes four equal gaps
-            across four items, placing QuantMenu's center exactly at the
+            across four items, placing Menu's center exactly at the
             midpoint between the status group's right edge and About's
-            left edge — Eric's requested "roughly center QUANT MENU in
+            left edge — Eric's requested "roughly center MENU in
             between the gamma status and ABOUT". */}
-        <QuantMenu />
+        <Menu />
         <a href="https://about.aigamma.com/" className="site-about-link">About</a>
 
         {freshness && (

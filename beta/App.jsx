@@ -1,7 +1,7 @@
 import '../src/styles/theme.css';
 import '../src/styles/lab.css';
 import ErrorBoundary from '../src/ErrorBoundary';
-import QuantMenu from '../src/components/QuantMenu';
+import Menu from '../src/components/Menu';
 import SlotB, { slotName as slotBName } from './slots/SlotB';
 
 // Beta Lab shell — single slot for models under test. Graduated
@@ -14,7 +14,7 @@ import SlotB, { slotName as slotBName } from './slots/SlotB';
 // The amber badge and warning strip are the only signals that this
 // is a sandbox rather than the production dashboard.
 //
-// The logo in the header links back to the homepage and the QuantMenu on
+// The logo in the header links back to the homepage and the Menu on
 // the right of the header opens the nine-lab directory, so the page is
 // reachable from and navigable to every other lab without leaving the
 // keyboard. Crawlers are still blocked via the noindex meta tag in
@@ -31,7 +31,7 @@ export default function App() {
             BETA LAB
           </span>
         </div>
-        <QuantMenu />
+        <Menu />
       </header>
 
       <div className="lab-warning">

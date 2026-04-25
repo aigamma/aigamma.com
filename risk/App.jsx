@@ -1,7 +1,7 @@
 import '../src/styles/theme.css';
 import '../src/styles/lab.css';
 import ErrorBoundary from '../src/ErrorBoundary';
-import QuantMenu from '../src/components/QuantMenu';
+import Menu from '../src/components/Menu';
 import Chat from '../src/components/Chat';
 import SlotA from './slots/SlotA';
 import SlotB from './slots/SlotB';
@@ -48,7 +48,7 @@ import SlotD from './slots/SlotD';
 // affordances, matching the /parity/, /jump/, /garch/, /regime/, and
 // /stochastic/ pattern: the logo in the header is a hyperlink to `/`,
 // a filled green RETURN HOME button sits in the header itself between
-// the Risk Lab brand on the left and the QuantMenu trigger on the
+// the Risk Lab brand on the left and the Menu trigger on the
 // right — centered horizontally as the midpoint of the other two nav
 // items via the header's flex space-between distribution across three
 // direct children — and the footer carries a bolded Return Home link
@@ -77,7 +77,7 @@ export default function App() {
           <span className="lab-home-button__desktop-text">Return Home</span>
           <span className="lab-home-button__mobile-text">Home</span>
         </a>
-        <QuantMenu />
+        <Menu />
       </header>
 
       <section className="lab-slot">
