@@ -165,6 +165,7 @@ export default defineConfig({
         jump: fileURLToPath(new URL('./jump/index.html', import.meta.url)),
         discrete: fileURLToPath(new URL('./discrete/index.html', import.meta.url)),
         parity: fileURLToPath(new URL('./parity/index.html', import.meta.url)),
+        seasonality: fileURLToPath(new URL('./seasonality/index.html', import.meta.url)),
       },
     },
   },

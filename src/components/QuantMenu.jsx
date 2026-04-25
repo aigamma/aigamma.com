@@ -5,15 +5,16 @@ import { useCallback, useEffect, useRef, useState } from 'react';
 // any page without touching the URL bar. Items are alphabetized by path
 // so users get a stable scan order across every surface that mounts it.
 const LAB_ITEMS = [
-  { path: '/discrete/',   desc: 'Binomial and trinomial trees, SVI and SSVI surfaces' },
-  { path: '/garch/',      desc: 'GARCH family and ensemble forecasts' },
-  { path: '/jump/',       desc: 'Merton, Kou, Bates, variance gamma' },
-  { path: '/local/',      desc: 'Dupire extraction and local vol pricing' },
-  { path: '/parity/',     desc: 'Put-call parity, box-spread rate, implied forward' },
-  { path: '/regime/',     desc: 'Mixture, Markov, Wasserstein regimes' },
-  { path: '/risk/',       desc: 'Cross-model Greeks, Vanna-Volga, second-order' },
-  { path: '/rough/',      desc: 'Rough Bergomi and rough vol exploration' },
-  { path: '/stochastic/', desc: 'Heston, SABR, LSV, rough Bergomi' },
+  { path: '/discrete/',    desc: 'Binomial and trinomial trees, SVI and SSVI surfaces' },
+  { path: '/garch/',       desc: 'GARCH family and ensemble forecasts' },
+  { path: '/jump/',        desc: 'Merton, Kou, Bates, variance gamma' },
+  { path: '/local/',       desc: 'Dupire extraction and local vol pricing' },
+  { path: '/parity/',      desc: 'Put-call parity, box-spread rate, implied forward' },
+  { path: '/regime/',      desc: 'Mixture, Markov, Wasserstein regimes' },
+  { path: '/risk/',        desc: 'Cross-model Greeks, Vanna-Volga, second-order' },
+  { path: '/rough/',       desc: 'Rough Bergomi and rough vol exploration' },
+  { path: '/seasonality/', desc: 'SPX 30-minute intraday seasonality grid' },
+  { path: '/stochastic/',  desc: 'Heston, SABR, LSV, rough Bergomi' },
 ];
 
 export default function QuantMenu() {

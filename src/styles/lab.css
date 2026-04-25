@@ -499,3 +499,222 @@
     letter-spacing: 0.08em;
   }
 }
+
+/* /seasonality lab grid. A bordered 14-column cell table (row-label +
+   13 30-min bucket columns) rendered as a semantic <table>. The card
+   wrapper handles scroll on narrow viewports; the table itself owns
+   the cell borders and the header/row-label chrome. */
+.seasonality-card {
+  padding: 1rem 1.1rem 1.25rem;
+  display: flex;
+  flex-direction: column;
+  gap: 0.9rem;
+}
+
+.seasonality-meta {
+  display: flex;
+  align-items: baseline;
+  gap: 0.6rem;
+  flex-wrap: wrap;
+  font-family: 'Courier New', monospace;
+  letter-spacing: 0.04em;
+}
+
+.seasonality-symbol {
+  font-size: 1rem;
+  color: var(--text-primary);
+  text-transform: uppercase;
+  font-weight: 700;
+}
+
+.seasonality-ticker {
+  font-size: 1rem;
+  color: var(--accent-blue);
+  font-weight: 700;
+}
+
+.seasonality-asof {
+  font-size: 0.75rem;
+  color: var(--text-secondary);
+  text-transform: uppercase;
+  margin-left: auto;
+}
+
+/* Horizontal scroll container. On wide viewports the table fits
+   without scrolling; at mobile widths the user swipes horizontally
+   rather than reflowing columns. */
+.seasonality-scroll {
+  width: 100%;
+  overflow-x: auto;
+  border: 1px solid var(--bg-card-border);
+  border-radius: 4px;
+  background: var(--bg-card);
+}
+
+.seasonality-grid {
+  width: 100%;
+  border-collapse: separate;
+  border-spacing: 0;
+  font-family: 'Courier New', monospace;
+  font-size: 0.78rem;
+  color: var(--text-primary);
+}
+
+.seasonality-grid th,
+.seasonality-grid td {
+  border-right: 1px solid var(--bg-card-border);
+  border-bottom: 1px solid var(--bg-card-border);
+  padding: 0.5rem 0.35rem;
+  text-align: center;
+  font-weight: 400;
+  letter-spacing: 0.02em;
+  white-space: nowrap;
+}
+
+.seasonality-grid thead th {
+  background: rgba(255, 255, 255, 0.035);
+  color: var(--text-secondary);
+  font-size: 0.72rem;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  border-bottom: 1px solid var(--bg-card-border);
+  position: sticky;
+  top: 0;
+  z-index: 2;
+}
+
+.seasonality-grid tr:last-child th,
+.seasonality-grid tr:last-child td {
+  border-bottom: none;
+}
+
+.seasonality-grid th:last-child,
+.seasonality-grid td:last-child {
+  border-right: none;
+}
+
+.seasonality-corner {
+  background: rgba(255, 255, 255, 0.05);
+  text-align: left !important;
+  padding-left: 0.85rem !important;
+  min-width: 120px;
+  position: sticky;
+  left: 0;
+  z-index: 3;
+}
+
+.seasonality-col-head {
+  min-width: 62px;
+}
+
+.seasonality-row-head {
+  background: rgba(255, 255, 255, 0.04);
+  text-align: left !important;
+  padding-left: 0.85rem !important;
+  color: var(--text-primary);
+  font-family: 'Courier New', monospace;
+  font-size: 0.78rem;
+  position: sticky;
+  left: 0;
+  z-index: 1;
+  min-width: 120px;
+}
+
+.seasonality-row-head--avg {
+  color: var(--accent-amber);
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  font-size: 0.72rem;
+  font-weight: 700;
+}
+
+.seasonality-row--first-day .seasonality-row-head,
+.seasonality-row--first-day .seasonality-cell {
+  border-top: 2px solid var(--bg-card-border);
+}
+
+.seasonality-cell {
+  font-variant-numeric: tabular-nums;
+  min-width: 62px;
+  transition: background-color 150ms ease;
+}
+
+.seasonality-legend {
+  font-size: 0.72rem;
+  color: var(--text-secondary);
+  line-height: 1.55;
+  letter-spacing: 0.02em;
+}
+
+.seasonality-loading,
+.seasonality-error {
+  padding: 2.5rem 1rem;
+  text-align: center;
+  color: var(--text-secondary);
+  font-family: 'Courier New', monospace;
+  font-size: 0.9rem;
+  letter-spacing: 0.04em;
+}
+
+.seasonality-error {
+  color: var(--accent-coral);
+}
+
+@media (max-width: 768px) {
+  .seasonality-card {
+    padding: 0.85rem 0.85rem 1rem;
+  }
+
+  .seasonality-grid {
+    font-size: 0.7rem;
+  }
+
+  .seasonality-grid th,
+  .seasonality-grid td {
+    padding: 0.42rem 0.28rem;
+  }
+
+  .seasonality-col-head,
+  .seasonality-cell {
+    min-width: 54px;
+  }
+
+  .seasonality-corner,
+  .seasonality-row-head {
+    min-width: 96px;
+    padding-left: 0.6rem !important;
+  }
+
+  .seasonality-row-head--avg {
+    font-size: 0.66rem;
+  }
+
+  .seasonality-meta {
+    font-size: 0.9rem;
+  }
+
+  .seasonality-asof {
+    font-size: 0.68rem;
+  }
+}
+
+@media (max-width: 480px) {
+  .seasonality-grid {
+    font-size: 0.65rem;
+  }
+
+  .seasonality-grid th,
+  .seasonality-grid td {
+    padding: 0.36rem 0.22rem;
+  }
+
+  .seasonality-col-head,
+  .seasonality-cell {
+    min-width: 48px;
+  }
+
+  .seasonality-corner,
+  .seasonality-row-head {
+    min-width: 84px;
+  }
+}
