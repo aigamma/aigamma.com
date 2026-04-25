@@ -5,26 +5,24 @@ import QuantMenu from '../src/components/QuantMenu';
 import RotationChart from '../src/components/RotationChart';
 
 // Relative Sector Rotation lab. A four-quadrant scatter that places every
-// component index on a (rotation_ratio, rotation_momentum) plane with a
+// sector ETF on a (rotation_ratio, rotation_momentum) plane with a
 // trailing tail showing where it was on each of the previous N trading
-// sessions. Components above 100 on the x-axis are leading the SPX
+// sessions. Components above 100 on the x-axis are leading the SPY
 // benchmark on price; components above 100 on the y-axis are gaining on
 // that lead. The four quadrants — Leading top-right, Weakening bottom-
 // right, Lagging bottom-left, Improving top-left — describe a clockwise
 // rotation that components typically traverse over weeks-to-months as
 // regimes shift.
 //
-// Data source: ThetaData /v3/index/history/eod feeds public.index_daily_
-// eod via scripts/backfill/index-daily-eod.mjs. The endpoint at
-// netlify/functions/rotations.mjs computes the rotation ratio and
-// rotation momentum vs SPX and returns a tail of N daily points per
-// component. The reference visual at C:\i\ uses sector ETFs (XBI / XLF /
-// XLK / ...) which aren't on the Index Standard tier; this build uses
-// the closest available substitute — cap-weight peers (OEX, RUI, RUT,
-// DJX) plus the CBOE-published S&P 500 derivative-strategy indices
-// (BXM, BXY, BXMC, BXMD, PUT, PPUT, CLL, CMBO, CNDR), which read as
-// "the S&P 500 with strategy X applied" and so map naturally onto the
-// rotation frame.
+// Data source: ThetaData /v3/stock/history/eod (Stock Value tier) feeds
+// public.daily_eod via scripts/backfill/daily-eod.mjs. The endpoint at
+// netlify/functions/rotations.mjs computes the rotation ratio and the
+// rotation momentum vs SPY and returns a tail of N daily points per
+// component. The default universe matches the reference chart at
+// C:\i\: SPY benchmark plus the eleven SPDR sector ETFs (XLB, XLC,
+// XLE, XLF, XLI, XLK, XLP, XLRE, XLU, XLV, XLY) and three additional
+// theme ETFs that appear on that chart (XBI biotech, XME metals &
+// mining, KWEB China internet).
 export default function App() {
   return (
     <div className="app-shell lab-shell">
@@ -73,11 +71,11 @@ export default function App() {
           <p style={{ margin: '0 0 0.7rem' }}>
             Each component lands on the plane at coordinates (rotation
             ratio, rotation momentum). The ratio is a 100-centered
-            standardized score of the component's price relative to SPX
+            standardized score of the component's price relative to SPY
             over the last 63 trading days; the momentum is the same kind
             of standardized score applied to the 5-day rate of change of
             the ratio. Values above 100 on the x-axis mean the component
-            is leading SPX on price; above 100 on the y-axis means it's
+            is leading SPY on price; above 100 on the y-axis means it's
             gaining on that lead.
           </p>
           <p style={{ margin: '0 0 0.7rem' }}>
@@ -94,15 +92,12 @@ export default function App() {
             position.
           </p>
           <p style={{ margin: 0 }}>
-            Source is ThetaData Index Standard EOD prices joined against
-            the SPX benchmark series in the same table. The component
-            universe is the set of indices ThetaData carries with
-            current-data coverage at this tier — sector ETFs (XLK /
-            XLF / etc.) are not in the Index Standard feed, so the
-            closest available substitutes are used: cap-weight peers
-            (OEX, RUI, RUT, DJX) and the CBOE-published S&P 500
-            derivative-strategy indices (BXM / BXY / BXMC / BXMD / PUT /
-            PPUT / CLL / CMBO / CNDR).
+            Source is ThetaData Stock Value EOD prices joined against
+            the SPY benchmark series in the same table. The component
+            universe matches the reference chart: the eleven SPDR
+            sector ETFs (XLB, XLC, XLE, XLF, XLI, XLK, XLP, XLRE, XLU,
+            XLV, XLY) plus three additional theme ETFs (XBI biotech,
+            XME metals &amp; mining, KWEB China internet).
           </p>
         </div>
       </div>

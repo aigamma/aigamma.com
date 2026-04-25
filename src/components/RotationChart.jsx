@@ -8,28 +8,27 @@ import {
 } from '../lib/plotlyTheme';
 
 // Relative Sector Rotation chart. Renders the /api/rotations payload as a
-// four-quadrant scatter where each component's recent trail is plotted
-// against an SPX benchmark via standardized relative-strength math:
-// rotation ratio on the x-axis (>100 = component leading benchmark on
-// price), rotation momentum on the y-axis (>100 = component's rotation
-// ratio is rising). The four quadrants tint the background and lend
-// their color to the trail of any component whose latest point sits
-// inside them — Leading green top-right, Weakening amber bottom-right,
-// Lagging coral bottom-left, Improving blue top-left. Each component
-// renders as one Plotly scatter trace with mode='lines+markers+text':
-// the tail is a thin line with small dot markers, the most-recent point
-// is a larger filled circle plus the symbol label, and hover text
-// reports date / ratio / momentum on every dot.
+// four-quadrant scatter where each ETF's recent trail is plotted against
+// the SPY benchmark via standardized relative-strength math: rotation
+// ratio on the x-axis (>100 = component leading benchmark on price),
+// rotation momentum on the y-axis (>100 = component's rotation ratio is
+// rising). The four quadrants tint the background and lend their color
+// to the trail of any component whose latest point sits inside them —
+// Leading green top-right, Weakening amber bottom-right, Lagging coral
+// bottom-left, Improving blue top-left. Each component renders as one
+// Plotly scatter trace with mode='lines+markers+text': the tail is a
+// thin line with small dot markers, the most-recent point is a larger
+// filled circle plus the symbol label, and hover text reports date /
+// ratio / momentum on every dot.
 //
-// Data source: ThetaData /v3/index/history/eod via public.index_daily_eod
-// → /api/rotations. The benchmark and component universe are determined
-// server-side from the symbols backfilled into index_daily_eod; on the
-// initial build that's SPX as the benchmark plus 13 components (cap-
-// weight peers OEX / RUI / RUT / DJX, plus nine CBOE-published S&P 500
-// derivative-strategy indices BXM / BXY / BXMC / BXMD / PUT / PPUT /
-// CLL / CMBO / CNDR). Adding a symbol to scripts/backfill/index-daily-
-// eod.mjs's DEFAULT_SYMBOLS list and re-running the backfill will surface
-// it on the chart automatically with no client-side edits.
+// Data source: ThetaData /v3/stock/history/eod (Stock Value tier) via
+// public.daily_eod → /api/rotations. The default universe matches the
+// reference chart at C:\i\: SPY benchmark plus the eleven SPDR sector
+// ETFs and three additional theme ETFs (XBI / XLB / XLC / XLE / XLF /
+// XLI / XLK / XLP / XLRE / XLU / XLV / XLY / XME / KWEB). Adding a
+// symbol to scripts/backfill/daily-eod.mjs's DEFAULT_SYMBOLS list and
+// re-running the backfill will surface it on the chart automatically
+// with no client-side edits.
 
 const QUADRANT_FILL = {
   leading:   'rgba(46, 204, 113, 0.10)',

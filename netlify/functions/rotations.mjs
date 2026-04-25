@@ -1,9 +1,13 @@
 // netlify/functions/rotations.mjs
 //
-// Read endpoint for the /rotations Relative Sector Rotation lab. Pulls the
-// 14-symbol universe from public.index_daily_eod, computes the rotation
-// ratio and rotation momentum for every component vs the SPX benchmark,
+// Read endpoint for the /rotations Relative Sector Rotation lab. Pulls
+// the multi-symbol universe from public.daily_eod, computes the rotation
+// ratio and rotation momentum for every component vs the SPY benchmark,
 // and returns one tail of `tail` daily points per component for the chart.
+// Default universe is the SPDR sector ETF set from C:\i\: SPY benchmark
+// plus XBI / XLB / XLC / XLE / XLF / XLI / XLK / XLP / XLRE / XLU / XLV /
+// XLY / XME / KWEB. Source data is ThetaData /v3/stock/history/eod (Stock
+// Value tier on this account as of 2026-04-25).
 //
 // The math is the open standardized-relative-strength construction that
 // any reader can derive from a benchmark series and a component series:
@@ -32,10 +36,10 @@
 // Query params:
 //   tail        — how many trailing daily points per component (default 10, max 60)
 //   symbols     — comma-separated component override (default = all in table)
-//   benchmark   — benchmark symbol (default 'SPX')
+//   benchmark   — benchmark symbol (default 'SPY')
 //
 // Reads through the anon SUPABASE_KEY against the allow_anon_read RLS
-// policy on index_daily_eod. Cache-Control: 15 minutes at the edge with
+// policy on daily_eod. Cache-Control: 15 minutes at the edge with
 // a long stale-while-revalidate, matching the seasonality endpoint —
 // the table only changes once per day after close when the backfill runs.
 
@@ -59,7 +63,7 @@ const MOMENTUM_LOOKBACK = 5;
 // for default settings, just over the cap, so paginate.
 const PAGE_SIZE = 1000;
 
-const DEFAULT_BENCHMARK = 'SPX';
+const DEFAULT_BENCHMARK = 'SPY';
 
 async function fetchWithTimeout(url, options, label) {
   try {
@@ -100,12 +104,12 @@ export default async function handler(request) {
   try {
     // Pull enough trailing rows to cover the longest computation window
     // for every symbol, then trim to `tail` at the end. The window has
-    // to fit RS(t) → SMA(L) over RS → diff(M) over RS-Ratio → SMA(L) over
-    // diff. That's 2L + M − 2 = 2·63 + 5 − 2 = 129 days of warm-up
-    // before the first valid RS-Momentum point, plus tail for the
-    // visible trail. Add 5 days margin for missing-bar slack.
+    // to fit RS(t) → SMA(L) over RS → diff(M) over rotation_ratio →
+    // SMA(L) over diff. That's 2L + M − 2 = 2·63 + 5 − 2 = 129 days of
+    // warm-up before the first valid rotation_momentum point, plus tail
+    // for the visible trail. Add 5 days margin for missing-bar slack.
     const minDays = 2 * NORM_WINDOW + MOMENTUM_LOOKBACK + tail + 5;
-    const rowLimit = minDays * 20; // 14 symbols + headroom
+    const rowLimit = minDays * 20; // 15 symbols + headroom
 
     // Fetch all symbols' recent rows in one paged query, ordered newest-
     // first so we can slice trailing windows without sorting in JS later.
@@ -115,7 +119,7 @@ export default async function handler(request) {
       limit: String(rowLimit),
     });
     if (symbolsFilter && symbolsFilter.length > 0) {
-      // PostgREST `in` filter syntax: symbol=in.(SPX,RUT,...)
+      // PostgREST `in` filter syntax: symbol=in.(SPY,XLK,...)
       params.set('symbol', `in.(${[...symbolsFilter, benchmark].join(',')})`);
     }
 
@@ -123,19 +127,19 @@ export default async function handler(request) {
     for (let offset = 0; offset < rowLimit; offset += PAGE_SIZE) {
       const end = Math.min(offset + PAGE_SIZE, rowLimit) - 1;
       const res = await fetchWithTimeout(
-        `${supabaseUrl}/rest/v1/index_daily_eod?${params}`,
+        `${supabaseUrl}/rest/v1/daily_eod?${params}`,
         { headers: { ...headers, Range: `${offset}-${end}`, 'Range-Unit': 'items' } },
-        'index_daily_eod',
+        'daily_eod',
       );
       if (!res.ok && res.status !== 206) {
-        throw new Error(`index_daily_eod query failed: ${res.status}`);
+        throw new Error(`daily_eod query failed: ${res.status}`);
       }
       const page = await res.json();
       if (!Array.isArray(page) || page.length === 0) break;
       rows.push(...page);
       if (page.length < end - offset + 1) break;
     }
-    if (rows.length === 0) return jsonError(404, 'No index_daily_eod rows available');
+    if (rows.length === 0) return jsonError(404, 'No daily_eod rows available');
 
     // Bucket rows by symbol → date-sorted ascending close array. The
     // computations downstream need ascending order so SMA / stdev /
@@ -150,7 +154,7 @@ export default async function handler(request) {
 
     const benchSeries = bySymbol[benchmark];
     if (!benchSeries || benchSeries.length === 0) {
-      return jsonError(404, `Benchmark symbol ${benchmark} not in index_daily_eod`);
+      return jsonError(404, `Benchmark symbol ${benchmark} not in daily_eod`);
     }
 
     // Build a Map from trading_date → benchmark close for fast lookup.
