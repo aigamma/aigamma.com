@@ -58,17 +58,30 @@ function formatDateLabel(iso) {
 function buildPanelTraces(rows) {
   if (!rows || rows.length === 0) return { traces: [], names: [] };
 
-  const names = rows.map((r) => r.name);
   const values = rows.map((r) => r.value);
   const magnitudes = values.map((v) => Math.abs(v));
   const colors = values.map((v) => (v >= 0 ? POSITIVE_INK : NEGATIVE_INK));
   const labels = values.map(formatPct);
 
+  // Each y-axis category label is wrapped in an inline <span> whose color
+  // matches its bar (green for positive returns, red for negative). Plotly
+  // renders tick text through the same SVG-text path that supports a
+  // subset of HTML — <b>, <i>, <span style="...">, etc. — so the colored
+  // markup carries through correctly. Each panel computes its own colored
+  // labels because the same sector can be green in one horizon and red
+  // in another (e.g. XLE leads on 1W and trails on 1M in the current
+  // regime), and Plotly treats each unique string as its own categorical
+  // value within the chart so cross-panel sharing is not a concern.
+  const coloredNames = rows.map((r) => {
+    const color = r.value >= 0 ? POSITIVE_INK : NEGATIVE_INK;
+    return `<span style="color:${color}">${r.name}</span>`;
+  });
+
   const trace = {
     type: 'bar',
     orientation: 'h',
     x: magnitudes,
-    y: names,
+    y: coloredNames,
     marker: {
       color: colors,
       line: { color: 'rgba(255,255,255,0.18)', width: 0.6 },
@@ -81,14 +94,18 @@ function buildPanelTraces(rows) {
       color: PLOTLY_COLORS.titleText,
       size: 12,
     },
+    // Hover references customdata[2] (the plain sector name) rather than
+    // %{y}, which would otherwise dump the colored-span HTML straight
+    // into the hover label. The hover stays uncolored for legibility on
+    // the dark hover-card background.
     hovertemplate:
-      '<b>%{customdata[0]}</b> · %{y}<br>' +
+      '<b>%{customdata[0]}</b> · %{customdata[2]}<br>' +
       '%{customdata[1]:+.2f}%<extra></extra>',
-    customdata: rows.map((r) => [r.symbol, r.value]),
+    customdata: rows.map((r) => [r.symbol, r.value, r.name]),
     showlegend: false,
   };
 
-  return { traces: [trace], names };
+  return { traces: [trace], names: rows.map((r) => r.name) };
 }
 
 function buildPanelLayout(rows, panelTitle) {
