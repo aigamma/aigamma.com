@@ -235,9 +235,6 @@ export default function SectorPerformanceBars() {
     <div className="card sector-bars-card">
       <div className="sector-bars__meta">
         <span className="sector-bars__title">Sector Performance</span>
-        <span className="sector-bars__meta-line">
-          {panels['1d'].length} GICS sectors · sorted by horizon
-        </span>
         <span className="sector-bars__asof">
           Through {formatDateLabel(payload.asOf)}
         </span>
