@@ -82,10 +82,10 @@ const STEP_OPTIONS = [
 // in the universe — the longer-tail experiment that briefly shipped
 // 5/10/20/40/60 and the follow-up 5/10/15 both surfaced the visual-
 // clutter problem and got cut down to this minimal pair. Default
-// stays at 10 so the chart preserves its previous behavior for any
-// reader who doesn't touch the toggle.
+// is 5 paired with the week step (see useState below) so a first-time
+// reader lands on the cleanest, least-cluttered view of the chart.
 const TAIL_OPTIONS = [5, 10];
-const DEFAULT_TAIL = 10;
+const DEFAULT_TAIL = 5;
 
 function RotationStepToggle({ step, onChange, disabled }) {
   return (
@@ -150,7 +150,11 @@ function RotationTailToggle({ tail, onChange, disabled }) {
 export default function RotationChart() {
   const chartRef = useRef(null);
   const { plotly: Plotly, error: plotlyError } = usePlotly();
-  const [step, setStep] = useState('day');
+  // Defaults: week step + 5-period tail. The weekly view shows the
+  // longer-horizon rotation pattern that's most actionable for the
+  // sector-rotation use case, and tail=5 gives the tightest visual
+  // cluster (less trail overlap with 14 components rendering at once).
+  const [step, setStep] = useState('week');
   const [tail, setTail] = useState(DEFAULT_TAIL);
   const [payload, setPayload] = useState(null);
   const [fetchError, setFetchError] = useState(null);
