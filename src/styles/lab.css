@@ -130,7 +130,7 @@
 }
 
 .lab-badge {
-  font-family: 'Courier New', monospace;
+  font-family: var(--font-model-title);
   font-size: 1.25rem;
   padding: 0 1rem;
   border: 1px solid var(--accent-amber);
@@ -822,6 +822,7 @@
 }
 
 .sector-bars__title {
+  font-family: var(--font-model-title);
   font-size: 1.6rem;
   color: var(--accent-blue);
   font-weight: 700;
