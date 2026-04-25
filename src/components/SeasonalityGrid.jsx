@@ -78,7 +78,7 @@ export default function SeasonalityGrid() {
     let cancelled = false;
     async function load() {
       try {
-        const res = await fetch('/api/seasonality?days=8');
+        const res = await fetch('/api/seasonality?days=20');
         if (!res.ok) throw new Error(`seasonality fetch failed: ${res.status}`);
         const json = await res.json();
         if (!cancelled) { setPayload(json); setLoading(false); }
