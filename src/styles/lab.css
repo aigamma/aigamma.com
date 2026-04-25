@@ -820,6 +820,52 @@
   outline-offset: 2px;
 }
 
+/* Reset View button. Matches the segmented-toggle chrome (border, font,
+   transition) but renders as a single rectangular button rather than
+   part of a multi-button group. Tucked in the meta band between the
+   tail toggle and the period-count meta line so a reader who pans /
+   zooms the chart can find the reset affordance immediately without
+   having to remember the double-click gesture. */
+.rotation-reset-btn {
+  appearance: none;
+  background: transparent;
+  color: var(--accent-blue);
+  border: 1px solid var(--accent-blue);
+  border-radius: 3px;
+  padding: 0.35rem 0.65rem;
+  font-family: 'Courier New', monospace;
+  font-size: 0.75rem;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  cursor: pointer;
+  transition: background-color 0.15s ease, color 0.15s ease;
+}
+
+.rotation-reset-btn:hover:not(:disabled) {
+  background: rgba(74, 158, 255, 0.15);
+}
+
+.rotation-reset-btn:disabled {
+  opacity: 0.55;
+  cursor: progress;
+}
+
+.rotation-reset-btn:focus-visible {
+  outline: 2px solid var(--accent-green);
+  outline-offset: 2px;
+}
+
+/* Cursor hint inside the rotation chart so a reader knows the chart
+   is interactive (drag-to-pan, wheel-to-zoom). Plotly applies its own
+   cursor: crosshair when dragmode is active, which works fine for
+   click-and-drag panning. We don't override it. */
+.rotation-chart .nsewdrag {
+  cursor: grab;
+}
+.rotation-chart .nsewdrag:active {
+  cursor: grabbing;
+}
+
 .rotation-chart {
   width: 100%;
   height: 640px;

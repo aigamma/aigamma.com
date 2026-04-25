@@ -391,13 +391,41 @@ export default function RotationChart() {
       annotations,
       margin: { t: 30, r: 30, b: 70, l: 70 },
       hovermode: 'closest',
+      // Override the platform-wide dragmode: false from PLOTLY_BASE_LAYOUT_2D
+      // because RRG components cluster tightly around the 100/100
+      // cross-hairs and a reader needs to zoom in to see individual
+      // labels and trail directions. Pan-on-drag plus wheel-zoom is the
+      // standard 2D-scatter interaction model and Plotly handles
+      // double-click-to-reset automatically. The other 2D charts on the
+      // platform stay brush-only because their x-axis is time and the
+      // brush idiom is more useful there; the rotation chart is the
+      // only place where both axes are values that benefit from
+      // free-form pan/zoom.
+      dragmode: 'pan',
     });
 
     Plotly.react(chartRef.current, traces, layout, {
       displayModeBar: false,
       responsive: true,
+      // scrollZoom enables mouse-wheel zoom and pinch-to-zoom on
+      // touch devices. doubleClick='reset' restores the axes to their
+      // computed default ranges (xRange / yRange above) — this is the
+      // same behavior as the user pressing the Reset button in the
+      // meta band, which we expose as a visible affordance because
+      // first-time readers won't necessarily know the double-click
+      // gesture is available.
+      scrollZoom: true,
+      doubleClick: 'reset',
     });
   }, [Plotly, payload, chartData]);
+
+  const handleResetView = () => {
+    if (!Plotly || !chartRef.current || !chartData) return;
+    Plotly.relayout(chartRef.current, {
+      'xaxis.range': chartData.xRange,
+      'yaxis.range': chartData.yRange,
+    });
+  };
 
   // The card chrome (meta band + step toggle) renders in every state so
   // the lookback control stays reachable even when the current step is
@@ -416,6 +444,17 @@ export default function RotationChart() {
         <span className="rotation-ticker">{benchmarkSymbol}</span>
         <RotationStepToggle step={step} onChange={setStep} disabled={loading} />
         <RotationTailToggle tail={tail} onChange={setTail} disabled={loading} />
+        {payload && !errorMessage && (
+          <button
+            type="button"
+            className="rotation-reset-btn"
+            onClick={handleResetView}
+            disabled={loading}
+            title="Reset zoom / pan back to default view"
+          >
+            Reset View
+          </button>
+        )}
         {payload && (
           <>
             <span className="rotation-meta-line">
