@@ -825,6 +825,31 @@
   height: 640px;
 }
 
+/* Force Courier New on every <text> element Plotly draws inside the
+   rotation card, including SVG text where Plotly applies font-family
+   inline via a style="..." attribute that beats class-level CSS unless
+   we use !important. Without this rule the chart's quadrant labels
+   ("Improving", "Leading", "Lagging", "Weakening"), the axis titles
+   ("Rotation Ratio", "Rotation Momentum"), and the numeric tick labels
+   render in whatever the browser's monospace fallback resolves to —
+   on some installs that's a clean Courier match, on others it falls
+   back to a sans-serif default that visually clashes with the Courier
+   New chrome around the chart (the SPY ticker, the segmented toggles,
+   the meta line, the "Through M/D/YYYY" stamp). The expanded fallback
+   chain (Courier New → Liberation Mono → Consolas → DejaVu Sans Mono
+   → monospace) covers the common monospace fonts on Windows / macOS
+   / Linux so a user without Courier New still gets a true monospace
+   render rather than the browser's sans default. */
+.rotation-chart text,
+.rotation-chart .gtitle,
+.rotation-chart .annotation-text,
+.rotation-chart .xtitle,
+.rotation-chart .ytitle,
+.rotation-chart .xtick text,
+.rotation-chart .ytick text {
+  font-family: 'Courier New', 'Liberation Mono', 'Consolas', 'DejaVu Sans Mono', monospace !important;
+}
+
 .rotation-status {
   padding: 4rem 1rem;
   text-align: center;

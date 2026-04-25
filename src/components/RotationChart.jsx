@@ -76,6 +76,19 @@ const STEP_OPTIONS = [
   { id: 'week', short: '1W', long: 'Week' },
 ];
 
+// Tail-length presets. Five well-spaced values that bracket the visual
+// range a reader would want: 5 for a tight "where did we just come
+// from" snapshot, 10 to match the StockCharts /RRG® default, 20 for
+// roughly a month of motion in day mode (or five months in week mode),
+// 40 for a full quarter in day mode (long enough that the canonical
+// clockwise spiral starts to be visible on slow-moving sectors), and
+// 60 for the maximum the API allows — useful when watching a sector
+// trace a complete rotation through all four quadrants. Default
+// stays at 10 so the chart preserves its previous behavior for any
+// reader who doesn't touch the new toggle.
+const TAIL_OPTIONS = [5, 10, 20, 40, 60];
+const DEFAULT_TAIL = 10;
+
 function RotationStepToggle({ step, onChange, disabled }) {
   return (
     <div
@@ -106,10 +119,41 @@ function RotationStepToggle({ step, onChange, disabled }) {
   );
 }
 
+function RotationTailToggle({ tail, onChange, disabled }) {
+  return (
+    <div
+      className="rotation-step-toggle"
+      role="group"
+      aria-label="Trail length"
+    >
+      {TAIL_OPTIONS.map((n) => {
+        const active = n === tail;
+        return (
+          <button
+            key={n}
+            type="button"
+            className={
+              'rotation-step-toggle__btn' +
+              (active ? ' rotation-step-toggle__btn--active' : '')
+            }
+            aria-pressed={active}
+            disabled={disabled}
+            title={`${n} periods of trail per component`}
+            onClick={() => onChange(n)}
+          >
+            {n}
+          </button>
+        );
+      })}
+    </div>
+  );
+}
+
 export default function RotationChart() {
   const chartRef = useRef(null);
   const { plotly: Plotly, error: plotlyError } = usePlotly();
   const [step, setStep] = useState('day');
+  const [tail, setTail] = useState(DEFAULT_TAIL);
   const [payload, setPayload] = useState(null);
   const [fetchError, setFetchError] = useState(null);
   const [loading, setLoading] = useState(true);
@@ -120,7 +164,7 @@ export default function RotationChart() {
     setFetchError(null);
     async function load() {
       try {
-        const res = await fetch(`/api/rotations?tail=10&step=${step}`);
+        const res = await fetch(`/api/rotations?tail=${tail}&step=${step}`);
         if (!res.ok) {
           // The 503 path for hour mode returns a JSON {error: '...'}
           // payload that's much more useful than a generic status code,
@@ -148,7 +192,7 @@ export default function RotationChart() {
     }
     load();
     return () => { cancelled = true; };
-  }, [step]);
+  }, [step, tail]);
 
   // Pre-compute axis ranges and trace data once payload is in hand.
   // The axis is symmetric around 100 with at least ±1.5 of half-extent
@@ -373,6 +417,7 @@ export default function RotationChart() {
       <div className="rotation-meta">
         <span className="rotation-ticker">{benchmarkSymbol}</span>
         <RotationStepToggle step={step} onChange={setStep} disabled={loading} />
+        <RotationTailToggle tail={tail} onChange={setTail} disabled={loading} />
         {payload && (
           <>
             <span className="rotation-meta-line">

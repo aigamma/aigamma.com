@@ -34,10 +34,10 @@ export default function App() {
           </a>
           <span
             className="lab-badge"
-            title="Relative Sector Rotation · ratio + momentum vs SPX"
+            title="Sector Rotations · ratio + momentum vs SPX"
           >
-            <span className="lab-badge__desktop-text">Relative Sector Rotation</span>
-            <span className="lab-badge__mobile-text">Rotation</span>
+            <span className="lab-badge__desktop-text">Sector Rotations</span>
+            <span className="lab-badge__mobile-text">Rotations</span>
           </span>
         </div>
         <a
@@ -74,21 +74,25 @@ export default function App() {
         </div>
         <div style={{ color: 'var(--text-secondary)', lineHeight: 1.65, fontSize: '0.95rem' }}>
           <p style={{ margin: '0 0 0.7rem' }}>
-            <strong style={{ color: 'var(--text-primary)' }}>Top — Relative Sector Rotation.</strong>{' '}
+            <strong style={{ color: 'var(--text-primary)' }}>Top — Sector Rotations.</strong>{' '}
             Each component lands on the plane at coordinates (rotation
             ratio, rotation momentum). The ratio is the component's
             relative-strength price ratio expressed as a percentage of
             its own slow exponential moving average; the momentum is the
             ratio expressed as a percentage of its own fast exponential
-            moving average. The 1H · 1D · 1W toggle in the card's meta
-            band chooses the lookback granularity: Day pairs a 63-day
-            ratio EMA with a 13-day momentum EMA (the canonical RRG
-            daily defaults), Week resamples to ISO-week-end closes and
-            uses a 13-week / 5-week EMA pair, and Hour requires
-            intraday ETF bars that are not yet ingested into Supabase.
-            Values above 100 on the x-axis mean the component is
-            leading SPY on price; above 100 on the y-axis means it's
-            gaining on that lead.
+            moving average. Two toggles in the card's meta band drive
+            the view: the 1H · 1D · 1W toggle chooses the lookback
+            granularity (Day pairs a 63-day ratio EMA with a 13-day
+            momentum EMA, Week resamples to ISO-week-end closes and uses
+            a 13-week / 5-week EMA pair, Hour requires intraday ETF
+            bars that are not yet ingested into Supabase) and the
+            5 · 10 · 20 · 40 · 60 toggle chooses the trail length —
+            longer trails surface the canonical clockwise rotation
+            spiral through Improving → Leading → Weakening → Lagging
+            that is barely visible at the StockCharts default of 10
+            steps. Values above 100 on the x-axis mean the component
+            is leading SPY on price; above 100 on the y-axis means
+            it's gaining on that lead.
           </p>
           <p style={{ margin: '0 0 0.7rem' }}>
             Quadrants describe a typical clockwise rotation:{' '}
@@ -129,7 +133,7 @@ export default function App() {
 
       <footer className="lab-footer">
         <span className="lab-footer-line">
-          AI Gamma · Relative Sector Rotation · daily tail vs SPX · v0.1.0
+          AI Gamma · Sector Rotations · daily tail vs SPX · v0.1.0
         </span>
         <a href="/" className="lab-footer-home">Return Home</a>
       </footer>
