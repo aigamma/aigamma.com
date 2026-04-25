@@ -160,6 +160,45 @@ export function createBackfillWriter({ url, serviceKey, fetchImpl = fetch }) {
     return out;
   }
 
+  // 30-minute SPX index bars for the /seasonality grid. Each request to
+  // ThetaData's /v3/index/history/ohlc?symbol=SPX&interval=30M returns
+  // 14 rows per session (09:30, 10:00, ..., 15:30, 16:00 close-tick),
+  // so a 60-day backfill upserts ~840 rows in one POST. Uses the same
+  // merge-duplicates Prefer header the other writers use, so re-running
+  // is idempotent on (trading_date, bucket_time).
+  async function upsertSpxIntradayBars(rows) {
+    const payload = rows.map((r) => ({
+      trading_date: r.trading_date,
+      bucket_time: r.bucket_time,
+      spx_open: r.spx_open,
+      spx_high: r.spx_high,
+      spx_low: r.spx_low,
+      spx_close: r.spx_close,
+      source: r.source ?? 'thetadata',
+    }));
+    return upsert('/rest/v1/spx_intraday_bars', payload);
+  }
+
+  async function getExistingSpxIntradayDates() {
+    const PAGE_SIZE = 1000;
+    const set = new Set();
+    for (let offset = 0; ; offset += PAGE_SIZE) {
+      const end = offset + PAGE_SIZE - 1;
+      const res = await fetchImpl(
+        `${url}/rest/v1/spx_intraday_bars?select=trading_date&order=trading_date.asc`,
+        { headers: { ...headers, Range: `${offset}-${end}`, 'Range-Unit': 'items' } },
+      );
+      if (!res.ok && res.status !== 206) {
+        throw new Error(`supabase list spx_intraday_bars HTTP ${res.status}`);
+      }
+      const page = await res.json();
+      if (!Array.isArray(page) || page.length === 0) break;
+      for (const r of page) set.add(r.trading_date);
+      if (page.length < PAGE_SIZE) break;
+    }
+    return set;
+  }
+
   async function upsertDailyGexStats(rows) {
     const payload = rows.map((r) => ({
       trading_date: r.trading_date,
@@ -204,9 +243,11 @@ export function createBackfillWriter({ url, serviceKey, fetchImpl = fetch }) {
     upsertDailyVolatilityOhlc,
     upsertDailyVolatilityDerived,
     upsertDailyGexStats,
+    upsertSpxIntradayBars,
     getDailyVolatilityOhlc,
     getExistingTermStructureDates,
     getExistingGexDates,
+    getExistingSpxIntradayDates,
     getHistoricalTermStructure,
   };
 }
