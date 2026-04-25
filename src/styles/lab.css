@@ -633,8 +633,13 @@
   border-top: 2px solid var(--bg-card-border);
 }
 
-.seasonality-cell {
+/* .seasonality-grid td base rule above sets font-weight: 400, and the
+   type-plus-class selector (0,1,1) outweighs a single class (0,1,0),
+   so pin the bold numeric weight on td.seasonality-cell (0,2,1) to
+   win the cascade against the reset. */
+.seasonality-grid td.seasonality-cell {
   font-variant-numeric: tabular-nums;
+  font-weight: 700;
   min-width: 62px;
   transition: background-color 150ms ease;
 }
