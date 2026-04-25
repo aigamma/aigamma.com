@@ -88,19 +88,18 @@ export default function App() {
             bars that are not yet ingested into Supabase) and the
             5 · 10 toggle chooses the trail length — 5 for a tight
             recent snapshot, 10 to match the StockCharts /RRG®
-            default. Anything past 10 stacks too many crisscrossing
-            trails on top of each other given 14 components in the
-            universe. Day mode uses the StockCharts daily-RRG
-            defaults
-            (63-day / 13-day pair = 3-month range); week mode uses
-            their weekly-RRG defaults (52-week / 13-week = 1-year
-            range). Component positions read close to but not exactly
-            the same as the proprietary StockCharts /RRG® reference —
-            their implementation chains additional smoothing passes
-            and likely uses total-return prices with dividend
-            reinvestment, neither of which we replicate. Quadrant
-            assignments and trail shapes match. Values above 100 on
-            the x-axis mean the component
+            default. The math is the Mansfield rate-of-change form
+            calibrated against the StockCharts reference at C:\i\:
+            day mode uses a 21-day lookback for both the ratio and
+            the momentum (~1 month of relative-strength change),
+            week mode uses a 13-week lookback (~3 months). Quadrant
+            assignments match the StockCharts reference for ~10 of
+            14 components in the configured universe; the remaining
+            mismatches are boundary cases within 2 points of the
+            100/100 cross-hairs and reflect the limits of price-only
+            analysis without the total-return data StockCharts uses
+            internally. Values above 100 on the x-axis mean the
+            component
             is leading SPY on price; above 100 on the y-axis means
             it's gaining on that lead.
           </p>

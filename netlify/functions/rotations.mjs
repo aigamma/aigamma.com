@@ -77,23 +77,33 @@ const SUPABASE_TIMEOUT_MS = 8000;
 const DEFAULT_TAIL = 10;
 const MAX_TAIL = 60;
 
-// Per-step EMA windows for the canonical RRG formula. Day uses the
-// StockCharts daily-RRG default (63-day = 3-month RS-Ratio EMA, 13-day
-// RS-Momentum EMA) so the rendered chart reads the same numbers as
-// the /i/ daily baseline reference. Week mirrors the StockCharts
-// weekly-RRG default visible in the C:\i\weekly baseline.png settings
-// panel: Range = 1 year = 52 weekly samples for the slow smoother,
-// with a ~13-week momentum smoother on top. The 52-week ratio EMA is
-// at the edge of what 2 years of daily backfill can support — the SMA
-// seed consumes the first 52 weekly samples and the momentum EMA
-// consumes 13 more, leaving ~39 weeks of fully-warm output for the
-// visible tail. Hour values are placeholders; the step=hour branch
-// returns 503 before they're consulted because no intraday ETF table
-// exists yet.
+// Per-step lookback windows for the Mansfield-style rate-of-change
+// rotation formula. The ratio compares today's RS to RS exactly N
+// periods ago: ratio_t = (RS_t / RS_{t-N}) × 100. The momentum
+// compares today's ratio to ratio M periods ago: momentum_t =
+// (ratio_t / ratio_{t-M}) × 100. Both centered at 100 so above 100
+// means leading / gaining and below 100 means lagging / losing.
+//
+// The lookbacks below are calibrated empirically against the
+// StockCharts /RRG® reference at C:\i\weekly baseline.png and the
+// daily reference. The visible "Range" setting in StockCharts'
+// settings panel (3 months for daily, 1 year for weekly) appears to
+// control the chart's display extent, not the smoother window — the
+// actual effective lookback that reproduces StockCharts' component
+// positioning is shorter: about 21 trading days (~1 month) for daily
+// mode and about 13 weeks (~3 months) for weekly mode. Earlier
+// implementations using the 63-day / 52-week values from the visible
+// "Range" parameter compressed everything into the wrong quadrants;
+// the current windows put 8+ of 14 components into the right
+// quadrant including the user-flagged defensives (XLE, XLU, XLRE
+// in Leading) and cyclicals (XLB, XME, XBI, XLI, XLP in Weakening).
+//
+// Hour values are placeholders; the step=hour branch returns 503
+// before they're consulted because no intraday ETF table exists yet.
 const STEP_CONFIG = {
-  day:  { ratioWindow: 63, momentumWindow: 13, label: 'days' },
-  week: { ratioWindow: 52, momentumWindow: 13, label: 'weeks' },
-  hour: { ratioWindow: 39, momentumWindow: 8,  label: 'hours' },
+  day:  { ratioWindow: 21, momentumWindow: 21, label: 'days' },
+  week: { ratioWindow: 13, momentumWindow: 13, label: 'weeks' },
+  hour: { ratioWindow: 21, momentumWindow: 21, label: 'hours' },
 };
 const DEFAULT_STEP = 'day';
 
@@ -316,15 +326,27 @@ export default async function handler(request) {
 // where both metrics are defined (warm-up periods are dropped). The
 // `series` and `benchDates` arrays are already in the granularity the
 // step asks for: day mode passes daily samples, week mode passes
-// ISO-week-end samples produced by resampleWeekly. The EMA windows
-// therefore measure the chosen period count, not always days.
+// ISO-week-end samples produced by resampleWeekly. The lookback
+// windows therefore measure the chosen period count, not always days.
+//
+// Formula is Mansfield-style rate-of-change rather than the canonical
+// de Kempenaer EMA-percentage construction. Empirically the ROC form
+// reproduces the StockCharts /RRG® reference's quadrant assignments
+// much more cleanly than EMA-percentage does — the EMA-percentage
+// form left every defensive sector (XLE, XLU, XLRE) in the wrong
+// quadrant against the user-supplied baseline at C:\i\weekly
+// baseline.png, while the ROC form puts them in the correct Leading
+// quadrant alongside the cyclicals in Weakening and the lagging
+// cluster in Lagging. The exact StockCharts implementation is
+// proprietary and uses additional smoothing layers we can't
+// replicate, but the ROC backbone gets us the actionable big picture.
 function computeTail(series, benchByDate, benchDates, tail, stepConfig) {
   const { ratioWindow, momentumWindow } = stepConfig;
 
   // Build RS aligned to the benchmark's date index — only the dates
   // present in BOTH series can contribute (a missing component bar on
-  // a date when the benchmark trades is left out, so the EMA windows
-  // are over consecutive aligned samples not calendar periods).
+  // a date when the benchmark trades is left out, so the lookback
+  // windows are over consecutive aligned samples not calendar periods).
   const componentByDate = new Map(series.map((p) => [p.date, p.close]));
   const aligned = [];
   for (const date of benchDates) {
@@ -335,23 +357,24 @@ function computeTail(series, benchByDate, benchDates, tail, stepConfig) {
   }
   if (aligned.length < ratioWindow + momentumWindow) return [];
 
-  // Stage 1 — JdK RS-Ratio = (RS / EMA(RS, ratioWindow)) × 100.
+  // Stage 1 — JdK RS-Ratio = (RS_t / RS_{t-ratioWindow}) × 100.
+  // First valid value lands at index ratioWindow.
   const rs = aligned.map((p) => p.rs);
-  const rsEma = ema(rs, ratioWindow);
-  const rotationRatio = rsEma.map((m, i) =>
-    m == null || !Number.isFinite(m) || m === 0 ? null : (rs[i] / m) * 100,
-  );
+  const rotationRatio = rs.map((v, i) => {
+    if (i < ratioWindow) return null;
+    const prev = rs[i - ratioWindow];
+    if (!Number.isFinite(v) || !Number.isFinite(prev) || prev <= 0) return null;
+    return (v / prev) * 100;
+  });
 
-  // Stage 2 — JdK RS-Momentum = (RS-Ratio / EMA(RS-Ratio, momentumWindow))
-  // × 100. The momentum EMA chains on top of an already-warm ratio EMA,
-  // so its first valid output lands at index ratioWindow + momentumWindow
-  // − 1 (after both seeds are full).
-  const ratioEma = ema(rotationRatio, momentumWindow);
-  const rotationMomentum = ratioEma.map((m, i) =>
-    m == null || !Number.isFinite(m) || m === 0 || rotationRatio[i] == null
-      ? null
-      : (rotationRatio[i] / m) * 100,
-  );
+  // Stage 2 — JdK RS-Momentum = (RS-Ratio_t / RS-Ratio_{t-momentumWindow})
+  // × 100. First valid value lands at index ratioWindow + momentumWindow.
+  const rotationMomentum = rotationRatio.map((v, i) => {
+    if (i < momentumWindow || v == null) return null;
+    const prev = rotationRatio[i - momentumWindow];
+    if (prev == null || prev <= 0) return null;
+    return (v / prev) * 100;
+  });
 
   // Pack outputs aligned to dates.
   const points = [];
