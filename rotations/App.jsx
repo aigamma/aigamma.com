@@ -78,30 +78,27 @@ export default function App() {
             Each component lands on the plane at coordinates (rotation
             ratio, rotation momentum). The ratio is the component's
             relative-strength price ratio expressed as a percentage of
-            its own slow exponential moving average; the momentum is the
-            ratio expressed as a percentage of its own fast exponential
-            moving average. Two toggles in the card's meta band drive
-            the view: the 1H · 1D · 1W toggle chooses the lookback
-            granularity (Day pairs a 63-day ratio EMA with a 13-day
-            momentum EMA, Week resamples to ISO-week-end closes and uses
-            a 13-week / 5-week EMA pair, Hour requires intraday ETF
-            bars that are not yet ingested into Supabase) and the
-            5 · 10 toggle chooses the trail length — 5 for a tight
-            recent snapshot, 10 to match the StockCharts /RRG®
-            default. The math is the Mansfield rate-of-change form
-            calibrated against the StockCharts reference at C:\i\:
-            day mode uses a 21-day lookback for both the ratio and
-            the momentum (~1 month of relative-strength change),
-            week mode uses a 13-week lookback (~3 months). Quadrant
-            assignments match the StockCharts reference for ~10 of
-            14 components in the configured universe; the remaining
-            mismatches are boundary cases within 2 points of the
-            100/100 cross-hairs and reflect the limits of price-only
-            analysis without the total-return data StockCharts uses
-            internally. Values above 100 on the x-axis mean the
-            component
-            is leading SPY on price; above 100 on the y-axis means
-            it's gaining on that lead.
+            its own slow exponential moving average — Roy Mansfield's
+            1979 "Mansfield Relative Performance" normalization, with
+            an EMA in place of his original 52-week SMA so old samples
+            decay smoothly rather than dropping off a fixed window
+            edge. The momentum is the same percentage-of-moving-average
+            operation applied to the ratio with a faster smoother;
+            because the fast EMA responds to recent changes in ratio
+            ahead of the slow EMA, momentum naturally leads ratio in
+            time and traces the clockwise spiral pattern that
+            characterises a rotation chart. Two toggles in the card's
+            meta band drive the view: the 1H · 1D · 1W toggle chooses
+            the lookback granularity (Day pairs a 63-day slow EMA with
+            a 13-day fast EMA, Week resamples to ISO-week-end closes
+            and uses a 26-week slow EMA with a 5-week fast EMA, Hour
+            requires intraday ETF bars that are not yet ingested into
+            Supabase) and the 5 · 10 toggle chooses the trail length —
+            5 for a tight recent snapshot, 10 for a longer window of
+            historical motion. Values above 100 on the x-axis mean the
+            component is leading SPY on price relative to its slow
+            average; above 100 on the y-axis means it's gaining on
+            that lead relative to its fast average.
           </p>
           <p style={{ margin: '0 0 0.7rem' }}>
             Quadrants describe a typical clockwise rotation:{' '}
