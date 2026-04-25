@@ -4,8 +4,9 @@
 // Pulls ThetaData /v3/index/history/eod for every symbol in DEFAULT_SYMBOLS
 // (the ThetaData Index Standard universe with current 2026-Apr coverage)
 // and upserts rows into public.index_daily_eod, one row per (symbol,
-// trading_date). The /rotations Relative Rotation Graph reads from this
-// table to compute JdK RS-Ratio and RS-Momentum vs SPX.
+// trading_date). The /rotations Relative Sector Rotation page reads from
+// this table to compute the rotation ratio and rotation momentum of every
+// component vs the SPX benchmark.
 //
 // The symbol list was filtered down from ThetaData's /v3/index/list/symbols
 // (13,201 entries) by probing each candidate against the EOD endpoint for
@@ -19,8 +20,8 @@
 //     CLL, CMBO, CNDR — these are derivative-overlay strategies (covered
 //     calls at multiple deltas, put-write at multiple strikes, collars,
 //     iron condors) that read as "S&P 500 with strategy X applied", and
-//     their RRG positions answer "which derivative strategy is leading
-//     the underlying index right now?"
+//     their position on the rotation chart answers "which derivative
+//     strategy is leading the underlying index right now?"
 //
 // Usage:
 //   SUPABASE_URL=... SUPABASE_SERVICE_KEY=... \
