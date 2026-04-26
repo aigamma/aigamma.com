@@ -53,10 +53,21 @@ export default function App() {
           </a>
           <span
             className="lab-badge"
-            title="Earnings Calendar · upcoming releases by implied move and date, scraped from EarningsWhispers"
+            title="Earnings · upcoming releases by implied move and date, scraped from EarningsWhispers"
           >
-            <span className="lab-badge__desktop-text">Earnings Calendar</span>
+            <span className="lab-badge__desktop-text">Earnings</span>
             <span className="lab-badge__mobile-text">Earnings</span>
+          </span>
+          <span
+            className="lab-badge lab-badge--coral"
+            title="This page is a v0 — implied moves are currently not rendering on weekends/off-hours because Massive's snapshot endpoint returns a null underlying_asset.price outside live sessions. A grouped-bars spot fallback (already proven in scan.mjs) is the planned fix."
+            style={{
+              borderColor: 'var(--accent-coral)',
+              color: 'var(--accent-coral)',
+            }}
+          >
+            <span className="lab-badge__desktop-text">Under Construction</span>
+            <span className="lab-badge__mobile-text">WIP</span>
           </span>
         </div>
         <TopNav />
