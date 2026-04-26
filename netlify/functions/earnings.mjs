@@ -432,7 +432,7 @@ async function pmap(items, concurrency, mapper) {
 //     the chart, while excluding it costs at most one DTE of vol.
 //
 // Same auth pattern as scan.mjs.
-async function fetchTickerSnapshot(ticker, earningsIso, releaseTime) {
+async function fetchTickerSnapshot(ticker, earningsIso, releaseTime, spot) {
   if (!MASSIVE_API_KEY) return { ok: false, reason: 'no-key' };
   const minExpIso = releaseTime === 1 ? earningsIso : addDaysIso(earningsIso, 1);
   // 30-day upper bound captures both (a) liquid names with weekly /
@@ -451,6 +451,30 @@ async function fetchTickerSnapshot(ticker, earningsIso, releaseTime) {
     'expiration_date.lte': addDaysIso(earningsIso, 30),
     limit: '250',
   });
+  // Strike-range filter scoped to ±15% of spot. Without this, high-
+  // priced names like META ($675) and KLAC ($1935) with daily / many
+  // expirations in the 30-day window blow past the limit=250 ceiling
+  // BEFORE the response reaches the ATM band, because Massive's
+  // default sort is expiration_date.asc, strike_price.asc — so the
+  // first 250 contracts only cover the lowest-strike OTM puts on the
+  // earliest expirations and the entire ATM grid gets truncated. The
+  // observed symptom was strikes selected 25-30% below spot (META
+  // strike=$495 vs spot=$675; KLAC strike=$1400 vs spot=$1935),
+  // producing implausibly-wide implied ranges (META 24.04%, KLAC
+  // 20.75%) because callMid + putMid at a deeply-ITM strike includes
+  // ~$180 of intrinsic value that has nothing to do with the
+  // earnings-night gap. ±15% is wide enough to absorb any plausible
+  // ATM band including high-IV biotechs (whose largest single-day
+  // straddles cap around 30% in extreme cases) while narrow enough
+  // that the strike-grid count per expiration stays well under the
+  // 250 ceiling. When spot is unknown (the ticker missed the grouped-
+  // bars spot map — should be rare since the map covers ~12k US
+  // tickers), we omit the strike filter and accept the pagination
+  // risk; better than dropping the ticker outright.
+  if (Number.isFinite(spot) && spot > 0) {
+    params.set('strike_price.gte', String(spot * 0.85));
+    params.set('strike_price.lte', String(spot * 1.15));
+  }
   let res;
   try {
     res = await fetch(`${MASSIVE_BASE}/v3/snapshot/options/${ticker}?${params}`, {
@@ -674,16 +698,18 @@ export default async function handler(_request) {
     const spotMap = groupedSession.ok ? groupedSession.prices : new Map();
 
     const jobResults = await pmap(chartTickerJobs, FETCH_CONCURRENCY, async (job) => {
+      const knownSpot = spotMap.get(job.ticker.ticker);
       const snap = await fetchTickerSnapshot(
         job.ticker.ticker,
         job.day.isoDate,
         job.ticker.releaseTime,
+        knownSpot,
       );
       if (!snap.ok) return { job, ok: false, reason: snap.reason };
       const derived = deriveImpliedMove(
         snap.contracts,
         todayIso,
-        spotMap.get(job.ticker.ticker),
+        knownSpot,
       );
       if (derived?.reason) return { job, ok: false, reason: derived.reason };
       return { job, ok: true, ...derived };
