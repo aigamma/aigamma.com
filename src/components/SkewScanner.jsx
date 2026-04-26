@@ -299,35 +299,49 @@ export default function SkewScanner() {
 function ScannerToolbar({ tab, onTabChange }) {
   return (
     <div
-      role="tablist"
-      aria-label="Skew side"
       style={{
         display: 'flex',
-        gap: '0.6rem',
         justifyContent: 'center',
-        fontFamily: 'Courier New, monospace',
       }}
     >
-      <TabButton
-        active={tab === 'put'}
-        onClick={() => onTabChange('put')}
-        tone="coral"
+      <div
+        role="tablist"
+        aria-label="Skew side"
+        style={{
+          display: 'inline-flex',
+          alignItems: 'stretch',
+          border: '2px solid #e8edf6',
+          borderRadius: '4px',
+          overflow: 'hidden',
+          fontFamily: 'Courier New, monospace',
+        }}
       >
-        Put skew
-      </TabButton>
-      <TabButton
-        active={tab === 'call'}
-        onClick={() => onTabChange('call')}
-        tone="green"
-      >
-        Call skew
-      </TabButton>
+        <TabButton
+          active={tab === 'put'}
+          onClick={() => onTabChange('put')}
+          tone="coral"
+        >
+          Put skew
+        </TabButton>
+        <div
+          aria-hidden="true"
+          style={{ width: 1, background: 'rgba(232, 237, 246, 0.4)' }}
+        />
+        <TabButton
+          active={tab === 'call'}
+          onClick={() => onTabChange('call')}
+          tone="green"
+        >
+          Call skew
+        </TabButton>
+      </div>
     </div>
   );
 }
 
 function TabButton({ active, onClick, children, tone }) {
   const color = tone === 'green' ? '#04A29F' : 'var(--accent-coral)';
+  const tintBg = tone === 'green' ? 'rgba(4, 162, 159, 0.18)' : 'rgba(216, 90, 48, 0.18)';
   return (
     <button
       type="button"
@@ -338,10 +352,9 @@ function TabButton({ active, onClick, children, tone }) {
         fontSize: '1.1rem',
         fontWeight: 700,
         letterSpacing: '0.05em',
-        background: 'transparent',
+        background: active ? tintBg : 'transparent',
         color: color,
-        border: `2px solid ${color}`,
-        borderRadius: '4px',
+        border: 'none',
         cursor: 'pointer',
         opacity: active ? 1 : 0.55,
       }}
