@@ -110,13 +110,13 @@ export default function App() {
           </a>
           <span
             className="lab-badge"
-            title="Tactical Vol Lab · VRP, term structure, smile, RND, fixed-strike IV"
+            title="Tactical Vol · VRP, term structure, smile, RND, fixed-strike IV"
           >
-            <span className="lab-badge__desktop-text">Tactical Vol Lab</span>
-            <span className="lab-badge__mobile-text">Tactical</span>
+            <span className="lab-badge__desktop-text">Tactical Vol</span>
+            <span className="lab-badge__mobile-text">Tactical Vol</span>
           </span>
         </div>
-        <TopNav />
+        <TopNav current="tactical" />
         <a
           href="/"
           className="lab-home-button lab-home-button--inline lab-home-button--split"

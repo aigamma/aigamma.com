@@ -41,7 +41,7 @@ export default function App() {
             <span className="lab-badge__mobile-text">Seasonality</span>
           </span>
         </div>
-        <TopNav />
+        <TopNav current="seasonality" />
         <a
           href="/"
           className="lab-home-button lab-home-button--inline lab-home-button--split"

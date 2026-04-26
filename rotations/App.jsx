@@ -41,7 +41,7 @@ export default function App() {
             <span className="lab-badge__mobile-text">Rotations</span>
           </span>
         </div>
-        <TopNav />
+        <TopNav current="rotations" />
         <a
           href="/"
           className="lab-home-button lab-home-button--inline lab-home-button--split"

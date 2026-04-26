@@ -12,16 +12,23 @@
 // .lab-badge and .lab-home-button--split) so three buttons + a
 // Return Home + a Menu trigger still fit on one row at phone
 // widths without requiring the lab-header's flex-wrap fallback.
+//
+// The `current` prop suppresses the button matching the page the
+// user is already on — the lab-badge in the upper-left already
+// names the page, so a duplicate accent-blue button in the same
+// header row is redundant. Pages that aren't one of the three
+// promoted destinations (e.g. /rough/, /risk/, /jump/) omit the
+// prop and see all three buttons.
 const TOP_NAV_ITEMS = [
-  { href: '/tactical/',    label: 'Tactical Vol', short: 'Vol'  },
-  { href: '/seasonality/', label: 'Seasonality',  short: 'Seas' },
-  { href: '/rotations/',   label: 'Rotations',    short: 'Rot'  },
+  { key: 'tactical',    href: '/tactical/',    label: 'Tactical Vol', short: 'Vol'  },
+  { key: 'seasonality', href: '/seasonality/', label: 'Seasonality',  short: 'Seas' },
+  { key: 'rotations',   href: '/rotations/',   label: 'Rotations',    short: 'Rot'  },
 ];
 
-export default function TopNav() {
+export default function TopNav({ current } = {}) {
   return (
     <nav className="top-nav" aria-label="Featured labs">
-      {TOP_NAV_ITEMS.map((item) => (
+      {TOP_NAV_ITEMS.filter((item) => item.key !== current).map((item) => (
         <a key={item.href} href={item.href} className="top-nav__item">
           <span className="top-nav__desktop-text">{item.label}</span>
           <span className="top-nav__mobile-text">{item.short}</span>
