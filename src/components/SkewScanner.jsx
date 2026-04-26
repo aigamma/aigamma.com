@@ -469,6 +469,23 @@ function Quadrant({
           // amber accent treatment as the only privileged visual.
           const r = isHovered ? 7 : 3.5;
           const dotColor = isHovered ? '#f0a030' : '#9ab2d8';
+          const fontSize = isHovered ? 16 : isTopTen ? 14 : 13;
+          // Right-edge overflow guard. Default placement is to the
+          // RIGHT of the dot (cx + r + 4, text-anchor=start). For dots
+          // near the right edge of the canvas the rightward label
+          // would extend past PLOT_SIZE and either clip at the SVG
+          // boundary or paint into adjacent page chrome. Estimate the
+          // rendered text width using Courier New's monospace ratio
+          // (~0.6 em per glyph) and flip the label to the LEFT side
+          // of the dot (text-anchor=end) when the rightward placement
+          // would overflow. The flip happens silently — no visual
+          // marker — because all symbols are 3-5 chars and the
+          // leftward fallback always fits within the canvas.
+          const charWidthPx = fontSize * 0.6;
+          const labelWidthPx = t.symbol.length * charWidthPx;
+          const overflowsRight = (cx + r + 4 + labelWidthPx) > PLOT_SIZE;
+          const labelX = overflowsRight ? (cx - r - 4) : (cx + r + 4);
+          const labelAnchor = overflowsRight ? 'end' : 'start';
           return (
             <g key={t.symbol} style={{ pointerEvents: 'auto' }}>
               <circle
@@ -483,11 +500,12 @@ function Quadrant({
                 onMouseLeave={() => onHover(null)}
               />
               <text
-                x={cx + r + 4}
+                x={labelX}
                 y={cy + 5}
+                textAnchor={labelAnchor}
                 fill={isHovered ? '#f3f4f6' : isTopTen ? '#e1e8f4' : '#9aa6c2'}
                 fontFamily="Courier New, monospace"
-                fontSize={isHovered ? 16 : isTopTen ? 14 : 13}
+                fontSize={fontSize}
                 fontWeight={isHovered || isTopTen ? 700 : 400}
                 style={{ pointerEvents: 'none', userSelect: 'none' }}
               >
