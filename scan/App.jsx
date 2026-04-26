@@ -46,9 +46,9 @@ export default function App() {
           </a>
           <span
             className="lab-badge"
-            title="SPX Skew Scanner · 25-delta call/put skew vs ATM IV across the top options-active single names"
+            title="Skew Scanner · 25-delta call/put skew vs ATM IV across the top options-active single names"
           >
-            <span className="lab-badge__desktop-text">SPX Skew Scanner</span>
+            <span className="lab-badge__desktop-text">Skew Scanner</span>
             <span className="lab-badge__mobile-text">Skew</span>
           </span>
         </div>
@@ -120,7 +120,7 @@ export default function App() {
 
       <footer className="lab-footer">
         <span className="lab-footer-line">
-          AI Gamma · SPX Skew Scanner · top by options volume, 25Δ wings vs ATM · v0.1.0
+          AI Gamma · Skew Scanner · top by options volume, 25Δ wings vs ATM · v0.3.0
         </span>
         <a href="/" className="lab-footer-home">Return Home</a>
       </footer>

@@ -217,42 +217,46 @@ async function fetchMassiveGroupedDay(dateIso) {
 }
 
 // Walk back from today's ET calendar date through the grouped daily
-// bars endpoint to find the most recent trading session with data.
-// On a Saturday or Sunday this returns Friday's bars; on a Monday
-// holiday it returns the preceding Friday; on a normal weekday during
-// market hours it returns the in-progress current-day bar (which is
-// what we want — IV from the snapshot endpoint is also intraday-
-// fresh, so the two data sources stay temporally aligned).
+// bars endpoint to find the TWO most recent trading sessions with
+// data. On a Saturday or Sunday this returns Friday + Thursday; on a
+// Monday holiday it returns the preceding Friday + Thursday; on a
+// normal weekday during market hours it returns the in-progress
+// current-day bar + the previous session's close. The two sessions
+// support both the session-anchored spot (most-recent close, used to
+// pick the ATM strike) and the per-ticker pctChange (vs the prior
+// session's close).
 //
 // The 8-day search ceiling covers any plausible weekend + multi-day
 // holiday gap (the longest US market closure in modern history was
 // the 4-session post-9/11 close, which fits in 6 days; 8 leaves
-// slack). Returns { ok, date, prices, barTime } on success.
+// slack). Returns { ok, last, prev } where each session is
+// { date, prices, barTime }.
 //
-// This mirrors heatmap.mjs's fetchMassiveRecentTwoSessions but only
-// needs the single most-recent session — skew computation doesn't
-// require a prior-close comparison the way the heatmap's percent-
-// change tile coloring does.
-async function fetchMostRecentSessionGrouped() {
+// Mirrors heatmap.mjs's fetchMassiveRecentTwoSessions exactly — same
+// endpoint, same walk-back logic, same auth-class error short-circuit.
+async function fetchMostRecentTwoSessionsGrouped() {
   if (!MASSIVE_API_KEY) return { ok: false, reason: 'no-key' };
   const today = etTodayIso();
+  const sessions = [];
   let lastReason = 'no-data-found';
   for (let i = 0; i < 8; i++) {
+    if (sessions.length >= 2) break;
     const d = subtractDaysIso(today, i);
     const result = await fetchMassiveGroupedDay(d);
     if (!result.ok) {
       lastReason = result.reason;
-      // Auth-class errors are permanent at the request level — bail
-      // out rather than fruitlessly walking further back.
       if (result.status && result.status >= 400 && result.status < 500) {
         return { ok: false, reason: result.reason, status: result.status };
       }
       continue;
     }
     if (result.empty) continue;
-    return { ok: true, date: d, prices: result.prices, barTime: result.barTime };
+    sessions.push({ date: d, prices: result.prices, barTime: result.barTime });
   }
-  return { ok: false, reason: `no-session-in-8d:${lastReason}` };
+  if (sessions.length < 2) {
+    return { ok: false, reason: `insufficient-sessions:${lastReason}` };
+  }
+  return { ok: true, last: sessions[0], prev: sessions[1] };
 }
 
 // Per-ticker snapshot fetch. Returns the parsed contract list or an
@@ -499,24 +503,30 @@ export default async function handler(request) {
   // Establish the session anchor. On weekdays during/after market
   // hours this is today's date; on weekends and Monday holidays it
   // walks back to Friday's session (or whichever was the most recent
-  // trading day). The session date is the single source of truth for
-  // both the expiration window and the per-ticker spot used by the
-  // skew computation.
-  const session = MASSIVE_API_KEY ? await fetchMostRecentSessionGrouped() : null;
-  const sessionDate = session?.ok ? session.date : todayIso;
-  const sessionSpots = session?.ok ? session.prices : new Map();
+  // trading day). The two-session walk-back also returns the prior
+  // session's closes so each ticker's pctChange can be computed
+  // server-side without an extra per-ticker round trip.
+  const sessions = MASSIVE_API_KEY ? await fetchMostRecentTwoSessionsGrouped() : null;
+  const sessionDate = sessions?.ok ? sessions.last.date : todayIso;
+  const prevSessionDate = sessions?.ok ? sessions.prev.date : null;
+  const sessionSpots = sessions?.ok ? sessions.last.prices : new Map();
+  const prevSpots = sessions?.ok ? sessions.prev.prices : new Map();
 
   // Try the live Massive path. Per-ticker errors are tolerated — a
   // single failed snapshot demotes that ticker to a null skew row, not
   // the whole response.
-  const liveAttempt = (MASSIVE_API_KEY && session?.ok)
+  const liveAttempt = (MASSIVE_API_KEY && sessions?.ok)
     ? await pmap(universe, FETCH_CONCURRENCY, async (h) => {
         const snap = await fetchTickerSnapshot(h.symbol, sessionDate);
         if (!snap.ok) return { holding: h, ok: false, reason: snap.reason };
         const sessionSpot = sessionSpots.get(h.symbol)?.close ?? null;
+        const prevClose = prevSpots.get(h.symbol)?.close ?? null;
+        const pctChange = (Number.isFinite(sessionSpot) && Number.isFinite(prevClose) && prevClose > 0)
+          ? ((sessionSpot - prevClose) / prevClose) * 100
+          : null;
         const derived = deriveSkew(snap.contracts, sessionDate, sessionSpot);
         if (!derived) return { holding: h, ok: false, reason: 'thin-chain' };
-        return { holding: h, ok: true, ...derived };
+        return { holding: h, ok: true, prevClose, pctChange, ...derived };
       })
     : null;
 
@@ -528,7 +538,7 @@ export default async function handler(request) {
     mode = 'seed';
     degradeReason = !MASSIVE_API_KEY
       ? 'no-massive-key'
-      : `session-lookup-failed:${session?.reason || 'unknown'}`;
+      : `session-lookup-failed:${sessions?.reason || 'unknown'}`;
     rows = universe.map((h) => ({ ...seedSkew(h.symbol), holding: h, ok: true, seeded: true }));
   } else {
     const liveOkCount = liveAttempt.filter((r) => r.ok).length;
@@ -567,6 +577,8 @@ export default async function handler(request) {
       sector: r.holding.sector,
       optionsVolume: r.holding.optionsVolume,
       spot: r.spot,
+      prevClose: r.prevClose ?? null,
+      pctChange: r.pctChange ?? null,
       expiration: r.expiration,
       dte: r.dte,
       atmIv: r.atmIv,
@@ -586,8 +598,9 @@ export default async function handler(request) {
     degradeReason,           // populated only when mode === 'seed'
     asOf: todayIso,          // calendar date the request fired on
     sessionDate,             // most-recent trading day the data anchors to
-    sourceUpdated: session?.ok && session.barTime
-      ? new Date(session.barTime).toISOString()
+    prevSessionDate,         // prior trading day used for pctChange baseline
+    sourceUpdated: sessions?.ok && sessions.last.barTime
+      ? new Date(sessions.last.barTime).toISOString()
       : null,
     universeSize: universe.length,
     pricedCount: tickers.filter((t) => t.atmIv != null).length,

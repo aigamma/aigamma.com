@@ -257,11 +257,7 @@ export default function SkewScanner() {
         </div>
       )}
 
-      {data && (
-        <ScannerLegend data={data} spec={spec} hovered={
-          hoveredSymbol ? plotted.find((t) => t.symbol === hoveredSymbol) : null
-        } />
-      )}
+      {data && <ScannerLegend />}
     </div>
   );
 }
@@ -501,28 +497,169 @@ function Quadrant({
           );
         })}
       </svg>
+
+      {/* Floating tooltip near the hovered dot. Rendered as a sibling
+          div positioned absolutely within the Quadrant container so
+          it doesn't depend on cursor coordinates — the anchor is the
+          dot itself, not the mouse. Position-flips horizontally if
+          the dot is in the right half (so the tooltip opens leftward
+          instead of clipping the canvas) and vertically if the dot is
+          near the top (so the tooltip opens downward). */}
+      {(() => {
+        if (!hoveredSymbol) return null;
+        const t = plotted.find((p) => p.symbol === hoveredSymbol);
+        if (!t) return null;
+        const yp = ivRank(t.symbol);
+        const xp = skewRank(t.symbol);
+        if (yp == null || xp == null) return null;
+        const cx = (1 - xp) * PLOT_SIZE;
+        const cy = (1 - yp) * PLOT_SIZE;
+        const openLeft = cx > PLOT_SIZE * 0.55;
+        const openDown = cy < PLOT_SIZE * 0.30;
+        const offset = 14;
+        const style = {
+          position: 'absolute',
+          zIndex: 5,
+          pointerEvents: 'none',
+          background: 'rgba(8, 11, 16, 0.96)',
+          border: '1px solid rgba(160, 172, 200, 0.35)',
+          borderRadius: '4px',
+          padding: '0.55rem 0.75rem',
+          fontFamily: 'Courier New, monospace',
+          fontSize: '0.78rem',
+          color: '#e1e8f4',
+          minWidth: 200,
+          maxWidth: 260,
+          lineHeight: 1.45,
+          boxShadow: '0 2px 12px rgba(0, 0, 0, 0.6)',
+        };
+        if (openLeft) {
+          style.right = (PLOT_SIZE - cx + offset) + PADDING;
+        } else {
+          style.left = cx + offset + PADDING;
+        }
+        if (openDown) {
+          style.top = cy + offset + PADDING;
+        } else {
+          style.bottom = (PLOT_SIZE - cy + offset) + PADDING;
+        }
+        return <Tooltip ticker={t} style={style} />;
+      })()}
     </div>
   );
 }
 
+function Tooltip({ ticker: t, style }) {
+  return (
+    <div style={style}>
+      <div style={{
+        display: 'flex',
+        alignItems: 'baseline',
+        justifyContent: 'space-between',
+        gap: '0.5rem',
+        marginBottom: '0.35rem',
+      }}>
+        <strong style={{ fontSize: '0.95rem', color: '#f0a030' }}>{t.symbol}</strong>
+        <span style={{
+          color: pctChangeColor(t.pctChange),
+          fontWeight: 700,
+        }}>
+          {formatSignedPct(t.pctChange)}
+        </span>
+      </div>
+      <div style={{
+        color: 'var(--text-secondary)',
+        fontSize: '0.74rem',
+        marginBottom: '0.45rem',
+        whiteSpace: 'nowrap',
+        overflow: 'hidden',
+        textOverflow: 'ellipsis',
+      }}>
+        {t.name}
+      </div>
+      <TooltipRow label="Spot" value={t.spot != null ? `$${t.spot.toFixed(2)}` : '—'} />
+      <TooltipRow label="Prev close" value={t.prevClose != null ? `$${t.prevClose.toFixed(2)}` : '—'} />
+      <TooltipRow label="ATM IV" value={formatPct(t.atmIv)} />
+      <TooltipRow
+        label="IV Rank"
+        value="—"
+        subtle
+        note="pending backfill"
+      />
+      <TooltipRow label="25Δ call" value={`${formatPct(t.call25dIv)} (${formatVolPoints(t.callSkew)})`} />
+      <TooltipRow label="25Δ put"  value={`${formatPct(t.put25dIv)} (${formatVolPoints(t.putSkew)})`} />
+      <TooltipRow label="Tenor" value={`${t.dte}D · ${t.expiration}`} subtle />
+    </div>
+  );
+}
+
+function TooltipRow({ label, value, subtle, note }) {
+  return (
+    <div style={{
+      display: 'flex',
+      justifyContent: 'space-between',
+      alignItems: 'baseline',
+      gap: '0.6rem',
+      color: subtle ? 'var(--text-secondary)' : '#e1e8f4',
+    }}>
+      <span style={{ color: 'var(--text-secondary)' }}>{label}</span>
+      <span style={{ textAlign: 'right' }}>
+        {value}
+        {note && (
+          <span style={{
+            color: '#7e8aa0',
+            fontSize: '0.7rem',
+            marginLeft: '0.4rem',
+            fontStyle: 'italic',
+          }}>
+            {note}
+          </span>
+        )}
+      </span>
+    </div>
+  );
+}
+
+function formatSignedPct(p) {
+  if (p == null || !Number.isFinite(p)) return '—';
+  const sign = p > 0 ? '+' : '';
+  return `${sign}${p.toFixed(2)}%`;
+}
+
+function pctChangeColor(p) {
+  if (p == null || !Number.isFinite(p)) return 'var(--text-secondary)';
+  if (p > 0) return '#3ec57e';
+  if (p < 0) return 'var(--accent-coral)';
+  return 'var(--text-secondary)';
+}
+
 function EdgeLabel({ edge, offsetPx, plotPadding, plotSize, text, color }) {
-  // Edge-anchored guidance label. `edge` ∈ {top,bottom,left,right}
-  // chooses which side the label rides; offsetPx pushes it inward
-  // from that edge so it doesn't sit flush against the border. For
-  // the top/bottom labels we anchor right-of-center to mirror the
-  // reference screenshots' aesthetic (the "High IV" label hugs the
-  // top-right area, not the dead-center top). For the left/right
-  // labels we vertically center the text on the X-axis split line.
+  // Edge-anchored axis label. All four labels are centered on the
+  // median split line of their respective axis: top/bottom on the
+  // vertical X=50% center, left/right on the horizontal Y=50% center.
+  // The black-box backing gives each label legible contrast against
+  // the gradient quadrant fill underneath, regardless of whether the
+  // label happens to land on the deeper-tinted half or the muted half.
+  //
+  // Stock SVG text wins on collision: the SVG element renders AFTER
+  // these EdgeLabel divs in the Quadrant component's DOM order, so
+  // SVG text natively stacks on top per the standard CSS painting
+  // order (later-in-DOM = drawn-later = on-top within the same
+  // stacking context). A stock label that lands on top of an axis
+  // label simply punches through visually — the user sees the ticker
+  // and infers the axis label from position context.
   const baseStyle = {
     position: 'absolute',
     pointerEvents: 'none',
     fontFamily: 'Courier New, monospace',
-    fontSize: '1.05rem',
+    fontSize: '1.0rem',
     fontWeight: 700,
     letterSpacing: '0.02em',
     color,
-    textShadow: '0 1px 3px rgba(0, 0, 0, 0.95)',
-    lineHeight: 1.1,
+    background: 'rgba(0, 0, 0, 0.78)',
+    padding: '3px 8px',
+    borderRadius: '3px',
+    lineHeight: 1.15,
     whiteSpace: 'nowrap',
   };
 
@@ -531,8 +668,9 @@ function EdgeLabel({ edge, offsetPx, plotPadding, plotSize, text, color }) {
       <div
         style={{
           ...baseStyle,
-          left: plotPadding + plotSize * 0.62,
+          left: plotPadding + plotSize * 0.50,
           top: offsetPx,
+          transform: 'translateX(-50%)',
         }}
       >
         {text}
@@ -544,8 +682,9 @@ function EdgeLabel({ edge, offsetPx, plotPadding, plotSize, text, color }) {
       <div
         style={{
           ...baseStyle,
-          left: plotPadding + plotSize * 0.62,
+          left: plotPadding + plotSize * 0.50,
           bottom: offsetPx,
+          transform: 'translateX(-50%)',
         }}
       >
         {text}
@@ -574,7 +713,6 @@ function EdgeLabel({ edge, offsetPx, plotPadding, plotSize, text, color }) {
         right: offsetPx,
         top: plotPadding + plotSize * 0.50,
         transform: 'translateY(-50%)',
-        textAlign: 'right',
       }}
     >
       {text}
@@ -582,7 +720,7 @@ function EdgeLabel({ edge, offsetPx, plotPadding, plotSize, text, color }) {
   );
 }
 
-function ScannerLegend({ data, spec, hovered }) {
+function ScannerLegend() {
   return (
     <div
       className="card"
@@ -631,32 +769,13 @@ function ScannerLegend({ data, spec, hovered }) {
         <span style={{ color: 'var(--text-secondary)' }}>hovered</span>
       </div>
 
-      {hovered && (
-        <div
-          style={{
-            marginLeft: 'auto',
-            display: 'flex',
-            flexWrap: 'wrap',
-            alignItems: 'baseline',
-            gap: '0.85rem',
-            color: '#f3f4f6',
-          }}
-        >
-          <strong style={{ fontSize: '0.95rem', color: '#f0a030' }}>{hovered.symbol}</strong>
-          <span style={{ color: 'var(--text-secondary)' }}>{hovered.name}</span>
-          <span>spot ${hovered.spot?.toFixed(2)}</span>
-          <span>ATM IV {formatPct(hovered.atmIv)}</span>
-          <span>
-            call {formatPct(hovered.call25dIv)} ({formatVolPoints(hovered.callSkew)})
-          </span>
-          <span>
-            put {formatPct(hovered.put25dIv)} ({formatVolPoints(hovered.putSkew)})
-          </span>
-          <span style={{ color: 'var(--text-secondary)' }}>
-            {hovered.dte}D · {hovered.expiration}
-          </span>
-        </div>
-      )}
+      <div style={{
+        marginLeft: 'auto',
+        color: 'var(--text-secondary)',
+        fontSize: '0.78rem',
+      }}>
+        Hover any dot for the ticker profile.
+      </div>
     </div>
   );
 }
