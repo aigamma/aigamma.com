@@ -254,7 +254,7 @@ export default function LevelsPanel({ levels, spotPrice, prevClose, expirationMe
           <img
             src="/logo.webp"
             alt="aigamma.com"
-            style={{ height: '2rem', display: 'block' }}
+            style={{ height: '3.2rem', display: 'block' }}
           />
           {regimeIndicator && (
             <span
