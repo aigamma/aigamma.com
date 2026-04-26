@@ -35,9 +35,9 @@ export default function App() {
           </a>
           <span
             className="lab-badge"
-            title="Intraday Seasonality · 30-minute SPX cumulative change vs prior close"
+            title="Seasonality · 30-minute SPX cumulative change vs prior close"
           >
-            <span className="lab-badge__desktop-text">Intraday Seasonality</span>
+            <span className="lab-badge__desktop-text">Seasonality</span>
             <span className="lab-badge__mobile-text">Seasonality</span>
           </span>
         </div>
