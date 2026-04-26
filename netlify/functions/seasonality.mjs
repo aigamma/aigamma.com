@@ -682,9 +682,9 @@ function weekLabel(mondayIso) {
   friday.setUTCDate(monday.getUTCDate() + 4);
   const monthName = (date) => new Intl.DateTimeFormat('en-US', { month: 'short', timeZone: 'UTC' }).format(date);
   if (monday.getUTCMonth() === friday.getUTCMonth()) {
-    return `${monthName(monday)} ${monday.getUTCDate()} – ${friday.getUTCDate()}`;
+    return `${monthName(monday)} ${monday.getUTCDate()}-${friday.getUTCDate()}`;
   }
-  return `${monthName(monday)} ${monday.getUTCDate()} – ${monthName(friday)} ${friday.getUTCDate()}`;
+  return `${monthName(monday)} ${monday.getUTCDate()}-${monthName(friday)} ${friday.getUTCDate()}`;
 }
 
 function etTodayIso() {

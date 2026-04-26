@@ -380,7 +380,7 @@ function WeeklyGrid({ payload, anchor }) {
           {weekColumns.map((col, weekIdx) => (
             <tr key={col.week} className="seasonality-row">
               <th scope="row" className="seasonality-row-head">
-                {col.range ? `${col.week} · ${col.range}` : col.week}
+                {col.range ? `${col.week}: ${col.range}` : col.week}
               </th>
               <NumericCell pct={avgValues[weekIdx]} anchor={anchor} />
               {yearCols.map((yc) => (
