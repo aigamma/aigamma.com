@@ -1,4 +1,3 @@
-import { useEffect, useState } from 'react';
 import '../src/styles/theme.css';
 import '../src/styles/lab.css';
 import ErrorBoundary from '../src/ErrorBoundary';
@@ -32,13 +31,12 @@ import useSviFits from '../src/hooks/useSviFits';
 // useVrpHistory (called inside VolatilityRiskPremium) drains the
 // __apiBoot.vrpHistory promise, useSviFits dispatches the per-expiration
 // SVI calibration to the shared Web Worker so the RND density curves do
-// not block scroll. The prev-day contracts for the FixedStrikeIvMatrix
-// 1D-change overlay are fetched by a post-first-paint
-// requestIdleCallback so the visible surfaces (smile, RND, term) paint
-// without waiting on the ~240 KB brotli prev-day chain. Until that idle
-// fetch resolves the matrix renders without the diff layer; both
-// FixedStrikeIvMatrix and the other consumers handle prevContracts=null
-// gracefully.
+// not block scroll. The prev-day chain for the FixedStrikeIvMatrix
+// 1D-change overlay is no longer fetched here — the matrix component
+// owns its own prev-day data and pulls a thin IV-only projection from
+// /api/fixed-strike-iv in two phases (visible expirations first, the
+// rest on idle), replacing the historical 228 KB /api/data?prev_day=1
+// idle fetch that lived in this App.jsx until 2026-04-26.
 //
 // Three redundant Return-Home affordances follow the /parity/ and /jump/
 // pattern: the logo wraps a hyperlink to `/`, a green RETURN HOME button
@@ -49,50 +47,6 @@ export default function App() {
     underlying: 'SPX',
     snapshotType: 'intraday',
   });
-
-  const [prevDayContracts, setPrevDayContracts] = useState(null);
-  useEffect(() => {
-    if (typeof window === 'undefined') return;
-    let cancelled = false;
-    const idle = window.requestIdleCallback
-      ? (cb) => window.requestIdleCallback(cb, { timeout: 2000 })
-      : (cb) => setTimeout(cb, 300);
-    const cancel = window.cancelIdleCallback
-      ? window.cancelIdleCallback
-      : clearTimeout;
-    const handle = idle(() => {
-      if (cancelled) return;
-      fetch('/api/data?underlying=SPX&snapshot_type=intraday&prev_day=1&v=2')
-        .then((r) => (r.ok ? r.json() : null))
-        .then((json) => {
-          if (cancelled || !json) return;
-          const cols = json.contractCols;
-          if (!cols || !Array.isArray(cols.strike)) return;
-          const exps = Array.isArray(json.expirations) ? json.expirations : [];
-          const n = cols.strike.length;
-          const contracts = new Array(n);
-          for (let i = 0; i < n; i++) {
-            const expIdx = cols.exp[i];
-            contracts[i] = {
-              expiration_date: expIdx >= 0 && expIdx < exps.length ? exps[expIdx] : null,
-              strike_price: cols.strike[i],
-              contract_type: cols.type[i] === 0 ? 'call' : 'put',
-              implied_volatility: cols.iv[i],
-              delta: cols.delta[i],
-              gamma: cols.gamma[i],
-              open_interest: cols.oi[i],
-              close_price: cols.px[i],
-            };
-          }
-          setPrevDayContracts(contracts);
-        })
-        .catch(() => {});
-    });
-    return () => {
-      cancelled = true;
-      cancel(handle);
-    };
-  }, []);
 
   const sviFits = useSviFits({
     contracts: data?.contracts,
@@ -201,7 +155,6 @@ export default function App() {
               contracts={data.contracts}
               spotPrice={data.spotPrice}
               expirations={data.expirations}
-              prevContracts={prevDayContracts}
             />
           </ErrorBoundary>
         </>

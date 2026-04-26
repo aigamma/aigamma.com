@@ -16,11 +16,13 @@
       // chain feeds the smile, RND, fixed-strike matrix, and the term
       // structure observed-curve trace) and /api/vrp-history (feeds the VRP
       // card). Both are consumed via the __apiBoot.today / __apiBoot.vrpHistory
-      // hooks in useOptionsData and useVrpHistory respectively. Prev-day
-      // contracts for the FixedStrikeIvMatrix 1D-change overlay are fetched
-      // by a post-first-paint requestIdleCallback in App.jsx instead of being
-      // booted here, so the visible-immediately surfaces (smile, RND, term)
-      // are not slowed by the ~240 KB brotli prev-day chain transit.
+      // hooks in useOptionsData and useVrpHistory respectively. Prev-day IV
+      // for the FixedStrikeIvMatrix 1D-change overlay is fetched separately
+      // by the matrix component itself via the thin /api/fixed-strike-iv
+      // endpoint in two phases — visible expirations first, the rest on idle
+      // — so the visible-immediately surfaces (smile, RND, term) are not
+      // slowed by a heavy prev-day chain transit and the rangeslider has
+      // tail data ready when the user drags out.
       (function () {
         function boot(url) {
           return fetch(url).then(function (r) {

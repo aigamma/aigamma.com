@@ -93,6 +93,37 @@ function groupByExpiration(contracts) {
   return map;
 }
 
+// Rehydrate the columnar /api/fixed-strike-iv payload back into the same
+// row-of-objects shape interpolateIv() consumes. The wire format mirrors
+// data.mjs's contractCols pattern but trims to four columns (exp, strike,
+// type, iv) — Greeks, OI, and px are dead weight for the matrix. expIndex
+// preserves the request-time order so a Phase 1 / Phase 2 split keys back
+// to ISO dates without re-sorting.
+function rehydrateThinPayload(json) {
+  if (!json || !Array.isArray(json.strike)) return [];
+  const exps = Array.isArray(json.expirations) ? json.expirations : [];
+  const n = json.strike.length;
+  const out = new Array(n);
+  for (let i = 0; i < n; i++) {
+    const expIdx = json.exp[i];
+    out[i] = {
+      expiration_date: expIdx >= 0 && expIdx < exps.length ? exps[expIdx] : null,
+      strike_price: json.strike[i],
+      contract_type: json.type[i] === 0 ? 'call' : 'put',
+      implied_volatility: json.iv[i],
+    };
+  }
+  return out;
+}
+
+// Visible-by-default expiration count, matching defaultColRange's window.
+// Desktop shows 5 columns (range [-0.5, 4.5]); mobile shows 4 (range
+// [-0.5, 3.5]). Phase 1 fetches a small headroom beyond that so the
+// rangeslider feels responsive on the first ~couple expirations of drag
+// before Phase 2's tail backfill lands.
+const PHASE_ONE_DESKTOP = 7;
+const PHASE_ONE_MOBILE = 6;
+
 function toggleBtnStyle(active) {
   return {
     background: active ? 'rgba(74,158,255,0.12)' : 'none',
@@ -108,7 +139,7 @@ function toggleBtnStyle(active) {
   };
 }
 
-export default function FixedStrikeIvMatrix({ contracts, spotPrice, expirations, prevContracts }) {
+export default function FixedStrikeIvMatrix({ contracts, spotPrice, expirations }) {
   const chartRef = useRef(null);
   const { plotly: Plotly, error: plotlyError } = usePlotly();
   const [mode, setMode] = useState('change');
@@ -119,6 +150,104 @@ export default function FixedStrikeIvMatrix({ contracts, spotPrice, expirations,
   const [colRange, setColRange] = useState(null);
   const mobile = useIsMobile();
 
+  // Prev-day IV is owned by this component now: the matrix is the only
+  // consumer of the 1D-change overlay, so the historical /tactical/App.jsx
+  // idle fetch that pulled the full /api/data?prev_day=1 (~228 KB brotli
+  // with all Greeks/OI/px columns the matrix never read) was 95% waste.
+  // The replacement is a two-phase fetch against the thin
+  // /api/fixed-strike-iv endpoint:
+  //
+  //   Phase 1 — visible-by-default expirations (5 desktop / 4 mobile +
+  //             ~2 expirations of headroom). Lands first so the 1D Change
+  //             cells have data before the user can react.
+  //   Phase 2 — every remaining expiration, dispatched on
+  //             requestIdleCallback after Phase 1 resolves. Some of these
+  //             may never be looked at if the user doesn't drag the
+  //             rangeslider, but the user explicitly accepted that
+  //             tradeoff in exchange for a responsive slider that doesn't
+  //             have to wait on a network round-trip mid-drag.
+  //
+  // prevByExp is keyed by expiration date and updated immutably as
+  // batches arrive, so the levelMatrix / changeMatrix useMemo recomputes
+  // when new expirations land. PrevByExp grows from {} → 7 entries →
+  // ~30 entries over ~1-2 seconds on a warm cache hit.
+  const [prevByExp, setPrevByExp] = useState(() => new Map());
+  // Tracks which expirations have already been requested so a re-run of the
+  // fetch effect (e.g. on a desktop ↔ mobile breakpoint flip) doesn't fire a
+  // second network call for an expiration we've already loaded. The ref
+  // persists across renders without retriggering the effect dependency
+  // chain.
+  const loadedExpsRef = useRef(new Set());
+
+  useEffect(() => {
+    if (!expirations || expirations.length === 0) return undefined;
+    const sortedExps = [...expirations].sort().slice(1);
+    if (sortedExps.length === 0) return undefined;
+
+    const phaseOneCount = mobile ? PHASE_ONE_MOBILE : PHASE_ONE_DESKTOP;
+    const phaseOneExps = sortedExps.slice(0, phaseOneCount);
+    const phaseTwoExps = sortedExps.slice(phaseOneCount);
+
+    let cancelled = false;
+    let phaseTwoHandle = null;
+    const cancelIdle = window.cancelIdleCallback || clearTimeout;
+
+    const fetchBatch = async (expsBatch) => {
+      const needed = expsBatch.filter((e) => !loadedExpsRef.current.has(e));
+      if (cancelled || needed.length === 0) return;
+      // Mark as in-flight up-front so a parallel fetch doesn't double up.
+      // If the fetch fails we leave them marked anyway — a subsequent
+      // remount or breakpoint flip can retry, but a transient 5xx within
+      // a single mount session is treated terminally.
+      needed.forEach((e) => loadedExpsRef.current.add(e));
+      try {
+        const params = new URLSearchParams({
+          prev_day: '1',
+          expirations: needed.join(','),
+        });
+        const res = await fetch(`/api/fixed-strike-iv?${params}`);
+        if (!res.ok || cancelled) return;
+        const json = await res.json();
+        if (cancelled) return;
+        const newContracts = rehydrateThinPayload(json);
+        if (newContracts.length === 0) return;
+        setPrevByExp((prev) => {
+          const next = new Map(prev);
+          // Bucket by expiration first so a re-fetch of the same exp
+          // overwrites in one go rather than appending duplicates.
+          const grouped = new Map();
+          for (const c of newContracts) {
+            const exp = c.expiration_date;
+            if (!exp) continue;
+            if (!grouped.has(exp)) grouped.set(exp, []);
+            grouped.get(exp).push(c);
+          }
+          for (const [exp, contracts] of grouped) next.set(exp, contracts);
+          return next;
+        });
+      } catch {
+        // Silent — the matrix falls back to Level mode for these cells
+        // until a successful retry on a future mount lands.
+      }
+    };
+
+    // Phase 1 lands first so the 1D Change overlay paints for the visible
+    // columns before the user can react. Phase 2 backgrounds the tail on
+    // requestIdleCallback so the rangeslider is responsive on drag.
+    fetchBatch(phaseOneExps).then(() => {
+      if (cancelled || phaseTwoExps.length === 0) return;
+      const idle = window.requestIdleCallback
+        ? (cb) => window.requestIdleCallback(cb, { timeout: 4000 })
+        : (cb) => setTimeout(cb, 600);
+      phaseTwoHandle = idle(() => fetchBatch(phaseTwoExps));
+    });
+
+    return () => {
+      cancelled = true;
+      if (phaseTwoHandle != null) cancelIdle(phaseTwoHandle);
+    };
+  }, [expirations, mobile]);
+
   const { levelMatrix, changeMatrix } = useMemo(() => {
     if (!contracts || contracts.length === 0 || !spotPrice || !expirations || expirations.length === 0) {
       return { levelMatrix: null, changeMatrix: null };
@@ -126,7 +255,6 @@ export default function FixedStrikeIvMatrix({ contracts, spotPrice, expirations,
 
     const numRows = mobile ? NUM_STRIKE_ROWS_MOBILE : NUM_STRIKE_ROWS_DESKTOP;
     const byExp = groupByExpiration(contracts);
-    const prevByExp = groupByExpiration(prevContracts);
 
     // Drop the nearest expiration (the 0DTE column during trading hours):
     // same-day IV is dominated by gamma-scalping noise and pinning effects
@@ -180,7 +308,7 @@ export default function FixedStrikeIvMatrix({ contracts, spotPrice, expirations,
     const level = { xLabels, yLabels, z: zLevel, textCells: textLevel };
     const change = hasAnyChange ? { xLabels, yLabels, z: zChange, textCells: textChange } : null;
     return { levelMatrix: level, changeMatrix: change };
-  }, [contracts, spotPrice, expirations, prevContracts, mobile]);
+  }, [contracts, spotPrice, expirations, prevByExp, mobile]);
 
   const hasPrev = changeMatrix != null;
   // On mobile the toggle is hidden to avoid colliding with the section
