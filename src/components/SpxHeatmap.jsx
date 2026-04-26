@@ -120,6 +120,23 @@ function formatVolume(v) {
   return String(v);
 }
 
+// "2026-04-24" → "Apr 24, 2026". Parse at noon UTC to keep the date
+// intact regardless of the viewer's local timezone offset (a Date
+// constructed from "2026-04-24" alone is interpreted as UTC midnight,
+// which can roll back to Apr 23 once toLocaleDateString applies a
+// negative-offset locale).
+function formatLastUpdated(iso) {
+  if (!iso || typeof iso !== 'string') return '';
+  const d = new Date(`${iso}T12:00:00Z`);
+  if (Number.isNaN(d.getTime())) return iso;
+  return d.toLocaleDateString('en-US', {
+    year: 'numeric',
+    month: 'short',
+    day: 'numeric',
+    timeZone: 'UTC',
+  });
+}
+
 export default function SpxHeatmap() {
   const [data, setData] = useState(null);
   const [error, setError] = useState(null);
@@ -209,34 +226,6 @@ export default function SpxHeatmap() {
         gap: '0.5rem',
       }}
     >
-      <div
-        style={{
-          display: 'flex',
-          alignItems: 'center',
-          justifyContent: 'space-between',
-          gap: '1rem',
-          flexWrap: 'wrap',
-          fontFamily: 'Courier New, monospace',
-          fontSize: '0.75rem',
-          letterSpacing: '0.08em',
-          color: 'var(--text-secondary)',
-          textTransform: 'uppercase',
-        }}
-      >
-        <span>
-          {data
-            ? (data.mode === 'sector-etf-fallback'
-                ? 'Sector ETFs · fallback view'
-                : 'Top 250 SPX stocks by option volume')
-            : 'Loading…'}
-        </span>
-        <span style={{ color: 'var(--text-secondary)' }}>
-          {data?.asOf
-            ? `Session ${data.asOf}${data.prevSessionDate ? ` vs ${data.prevSessionDate}` : ''}`
-            : ''}
-        </span>
-      </div>
-
       {data?.mode === 'sector-etf-fallback' && (
         <div
           style={{
@@ -311,10 +300,50 @@ export default function SpxHeatmap() {
                   alignItems: 'center',
                   justifyContent: 'space-between',
                   padding: '0 0.5rem',
+                  gap: '0.75rem',
                 }}
               >
-                <span>{band.sector}</span>
-                <span style={{ color: '#6c7384' }}>{band.tiles.length}</span>
+                {/* The first sector strip (Information Technology under
+                    the canonical SECTOR_ORDER, since it's the largest
+                    single sector by both market cap and ticker count
+                    and therefore always renders first) doubles as the
+                    page-level header — the page title sits to the right
+                    of the sector name, and the last-updated date sits
+                    on the right opposite the ticker count. Subsequent
+                    sector strips render the standard sector + count
+                    layout only. This frees the vertical space above the
+                    grid that a separate page-header row would otherwise
+                    consume, which on a top-of-fold heatmap is real
+                    estate the grid wants for its first row of tiles. */}
+                <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem', minWidth: 0, flex: '1 1 auto' }}>
+                  <span style={{ flexShrink: 0 }}>{band.sector}</span>
+                  {idx === 0 && (
+                    <>
+                      <span style={{ color: '#5a626f', flexShrink: 0 }}>·</span>
+                      <span style={{
+                        color: '#9aa3b8',
+                        whiteSpace: 'nowrap',
+                        overflow: 'hidden',
+                        textOverflow: 'ellipsis',
+                      }}>
+                        {data.mode === 'sector-etf-fallback'
+                          ? 'Sector ETFs · fallback view'
+                          : 'Top 250 SPX stocks by option volume'}
+                      </span>
+                    </>
+                  )}
+                </div>
+                <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem', flexShrink: 0 }}>
+                  {idx === 0 && data.asOf && (
+                    <>
+                      <span style={{ color: '#9aa3b8' }}>
+                        Last Updated: {formatLastUpdated(data.asOf)}
+                      </span>
+                      <span style={{ color: '#5a626f' }}>·</span>
+                    </>
+                  )}
+                  <span style={{ color: '#6c7384' }}>{band.tiles.length}</span>
+                </div>
               </div>
               <div
                 style={{
