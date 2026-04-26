@@ -296,44 +296,49 @@ export default function SpxHeatmap() {
                   fontSize: '0.7rem',
                   letterSpacing: '0.1em',
                   textTransform: 'uppercase',
-                  display: 'flex',
+                  display: 'grid',
+                  gridTemplateColumns: '1fr auto 1fr',
                   alignItems: 'center',
-                  justifyContent: 'space-between',
                   padding: '0 0.5rem',
                   gap: '0.75rem',
                 }}
               >
-                {/* The first sector strip (Information Technology under
-                    the canonical SECTOR_ORDER, since it's the largest
-                    single sector by both market cap and ticker count
-                    and therefore always renders first) doubles as the
-                    page-level header — the page title sits to the right
-                    of the sector name, and the last-updated date sits
-                    on the right opposite the ticker count. Subsequent
-                    sector strips render the standard sector + count
-                    layout only. This frees the vertical space above the
-                    grid that a separate page-header row would otherwise
-                    consume, which on a top-of-fold heatmap is real
-                    estate the grid wants for its first row of tiles. */}
-                <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem', minWidth: 0, flex: '1 1 auto' }}>
-                  <span style={{ flexShrink: 0 }}>{band.sector}</span>
+                {/* Three-column grid keeps the per-band layout uniform
+                    across all eleven sectors: sector name pinned left,
+                    count pinned right, middle column reserved for the
+                    page-level title (rendered only on the first band,
+                    which is Information Technology under the canonical
+                    SECTOR_ORDER). Using 1fr auto 1fr instead of flex
+                    space-between guarantees the middle text is centered
+                    on the strip's full width regardless of how wide the
+                    side elements grow — flex space-between would center
+                    the middle text on the gap between the sides, which
+                    drifts off-center as one side gets longer than the
+                    other. The standalone page-header row this folds
+                    into was redundant given the IT strip is already
+                    visually anchored at the top of every render. */}
+                <span style={{ justifySelf: 'start' }}>{band.sector}</span>
+                <span
+                  style={{
+                    justifySelf: 'center',
+                    color: '#9aa3b8',
+                    whiteSpace: 'nowrap',
+                    overflow: 'hidden',
+                    textOverflow: 'ellipsis',
+                  }}
+                >
                   {idx === 0 && (
-                    <>
-                      <span style={{ color: '#5a626f', flexShrink: 0 }}>·</span>
-                      <span style={{
-                        color: '#9aa3b8',
-                        whiteSpace: 'nowrap',
-                        overflow: 'hidden',
-                        textOverflow: 'ellipsis',
-                      }}>
-                        {data.mode === 'sector-etf-fallback'
-                          ? 'Sector ETFs · fallback view'
-                          : 'Top 250 SPX stocks by option volume'}
-                      </span>
-                    </>
+                    data.mode === 'sector-etf-fallback'
+                      ? 'Sector ETFs · fallback view'
+                      : 'Top 250 SPX stocks by option volume'
                   )}
-                </div>
-                <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem', flexShrink: 0 }}>
+                </span>
+                <div style={{
+                  justifySelf: 'end',
+                  display: 'flex',
+                  alignItems: 'center',
+                  gap: '0.75rem',
+                }}>
                   {idx === 0 && data.asOf && (
                     <>
                       <span style={{ color: '#9aa3b8' }}>
