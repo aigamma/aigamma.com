@@ -919,34 +919,55 @@ function UpcomingGrid({ calendarDays, scale = 1 }) {
 }
 
 function WeekRow({ days, scale }) {
-  // Each day gets two stacked cells: BMO and AMC. Tickers without a
-  // recognized session land in BMO (the Unknown bucket — rare, since
-  // EW only emits releaseTime 1 or 3).
+  // CSS subgrid: each WeekRow defines header / BMO / AMC ( / Unknown)
+  // as auto-sized rows, and every DayColumn opts into those tracks via
+  // grid-template-rows: subgrid. Result: every BMO cell in the row is
+  // sized to the tallest BMO content across all 5 days, and every AMC
+  // cell is sized to the tallest AMC content. AMC labels line up across
+  // columns AND no cell can clip its tickers — the bug Eric flagged
+  // (Wed Apr 29 had AMC = 7 but only 5 names rendered) was the old
+  // flex:1-with-min-height:60 layout dividing the row's vertical space
+  // 50/50 between BMO and AMC regardless of how many tickers each held,
+  // so a 7-ticker AMC cell next to a 2-ticker BMO cell got clipped at
+  // the 50% line by the parent's overflow:hidden.
+  const anyUnknown = days.some(
+    (d) => d.tickers.some((t) => t.releaseTime !== 1 && t.releaseTime !== 3),
+  );
+  const rowSpan = anyUnknown ? 4 : 3;
+  const gridTemplateRows = anyUnknown ? 'auto auto auto auto' : 'auto auto auto';
   return (
     <div style={{
       display: 'grid',
       gridTemplateColumns: `repeat(${days.length}, minmax(0, 1fr))`,
-      gap: '0.5rem',
+      gridTemplateRows,
+      gap: '0 0.5rem',
     }}>
       {days.map((d) => (
-        <DayColumn key={d.isoDate} day={d} scale={scale} />
+        <DayColumn
+          key={d.isoDate}
+          day={d}
+          scale={scale}
+          rowSpan={rowSpan}
+          renderUnknownCell={anyUnknown}
+        />
       ))}
     </div>
   );
 }
 
-function DayColumn({ day, scale }) {
+function DayColumn({ day, scale, rowSpan, renderUnknownCell }) {
   const bmo = day.tickers.filter((t) => t.releaseTime === 1);
   const amc = day.tickers.filter((t) => t.releaseTime === 3);
   const unknown = day.tickers.filter((t) => t.releaseTime !== 1 && t.releaseTime !== 3);
   return (
     <div style={{
+      gridRow: `span ${rowSpan}`,
+      display: 'grid',
+      gridTemplateRows: 'subgrid',
       background: '#11151c',
       border: '1px solid #1d232c',
       borderRadius: '3px',
       overflow: 'hidden',
-      display: 'flex',
-      flexDirection: 'column',
       minWidth: 0,
     }}>
       <div style={{
@@ -971,7 +992,7 @@ function DayColumn({ day, scale }) {
       </div>
       <SessionCell label="BMO" color={SESSION_COLORS.BMO} tickers={bmo} scale={scale} />
       <SessionCell label="AMC" color={SESSION_COLORS.AMC} tickers={amc} scale={scale} />
-      {unknown.length > 0 && (
+      {renderUnknownCell && (
         <SessionCell label="Unknown" color={SESSION_COLORS.Unknown} tickers={unknown} scale={scale} />
       )}
     </div>
@@ -985,8 +1006,6 @@ function SessionCell({ label, color, tickers, scale = 1 }) {
       padding: '0.55rem 0.55rem',
       fontFamily: 'Courier New, monospace',
       fontSize: `${0.95 * scale}rem`,
-      flex: 1,
-      minHeight: Math.round(60 * scale),
     }}>
       <div style={{
         display: 'flex',
