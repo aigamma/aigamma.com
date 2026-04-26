@@ -158,6 +158,27 @@ export default function ExpiringGamma() {
       xaxis: plotlyAxis('', {
         type: 'date',
         title: '',
+        // Auto-zoom to span [trading date, next AM monthly OPEX + 7
+        // calendar days] when the server emitted a defaultWindow.
+        // Plotly's rangeslider treats xaxis.range as the visible
+        // window while the slider thumb shows the full series — so
+        // setting an initial range here places the reader's first
+        // view on the largest near-term roll-off (the next monthly
+        // OPEX, an SPX-root AM-settled contract that always carries
+        // the heaviest OI concentration in the front three months)
+        // without losing the ability to pan back out. autorange:
+        // false is required, otherwise Plotly recomputes the range
+        // to fit the data on every relayout and the slider thumb
+        // snaps back to the full series after the first hover. The
+        // rangeslider gets its own explicit range matching the data
+        // domain so the slider track stays the same regardless of
+        // the visible-window auto-zoom.
+        ...(data?.defaultWindow
+          ? {
+              range: [data.defaultWindow.start, data.defaultWindow.end],
+              autorange: false,
+            }
+          : {}),
         rangeslider: {
           visible: true,
           bordercolor: PLOTLY_COLORS.grid,
@@ -190,7 +211,7 @@ export default function ExpiringGamma() {
       responsive: true,
       displayModeBar: false,
     });
-  }, [Plotly, traces, mobile]);
+  }, [Plotly, traces, mobile, data]);
 
   if (plotlyError) {
     return (
@@ -246,6 +267,16 @@ export default function ExpiringGamma() {
           {' '}
           <span className="expiring-gamma-totals__value">{formatDollar(data.totalPutGammaNotional)}</span>
         </span>
+        {data.nextAmExpiration && (
+          <>
+            <span style={{ opacity: 0.4 }}>·</span>
+            <span>
+              <span style={{ color: 'var(--text-secondary)' }}>Auto-zoomed to next AM OPEX</span>
+              {' '}
+              <span className="expiring-gamma-totals__value">{data.nextAmExpiration}</span>
+            </span>
+          </>
+        )}
       </div>
       <div ref={chartRef} className="expiring-gamma-chart" />
     </div>

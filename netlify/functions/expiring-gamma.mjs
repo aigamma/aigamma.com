@@ -54,6 +54,78 @@ const SUPABASE_KEY = process.env.SUPABASE_KEY;
 const SUPABASE_TIMEOUT_MS = 8000;
 const PAGE_SIZE = 1000;
 
+// Hardcoded US market holidays mirrored from ingest-background.mjs so
+// the next-AM-expiration computation here observes the same date
+// adjustment rules the ingest used when it stored the contracts. Keep
+// in sync — when ingest extends past 2028, this list extends too.
+const US_MARKET_HOLIDAYS = new Set([
+  '2026-01-01', '2026-01-19', '2026-02-16', '2026-04-03', '2026-05-25',
+  '2026-06-19', '2026-07-03', '2026-09-07', '2026-11-26', '2026-12-25',
+  '2027-01-01', '2027-01-18', '2027-02-15', '2027-03-26', '2027-05-31',
+  '2027-06-18', '2027-07-05', '2027-09-06', '2027-11-25', '2027-12-24',
+  '2028-01-17', '2028-02-21', '2028-04-14', '2028-05-29', '2028-06-19',
+  '2028-07-04', '2028-09-04', '2028-11-23', '2028-12-25',
+]);
+
+function ymd(d) {
+  return d.toISOString().split('T')[0];
+}
+
+function thirdFriday(year, month) {
+  // 3rd Friday of (year, month). Mirrors ingest-background.mjs's helper
+  // exactly so the dates this function emits coincide with the
+  // expirations the ingest actually stored. firstFridayDate uses the
+  // mod-7 weekday-shift trick: ((5 - firstDow + 7) % 7) is the number
+  // of days from the 1st of the month to the first Friday, +14 walks
+  // forward two more weeks to reach the 3rd Friday.
+  const first = new Date(Date.UTC(year, month, 1));
+  const firstDow = first.getUTCDay();
+  const firstFridayDate = 1 + ((5 - firstDow + 7) % 7);
+  return new Date(Date.UTC(year, month, firstFridayDate + 14));
+}
+
+function adjustForHoliday(dateStr) {
+  // Walk back up to 5 days if the candidate falls on a market holiday,
+  // matching the SOQ-listing practice CBOE uses (a Friday OPEX that
+  // lands on a holiday rolls to Thursday). Same loop bound and same
+  // semantics as ingest-background.mjs.
+  let d = new Date(dateStr + 'T12:00:00Z');
+  for (let i = 0; i < 5; i++) {
+    const s = ymd(d);
+    if (!US_MARKET_HOLIDAYS.has(s)) return s;
+    d = new Date(d.getTime() - 86400000);
+  }
+  return ymd(d);
+}
+
+function addCalendarDaysIso(iso, n) {
+  const d = new Date(`${iso}T12:00:00Z`);
+  d.setUTCDate(d.getUTCDate() + n);
+  return ymd(d);
+}
+
+// Resolve the next AM-settled monthly OPEX (SPX root, expires at
+// 9:30 ET via SOQ on the 3rd Friday of the month, holiday-adjusted)
+// relative to a reference trading date. Used to seed the chart's
+// default visible x-axis window — the reader's first read of the
+// page should center on "the next big roll-off", which on SPX is
+// always the next monthly OPEX.
+//
+// If the reference date is on or past this month's 3rd Friday, we
+// advance to next month's. Same threshold the ingest uses when it
+// builds the targetExpirations set, which means the next AM
+// expiration this function reports always matches a date the ingest
+// has actually stored contracts for (so the auto-zoom never lands
+// on an empty bar).
+function nextAmExpirationIso(refTradingDateIso) {
+  const ref = new Date(`${refTradingDateIso}T12:00:00Z`);
+  let next = thirdFriday(ref.getUTCFullYear(), ref.getUTCMonth());
+  if (next <= ref) {
+    next = thirdFriday(ref.getUTCFullYear(), ref.getUTCMonth() + 1);
+  }
+  return adjustForHoliday(ymd(next));
+}
+
 async function fetchWithTimeout(url, options, label) {
   try {
     return await fetch(url, { ...options, signal: AbortSignal.timeout(SUPABASE_TIMEOUT_MS) });
@@ -243,14 +315,36 @@ export default async function handler() {
     const totalCallGamma = expirations.reduce((s, e) => s + (e.callGammaNotional || 0), 0);
     const totalPutGamma = expirations.reduce((s, e) => s + (e.putGammaNotional || 0), 0);
 
+    // Next AM-settled monthly OPEX. The chart's default visible
+    // window auto-zooms to span [tradingDate, nextAmExpiration + 7
+    // calendar days] so the largest near-term roll-off is centered
+    // in the initial view. The rangeslider underneath the chart
+    // still shows the full data range, so a reader can pan back out
+    // to LEAPS-style horizons (when the ingest pipeline eventually
+    // captures them) without losing the auto-zoom default.
+    //
+    // The 7-calendar-day right-side cushion lands one weekly past
+    // the monthly OPEX on the chart so the OPEX bar is not jammed
+    // against the right edge of the visible window. If trading_date
+    // is null (degenerate run header that somehow passed the spot-
+    // price guard above), we omit the field and the client falls
+    // through to the natural full-data range.
+    const tradingDate = run.trading_date || null;
+    const nextAmExpiration = tradingDate ? nextAmExpirationIso(tradingDate) : null;
+    const defaultWindow = tradingDate && nextAmExpiration
+      ? { start: tradingDate, end: addCalendarDaysIso(nextAmExpiration, 7) }
+      : null;
+
     const payload = {
       asOf: run.captured_at,
-      tradingDate: run.trading_date || null,
+      tradingDate,
       spotPrice: spot,
       contractCount: contractRows.length,
       expirationCount: expirations.length,
       totalCallGammaNotional: round(totalCallGamma, 0),
       totalPutGammaNotional: round(totalPutGamma, 0),
+      nextAmExpiration,
+      defaultWindow,
       expirations,
     };
 
