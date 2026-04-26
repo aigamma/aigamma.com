@@ -227,6 +227,14 @@ body {
   color: var(--text-primary);
 }
 
+/* VIX renders in accent-purple to match the Menu trigger and VIX's
+   documented purple identity elsewhere on the platform. Hover
+   tint mirrors .menu-trigger's 0.08 alpha so the two purple
+   buttons read as a coherent pair when they share the row. */
+.top-nav__item--purple {
+  color: var(--accent-purple);
+}
+
 .top-nav__item--blue:hover,
 .top-nav__item--blue:focus-visible {
   background-color: rgba(74, 158, 255, 0.12);
@@ -236,6 +244,12 @@ body {
 .top-nav__item--white:hover,
 .top-nav__item--white:focus-visible {
   background-color: rgba(224, 224, 224, 0.10);
+  outline: none;
+}
+
+.top-nav__item--purple:hover,
+.top-nav__item--purple:focus-visible {
+  background-color: rgba(191, 127, 255, 0.08);
   outline: none;
 }
 

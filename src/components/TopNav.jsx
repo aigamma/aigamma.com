@@ -26,7 +26,15 @@
 // blue block. The alternation runs on the post-filter render index
 // so when one button is hidden (because it represents the current
 // page), the surviving buttons still alternate cleanly from blue
-// at the leftmost slot.
+// at the leftmost slot. VIX is the one exception: its tile carries
+// an explicit `variant: 'purple'` field and renders in
+// var(--accent-purple) (#BF7FFF) to match the Menu trigger and
+// VIX's documented purple identity throughout the codebase
+// (see VolatilityRiskPremium.jsx, VixHeaderProfile.jsx,
+// LevelsPanel.jsx). This pulls VIX out of the blue/white
+// alternation but does not disturb the parity of its neighbors —
+// adjacent buttons keep whatever color their visible index gave
+// them.
 //
 // On viewports ≤768px each item swaps to a compact mobile label
 // via paired desktop/mobile spans (the same pattern used by
@@ -47,7 +55,7 @@ const TOP_NAV_ITEMS = [
   { key: 'earnings',    href: '/earnings/',    label: 'Earnings',     short: 'Earn' },
   { key: 'scan',        href: '/scan/',        label: 'Scan',         short: 'Scan' },
   { key: 'rotations',   href: '/rotations/',   label: 'Rotations',    short: 'Rot'  },
-  { key: 'vix',         href: '/vix/',         label: 'VIX',          short: 'VIX'  },
+  { key: 'vix',         href: '/vix/',         label: 'VIX',          short: 'VIX',  variant: 'purple' },
   { key: 'seasonality', href: '/seasonality/', label: 'Seasonality',  short: 'Seas' },
 ];
 
@@ -56,7 +64,9 @@ export default function TopNav({ current } = {}) {
   return (
     <nav className="top-nav" aria-label="Featured labs">
       {items.map((item, index) => {
-        const variant = index % 2 === 0 ? 'top-nav__item--blue' : 'top-nav__item--white';
+        const variant = item.variant === 'purple'
+          ? 'top-nav__item--purple'
+          : (index % 2 === 0 ? 'top-nav__item--blue' : 'top-nav__item--white');
         return (
           <a key={item.href} href={item.href} className={`top-nav__item ${variant}`}>
             <span className="top-nav__desktop-text">{item.label}</span>
