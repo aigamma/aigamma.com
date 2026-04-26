@@ -68,9 +68,9 @@ export default function App() {
           </a>
           <span
             className="lab-badge"
-            title="Rough Volatility Lab · fractional-Brownian / Volterra model zoo"
+            title="Rough Vol · fractional-Brownian / Volterra model zoo"
           >
-            <span className="lab-badge__desktop-text">Rough Vol Lab</span>
+            <span className="lab-badge__desktop-text">Rough Vol</span>
             <span className="lab-badge__mobile-text">Rough Vol</span>
           </span>
         </div>
