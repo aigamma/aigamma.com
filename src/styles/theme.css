@@ -273,6 +273,68 @@ body {
   display: inline;
 }
 
+/* ===== SITE HEADER =====
+   Main dashboard header chrome. Mobile-first defaults match what was
+   previously inline-styled on the <header className="site-header"> and
+   its first <div> child in src/App.jsx: a wrapping flex row whose brand
+   cluster carries margin-right: auto so the post-brand chrome (TopNav,
+   Menu) sits flush against the right edge of the row. The desktop
+   override block below cancels both the brand auto-margin and the row's
+   flex-start distribution and replaces them with space-between, and the
+   companion .top-nav { display: contents } rule dissolves the TopNav
+   wrapper so its three buttons become direct flex items of .site-header
+   alongside the brand and the Menu trigger — five children that
+   space-between distributes as a single evenly spaced row across the
+   desktop viewport. The mobile cluster is preserved because the small
+   regime favicon plus three short top-nav buttons plus the Menu trigger
+   already fit the narrow row tightly without redistribution. */
+.site-header {
+  display: flex;
+  align-items: center;
+  justify-content: flex-start;
+  flex-wrap: wrap;
+  gap: 0.75rem;
+  margin-bottom: 1rem;
+}
+
+.site-brand {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  flex-wrap: wrap;
+  margin-right: auto;
+}
+
+@media (min-width: 769px) {
+  .site-header {
+    justify-content: space-between;
+  }
+
+  .site-brand {
+    margin-right: 0;
+  }
+
+  /* display: contents lets .top-nav's three anchor children participate
+     in the parent flex layout (.site-header on the main page,
+     .lab-header on the lab pages) as if they were direct siblings of
+     the brand cluster, the Return Home button, and the Menu trigger.
+     Combined with justify-content: space-between on the parent, this
+     produces a single evenly-distributed row instead of the
+     left-anchored brand + tight right-cluster the auto-margin layout
+     produced. Modern browsers preserve the <nav aria-label="Featured
+     labs"> accessibility role across display: contents (Chrome 88+,
+     Firefox 50+, Safari 11.1+), so the screen-reader landmark stays
+     intact even though the box itself is removed from the visual flow.
+     Scoped to desktop because at ≤768px the parent's flex-wrap is
+     already enough to keep the cluster on one row and the original
+     inline-flex behavior with its own 0.4rem inter-button gap reads
+     better than space-between would on a viewport where everything
+     barely fits. */
+  .top-nav {
+    display: contents;
+  }
+}
+
 .app-shell {
   max-width: 1100px;
   margin: 0 auto;

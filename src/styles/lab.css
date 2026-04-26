@@ -19,14 +19,19 @@
   margin-bottom: 1rem;
 }
 
-/* margin-right: auto pushes every post-brand sibling to the right
-   edge of the row, so the brand anchors the left and the navigational
-   chrome (TopNav, Return Home button, Menu trigger) clusters tightly
-   on the right. The previous justify-content: space-between
-   distributed the chrome evenly across the row, which orphaned the
-   Return Home button in the middle once a third right-side item
-   (TopNav) was added. flex-start + auto-margin keeps the cluster
-   together regardless of how many items end up in it. */
+/* Default (mobile) behavior: margin-right: auto pushes every post-brand
+   sibling to the right edge of the row, so the brand anchors the left
+   and the navigational chrome (TopNav, Return Home button, Menu trigger)
+   clusters tightly on the right. The desktop @media (min-width: 769px)
+   block below cancels both the auto margin and lab-header's flex-start
+   distribution and switches in justify-content: space-between with
+   display: contents on .top-nav, so the three TopNav buttons become
+   direct flex items of .lab-header alongside the brand, the Return
+   Home button, and the Menu trigger and the whole row distributes
+   evenly across the desktop viewport instead of clustering tightly
+   on the right after a single big gap. The mobile cluster behavior
+   is preserved as-is because the four-button cluster + small badge
+   already fits the narrow row tightly without space-between. */
 .lab-brand {
   display: flex;
   align-items: center;
@@ -287,6 +292,31 @@
 .lab-footer-home:focus-visible {
   text-decoration: underline;
   outline: none;
+}
+
+/* Desktop-only override that flips the lab-header from a left-anchored
+   brand + right-anchored nav cluster (the mobile-first default above)
+   into an evenly distributed row. justify-content: space-between on
+   the header pushes the first item to the start and the last to the
+   end and divides the remaining horizontal space equally between every
+   adjacent pair of children. Removing the auto right-margin from
+   .lab-brand is required because an auto margin in flex consumes free
+   space before space-between can distribute it; with the auto cleared,
+   space-between has space to work with. The companion .top-nav
+   { display: contents } rule lives in theme.css beside the rest of
+   the .top-nav styles and dissolves the TopNav wrapper at desktop
+   widths so its three buttons (Tactical Vol, Seasonality, Rotations)
+   become direct flex items of .lab-header alongside the brand cluster,
+   the Return Home button, and the Menu trigger — six children that
+   space-between distributes as a single evenly-spaced row. */
+@media (min-width: 769px) {
+  .lab-header {
+    justify-content: space-between;
+  }
+
+  .lab-brand {
+    margin-right: 0;
+  }
 }
 
 /* The labs borrow the main dashboard's single-breakpoint approach at 768px

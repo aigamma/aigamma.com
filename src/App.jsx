@@ -415,25 +415,17 @@ export default function App() {
 
   return (
     <div className="app-shell">
-      <header
-        className="site-header"
-        style={{
-          display: 'flex',
-          alignItems: 'center',
-          justifyContent: 'flex-start',
-          flexWrap: 'wrap',
-          gap: '0.75rem',
-          marginBottom: '1rem',
-        }}
-      >
-        {/* Brand cluster carries marginRight: auto so the post-brand
-            chrome (TopNav, Menu) clusters at the right edge of the
-            row regardless of how many items get added to it later.
-            This replaces the prior justifyContent: space-between
-            layout that worked with two children but would have
-            orphaned TopNav in the middle of the row once a third
-            sibling (Menu) was on the right. */}
-        <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem', flexWrap: 'wrap', marginRight: 'auto' }}>
+      <header className="site-header">
+        {/* Brand cluster. At mobile widths .site-brand carries
+            margin-right: auto so the post-brand chrome (TopNav, Menu)
+            clusters tightly against the right edge of the row; at
+            desktop widths (≥769px) the auto margin is cleared and
+            space-between on .site-header pairs with display: contents
+            on .top-nav to distribute the brand, the three top-nav
+            buttons, and the Menu trigger evenly across the row. The
+            full layout rationale lives in src/styles/theme.css beside
+            the .site-header and .top-nav rules. */}
+        <div className="site-brand">
           <a href="https://about.aigamma.com/" className="site-logo-link">
             <img
               src="/logo.webp"
