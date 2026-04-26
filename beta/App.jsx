@@ -2,6 +2,7 @@ import '../src/styles/theme.css';
 import '../src/styles/lab.css';
 import ErrorBoundary from '../src/ErrorBoundary';
 import Menu from '../src/components/Menu';
+import TopNav from '../src/components/TopNav';
 import SlotB, { slotName as slotBName } from './slots/SlotB';
 
 // Beta Lab shell — single slot for models under test. Graduated
@@ -31,6 +32,7 @@ export default function App() {
             BETA LAB
           </span>
         </div>
+        <TopNav />
         <Menu />
       </header>
 

@@ -2,6 +2,7 @@ import '../src/styles/theme.css';
 import '../src/styles/lab.css';
 import ErrorBoundary from '../src/ErrorBoundary';
 import Menu from '../src/components/Menu';
+import TopNav from '../src/components/TopNav';
 import Chat from '../src/components/Chat';
 import SlotA from './slots/SlotA';
 import SlotB from './slots/SlotB';
@@ -77,6 +78,7 @@ export default function App() {
             <span className="lab-badge__mobile-text">Jump</span>
           </span>
         </div>
+        <TopNav />
         <a
           href="/"
           className="lab-home-button lab-home-button--inline lab-home-button--split"

@@ -2,6 +2,7 @@ import '../src/styles/theme.css';
 import '../src/styles/lab.css';
 import ErrorBoundary from '../src/ErrorBoundary';
 import Menu from '../src/components/Menu';
+import TopNav from '../src/components/TopNav';
 import SlotA, { slotName as slotAName } from './slots/SlotA';
 import SlotB, { slotName as slotBName } from './slots/SlotB';
 
@@ -36,6 +37,7 @@ export default function App() {
             DEV LAB
           </span>
         </div>
+        <TopNav />
         <Menu />
       </header>
 

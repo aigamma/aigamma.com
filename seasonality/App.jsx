@@ -2,6 +2,7 @@ import '../src/styles/theme.css';
 import '../src/styles/lab.css';
 import ErrorBoundary from '../src/ErrorBoundary';
 import Menu from '../src/components/Menu';
+import TopNav from '../src/components/TopNav';
 import SeasonalityGrid from '../src/components/SeasonalityGrid';
 
 // Intraday seasonality lab. A bordered 14-column grid of SPX's
@@ -40,6 +41,7 @@ export default function App() {
             <span className="lab-badge__mobile-text">Seasonality</span>
           </span>
         </div>
+        <TopNav />
         <a
           href="/"
           className="lab-home-button lab-home-button--inline lab-home-button--split"

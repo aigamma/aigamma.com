@@ -13,17 +13,26 @@
 .lab-header {
   display: flex;
   align-items: center;
-  justify-content: space-between;
+  justify-content: flex-start;
   flex-wrap: wrap;
   gap: 0.75rem;
   margin-bottom: 1rem;
 }
 
+/* margin-right: auto pushes every post-brand sibling to the right
+   edge of the row, so the brand anchors the left and the navigational
+   chrome (TopNav, Return Home button, Menu trigger) clusters tightly
+   on the right. The previous justify-content: space-between
+   distributed the chrome evenly across the row, which orphaned the
+   Return Home button in the middle once a third right-side item
+   (TopNav) was added. flex-start + auto-margin keeps the cluster
+   together regardless of how many items end up in it. */
 .lab-brand {
   display: flex;
   align-items: center;
   gap: 0.75rem;
   flex-wrap: wrap;
+  margin-right: auto;
 }
 
 .lab-logo {
@@ -446,6 +455,22 @@
     height: 2.4rem;
     padding: 0 0.6rem;
     letter-spacing: 0.06em;
+  }
+
+  /* Match the 2.4rem cell sizing the rest of the lab-shell header
+     drops to at the 480px breakpoint (lab-badge, lab-logo,
+     menu-trigger, lab-home-button--inline). The desktop / 768px
+     layers in theme.css already shrink the top-nav buttons from
+     3.2rem → 2.8rem; this rule is the third step inside the
+     lab-shell only, so the buttons stay larger on the main
+     dashboard at the same width (the main dashboard does not have
+     a 480px-scoped block — see the @media (max-width: 768px) tail
+     in theme.css). */
+  .lab-shell .top-nav__item {
+    font-size: 0.78rem;
+    height: 2.4rem;
+    padding: 0 0.5rem;
+    letter-spacing: 0.05em;
   }
 
   .lab-warning {

@@ -2,6 +2,7 @@ import '../src/styles/theme.css';
 import '../src/styles/lab.css';
 import ErrorBoundary from '../src/ErrorBoundary';
 import Menu from '../src/components/Menu';
+import TopNav from '../src/components/TopNav';
 import RotationChart from '../src/components/RotationChart';
 import SectorPerformanceBars from '../src/components/SectorPerformanceBars';
 
@@ -40,6 +41,7 @@ export default function App() {
             <span className="lab-badge__mobile-text">Rotations</span>
           </span>
         </div>
+        <TopNav />
         <a
           href="/"
           className="lab-home-button lab-home-button--inline lab-home-button--split"

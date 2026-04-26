@@ -2,6 +2,7 @@ import '../src/styles/theme.css';
 import '../src/styles/lab.css';
 import ErrorBoundary from '../src/ErrorBoundary';
 import Menu from '../src/components/Menu';
+import TopNav from '../src/components/TopNav';
 import Chat from '../src/components/Chat';
 import SlotA, { slotName as slotAName } from './slots/SlotA';
 import SlotB, { slotName as slotBName } from './slots/SlotB';
@@ -38,6 +39,7 @@ export default function App() {
             Alpha Lab
           </span>
         </div>
+        <TopNav />
         <Menu />
       </header>
 

@@ -3,6 +3,7 @@ import './styles/theme.css';
 import ErrorBoundary from './ErrorBoundary';
 import LevelsPanel from './components/LevelsPanel';
 import Menu from './components/Menu';
+import TopNav from './components/TopNav';
 import LazyMount from './components/LazyMount';
 // Below-the-fold charts are code-split via React.lazy so their source bytes
 // do not land in the main chunk. Each becomes its own Vite chunk that the
@@ -419,13 +420,20 @@ export default function App() {
         style={{
           display: 'flex',
           alignItems: 'center',
-          justifyContent: 'space-between',
-          flexWrap: 'nowrap',
+          justifyContent: 'flex-start',
+          flexWrap: 'wrap',
           gap: '0.75rem',
           marginBottom: '1rem',
         }}
       >
-        <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem', flexWrap: 'wrap' }}>
+        {/* Brand cluster carries marginRight: auto so the post-brand
+            chrome (TopNav, Menu) clusters at the right edge of the
+            row regardless of how many items get added to it later.
+            This replaces the prior justifyContent: space-between
+            layout that worked with two children but would have
+            orphaned TopNav in the middle of the row once a third
+            sibling (Menu) was on the right. */}
+        <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem', flexWrap: 'wrap', marginRight: 'auto' }}>
           <a href="https://about.aigamma.com/" style={{ display: 'block' }}>
             <img
               src="/logo.webp"
@@ -485,6 +493,7 @@ export default function App() {
           )}
         </div>
 
+        <TopNav />
         <Menu />
       </header>
 

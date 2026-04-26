@@ -2,6 +2,7 @@ import '../src/styles/theme.css';
 import '../src/styles/lab.css';
 import ErrorBoundary from '../src/ErrorBoundary';
 import Menu from '../src/components/Menu';
+import TopNav from '../src/components/TopNav';
 import Chat from '../src/components/Chat';
 import SlotB from './slots/SlotB';
 import SlotC from './slots/SlotC';
@@ -83,6 +84,7 @@ export default function App() {
             <span className="lab-badge__mobile-text">Local Vol</span>
           </span>
         </div>
+        <TopNav />
         <a
           href="/"
           className="lab-home-button lab-home-button--inline lab-home-button--split"

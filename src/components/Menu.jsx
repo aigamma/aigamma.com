@@ -6,6 +6,13 @@ import { useCallback, useEffect, useRef, useState } from 'react';
 // path; the "About This Page" entry is pinned to the bottom as the
 // off-site exit (about.aigamma.com is a separate subdomain, so its
 // label drops the /slash-brackets/ format used for on-site labs).
+//
+// Three lab pages — /tactical/, /seasonality/, /rotations/ — moved
+// out of this dropdown into the TopNav component (see
+// src/components/TopNav.jsx) so they render as standalone buttons in
+// the header alongside the Menu trigger. Their entries are not
+// duplicated here; opening Menu now exposes only the labs that did
+// not get promoted to the top nav.
 const MENU_ITEMS = [
   { href: '/discrete/',                 label: '/discrete/',      desc: 'Binomial and trinomial trees, SVI and SSVI surfaces' },
   { href: '/garch/',                    label: '/garch/',         desc: 'GARCH family and ensemble forecasts' },
@@ -14,11 +21,8 @@ const MENU_ITEMS = [
   { href: '/parity/',                   label: '/parity/',        desc: 'Put-call parity, box-spread rate, implied forward' },
   { href: '/regime/',                   label: '/regime/',        desc: 'Mixture, Markov, Wasserstein regimes' },
   { href: '/risk/',                     label: '/risk/',          desc: 'Cross-model Greeks, Vanna-Volga, second-order' },
-  { href: '/rotations/',                label: '/rotations/',     desc: 'Relative sector rotation chart' },
   { href: '/rough/',                    label: '/rough/',         desc: 'Rough Bergomi and rough vol exploration' },
-  { href: '/seasonality/',              label: '/seasonality/',   desc: 'SPX 30-minute intraday seasonality grid' },
   { href: '/stochastic/',               label: '/stochastic/',    desc: 'Heston, SABR, LSV, rough Bergomi' },
-  { href: '/tactical/',                 label: '/tactical/',      desc: 'VRP, term structure, smile, RND, fixed-strike IV' },
   { href: 'https://about.aigamma.com/', label: 'About This Page' },
 ];
 
