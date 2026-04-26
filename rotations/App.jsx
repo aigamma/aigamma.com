@@ -32,9 +32,9 @@ export default function App() {
         <div className="lab-brand">
           <span
             className="lab-badge"
-            title="Sector Rotations · ratio + momentum vs SPX"
+            title="Rotations · ratio + momentum vs SPX"
           >
-            <span className="lab-badge__desktop-text">Sector Rotations</span>
+            <span className="lab-badge__desktop-text">Rotations</span>
             <span className="lab-badge__mobile-text">Rotations</span>
           </span>
         </div>
