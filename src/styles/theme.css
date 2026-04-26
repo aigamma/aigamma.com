@@ -433,6 +433,65 @@ body {
   gap: 1rem;
 }
 
+/* Outlined toggle row used by VolatilityRiskPremium to drive series
+   visibility. Replaces the native Plotly legend on that chart so the
+   toggle affordance reads at a glance — Plotly's default legend entries
+   are clickable but visually look like static text labels, which buried
+   the toggle interaction. Each .vrp-toggle is bordered in its trace's
+   own color when active, fades to bg-card-border / text-secondary when
+   inactive, and wraps to a second row on narrow viewports without
+   needing a media-query because the parent uses flex-wrap. */
+.vrp-toggle-row {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.5rem;
+  justify-content: center;
+  padding: 0.6rem 0.5rem 0.4rem;
+}
+
+.vrp-toggle {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.55rem;
+  height: 2.4rem;
+  padding: 0 0.85rem;
+  background: transparent;
+  border: 1.5px solid;
+  border-radius: 4px;
+  font-family: 'Courier New', monospace;
+  font-size: 0.85rem;
+  font-weight: 700;
+  letter-spacing: 0.04em;
+  cursor: pointer;
+  transition: opacity 0.15s ease, background 0.15s ease;
+  outline: none;
+}
+
+.vrp-toggle:hover {
+  background: rgba(255, 255, 255, 0.04);
+}
+
+.vrp-toggle:focus-visible {
+  outline: 2px solid var(--accent-blue);
+  outline-offset: 2px;
+}
+
+.vrp-toggle[data-active='false'] {
+  opacity: 0.55;
+}
+
+.vrp-toggle__dot {
+  width: 10px;
+  height: 10px;
+  border-radius: 50%;
+  border: 1.5px solid;
+  flex-shrink: 0;
+}
+
+.vrp-toggle__label {
+  white-space: nowrap;
+}
+
 .skeleton-card {
   background-color: var(--bg-card);
   border: 1px solid var(--bg-card-border);

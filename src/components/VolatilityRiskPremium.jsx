@@ -141,6 +141,26 @@ export default function VolatilityRiskPremium({ spotPrice, capturedAt }) {
   const mobile = useIsMobile();
   const [timeRange, setTimeRange] = useState(null);
 
+  // Series visibility state. The chart's legend has been replaced by the
+  // outlined toggle row rendered in JSX below the chart card; clicking a
+  // toggle flips its key here, the useEffect picks the new value up via
+  // dependency, and the corresponding trace's `visible` prop swaps
+  // between `true` (drawn) and 'legendonly' (registered with Plotly so
+  // the y-axis range still considers it but no line is rendered). VIX is
+  // off by default so the chart loads with the original three vol series
+  // (SPX, RV, IV) visible — the addition of VIX is opt-in for readers who
+  // want to compare the Cboe-published implied vol against the chain-
+  // derived implied vol.
+  const [traceVisibility, setTraceVisibility] = useState({
+    SPX: true,
+    RV: true,
+    IV: true,
+    VIX: false,
+  });
+  const toggleTrace = useCallback((key) => {
+    setTraceVisibility((prev) => ({ ...prev, [key]: !prev[key] }));
+  }, []);
+
   const series = useMemo(() => {
     if (!data?.series) return [];
     return data.series
@@ -233,6 +253,7 @@ export default function VolatilityRiskPremium({ spotPrice, capturedAt }) {
       yaxis: 'y',
       name: '<b>SPX</b>',
       hovertemplate: '%{x}<br>SPX: %{y:,.2f}<extra></extra>',
+      visible: traceVisibility.SPX ? true : 'legendonly',
     };
 
     // VRP shading is one closed-polygon trace per contiguous same-sign
@@ -258,6 +279,7 @@ export default function VolatilityRiskPremium({ spotPrice, capturedAt }) {
       yaxis: 'y2',
       name: `<span style="color: ${RV_COLOR}"><b>Realized Vol (20d YZ)</b></span>`,
       hovertemplate: '%{x}<br>RV: %{y:.2f}%<extra></extra>',
+      visible: traceVisibility.RV ? true : 'legendonly',
     };
     const ivLine = {
       x: series.map((r) => r.trading_date),
@@ -268,6 +290,7 @@ export default function VolatilityRiskPremium({ spotPrice, capturedAt }) {
       yaxis: 'y2',
       name: '<b>Implied Vol (30d CM)</b>',
       hovertemplate: '%{x}<br>IV: %{y:.2f}%<extra></extra>',
+      visible: traceVisibility.IV ? true : 'legendonly',
     };
 
     // VIX trace — Cboe-published 30d implied vol on SPX, sourced via the
@@ -287,6 +310,7 @@ export default function VolatilityRiskPremium({ spotPrice, capturedAt }) {
       yaxis: 'y2',
       name: `<span style="color: ${VIX_COLOR}"><b>VIX</b></span>`,
       hovertemplate: '%{x}<br>VIX: %{y:.2f}<extra></extra>',
+      visible: traceVisibility.VIX ? true : 'legendonly',
     };
 
     // Trace order encodes z-order in Plotly: later traces render on top of
@@ -340,32 +364,25 @@ export default function VolatilityRiskPremium({ spotPrice, capturedAt }) {
     const volLo = Math.max(0, volMin * 0.85);
     const volHi = volMax * 1.1;
 
-    // Top margin has to hold both the chart title and the horizontal legend
-    // row, so it's noticeably taller than the 50px used on single-row-title
-    // charts. Title is pinned to the top of the container; legend sits just
-    // above the plot area (y slightly above 1 in paper coords, yanchor
-    // bottom), leaving a comfortable band between the two. Left margin
-    // matches the 80px used on GammaInflectionChart and GexProfile so the
-    // SPX axis sits flush with the other charts on the page; the bolder
-    // 20px y-axis title fits inside that budget by trimming the standoff
-    // from 30px to 10px, which still reads as deliberate padding between
-    // the rotated title and the right-edge tick labels without wasting the
+    // Top margin only has to hold the chart title now — the horizontal
+    // legend row was replaced by the outlined HTML toggle row rendered
+    // above the chart in JSX, so the in-SVG legend is gone and the
+    // title-to-data band can be tighter. Left margin matches the 80px
+    // used on GammaInflectionChart and GexProfile so the SPX axis sits
+    // flush with the other charts on the page; the bolder 20px y-axis
+    // title fits inside that budget by trimming the standoff from 30px
+    // to 10px, which still reads as deliberate padding between the
+    // rotated title and the right-edge tick labels without wasting the
     // card's left margin on a huge title-to-tick gap. Right margin is
     // left at 115px because the right y-axis ("Implied Volatility") still
-    // carries the 30px standoff and the user's feedback was scoped to the
-    // left edge only.
+    // carries the 30px standoff.
     const axisTitleFont = {
       family: PLOTLY_FONT_FAMILY,
       color: PLOTLY_COLORS.titleText,
       size: 20,
     };
-    const legendFont = {
-      family: PLOTLY_FONT_FAMILY,
-      color: PLOTLY_COLORS.titleText,
-      size: 18,
-    };
     const layout = plotly2DChartLayout({
-      margin: mobile ? { t: 45, r: 50, b: 40, l: 50 } : { t: 100, r: 115, b: 45, l: 80 },
+      margin: mobile ? { t: 45, r: 50, b: 40, l: 50 } : { t: 50, r: 115, b: 45, l: 80 },
       title: {
         ...plotlyTitle('Volatility Risk Premium'),
         y: 0.97,
@@ -413,17 +430,12 @@ export default function VolatilityRiskPremium({ spotPrice, capturedAt }) {
           standoff: 30,
         },
       },
-      showlegend: !mobile,
-      legend: {
-        orientation: 'h',
-        x: 0.5,
-        y: 1.03,
-        xanchor: 'center',
-        yanchor: 'bottom',
-        font: legendFont,
-        bgcolor: 'rgba(0, 0, 0, 0)',
-        borderwidth: 0,
-      },
+      // Legend is rendered as a row of outlined HTML toggle buttons
+      // above the chart card in JSX (see the .vrp-toggle-row block in
+      // the return statement); Plotly's native legend is suppressed
+      // because the HTML buttons carry both the visual cue (boxed,
+      // colored borders) and the click-to-toggle interaction.
+      showlegend: false,
       hovermode: 'x unified',
     });
 
@@ -431,7 +443,7 @@ export default function VolatilityRiskPremium({ spotPrice, capturedAt }) {
       responsive: true,
       displayModeBar: false,
     });
-  }, [Plotly, series, vrpSegments, spxSeries, mobile, timeRange]);
+  }, [Plotly, series, vrpSegments, spxSeries, mobile, timeRange, traceVisibility]);
 
   const handleBrushChange = useCallback((minMs, maxMs) => {
     setTimeRange([msToIso(minMs), msToIso(maxMs)]);
@@ -469,10 +481,47 @@ export default function VolatilityRiskPremium({ spotPrice, capturedAt }) {
   const activeMinIso = timeRange ? timeRange[0] : defaultStart;
   const activeMaxIso = timeRange ? timeRange[1] : lastDate;
 
+  // Outlined toggle row that replaces the native Plotly legend. Each
+  // button is bordered in the trace's own color and renders the trace
+  // name in that same color when active; when toggled off the border
+  // fades to bg-card-border and the text dims to text-secondary, so
+  // the active/inactive distinction reads at a glance. The boxed
+  // styling makes the affordance obvious — the previous Plotly legend
+  // entries were technically clickable toggles but didn't visually
+  // signal that, leading readers to miss the interaction.
+  const toggles = [
+    { key: 'SPX', label: 'SPX',                         color: SPX_LINE   },
+    { key: 'RV',  label: 'Realized Vol (20d YZ)',       color: RV_COLOR   },
+    { key: 'IV',  label: 'Implied Vol (30d CM)',        color: IV_COLOR   },
+    { key: 'VIX', label: 'VIX',                         color: VIX_COLOR  },
+  ];
+
   return (
     <div className="card" style={{ marginBottom: '1rem', position: 'relative' }}>
       <ResetButton visible={timeRange != null} onClick={() => setTimeRange(null)} />
       <div ref={chartRef} style={{ width: '100%', height: '540px', backgroundColor: 'var(--bg-card)' }} />
+      <div className="vrp-toggle-row" role="group" aria-label="Series visibility toggles">
+        {toggles.map(({ key, label, color }) => {
+          const active = traceVisibility[key];
+          return (
+            <button
+              key={key}
+              type="button"
+              className="vrp-toggle"
+              data-active={active}
+              aria-pressed={active}
+              onClick={() => toggleTrace(key)}
+              style={{
+                borderColor: active ? color : 'var(--bg-card-border)',
+                color: active ? color : 'var(--text-secondary)',
+              }}
+            >
+              <span className="vrp-toggle__dot" style={{ background: active ? color : 'transparent', borderColor: color }} />
+              <span className="vrp-toggle__label">{label}</span>
+            </button>
+          );
+        })}
+      </div>
       <RangeBrush
         min={isoToMs(firstDate)}
         max={isoToMs(lastDate)}
