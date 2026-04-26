@@ -15,6 +15,7 @@ import { useCallback, useEffect, useRef, useState } from 'react';
 // not get promoted to the top nav.
 const MENU_ITEMS = [
   { href: '/discrete/',                 label: '/discrete/',      desc: 'Binomial and trinomial trees, SVI and SSVI surfaces' },
+  { href: '/earnings/',                 label: '/earnings/',      desc: 'Earnings calendar by implied move and date' },
   { href: '/garch/',                    label: '/garch/',         desc: 'GARCH family and ensemble forecasts' },
   { href: '/heatmap/',                  label: '/heatmap/',       desc: 'Market-cap-weighted SPX heatmap by sector' },
   { href: '/jump/',                     label: '/jump/',          desc: 'Merton, Kou, Bates, variance gamma' },
