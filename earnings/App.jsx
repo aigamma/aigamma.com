@@ -43,6 +43,16 @@ import EarningsCalendar from '../src/components/EarningsCalendar';
 //   Per-ticker implied move is then derived server-side from the
 //   Massive options snapshot endpoint for the chart-window subset.
 
+// Inline color tokens for the description prose. Each one keys to
+// the matching hex value in EarningsCalendar.jsx's SESSION_COLORS
+// constant so that when the description says the word "blue" it
+// renders in the exact same blue as the legend dots and scatter
+// points the prose is naming. Bolded so the color-coded references
+// stand out against the var(--text-secondary) base flow.
+const BMO_INK = { color: '#4a9eff', fontWeight: 700 };
+const AMC_INK = { color: '#d85a30', fontWeight: 700 };
+const UNK_INK = { color: '#7e8aa0', fontWeight: 700 };
+
 export default function App() {
   return (
     <div className="app-shell lab-shell earnings-shell">
@@ -98,15 +108,20 @@ export default function App() {
             range as a percent of spot. The implied range is the
             0.85-scaled at-the-money straddle midprice on the soonest
             expiration that captures the earnings event — same-day or
-            later for Before-Open reporters, next-day or later for
-            After-Close reporters, since same-day options settle at 4
-            PM ET before an after-close release. The 0.85 factor is
-            the SpotGamma convention; it scales raw straddle premium
-            down to the empirically-realized post-event
+            later for <span style={BMO_INK}>Before-Open reporters</span>,
+            next-day or later for <span style={AMC_INK}>After-Close reporters</span>,
+            since same-day options settle at 4 PM ET before an{' '}
+            <span style={AMC_INK}>after-close release</span>. The 0.85
+            factor is the SpotGamma convention; it scales raw straddle
+            premium down to the empirically-realized post-event
             one-standard-deviation range. Color encodes the reporting
-            session: blue for Before Market Open, coral for After
-            Market Close, gray for unconfirmed. Hover any dot for the
-            full per-ticker profile, including the dollar implied
+            session: <span style={BMO_INK}>blue</span> for{' '}
+            <span style={BMO_INK}>Before Market Open</span>,{' '}
+            <span style={AMC_INK}>coral</span> for{' '}
+            <span style={AMC_INK}>After Market Close</span>,{' '}
+            <span style={UNK_INK}>gray</span> for{' '}
+            <span style={UNK_INK}>unconfirmed</span>. Hover any dot for
+            the full per-ticker profile, including the dollar implied
             range, the ATM strike, and the straddle expiration.
           </p>
           <p style={{ margin: '0 0 0.7rem' }}>
@@ -126,7 +141,8 @@ export default function App() {
           <p style={{ margin: 0 }}>
             The four-week upcoming grid below the chart lists every
             release with a revenue estimate above one billion dollars,
-            sorted within each Before-Open / After-Close cell by
+            sorted within each <span style={BMO_INK}>Before-Open</span>{' '}
+            / <span style={AMC_INK}>After-Close</span> cell by
             revenue estimate descending. EarningsWhispers is the
             universe source; their API orders rows by the site's
             own sentiment-vote total, which conflates reader interest
