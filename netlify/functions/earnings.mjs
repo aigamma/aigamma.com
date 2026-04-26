@@ -80,6 +80,28 @@
 //   and the chart simply renders without implied moves — calendar
 //   stays useful, chart Y-axis shows blank with a degraded-banner.
 
+import { readFileSync } from 'node:fs';
+
+// Top-N-by-options-volume roster for the chart filter. Same JSON file
+// /heatmap and /scan already consume — generated from the Barchart
+// "stocks screener" CSV at C:\sheets\ via
+// scripts/backfill/options-volume-roster.mjs. Holds ~250 names sorted
+// by options volume desc; we take the first CHART_TOP_N for the
+// chart's universe so the scatter shows the names whose implied
+// ranges are actually load-bearing for SPX vol regime reading and
+// drops the long tail of low-options-volume mid-caps. The 4-week
+// calendar grid below the chart keeps the wider revenue >= $1B
+// universe — that's a landscape view where comprehensive coverage
+// matters more than visual density.
+const ROSTER_URL = new URL('../../src/data/options-volume-roster.json', import.meta.url);
+const roster = JSON.parse(readFileSync(ROSTER_URL, 'utf8'));
+const CHART_TOP_N = 100;
+const CHART_TICKER_SET = new Set(
+  (roster?.holdings ?? [])
+    .slice(0, CHART_TOP_N)
+    .map((h) => String(h.symbol || '').toUpperCase())
+);
+
 const EW_BASE = 'https://www.earningswhispers.com';
 const EW_USER_AGENT =
   'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 ' +
@@ -671,13 +693,18 @@ export default async function handler(_request) {
     return { isoDate: iso, ok: true, tickers: filtered };
   });
 
-  // Chart subset: first CHART_DAYS trading days. Compute implied moves
-  // for every ticker in this window. Calendar grid uses the rest as-is.
+  // Chart subset: first CHART_DAYS trading days, intersected with the
+  // top-N-by-options-volume roster so the scatter shows only the
+  // names whose implied ranges are load-bearing for SPX vol regime
+  // reading. The full revenue >= $1B universe stays in the 4-week
+  // calendar grid below the chart, where landscape comprehensiveness
+  // beats visual density.
   const chartIndices = new Set(dates.slice(0, CHART_DAYS));
   const chartTickerJobs = [];
   for (const day of dayResults) {
     if (!chartIndices.has(day.isoDate)) continue;
     for (const t of day.tickers) {
+      if (!CHART_TICKER_SET.has(t.ticker)) continue;
       chartTickerJobs.push({ day, ticker: t });
     }
   }
@@ -744,7 +771,11 @@ export default async function handler(_request) {
 
   const chartDays = dayResults
     .filter((d) => chartIndices.has(d.isoDate))
-    .map((d) => ({ ...d, dow: dayOfWeekFromIso(d.isoDate) }));
+    .map((d) => ({
+      ...d,
+      dow: dayOfWeekFromIso(d.isoDate),
+      tickers: d.tickers.filter((t) => CHART_TICKER_SET.has(t.ticker)),
+    }));
 
   const calendarDays = dayResults.map((d) => ({
     isoDate: d.isoDate,
@@ -771,6 +802,7 @@ export default async function handler(_request) {
   const payload = {
     asOf: todayIso,
     revenueFloor: REVENUE_FLOOR,
+    chartTopN: CHART_TOP_N,
     chartDayCount: CHART_DAYS,
     calendarWeekCount: CALENDAR_WEEKS,
     impliedMovesLive: liveImpliedMoves,

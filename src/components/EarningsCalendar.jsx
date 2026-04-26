@@ -188,7 +188,7 @@ function CalendarHeader({ data }) {
         letterSpacing: '0.04em',
       }}>
         {data
-          ? `${totalChart} chart · ${totalCal} 4-week · revenue ≥ $1B · ${data.asOf}`
+          ? `${totalChart} chart (top ${data.chartTopN ?? 100} options vol) · ${totalCal} 4-week (rev ≥ $1B) · ${data.asOf}`
           : ''}
       </div>
     </div>

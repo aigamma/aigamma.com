@@ -90,23 +90,27 @@ export default function App() {
         </div>
         <div style={{ color: 'var(--text-secondary)', lineHeight: 1.65, fontSize: '0.95rem' }}>
           <p style={{ margin: '0 0 0.7rem' }}>
-            Each upcoming earnings release on the next five trading
-            days is plotted as a single dot. The horizontal axis is the
-            calendar date the company reports; the vertical axis is the
-            options-market implied range as a percent of spot. The
-            implied range is the 0.85-scaled at-the-money straddle
-            midprice on the soonest expiration that captures the
-            earnings event — same-day or later for Before-Open
-            reporters, next-day or later for After-Close reporters,
-            since same-day options settle at 4 PM ET before an
-            after-close release. The 0.85 factor is the SpotGamma
-            convention; it scales raw straddle premium down to the
-            empirically-realized post-event one-standard-deviation
-            range. Color encodes the reporting session: blue for Before
-            Market Open, coral for After Market Close, gray for
-            unconfirmed. Hover any dot for the full per-ticker profile,
-            including the dollar implied range, the ATM strike, and
-            the straddle expiration.
+            Upcoming earnings releases on the next five trading days
+            are plotted as single dots, filtered to the top 100 names
+            by US options volume so the scatter shows the reporters
+            whose implied ranges are load-bearing for SPX vol regime
+            reading and drops the long tail of low-options-volume
+            mid-caps where the chart signal is too thin to be useful.
+            The horizontal axis is the calendar date the company
+            reports; the vertical axis is the options-market implied
+            range as a percent of spot. The implied range is the
+            0.85-scaled at-the-money straddle midprice on the soonest
+            expiration that captures the earnings event — same-day or
+            later for Before-Open reporters, next-day or later for
+            After-Close reporters, since same-day options settle at 4
+            PM ET before an after-close release. The 0.85 factor is
+            the SpotGamma convention; it scales raw straddle premium
+            down to the empirically-realized post-event
+            one-standard-deviation range. Color encodes the reporting
+            session: blue for Before Market Open, coral for After
+            Market Close, gray for unconfirmed. Hover any dot for the
+            full per-ticker profile, including the dollar implied
+            range, the ATM strike, and the straddle expiration.
           </p>
           <p style={{ margin: '0 0 0.7rem' }}>
             Implied range is computed server-side from the Massive
