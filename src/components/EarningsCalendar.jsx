@@ -81,23 +81,50 @@ function formatLongDate(iso) {
   });
 }
 
+const DEFAULT_FILTER_MODE = 'topN-100';
+
 export default function EarningsCalendar() {
   const [data, setData] = useState(null);
   const [error, setError] = useState(null);
+  const [filterMode, setFilterMode] = useState(DEFAULT_FILTER_MODE);
+  const [filterLoading, setFilterLoading] = useState(false);
   const [containerWidth, setContainerWidth] = useState(0);
   const wrapRef = useRef(null);
+  // Per-mode payload cache so toggling between already-fetched modes
+  // is instant (no refetch flicker, no re-paying the ~3-5s Massive
+  // fan-out cost). The cache lives for the component lifetime; a
+  // hard refresh wipes it which is the right behavior since the
+  // earnings calendar shifts as companies confirm release times.
+  const cacheRef = useRef(new Map());
 
   useEffect(() => {
     let cancelled = false;
-    fetch('/api/earnings')
+    if (cacheRef.current.has(filterMode)) {
+      setData(cacheRef.current.get(filterMode));
+      setError(null);
+      setFilterLoading(false);
+      return () => { cancelled = true; };
+    }
+    setFilterLoading(true);
+    fetch(`/api/earnings?chart_filter=${encodeURIComponent(filterMode)}`)
       .then((r) => {
         if (!r.ok) throw new Error(`HTTP ${r.status}`);
         return r.json();
       })
-      .then((j) => { if (!cancelled) setData(j); })
-      .catch((e) => { if (!cancelled) setError(String(e?.message || e)); });
+      .then((j) => {
+        if (cancelled) return;
+        cacheRef.current.set(filterMode, j);
+        setData(j);
+        setError(null);
+        setFilterLoading(false);
+      })
+      .catch((e) => {
+        if (cancelled) return;
+        setError(String(e?.message || e));
+        setFilterLoading(false);
+      });
     return () => { cancelled = true; };
-  }, []);
+  }, [filterMode]);
 
   useEffect(() => {
     if (!wrapRef.current || typeof ResizeObserver === 'undefined') return;
@@ -112,7 +139,12 @@ export default function EarningsCalendar() {
 
   return (
     <div ref={wrapRef} style={{ display: 'flex', flexDirection: 'column', gap: '1.25rem' }}>
-      <CalendarHeader data={data} />
+      <CalendarHeader
+        data={data}
+        filterMode={filterMode}
+        setFilterMode={setFilterMode}
+        filterLoading={filterLoading}
+      />
 
       {error && (
         <div style={{
@@ -165,32 +197,137 @@ export default function EarningsCalendar() {
   );
 }
 
-function CalendarHeader({ data }) {
+// Hardcoded fallback list mirrors the server's CHART_FILTER_MODES so
+// the toggle row can render before the first /api/earnings response
+// (or if the response shape ever drops the chartFilterModes field).
+// The server is the source of truth — when the response arrives we
+// prefer data.chartFilterModes.
+const FILTER_MODE_FALLBACK = [
+  { id: 'topN-100', label: 'Top 100 OV' },
+  { id: 'topN-250', label: 'Top 250 OV' },
+  { id: 'rev-5B',   label: 'Rev ≥ $5B' },
+  { id: 'rev-1B',   label: 'Rev ≥ $1B' },
+  { id: 'rev-500M', label: 'Rev ≥ $500M' },
+];
+
+function CalendarHeader({ data, filterMode, setFilterMode, filterLoading }) {
   const totalChart = data?.chartDays?.reduce((s, d) => s + (d.tickers?.length || 0), 0) || 0;
   const totalCal = data?.calendarDays?.reduce((s, d) => s + (d.tickers?.length || 0), 0) || 0;
+  const modes = data?.chartFilterModes ?? FILTER_MODE_FALLBACK;
+  const activeLabel = modes.find((m) => m.id === filterMode)?.label ?? filterMode;
+  return (
+    <div style={{ display: 'flex', flexDirection: 'column', gap: '0.6rem' }}>
+      <div style={{
+        display: 'flex',
+        flexWrap: 'wrap',
+        gap: '0.6rem 1.4rem',
+        justifyContent: 'space-between',
+        alignItems: 'baseline',
+      }}>
+        <div style={{ display: 'flex', flexWrap: 'wrap', gap: '0.4rem 1rem', alignItems: 'baseline' }}>
+          <LegendDot color={SESSION_COLORS.BMO} label="Before Market Open" />
+          <LegendDot color={SESSION_COLORS.AMC} label="After Market Close" />
+          <LegendDot color={SESSION_COLORS.Unknown} label="Unknown" />
+        </div>
+        <div style={{
+          color: 'var(--text-secondary)',
+          fontFamily: 'Courier New, monospace',
+          fontSize: '0.78rem',
+          letterSpacing: '0.04em',
+        }}>
+          {data
+            ? `${totalChart} chart (${activeLabel}) · ${totalCal} 4-week (rev ≥ $1B) · ${data.asOf}`
+            : ''}
+        </div>
+      </div>
+      <FilterToggleRow
+        modes={modes}
+        active={filterMode}
+        onChange={setFilterMode}
+        loading={filterLoading}
+      />
+    </div>
+  );
+}
+
+// Segmented-pill toggle row. Each button is mutex-active with the
+// others (radio behavior) and styled like the existing site chrome:
+// monospace caps, accent-blue active state, dim border, dim hover.
+// The "Market Cap" placeholder pill is intentionally disabled because
+// market-cap data is not yet ingested (see the
+// docs/earnings-data-roadmap.md plan written alongside this UI).
+function FilterToggleRow({ modes, active, onChange, loading }) {
   return (
     <div style={{
       display: 'flex',
       flexWrap: 'wrap',
-      gap: '0.6rem 1.4rem',
-      justifyContent: 'space-between',
-      alignItems: 'baseline',
+      gap: '0.4rem',
+      alignItems: 'center',
     }}>
-      <div style={{ display: 'flex', flexWrap: 'wrap', gap: '0.4rem 1rem', alignItems: 'baseline' }}>
-        <LegendDot color={SESSION_COLORS.BMO} label="Before Market Open" />
-        <LegendDot color={SESSION_COLORS.AMC} label="After Market Close" />
-        <LegendDot color={SESSION_COLORS.Unknown} label="Unknown" />
-      </div>
-      <div style={{
+      <span style={{
         color: 'var(--text-secondary)',
         fontFamily: 'Courier New, monospace',
-        fontSize: '0.78rem',
-        letterSpacing: '0.04em',
+        fontSize: '0.72rem',
+        letterSpacing: '0.14em',
+        textTransform: 'uppercase',
+        marginRight: '0.3rem',
       }}>
-        {data
-          ? `${totalChart} chart (top ${data.chartTopN ?? 100} options vol) · ${totalCal} 4-week (rev ≥ $1B) · ${data.asOf}`
-          : ''}
-      </div>
+        Filter
+      </span>
+      {modes.map((m) => {
+        const isActive = m.id === active;
+        return (
+          <button
+            key={m.id}
+            type="button"
+            onClick={() => { if (!isActive) onChange(m.id); }}
+            disabled={loading && !isActive}
+            style={{
+              fontFamily: 'Courier New, monospace',
+              fontSize: '0.78rem',
+              padding: '0.3rem 0.7rem',
+              borderRadius: '3px',
+              border: `1px solid ${isActive ? 'var(--accent-blue)' : '#2e3540'}`,
+              background: isActive ? 'rgba(74, 158, 255, 0.12)' : 'transparent',
+              color: isActive ? 'var(--accent-blue)' : '#9aa6c2',
+              cursor: isActive || loading ? 'default' : 'pointer',
+              letterSpacing: '0.04em',
+              opacity: loading && !isActive ? 0.5 : 1,
+              transition: 'background-color 0.15s ease, border-color 0.15s ease, color 0.15s ease',
+            }}
+          >
+            {m.label}
+          </button>
+        );
+      })}
+      <button
+        type="button"
+        disabled
+        title="Market cap data is not yet ingested. See docs/earnings-data-roadmap.md for the plan."
+        style={{
+          fontFamily: 'Courier New, monospace',
+          fontSize: '0.78rem',
+          padding: '0.3rem 0.7rem',
+          borderRadius: '3px',
+          border: '1px dashed #2e3540',
+          background: 'transparent',
+          color: '#5a6478',
+          cursor: 'not-allowed',
+          letterSpacing: '0.04em',
+        }}
+      >
+        Market Cap (soon)
+      </button>
+      {loading && (
+        <span style={{
+          color: 'var(--text-secondary)',
+          fontFamily: 'Courier New, monospace',
+          fontSize: '0.72rem',
+          marginLeft: '0.4rem',
+        }}>
+          Loading…
+        </span>
+      )}
     </div>
   );
 }

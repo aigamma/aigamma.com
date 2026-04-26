@@ -95,12 +95,36 @@ import { readFileSync } from 'node:fs';
 // matters more than visual density.
 const ROSTER_URL = new URL('../../src/data/options-volume-roster.json', import.meta.url);
 const roster = JSON.parse(readFileSync(ROSTER_URL, 'utf8'));
-const CHART_TOP_N = 100;
-const CHART_TICKER_SET = new Set(
-  (roster?.holdings ?? [])
-    .slice(0, CHART_TOP_N)
-    .map((h) => String(h.symbol || '').toUpperCase())
-);
+const ROSTER_SYMBOLS = (roster?.holdings ?? []).map((h) => String(h.symbol || '').toUpperCase());
+
+// Pre-built top-N roster sets for the chart's options-volume filter
+// modes. The roster JSON holds ~250 symbols sorted by US options
+// volume desc, so slicing the leading N gives the top-N set.
+const CHART_TOP_100_SET = new Set(ROSTER_SYMBOLS.slice(0, 100));
+const CHART_TOP_250_SET = new Set(ROSTER_SYMBOLS.slice(0, 250));
+
+// Chart filter mode resolver. Each mode produces a (ticker → bool)
+// predicate that the handler intersects with the chart-window
+// universe. Modes are exposed in the response payload so the front-
+// end can render the toggle UI without a hardcoded duplicate.
+const CHART_FILTER_MODES = [
+  { id: 'topN-100', label: 'Top 100 OV',
+    predicate: (t) => CHART_TOP_100_SET.has(t.ticker) },
+  { id: 'topN-250', label: 'Top 250 OV',
+    predicate: (t) => CHART_TOP_250_SET.has(t.ticker) },
+  { id: 'rev-5B',   label: 'Rev ≥ $5B',
+    predicate: (t) => Number.isFinite(t.revenueEst) && t.revenueEst >= 5_000_000_000 },
+  { id: 'rev-1B',   label: 'Rev ≥ $1B',
+    predicate: (t) => Number.isFinite(t.revenueEst) && t.revenueEst >= 1_000_000_000 },
+  { id: 'rev-500M', label: 'Rev ≥ $500M',
+    predicate: (t) => Number.isFinite(t.revenueEst) && t.revenueEst >= 500_000_000 },
+];
+const DEFAULT_CHART_FILTER_ID = 'topN-100';
+
+function resolveChartFilter(modeId) {
+  return CHART_FILTER_MODES.find((m) => m.id === modeId)
+    ?? CHART_FILTER_MODES.find((m) => m.id === DEFAULT_CHART_FILTER_ID);
+}
 
 const EW_BASE = 'https://www.earningswhispers.com';
 const EW_USER_AGENT =
@@ -112,7 +136,16 @@ const MASSIVE_API_KEY = process.env.MASSIVE_API_KEY;
 const MASSIVE_BASE = 'https://api.massive.com';
 const MASSIVE_TIMEOUT_MS = 8000;
 
-const REVENUE_FLOOR = 1_000_000_000; // $1B
+// Master revenue floor — the minimum any ticker needs to clear to ever
+// appear in either the scatter chart or the 4-week calendar grid. Set
+// to $500M so the most permissive chart toggle ('rev-500M') has a
+// universe to filter from. The calendar grid below the chart applies
+// a tighter $1B secondary filter (GRID_REVENUE_FLOOR) on top of this
+// so its appearance doesn't change from the long-standing $1B-only
+// behavior; only the chart-window fan-out reads from the wider $500M
+// universe, gated by the user's chart_filter selection.
+const MASTER_REVENUE_FLOOR = 500_000_000;  // $500M
+const GRID_REVENUE_FLOOR = 1_000_000_000;  // $1B
 const CHART_DAYS = 5;                // scatter chart window (trading days)
 const CALENDAR_WEEKS = 4;            // calendar grid window (calendar weeks)
 const CALENDAR_DAYS = CALENDAR_WEEKS * 5; // assume Mon-Fri
@@ -675,12 +708,16 @@ function deriveImpliedMove(contracts, todayIso, spotOverride) {
   };
 }
 
-export default async function handler(_request) {
+export default async function handler(request) {
   const todayIso = etTodayIso();
   const dates = nextNTradingDaysFromTodayIso(todayIso, CALENDAR_DAYS);
+  const url = new URL(request.url);
+  const chartFilterMode = resolveChartFilter(url.searchParams.get('chart_filter'));
 
   // Fetch all calendar days from EW in parallel (bounded). Per-day
   // failures don't fail the whole request — that day just renders empty.
+  // Master floor is $500M so the most-permissive chart toggle has a
+  // universe to filter from; the grid filter below tightens to $1B.
   const dayResults = await pmap(dates, EW_CONCURRENCY, async (iso) => {
     const result = await fetchEwCalendarDay(isoToYyyymmdd(iso));
     if (!result.ok) {
@@ -688,23 +725,25 @@ export default async function handler(_request) {
     }
     const filtered = result.rows
       .map(normalizeEwRow)
-      .filter((r) => r.ticker && r.revenueEst != null && r.revenueEst >= REVENUE_FLOOR)
+      .filter((r) => r.ticker && r.revenueEst != null && r.revenueEst >= MASTER_REVENUE_FLOOR)
       .sort((a, b) => (b.revenueEst ?? 0) - (a.revenueEst ?? 0));
     return { isoDate: iso, ok: true, tickers: filtered };
   });
 
-  // Chart subset: first CHART_DAYS trading days, intersected with the
-  // top-N-by-options-volume roster so the scatter shows only the
-  // names whose implied ranges are load-bearing for SPX vol regime
-  // reading. The full revenue >= $1B universe stays in the 4-week
-  // calendar grid below the chart, where landscape comprehensiveness
-  // beats visual density.
+  // Chart subset: first CHART_DAYS trading days, gated by the active
+  // chart filter mode. Top-100-by-options-volume is the default (the
+  // SpotGamma-style tight scatter); other modes widen the universe to
+  // top-250 OV or to revenue thresholds of $5B/$1B/$500M for readers
+  // who want to see more of the long tail of the earnings calendar.
+  // The 4-week grid below the chart is unaffected by this toggle —
+  // it always renders the wider $1B-revenue universe so the landscape
+  // view stays consistent regardless of which chart mode is active.
   const chartIndices = new Set(dates.slice(0, CHART_DAYS));
   const chartTickerJobs = [];
   for (const day of dayResults) {
     if (!chartIndices.has(day.isoDate)) continue;
     for (const t of day.tickers) {
-      if (!CHART_TICKER_SET.has(t.ticker)) continue;
+      if (!chartFilterMode.predicate(t)) continue;
       chartTickerJobs.push({ day, ticker: t });
     }
   }
@@ -774,15 +813,19 @@ export default async function handler(_request) {
     .map((d) => ({
       ...d,
       dow: dayOfWeekFromIso(d.isoDate),
-      tickers: d.tickers.filter((t) => CHART_TICKER_SET.has(t.ticker)),
+      tickers: d.tickers.filter((t) => chartFilterMode.predicate(t)),
     }));
 
+  // Calendar grid keeps its long-standing $1B floor — toggle only
+  // affects the chart, not the 4-week landscape view below.
   const calendarDays = dayResults.map((d) => ({
     isoDate: d.isoDate,
     ok: d.ok,
     reason: d.reason || null,
     dow: dayOfWeekFromIso(d.isoDate),
-    tickers: d.tickers.map((t) => ({
+    tickers: d.tickers
+      .filter((t) => Number.isFinite(t.revenueEst) && t.revenueEst >= GRID_REVENUE_FLOOR)
+      .map((t) => ({
       ticker: t.ticker,
       company: t.company,
       releaseTime: t.releaseTime,
@@ -801,8 +844,11 @@ export default async function handler(_request) {
 
   const payload = {
     asOf: todayIso,
-    revenueFloor: REVENUE_FLOOR,
-    chartTopN: CHART_TOP_N,
+    masterRevenueFloor: MASTER_REVENUE_FLOOR,
+    gridRevenueFloor: GRID_REVENUE_FLOOR,
+    chartFilter: chartFilterMode.id,
+    chartFilterLabel: chartFilterMode.label,
+    chartFilterModes: CHART_FILTER_MODES.map((m) => ({ id: m.id, label: m.label })),
     chartDayCount: CHART_DAYS,
     calendarWeekCount: CALENDAR_WEEKS,
     impliedMovesLive: liveImpliedMoves,
