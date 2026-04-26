@@ -59,7 +59,7 @@ export default function App() {
             <span className="lab-badge__mobile-text">Earnings</span>
           </span>
         </div>
-        <TopNav />
+        <TopNav current="earnings" />
         <a
           href="/"
           className="lab-home-button lab-home-button--inline lab-home-button--split"

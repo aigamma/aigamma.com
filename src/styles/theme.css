@@ -63,31 +63,92 @@ body {
   font-family: 'Courier New', monospace;
 }
 
-/* Dashboard regime badge has two renderings: the full "STATUS: POSITIVE
-   GAMMA" text pill reads unambiguously at desktop widths where the
-   header has room to breathe, but it is the single largest horizontal
-   offender on phones and was driving the top-row collision. Below
-   768px we swap in a 3.2rem × 3.2rem dynamic favicon PNG (teal plus /
-   coral minus / AiG monogram) that occupies roughly one-fifth the
-   width of the text pill while carrying the same regime signal a
-   reader already recognizes from their browser tab and extension
-   toolbar. App.jsx always renders both elements; CSS here toggles
+/* Dashboard upper-left "key term" container. The page identity (logo)
+   and the dealer-gamma regime status (favicon + key term — "Gamma" or
+   "Near Flip") share a single bordered pill so the brand mark and the
+   live regime indicator read as one coherent element rather than two
+   adjacent items. Collapsing the pair into one container also frees
+   ~60-80 px of horizontal space in the .site-header row, which is what
+   allows the four-button TopNav (Earnings, Tactical Vol, Seasonality,
+   Rotations) to fit alongside the Menu trigger on a single desktop row
+   without forcing a flex-wrap. The border color is set inline by App.jsx
+   from the regime tone (teal #04A29F for POSITIVE GAMMA, coral for
+   NEGATIVE GAMMA, amber for NEAR FLIP) so the upper-left visually carries
+   the same regime signal as the dashboard's regime classification.
+
+   Two renderings: --desktop carries the full "GAMMA" / "NEAR FLIP" text
+   alongside the logo and the favicon, --mobile drops the text and shows
+   just [logo | favicon] inside the bordered container, which is the
+   smallest possible form that still carries both the brand mark and the
+   regime signal. App.jsx always renders both; the CSS below toggles
    which one is visible at a given breakpoint. */
-.regime-badge-desktop {
+.site-status-pill {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.6rem;
+  height: 3.2rem;
+  padding: 0 0.85rem;
+  box-sizing: border-box;
+  border-radius: 3px;
+  font-family: 'Courier New', monospace;
+  font-size: 1.25rem;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  white-space: nowrap;
+  text-decoration: none;
+  outline: none;
+}
+
+.site-status-pill:focus-visible {
+  outline: 2px solid var(--accent-blue);
+  outline-offset: 2px;
+}
+
+.site-status-pill__logo {
+  height: 2.4rem;
+  width: auto;
+  display: block;
+  flex-shrink: 0;
+}
+
+.site-status-pill__favicon {
+  height: 2rem;
+  width: 2rem;
+  display: block;
+  flex-shrink: 0;
+}
+
+.site-status-pill__text {
+  display: inline-block;
+}
+
+.site-status-pill--desktop {
   display: inline-flex;
 }
 
-.regime-badge-mobile {
+.site-status-pill--mobile {
   display: none;
 }
 
 @media (max-width: 768px) {
-  .regime-badge-desktop {
+  .site-status-pill--desktop {
     display: none;
   }
 
-  .regime-badge-mobile {
-    display: block;
+  .site-status-pill--mobile {
+    display: inline-flex;
+    height: 2.8rem;
+    padding: 0 0.6rem;
+    gap: 0.4rem;
+  }
+
+  .site-status-pill--mobile .site-status-pill__logo {
+    height: 2.1rem;
+  }
+
+  .site-status-pill--mobile .site-status-pill__favicon {
+    height: 1.8rem;
+    width: 1.8rem;
   }
 }
 

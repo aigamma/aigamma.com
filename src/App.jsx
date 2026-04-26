@@ -416,72 +416,82 @@ export default function App() {
   return (
     <div className="app-shell">
       <header className="site-header">
-        {/* Brand cluster. At mobile widths .site-brand carries
-            margin-right: auto so the post-brand chrome (TopNav, Menu)
-            clusters tightly against the right edge of the row; at
-            desktop widths (≥769px) the auto margin is cleared and
-            space-between on .site-header pairs with display: contents
-            on .top-nav to distribute the brand, the three top-nav
-            buttons, and the Menu trigger evenly across the row. The
-            full layout rationale lives in src/styles/theme.css beside
-            the .site-header and .top-nav rules. */}
+        {/* Brand cluster. The logo and the gamma regime status pill share
+            a single bordered container in the upper-left so the page
+            identity and the current regime status read as one coherent
+            element rather than two adjacent items competing for header
+            real estate. Collapsing the two into one container also frees
+            roughly 60-80 px of horizontal space at desktop widths,
+            which is what allows the four-button TopNav (Earnings,
+            Tactical Vol, Seasonality, Rotations) to fit on a single
+            row alongside the Menu trigger without wrapping.
+
+            At mobile widths .site-brand carries margin-right: auto so
+            the post-brand chrome (TopNav, Menu) clusters tightly against
+            the right edge of the row; at desktop widths (≥769px) the
+            auto margin is cleared and space-between on .site-header
+            pairs with display: contents on .top-nav to distribute the
+            brand, the four top-nav buttons, and the Menu trigger evenly
+            across the row. The full layout rationale lives in
+            src/styles/theme.css beside the .site-header and .top-nav
+            rules. */}
         <div className="site-brand">
-          <a href="https://about.aigamma.com/" className="site-logo-link">
-            <img
-              src="/logo.webp"
-              alt="aigamma.com"
+          {regime ? (
+            <a
+              href="https://about.aigamma.com/"
+              className="site-status-pill site-status-pill--desktop"
+              title={`${regime.label} — ${regime.hint}`}
               style={{
-                height: '3.2rem',
-                display: 'block',
+                border: `1px solid ${REGIME_COLORS[regime.tone]}`,
+                color: REGIME_COLORS[regime.tone],
               }}
-            />
-          </a>
-          {regime && (
-            <>
-              <span
-                className="regime-badge-desktop"
-                title={`${regime.label} — ${regime.hint}`}
-                style={{
-                  fontFamily: 'Courier New, monospace',
-                  fontSize: '1.25rem',
-                  padding: '0 0.85rem',
-                  border: `1px solid ${REGIME_COLORS[regime.tone]}`,
-                  color: REGIME_COLORS[regime.tone],
-                  borderRadius: '3px',
-                  letterSpacing: '0.08em',
-                  textTransform: 'uppercase',
-                  whiteSpace: 'nowrap',
-                  height: '3.2rem',
-                  boxSizing: 'border-box',
-                  alignItems: 'center',
-                  gap: '0.5rem',
-                }}
-              >
-                <img
-                  src={FAVICON_PATHS[faviconStateFromRegime(regime)][32]}
-                  alt=""
-                  aria-hidden="true"
-                  style={{
-                    height: '2rem',
-                    width: '2rem',
-                    display: 'block',
-                    flexShrink: 0,
-                  }}
-                />
+            >
+              <img
+                src="/logo.webp"
+                alt="aigamma.com"
+                className="site-status-pill__logo"
+              />
+              <img
+                src={FAVICON_PATHS[faviconStateFromRegime(regime)][32]}
+                alt=""
+                aria-hidden="true"
+                className="site-status-pill__favicon"
+              />
+              <span className="site-status-pill__text">
                 {regime.tone === 'amber' ? 'Near Flip' : 'Gamma'}
               </span>
+            </a>
+          ) : (
+            <a href="https://about.aigamma.com/" className="site-logo-link">
               <img
-                className="regime-badge-mobile"
-                src={FAVICON_PATHS[faviconStateFromRegime(regime)][32]}
-                alt={regime.label}
-                title={`${regime.label} — ${regime.hint}`}
-                style={{
-                  height: '3.2rem',
-                  width: '3.2rem',
-                  flexShrink: 0,
-                }}
+                src="/logo.webp"
+                alt="aigamma.com"
+                style={{ height: '3.2rem', display: 'block' }}
               />
-            </>
+            </a>
+          )}
+          {regime && (
+            <a
+              href="https://about.aigamma.com/"
+              className="site-status-pill site-status-pill--mobile"
+              title={`${regime.label} — ${regime.hint}`}
+              style={{
+                border: `1px solid ${REGIME_COLORS[regime.tone]}`,
+              }}
+              aria-label={`aigamma.com — ${regime.label}`}
+            >
+              <img
+                src="/logo.webp"
+                alt="aigamma.com"
+                className="site-status-pill__logo"
+              />
+              <img
+                src={FAVICON_PATHS[faviconStateFromRegime(regime)][32]}
+                alt=""
+                aria-hidden="true"
+                className="site-status-pill__favicon"
+              />
+            </a>
           )}
         </div>
 

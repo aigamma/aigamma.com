@@ -20,6 +20,7 @@
 // promoted destinations (e.g. /rough/, /risk/, /jump/) omit the
 // prop and see all three buttons.
 const TOP_NAV_ITEMS = [
+  { key: 'earnings',    href: '/earnings/',    label: 'Earnings',     short: 'Earn' },
   { key: 'tactical',    href: '/tactical/',    label: 'Tactical Vol', short: 'Vol'  },
   { key: 'seasonality', href: '/seasonality/', label: 'Seasonality',  short: 'Seas' },
   { key: 'rotations',   href: '/rotations/',   label: 'Rotations',    short: 'Rot'  },
