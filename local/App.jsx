@@ -78,9 +78,9 @@ export default function App() {
           </a>
           <span
             className="lab-badge"
-            title="Local Vol Lab — Dupire pricing, viewer, forward-smile"
+            title="Local Vol — Dupire pricing, viewer, forward-smile"
           >
-            <span className="lab-badge__desktop-text">Local Vol Lab</span>
+            <span className="lab-badge__desktop-text">Local Vol</span>
             <span className="lab-badge__mobile-text">Local Vol</span>
           </span>
         </div>
