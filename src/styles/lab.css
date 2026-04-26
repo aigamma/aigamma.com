@@ -807,36 +807,46 @@
   width: auto;
 }
 
+/* Shared DAILY + WEEKLY treatment for the row-label column and the
+   data cells: right-align the labels so they all end at the same X
+   regardless of length (W01 / W17 / 5 Wk Avg / Mar 30 – Apr 3 all
+   land at the right edge of the auto-sized first column), left-align
+   the data cells so the value sits flush against that boundary, and
+   give every row a touch more vertical breathing room. The DAILY
+   view scopes additional Mon-Fri-only width overrides further down
+   inside @media (min-width: 769px); the WEEKLY view keeps its
+   inherited cell widths because its column count (Avg + 5 years) is
+   already comfortable on the default 62px floor. */
 .seasonality-grid--daily .seasonality-corner,
-.seasonality-grid--daily .seasonality-row-head {
+.seasonality-grid--daily .seasonality-row-head,
+.seasonality-grid--weekly .seasonality-corner,
+.seasonality-grid--weekly .seasonality-row-head {
   min-width: 0;
   padding-left: 0.4rem !important;   /* override .seasonality-row-head 0.85rem !important */
   padding-right: 0.3rem;
   text-align: right !important;      /* override .seasonality-row-head text-align:left !important */
 }
 
-/* A few extra pixels of vertical breathing room between rows in the
-   DAILY view so the right-aligned date labels don't feel stacked. The
-   base .seasonality-grid th/td padding is 0.5rem vertical; bumping to
-   0.62rem adds ~2px per edge, ~4px per row total. Applied to both th
-   (row labels) and td (data cells) so each row grows symmetrically. */
-.seasonality-grid--daily th,
-.seasonality-grid--daily td {
-  padding-top: 0.62rem;
-  padding-bottom: 0.62rem;
+.seasonality-grid--daily td.seasonality-cell,
+.seasonality-grid--daily .seasonality-col-head,
+.seasonality-grid--weekly td.seasonality-cell,
+.seasonality-grid--weekly .seasonality-col-head {
+  text-align: left;
 }
 
-/* DAILY data cells: left-align the value so it sits flush against the
-   row label (whose text is now right-aligned and ends at a consistent
-   X position regardless of label length — so "5 Wk Avg" and
-   "Mar 30 – Apr 3" both land at the right edge of the date column,
-   immediately followed by the Mon cell's value). The previous
-   center-aligned cells floated the value ~25px inside a 100px column,
-   leaving a visible 30+px gap between "Apr 3" and "+0.79%" that
-   forced the eye to track horizontally to associate label with row. */
-.seasonality-grid--daily td.seasonality-cell,
-.seasonality-grid--daily .seasonality-col-head {
-  text-align: left;
+/* Vertical breathing room between rows so the right-aligned labels
+   don't feel stacked. Base .seasonality-grid th/td vertical padding
+   is 0.5rem; 0.74rem adds ~3.8px per edge, ~7.6px per row total —
+   the "about twice" the previous 0.62rem bump per direct UX
+   feedback. Applied to both th (row labels) and td (data cells) so
+   each row grows symmetrically without the label cell ending up
+   taller than the data row beside it. */
+.seasonality-grid--daily th,
+.seasonality-grid--daily td,
+.seasonality-grid--weekly th,
+.seasonality-grid--weekly td {
+  padding-top: 0.74rem;
+  padding-bottom: 0.74rem;
 }
 
 /* Wider Mon-Fri data columns at desktop widths. The grid only has five
