@@ -14,33 +14,36 @@ import SlotD from './slots/SlotD';
 // one operational question a risk manager asks when reading an options
 // chain and lets a different model answer it on the same live SPX snapshot.
 //
-//   SLOT A · Cross-Model Greeks. Compute delta, gamma, and vega across
-//            strikes under three option-pricing models calibrated or
-//            fitted on the same slice: Black-Scholes-Merton (log-normal,
-//            industry baseline), Bachelier (arithmetic / normal), and
-//            Heston (stochastic variance). Answers the question of how
-//            much the Greek you hedge on depends on the model you assume.
+//   SLOT 1 · Vanna-Volga Smile Reconstruction (SlotC.jsx). The classic
+//            three-anchor smile reconstruction from FX (Castagna-Mercurio
+//            2007): pin an ATM, 25-delta put, and 25-delta call, then
+//            price every other strike as a BSM price plus three weighted
+//            correction terms that hedge vega, vanna, and volga against
+//            the anchors. Decomposes the observed smile into the three
+//            classical smile-risk exposures and is the headlining model
+//            of the page.
 //
-//   SLOT B · Delta Comparison. Five different deltas on the same chain:
-//            BSM market-IV delta, minimum-variance delta (Hull-White
-//            2017), sticky-strike delta, sticky-delta delta, and the
-//            ingested market delta. The chart shows how much a "delta-
-//            neutral" hedge shifts depending on which smile-dynamics
-//            assumption you embed.
+//   SLOT 2 · Cross-Model Greeks (SlotA.jsx). Compute delta, gamma, and
+//            vega across strikes under three option-pricing models
+//            calibrated or fitted on the same slice: Black-Scholes-Merton
+//            (log-normal, industry baseline), Bachelier (arithmetic /
+//            normal), and Heston (stochastic variance). Answers the
+//            question of how much the Greek you hedge on depends on the
+//            model you assume.
 //
-//   SLOT C · Vanna-Volga Decomposition. The classic three-anchor smile
-//            reconstruction from FX (Castagna-Mercurio 2007): pin an
-//            ATM, 25-delta put, and 25-delta call, then price every
-//            other strike as a BSM price plus three weighted correction
-//            terms that hedge vega, vanna, and volga against the anchors.
-//            Decomposes the observed smile into the three classical
-//            smile-risk exposures.
+//   SLOT 3 · Delta Comparison (SlotB.jsx). Five different deltas on the
+//            same chain: BSM market-IV delta, minimum-variance delta
+//            (Hull-White 2017), sticky-strike delta, sticky-delta delta,
+//            and the ingested market delta. The chart shows how much a
+//            "delta-neutral" hedge shifts depending on which smile-
+//            dynamics assumption you embed.
 //
-//   SLOT D · Second-Order Greeks. Vanna, volga, and charm across strikes
-//            at one expiration. The "risk-of-risks" a vol trader carries
-//            when a single-Greek hedge is not enough: vanna is how delta
-//            moves when vol moves, volga is the convexity of vega to vol,
-//            and charm is the bleed of delta through calendar time.
+//   SLOT 4 · Second-Order Greeks (SlotD.jsx). Vanna, volga, and charm
+//            across strikes at one expiration. The "risk-of-risks" a vol
+//            trader carries when a single-Greek hedge is not enough:
+//            vanna is how delta moves when vol moves, volga is the
+//            convexity of vega to vol, and charm is the bleed of delta
+//            through calendar time.
 //
 // All four slots consume the same live /api/data snapshot so their
 // Greeks, deltas, and smile reconstructions describe one point-in-time
@@ -83,15 +86,15 @@ export default function App() {
       </header>
 
       <section className="lab-slot">
+        <ErrorBoundary><SlotC /></ErrorBoundary>
+      </section>
+
+      <section className="lab-slot">
         <ErrorBoundary><SlotA /></ErrorBoundary>
       </section>
 
       <section className="lab-slot">
         <ErrorBoundary><SlotB /></ErrorBoundary>
-      </section>
-
-      <section className="lab-slot">
-        <ErrorBoundary><SlotC /></ErrorBoundary>
       </section>
 
       <section className="lab-slot">

@@ -46,11 +46,12 @@ import { daysToExpiration, pickDefaultExpiration, filterPickerExpirations } from
 // ATM, volga peaks in the wings, charm peaks near ATM and bleeds
 // through opposite signs on either side of the forward.
 //
-// This slot is the analytic complement to the Vanna-Volga Decomposition
-// in Slot C. Slot C uses the three second-order Greeks as hedge-match
-// constraints at three anchor strikes. Slot D draws them out
-// continuously across every strike so the reader can see how the hedge
-// burden varies with moneyness, not just at the three pivots.
+// This slot is the analytic complement to the Vanna-Volga Smile
+// Reconstruction in the page's headlining slot (SlotC.jsx). That slot
+// uses the three second-order Greeks as hedge-match constraints at three
+// anchor strikes. This slot draws them out continuously across every
+// strike so the reader can see how the hedge burden varies with
+// moneyness, not just at the three pivots.
 // -----------------------------------------------------------------------------
 
 const RATE_R = 0.045;
