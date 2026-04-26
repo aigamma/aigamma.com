@@ -31,9 +31,6 @@ export default function App() {
     <div className="app-shell lab-shell expiring-gamma-shell">
       <header className="lab-header">
         <div className="lab-brand">
-          <a href="/" className="lab-logo-link" aria-label="Return to aigamma.com homepage">
-            <img src="/logo.webp" alt="aigamma.com" className="lab-logo" />
-          </a>
           <span
             className="lab-badge"
             title="Expiring Gamma · per-expiration call / put dollar gamma scheduled to expire at current spot"

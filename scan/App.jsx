@@ -41,9 +41,6 @@ export default function App() {
     <div className="app-shell lab-shell scan-shell">
       <header className="lab-header">
         <div className="lab-brand">
-          <a href="/" className="lab-logo-link" aria-label="Return to aigamma.com homepage">
-            <img src="/logo.webp" alt="aigamma.com" className="lab-logo" />
-          </a>
           <span
             className="lab-badge"
             title="Skew Scanner · 25-delta call/put skew vs ATM IV across the top options-active single names"

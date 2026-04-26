@@ -29,9 +29,6 @@ export default function App() {
     <div className="app-shell lab-shell">
       <header className="lab-header">
         <div className="lab-brand">
-          <a href="/" className="lab-logo-link" aria-label="aigamma.com home">
-            <img src="/logo.webp" alt="aigamma.com" className="lab-logo" />
-          </a>
           <span
             className="lab-badge"
             title="Alpha · pre-β, software-stage sense"
