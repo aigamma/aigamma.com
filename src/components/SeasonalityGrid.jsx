@@ -147,6 +147,12 @@ export default function SeasonalityGrid() {
       try {
         const params = new URLSearchParams({ view });
         if (view === 'intraday') params.set('days', '20');
+        // Schema version stamp on the URL — bump whenever the API
+        // response shape changes so the browser doesn't keep serving a
+        // stale cached payload that the new render code can't handle.
+        // Last bump: WEEKLY columns moved from string array to {week,
+        // range} objects in commit 4bbe1d3.
+        params.set('schema', '2');
         const res = await fetch(`/api/seasonality?${params}`);
         if (!res.ok) throw new Error(`seasonality fetch failed: ${res.status}`);
         const json = await res.json();
