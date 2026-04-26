@@ -807,24 +807,38 @@
   width: auto;
 }
 
-/* Shared DAILY + WEEKLY treatment for the row-label column and the
-   data cells: right-align the labels so they all end at the same X
-   regardless of length (W01 / W17 / 5 Wk Avg / Mar 30 – Apr 3 all
-   land at the right edge of the auto-sized first column), left-align
-   the data cells so the value sits flush against that boundary, and
-   give every row a touch more vertical breathing room. The DAILY
-   view scopes additional Mon-Fri-only width overrides further down
-   inside @media (min-width: 769px); the WEEKLY view keeps its
-   inherited cell widths because its column count (Avg + 5 years) is
-   already comfortable on the default 62px floor. */
+/* DAILY row labels: right-aligned so variable-length date labels all
+   end at the same X regardless of length (5 Wk Avg / Apr 20-24 /
+   Mar 30-Apr 3 all land at the right edge of the auto-sized first
+   column), with the data cells left-aligned so the value sits flush
+   against that boundary. */
 .seasonality-grid--daily .seasonality-corner,
-.seasonality-grid--daily .seasonality-row-head,
-.seasonality-grid--weekly .seasonality-corner,
-.seasonality-grid--weekly .seasonality-row-head {
+.seasonality-grid--daily .seasonality-row-head {
   min-width: 0;
   padding-left: 0.4rem !important;   /* override .seasonality-row-head 0.85rem !important */
   padding-right: 0.3rem;
   text-align: right !important;      /* override .seasonality-row-head text-align:left !important */
+}
+
+/* WEEKLY row labels: left-aligned (inherits 'text-align: left
+   !important' from the .seasonality-row-head base, which is what we
+   want here — once the row labels are uniformly long with the date
+   range appended, "W01: Dec 29-Jan 2" through "W52: Dec 21-25" don't
+   benefit from end-of-line alignment the way the DAILY view does,
+   and Eric prefers the whole WEEKLY view to read left-anchored). The
+   table is also dropped to width: auto so it hugs its content
+   instead of spreading the year columns across the card — the auto
+   sizing and the left alignment together left-anchor the entire
+   grid within the card. */
+.seasonality-grid--weekly {
+  width: auto;
+}
+
+.seasonality-grid--weekly .seasonality-corner,
+.seasonality-grid--weekly .seasonality-row-head {
+  min-width: 0;
+  padding-left: 0.4rem !important;
+  padding-right: 0.3rem;
 }
 
 .seasonality-grid--daily td.seasonality-cell,
