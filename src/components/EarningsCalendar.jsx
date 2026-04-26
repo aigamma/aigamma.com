@@ -83,11 +83,38 @@ function formatLongDate(iso) {
 
 const DEFAULT_FILTER_MODE = 'topN-100';
 
+// Text size multipliers — applied to chart SVG text, tooltip,
+// header summary, calendar grid, and toggle pills so a user who
+// wants larger fonts can dial up the whole component in one move.
+// 'M' is the default, sized so even the smallest labels are
+// comfortably legible at 1080p without zooming. 'S' is a 10%
+// shrink for power users on dense layouts; 'L' is a 15% bump for
+// readability needs (ambient lighting, larger viewing distance,
+// or general preference). Selection persists across reloads via
+// localStorage.
+const TEXT_SCALES = { S: 0.9, M: 1.0, L: 1.15 };
+const TEXT_SCALE_OPTIONS = [
+  { id: 'S', label: 'S' },
+  { id: 'M', label: 'M' },
+  { id: 'L', label: 'L' },
+];
+const DEFAULT_TEXT_SCALE = 'M';
+
+function readStoredTextScale() {
+  if (typeof window === 'undefined') return DEFAULT_TEXT_SCALE;
+  try {
+    const stored = window.localStorage?.getItem('earnings_text_scale');
+    if (stored && TEXT_SCALES[stored] != null) return stored;
+  } catch { /* localStorage may be unavailable in private mode */ }
+  return DEFAULT_TEXT_SCALE;
+}
+
 export default function EarningsCalendar() {
   const [data, setData] = useState(null);
   const [error, setError] = useState(null);
   const [filterMode, setFilterMode] = useState(DEFAULT_FILTER_MODE);
   const [filterLoading, setFilterLoading] = useState(false);
+  const [textScaleId, setTextScaleIdRaw] = useState(readStoredTextScale);
   const [containerWidth, setContainerWidth] = useState(0);
   const wrapRef = useRef(null);
   // Per-mode payload cache so toggling between already-fetched modes
@@ -96,6 +123,15 @@ export default function EarningsCalendar() {
   // hard refresh wipes it which is the right behavior since the
   // earnings calendar shifts as companies confirm release times.
   const cacheRef = useRef(new Map());
+
+  const setTextScaleId = (id) => {
+    setTextScaleIdRaw(id);
+    if (typeof window !== 'undefined') {
+      try { window.localStorage?.setItem('earnings_text_scale', id); }
+      catch { /* localStorage may be unavailable */ }
+    }
+  };
+  const scale = TEXT_SCALES[textScaleId] ?? 1.0;
 
   useEffect(() => {
     let cancelled = false;
@@ -137,6 +173,9 @@ export default function EarningsCalendar() {
     return () => ro.disconnect();
   }, []);
 
+  const filterModes = data?.chartFilterModes ?? FILTER_MODE_FALLBACK;
+  const activeFilterLabel = filterModes.find((m) => m.id === filterMode)?.label ?? filterMode;
+
   return (
     <div ref={wrapRef} style={{ display: 'flex', flexDirection: 'column', gap: '1.25rem' }}>
       <CalendarHeader
@@ -144,12 +183,18 @@ export default function EarningsCalendar() {
         filterMode={filterMode}
         setFilterMode={setFilterMode}
         filterLoading={filterLoading}
+        textScaleId={textScaleId}
+        setTextScaleId={setTextScaleId}
+        scale={scale}
+        activeFilterLabel={activeFilterLabel}
+        filterModes={filterModes}
       />
 
       {error && (
         <div style={{
           color: 'var(--accent-coral)',
           fontFamily: 'Courier New, monospace',
+          fontSize: `${1.0 * scale}rem`,
           padding: '1rem',
         }}>
           Error loading earnings calendar: {error}
@@ -162,7 +207,7 @@ export default function EarningsCalendar() {
           textAlign: 'center',
           color: 'var(--text-secondary)',
           fontFamily: 'Courier New, monospace',
-          fontSize: '0.85rem',
+          fontSize: `${1.0 * scale}rem`,
         }}>
           Loading earnings schedule…
         </div>
@@ -174,7 +219,7 @@ export default function EarningsCalendar() {
           border: '1px solid #5a4220',
           color: '#e8c890',
           fontFamily: 'Courier New, monospace',
-          fontSize: '0.78rem',
+          fontSize: `${0.92 * scale}rem`,
           padding: '0.5rem 0.75rem',
           borderRadius: '3px',
         }}>
@@ -189,10 +234,28 @@ export default function EarningsCalendar() {
           containerWidth={containerWidth}
           impliedMovesLive={data.impliedMovesLive}
           impliedMoveDegrade={data.impliedMoveDegrade}
+          scale={scale}
         />
       )}
 
-      {data && <UpcomingGrid calendarDays={data.calendarDays} />}
+      {/* Second filter row, between the chart and the calendar grid.
+          Same FilterToggleRow component as the one inside CalendarHeader
+          above the chart — both instances share the filterMode state so
+          either copy controls both surfaces. Eric flagged that without
+          a second copy, readers don't realize the toggle also drives
+          the 4-week grid below. */}
+      {data && (
+        <FilterToggleRow
+          modes={filterModes}
+          active={filterMode}
+          onChange={setFilterMode}
+          loading={filterLoading}
+          scale={scale}
+          label="Filter"
+        />
+      )}
+
+      {data && <UpcomingGrid calendarDays={data.calendarDays} scale={scale} />}
     </div>
   );
 }
@@ -210,13 +273,21 @@ const FILTER_MODE_FALLBACK = [
   { id: 'rev-500M', label: 'Rev ≥ $500M' },
 ];
 
-function CalendarHeader({ data, filterMode, setFilterMode, filterLoading }) {
+function CalendarHeader({
+  data,
+  filterMode,
+  setFilterMode,
+  filterLoading,
+  textScaleId,
+  setTextScaleId,
+  scale,
+  activeFilterLabel,
+  filterModes,
+}) {
   const totalChart = data?.chartDays?.reduce((s, d) => s + (d.tickers?.length || 0), 0) || 0;
   const totalCal = data?.calendarDays?.reduce((s, d) => s + (d.tickers?.length || 0), 0) || 0;
-  const modes = data?.chartFilterModes ?? FILTER_MODE_FALLBACK;
-  const activeLabel = modes.find((m) => m.id === filterMode)?.label ?? filterMode;
   return (
-    <div style={{ display: 'flex', flexDirection: 'column', gap: '0.6rem' }}>
+    <div style={{ display: 'flex', flexDirection: 'column', gap: '0.7rem' }}>
       <div style={{
         display: 'flex',
         flexWrap: 'wrap',
@@ -224,27 +295,34 @@ function CalendarHeader({ data, filterMode, setFilterMode, filterLoading }) {
         justifyContent: 'space-between',
         alignItems: 'baseline',
       }}>
-        <div style={{ display: 'flex', flexWrap: 'wrap', gap: '0.4rem 1rem', alignItems: 'baseline' }}>
-          <LegendDot color={SESSION_COLORS.BMO} label="Before Market Open" />
-          <LegendDot color={SESSION_COLORS.AMC} label="After Market Close" />
-          <LegendDot color={SESSION_COLORS.Unknown} label="Unknown" />
+        <div style={{ display: 'flex', flexWrap: 'wrap', gap: '0.5rem 1.1rem', alignItems: 'baseline' }}>
+          <LegendDot color={SESSION_COLORS.BMO} label="Before Market Open" scale={scale} />
+          <LegendDot color={SESSION_COLORS.AMC} label="After Market Close" scale={scale} />
+          <LegendDot color={SESSION_COLORS.Unknown} label="Unknown" scale={scale} />
         </div>
         <div style={{
           color: 'var(--text-secondary)',
           fontFamily: 'Courier New, monospace',
-          fontSize: '0.78rem',
+          fontSize: `${0.95 * scale}rem`,
           letterSpacing: '0.04em',
         }}>
           {data
-            ? `${totalChart} chart (${activeLabel}) · ${totalCal} 4-week (rev ≥ $1B) · ${data.asOf}`
+            ? `${totalChart} chart · ${totalCal} 4-week · filter: ${activeFilterLabel} · ${data.asOf}`
             : ''}
         </div>
       </div>
       <FilterToggleRow
-        modes={modes}
+        modes={filterModes}
         active={filterMode}
         onChange={setFilterMode}
         loading={filterLoading}
+        scale={scale}
+        label="Filter"
+      />
+      <TextSizeToggle
+        active={textScaleId}
+        onChange={setTextScaleId}
+        scale={scale}
       />
     </div>
   );
@@ -256,23 +334,23 @@ function CalendarHeader({ data, filterMode, setFilterMode, filterLoading }) {
 // The "Market Cap" placeholder pill is intentionally disabled because
 // market-cap data is not yet ingested (see the
 // docs/earnings-data-roadmap.md plan written alongside this UI).
-function FilterToggleRow({ modes, active, onChange, loading }) {
+function FilterToggleRow({ modes, active, onChange, loading, scale, label = 'Filter' }) {
   return (
     <div style={{
       display: 'flex',
       flexWrap: 'wrap',
-      gap: '0.4rem',
+      gap: '0.45rem',
       alignItems: 'center',
     }}>
       <span style={{
         color: 'var(--text-secondary)',
         fontFamily: 'Courier New, monospace',
-        fontSize: '0.72rem',
+        fontSize: `${0.85 * scale}rem`,
         letterSpacing: '0.14em',
         textTransform: 'uppercase',
-        marginRight: '0.3rem',
+        marginRight: '0.4rem',
       }}>
-        Filter
+        {label}
       </span>
       {modes.map((m) => {
         const isActive = m.id === active;
@@ -284,8 +362,8 @@ function FilterToggleRow({ modes, active, onChange, loading }) {
             disabled={loading && !isActive}
             style={{
               fontFamily: 'Courier New, monospace',
-              fontSize: '0.78rem',
-              padding: '0.3rem 0.7rem',
+              fontSize: `${0.92 * scale}rem`,
+              padding: '0.36rem 0.78rem',
               borderRadius: '3px',
               border: `1px solid ${isActive ? 'var(--accent-blue)' : '#2e3540'}`,
               background: isActive ? 'rgba(74, 158, 255, 0.12)' : 'transparent',
@@ -306,8 +384,8 @@ function FilterToggleRow({ modes, active, onChange, loading }) {
         title="Market cap data is not yet ingested. See docs/earnings-data-roadmap.md for the plan."
         style={{
           fontFamily: 'Courier New, monospace',
-          fontSize: '0.78rem',
-          padding: '0.3rem 0.7rem',
+          fontSize: `${0.92 * scale}rem`,
+          padding: '0.36rem 0.78rem',
           borderRadius: '3px',
           border: '1px dashed #2e3540',
           background: 'transparent',
@@ -322,8 +400,8 @@ function FilterToggleRow({ modes, active, onChange, loading }) {
         <span style={{
           color: 'var(--text-secondary)',
           fontFamily: 'Courier New, monospace',
-          fontSize: '0.72rem',
-          marginLeft: '0.4rem',
+          fontSize: `${0.85 * scale}rem`,
+          marginLeft: '0.5rem',
         }}>
           Loading…
         </span>
@@ -332,20 +410,75 @@ function FilterToggleRow({ modes, active, onChange, loading }) {
   );
 }
 
-function LegendDot({ color, label }) {
+// Three-position text-size toggle. Mirrors the FilterToggleRow chrome
+// (monospace caps label + segmented pills) so the two sit on the same
+// visual baseline, but maps S/M/L → 0.9/1.0/1.15 scale multipliers
+// rather than a server-side filter mode. Selection persists in
+// localStorage via the parent's setTextScaleId callback so a refresh
+// preserves the reader's preference.
+function TextSizeToggle({ active, onChange, scale }) {
+  return (
+    <div style={{
+      display: 'flex',
+      flexWrap: 'wrap',
+      gap: '0.45rem',
+      alignItems: 'center',
+    }}>
+      <span style={{
+        color: 'var(--text-secondary)',
+        fontFamily: 'Courier New, monospace',
+        fontSize: `${0.85 * scale}rem`,
+        letterSpacing: '0.14em',
+        textTransform: 'uppercase',
+        marginRight: '0.4rem',
+      }}>
+        Text size
+      </span>
+      {TEXT_SCALE_OPTIONS.map((m) => {
+        const isActive = m.id === active;
+        return (
+          <button
+            key={m.id}
+            type="button"
+            onClick={() => { if (!isActive) onChange(m.id); }}
+            style={{
+              fontFamily: 'Courier New, monospace',
+              fontSize: `${0.92 * scale}rem`,
+              padding: '0.36rem 0.85rem',
+              borderRadius: '3px',
+              border: `1px solid ${isActive ? 'var(--accent-blue)' : '#2e3540'}`,
+              background: isActive ? 'rgba(74, 158, 255, 0.12)' : 'transparent',
+              color: isActive ? 'var(--accent-blue)' : '#9aa6c2',
+              cursor: isActive ? 'default' : 'pointer',
+              letterSpacing: '0.06em',
+              fontWeight: 700,
+              minWidth: '2.4rem',
+              transition: 'background-color 0.15s ease, border-color 0.15s ease, color 0.15s ease',
+            }}
+            title={`${m.label}: ${TEXT_SCALES[m.id] === 1.0 ? 'default' : TEXT_SCALES[m.id] < 1 ? 'compact' : 'larger'}`}
+          >
+            {m.label}
+          </button>
+        );
+      })}
+    </div>
+  );
+}
+
+function LegendDot({ color, label, scale = 1 }) {
   return (
     <span style={{
       display: 'inline-flex',
       alignItems: 'center',
-      gap: '0.4rem',
+      gap: '0.45rem',
       fontFamily: 'Courier New, monospace',
-      fontSize: '0.82rem',
+      fontSize: `${0.95 * scale}rem`,
       color: 'var(--text-secondary)',
     }}>
       <span style={{
         display: 'inline-block',
-        width: 10,
-        height: 10,
+        width: Math.round(11 * scale),
+        height: Math.round(11 * scale),
         borderRadius: '50%',
         background: color,
       }} />
@@ -370,13 +503,30 @@ function LegendDot({ color, label }) {
 // X column, then anchor the labels to the rightmost dot of each bin
 // (or comma-stack labels for tight clusters, capped with ellipsis).
 
-function ScatterChart({ chartDays, containerWidth, impliedMovesLive, impliedMoveDegrade }) {
+function ScatterChart({ chartDays, containerWidth, impliedMovesLive, impliedMoveDegrade, scale = 1 }) {
   const [hovered, setHovered] = useState(null);
 
   const width = Math.max(Math.min(containerWidth - 16, 1100), 320);
   const height = Math.round(width * 0.62);
 
-  const PADDING = { top: 32, right: 56, bottom: 56, left: 64 };
+  // SVG text sizing — multiplied by `scale` from the text-size toggle
+  // so a single user choice scales every label, tick, and title in
+  // unison. Baselines are bumped from the v0.4 sizes (11/12/10.5)
+  // to the v0.5 sizes (14/15/12.5) per Eric's "illegible without
+  // zooming" feedback; the toggle further multiplies by 0.9/1.0/1.15.
+  const fsTickLabel = 14 * scale;
+  const fsAxisTitle = 16 * scale;
+  const fsXDateLabel = 15 * scale;
+  const fsXWeekday = 13 * scale;
+  const fsDotTicker = 12.5 * scale; // +1pt over previous 11.5 baseline (Eric: "tickers 1 point higher")
+  // Padding scales mildly with text size so the larger Y-axis tick
+  // labels and axis titles still fit without overflowing the plot.
+  const PADDING = {
+    top: Math.round(36 * scale),
+    right: Math.round(56 * scale),
+    bottom: Math.round(64 * scale),
+    left: Math.round(72 * scale),
+  };
   const plotW = width - PADDING.left - PADDING.right;
   const plotH = height - PADDING.top - PADDING.bottom;
 
@@ -460,12 +610,12 @@ function ScatterChart({ chartDays, containerWidth, impliedMovesLive, impliedMove
                   strokeDasharray="2 4"
                 />
                 <text
-                  x={PADDING.left - 8}
-                  y={y + 4}
+                  x={PADDING.left - 10}
+                  y={y + Math.round(5 * scale)}
                   textAnchor="end"
                   fontFamily="Courier New, monospace"
-                  fontSize={11}
-                  fill="#7e8aa0"
+                  fontSize={fsTickLabel}
+                  fill="#9aa6c2"
                 >
                   {(v * 100).toFixed(stepPct < 0.025 ? 1 : 0)}%
                 </text>
@@ -485,36 +635,40 @@ function ScatterChart({ chartDays, containerWidth, impliedMovesLive, impliedMove
             />
             <text
               x={xForDay(i)}
-              y={height - PADDING.bottom + 22}
+              y={height - PADDING.bottom + Math.round(26 * scale)}
               textAnchor="middle"
               fontFamily="Courier New, monospace"
-              fontSize={12}
-              fill="#9aa6c2"
+              fontSize={fsXDateLabel}
+              fill="#cfd6e6"
             >
               {formatShortDate(d.isoDate)}
             </text>
             <text
               x={xForDay(i)}
-              y={height - PADDING.bottom + 38}
+              y={height - PADDING.bottom + Math.round(46 * scale)}
               textAnchor="middle"
               fontFamily="Courier New, monospace"
-              fontSize={10}
-              fill="#5a6478"
+              fontSize={fsXWeekday}
+              fill="#7e8aa0"
             >
               {['Sun','Mon','Tue','Wed','Thu','Fri','Sat'][d.dow] || ''}
             </text>
           </g>
         ))}
 
-        {/* Y axis title */}
+        {/* Y axis title — Eric called this "thumbnail grade" at 11px;
+            now bumped to 16px baseline (× scale) and pulled in to
+            x=18 so it doesn't run into the tick labels at the new
+            size. fontWeight 600 to balance the heavier presence. */}
         <text
           x={-(PADDING.top + plotH / 2)}
-          y={16}
+          y={Math.round(20 * scale)}
           transform="rotate(-90)"
           textAnchor="middle"
           fontFamily="Courier New, monospace"
-          fontSize={11}
-          fill="#9aa6c2"
+          fontSize={fsAxisTitle}
+          fontWeight={600}
+          fill="#cfd6e6"
         >
           Implied range (%)
         </text>
@@ -522,11 +676,12 @@ function ScatterChart({ chartDays, containerWidth, impliedMovesLive, impliedMove
         {/* X axis title */}
         <text
           x={PADDING.left + plotW / 2}
-          y={height - 6}
+          y={height - Math.round(6 * scale)}
           textAnchor="middle"
           fontFamily="Courier New, monospace"
-          fontSize={11}
-          fill="#9aa6c2"
+          fontSize={fsAxisTitle}
+          fontWeight={600}
+          fill="#cfd6e6"
         >
           Date
         </text>
@@ -579,12 +734,12 @@ function ScatterChart({ chartDays, containerWidth, impliedMovesLive, impliedMove
             <text
               key={`label-${g.dayIdx}-${g.yBkt}`}
               x={cx}
-              y={cy - 9 - (g.members.length > 1 ? 4 : 0)}
+              y={cy - Math.round(10 * scale) - (g.members.length > 1 ? Math.round(4 * scale) : 0)}
               textAnchor="middle"
               fontFamily="Courier New, monospace"
-              fontSize={10.5}
+              fontSize={fsDotTicker}
               fontWeight={600}
-              fill="#cfd6e6"
+              fill="#dde4f0"
               style={{ pointerEvents: 'none' }}
             >
               {display}
@@ -612,32 +767,32 @@ function ScatterChart({ chartDays, containerWidth, impliedMovesLive, impliedMove
           background: 'rgba(8, 11, 16, 0.96)',
           border: '1px solid rgba(160, 172, 200, 0.35)',
           borderRadius: '4px',
-          padding: '0.6rem 0.8rem',
+          padding: `${0.65 * scale}rem ${0.85 * scale}rem`,
           fontFamily: 'Courier New, monospace',
-          fontSize: '0.78rem',
+          fontSize: `${0.92 * scale}rem`,
           color: '#e1e8f4',
-          minWidth: 220,
-          maxWidth: 300,
-          lineHeight: 1.45,
+          minWidth: Math.round(240 * scale),
+          maxWidth: Math.round(330 * scale),
+          lineHeight: 1.5,
           boxShadow: '0 2px 12px rgba(0, 0, 0, 0.6)',
         };
         if (openLeft) style.right = (width - cx + o);
         else style.left = cx + o;
         if (openDown) style.top = cy + o;
         else style.bottom = (height - cy + o);
-        return <ChartTooltip ticker={hovered} style={style} />;
+        return <ChartTooltip ticker={hovered} style={style} scale={scale} />;
       })()}
 
       {/* Banner under the chart when implied moves are degraded */}
       {(impliedMovesLive === false || impliedMoveDegrade) && (
         <div style={{
-          marginTop: '0.5rem',
+          marginTop: '0.6rem',
           background: '#22262e',
           border: '1px solid #2e3540',
-          color: '#9aa6c2',
+          color: '#cfd6e6',
           fontFamily: 'Courier New, monospace',
-          fontSize: '0.74rem',
-          padding: '0.4rem 0.6rem',
+          fontSize: `${0.88 * scale}rem`,
+          padding: '0.55rem 0.75rem',
           borderRadius: '3px',
         }}>
           Implied moves: {impliedMovesLive ? 'partial coverage' : 'unavailable'}
@@ -650,7 +805,7 @@ function ScatterChart({ chartDays, containerWidth, impliedMovesLive, impliedMove
   );
 }
 
-function ChartTooltip({ ticker: t, style }) {
+function ChartTooltip({ ticker: t, style, scale = 1 }) {
   return (
     <div style={style}>
       <div style={{
@@ -658,21 +813,21 @@ function ChartTooltip({ ticker: t, style }) {
         alignItems: 'baseline',
         justifyContent: 'space-between',
         gap: '0.5rem',
-        marginBottom: '0.35rem',
+        marginBottom: '0.4rem',
       }}>
-        <strong style={{ fontSize: '1rem', color: '#f0a030' }}>{t.ticker}</strong>
+        <strong style={{ fontSize: `${1.2 * scale}rem`, color: '#f0a030' }}>{t.ticker}</strong>
         <span style={{
           color: SESSION_COLORS[t.sessionLabel] || SESSION_COLORS.Unknown,
           fontWeight: 700,
-          fontSize: '0.78rem',
+          fontSize: `${0.92 * scale}rem`,
         }}>
           {formatReleaseTime(t.epsTime, t.sessionLabel)}
         </span>
       </div>
       <div style={{
         color: 'var(--text-secondary)',
-        fontSize: '0.74rem',
-        marginBottom: '0.5rem',
+        fontSize: `${0.88 * scale}rem`,
+        marginBottom: '0.55rem',
         whiteSpace: 'nowrap',
         overflow: 'hidden',
         textOverflow: 'ellipsis',
@@ -687,7 +842,7 @@ function ChartTooltip({ ticker: t, style }) {
       <TooltipRow label="ATM strike" value={t.straddleStrike != null ? `$${Number(t.straddleStrike).toFixed(2)}` : '—'} subtle />
       <TooltipRow label="ATM IV" value={formatPctVol(t.atmIv)} subtle />
       <TooltipRow label="Straddle exp" value={t.straddleExpiration ? `${t.straddleExpiration} (${t.dte}D)` : '—'} subtle />
-      <div style={{ height: 1, background: 'rgba(160,172,200,0.15)', margin: '0.45rem 0' }} />
+      <div style={{ height: 1, background: 'rgba(160,172,200,0.15)', margin: '0.5rem 0' }} />
       <TooltipRow label="Revenue est" value={formatRevenue(t.revenueEst)} />
       <TooltipRow label="EPS est" value={t.epsEst != null ? `$${Number(t.epsEst).toFixed(2)}` : '—'} />
       {t.confirmDate && (
@@ -705,6 +860,7 @@ function TooltipRow({ label, value, subtle, highlight }) {
       alignItems: 'baseline',
       gap: '0.6rem',
       color: subtle ? 'var(--text-secondary)' : '#e1e8f4',
+      lineHeight: 1.55,
     }}>
       <span style={{ color: 'var(--text-secondary)' }}>{label}</span>
       <span style={{
@@ -722,7 +878,7 @@ function TooltipRow({ label, value, subtle, highlight }) {
 // 4-week upcoming grid
 // -----------------------------------------------------------------
 
-function UpcomingGrid({ calendarDays }) {
+function UpcomingGrid({ calendarDays, scale = 1 }) {
   // Group days into ISO weeks (Mon-Fri). A "week" starts on the
   // earliest weekday in the group and runs forward until we hit
   // another Monday. We render up to 4 such weeks.
@@ -742,27 +898,27 @@ function UpcomingGrid({ calendarDays }) {
   }, [calendarDays]);
 
   return (
-    <div className="card" style={{ padding: '0.85rem 1rem' }}>
+    <div className="card" style={{ padding: '1rem 1.15rem' }}>
       <div style={{
         fontFamily: 'Courier New, monospace',
-        fontSize: '0.7rem',
+        fontSize: `${0.88 * scale}rem`,
         letterSpacing: '0.14em',
         textTransform: 'uppercase',
         color: 'var(--text-secondary)',
-        marginBottom: '0.85rem',
+        marginBottom: '1rem',
       }}>
-        upcoming earnings — next 4 weeks · revenue ≥ $1B · sorted by revenue desc
+        upcoming earnings — next 4 weeks · sorted by revenue desc · filter applies
       </div>
       <div style={{ display: 'flex', flexDirection: 'column', gap: '1.5rem' }}>
         {weeks.map((week, wi) => (
-          <WeekRow key={wi} days={week.days} />
+          <WeekRow key={wi} days={week.days} scale={scale} />
         ))}
       </div>
     </div>
   );
 }
 
-function WeekRow({ days }) {
+function WeekRow({ days, scale }) {
   // Each day gets two stacked cells: BMO and AMC. Tickers without a
   // recognized session land in BMO (the Unknown bucket — rare, since
   // EW only emits releaseTime 1 or 3).
@@ -773,13 +929,13 @@ function WeekRow({ days }) {
       gap: '0.5rem',
     }}>
       {days.map((d) => (
-        <DayColumn key={d.isoDate} day={d} />
+        <DayColumn key={d.isoDate} day={d} scale={scale} />
       ))}
     </div>
   );
 }
 
-function DayColumn({ day }) {
+function DayColumn({ day, scale }) {
   const bmo = day.tickers.filter((t) => t.releaseTime === 1);
   const amc = day.tickers.filter((t) => t.releaseTime === 3);
   const unknown = day.tickers.filter((t) => t.releaseTime !== 1 && t.releaseTime !== 3);
@@ -794,10 +950,10 @@ function DayColumn({ day }) {
       minWidth: 0,
     }}>
       <div style={{
-        padding: '0.4rem 0.5rem',
+        padding: '0.5rem 0.55rem',
         borderBottom: '1px solid #1d232c',
         fontFamily: 'Courier New, monospace',
-        fontSize: '0.78rem',
+        fontSize: `${0.95 * scale}rem`,
         fontWeight: 700,
         color: '#cfd6e6',
         background: '#161b23',
@@ -805,42 +961,42 @@ function DayColumn({ day }) {
       }}>
         {formatLongDate(day.isoDate)}
         <div style={{
-          fontSize: '0.7rem',
+          fontSize: `${0.85 * scale}rem`,
           color: 'var(--text-secondary)',
           fontWeight: 400,
-          marginTop: 2,
+          marginTop: 3,
         }}>
           {day.tickers.length} reporting
         </div>
       </div>
-      <SessionCell label="BMO" color={SESSION_COLORS.BMO} tickers={bmo} />
-      <SessionCell label="AMC" color={SESSION_COLORS.AMC} tickers={amc} />
+      <SessionCell label="BMO" color={SESSION_COLORS.BMO} tickers={bmo} scale={scale} />
+      <SessionCell label="AMC" color={SESSION_COLORS.AMC} tickers={amc} scale={scale} />
       {unknown.length > 0 && (
-        <SessionCell label="Unknown" color={SESSION_COLORS.Unknown} tickers={unknown} />
+        <SessionCell label="Unknown" color={SESSION_COLORS.Unknown} tickers={unknown} scale={scale} />
       )}
     </div>
   );
 }
 
-function SessionCell({ label, color, tickers }) {
+function SessionCell({ label, color, tickers, scale = 1 }) {
   return (
     <div style={{
       borderTop: '1px solid #1d232c',
-      padding: '0.45rem 0.5rem',
+      padding: '0.55rem 0.55rem',
       fontFamily: 'Courier New, monospace',
-      fontSize: '0.74rem',
+      fontSize: `${0.95 * scale}rem`,
       flex: 1,
-      minHeight: 60,
+      minHeight: Math.round(60 * scale),
     }}>
       <div style={{
         display: 'flex',
         justifyContent: 'space-between',
         alignItems: 'baseline',
-        marginBottom: '0.3rem',
+        marginBottom: '0.4rem',
       }}>
         <span style={{
           color,
-          fontSize: '0.7rem',
+          fontSize: `${0.85 * scale}rem`,
           fontWeight: 700,
           letterSpacing: '0.08em',
         }}>
@@ -848,15 +1004,15 @@ function SessionCell({ label, color, tickers }) {
         </span>
         <span style={{
           color: 'var(--text-secondary)',
-          fontSize: '0.7rem',
+          fontSize: `${0.85 * scale}rem`,
         }}>
           {tickers.length}
         </span>
       </div>
       {tickers.length === 0 ? (
-        <div style={{ color: '#3a4253', fontSize: '0.72rem' }}>—</div>
+        <div style={{ color: '#3a4253', fontSize: `${0.88 * scale}rem` }}>—</div>
       ) : (
-        <div style={{ display: 'flex', flexDirection: 'column', gap: '0.18rem' }}>
+        <div style={{ display: 'flex', flexDirection: 'column', gap: '0.22rem' }}>
           {tickers.map((t) => (
             <div
               key={t.ticker}
@@ -870,7 +1026,7 @@ function SessionCell({ label, color, tickers }) {
               }}
             >
               <span style={{ fontWeight: 600 }}>{t.ticker}</span>
-              <span style={{ color: 'var(--text-secondary)', fontSize: '0.7rem' }}>
+              <span style={{ color: 'var(--text-secondary)', fontSize: `${0.85 * scale}rem` }}>
                 {formatRevenue(t.revenueEst)}
               </span>
             </div>

@@ -75,20 +75,20 @@ export default function App() {
         <ErrorBoundary><EarningsCalendar /></ErrorBoundary>
       </section>
 
-      <div className="card" style={{ padding: '1.1rem 1.25rem', margin: '1.25rem 0' }}>
+      <div className="card" style={{ padding: '1.25rem 1.4rem', margin: '1.25rem 0' }}>
         <div
           style={{
             fontFamily: 'Courier New, monospace',
-            fontSize: '0.7rem',
+            fontSize: '0.88rem',
             letterSpacing: '0.14em',
             textTransform: 'uppercase',
             color: 'var(--text-secondary)',
-            marginBottom: '0.45rem',
+            marginBottom: '0.7rem',
           }}
         >
           what this page measures
         </div>
-        <div style={{ color: 'var(--text-secondary)', lineHeight: 1.65, fontSize: '0.95rem' }}>
+        <div style={{ color: 'var(--text-secondary)', lineHeight: 1.7, fontSize: '1.1rem' }}>
           <p style={{ margin: '0 0 0.7rem' }}>
             Upcoming earnings releases on the next five trading days
             are plotted as single dots, filtered to the top 100 names

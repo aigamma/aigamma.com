@@ -136,16 +136,18 @@ const MASSIVE_API_KEY = process.env.MASSIVE_API_KEY;
 const MASSIVE_BASE = 'https://api.massive.com';
 const MASSIVE_TIMEOUT_MS = 8000;
 
-// Master revenue floor — the minimum any ticker needs to clear to ever
-// appear in either the scatter chart or the 4-week calendar grid. Set
-// to $500M so the most permissive chart toggle ('rev-500M') has a
-// universe to filter from. The calendar grid below the chart applies
-// a tighter $1B secondary filter (GRID_REVENUE_FLOOR) on top of this
-// so its appearance doesn't change from the long-standing $1B-only
-// behavior; only the chart-window fan-out reads from the wider $500M
-// universe, gated by the user's chart_filter selection.
+// Master revenue floor — the minimum any ticker needs to clear to
+// ever appear in the response payload. Set to $500M so the most
+// permissive chart toggle ('rev-500M') has a universe to filter
+// from; the active chart_filter mode is then applied to BOTH the
+// scatter chart and the 4-week calendar grid so the two surfaces
+// stay in sync (changing the toggle changes both views together).
+// Earlier behavior had a separate GRID_REVENUE_FLOOR=$1B that
+// pinned the grid regardless of the chart filter — Eric explicitly
+// asked for the chart and grid to share state ("they would be in
+// sync"), so the per-surface floor was removed in favor of the
+// single shared predicate.
 const MASTER_REVENUE_FLOOR = 500_000_000;  // $500M
-const GRID_REVENUE_FLOOR = 1_000_000_000;  // $1B
 const CHART_DAYS = 5;                // scatter chart window (trading days)
 const CALENDAR_WEEKS = 4;            // calendar grid window (calendar weeks)
 const CALENDAR_DAYS = CALENDAR_WEEKS * 5; // assume Mon-Fri
@@ -816,15 +818,18 @@ export default async function handler(request) {
       tickers: d.tickers.filter((t) => chartFilterMode.predicate(t)),
     }));
 
-  // Calendar grid keeps its long-standing $1B floor — toggle only
-  // affects the chart, not the 4-week landscape view below.
+  // Calendar grid uses the SAME chart filter so the two surfaces
+  // share state — the toggle controls both views together. Prior
+  // behavior pinned the grid at a separate $1B floor regardless of
+  // the chart filter; Eric explicitly requested the sync so the
+  // reader sees the same universe in both surfaces.
   const calendarDays = dayResults.map((d) => ({
     isoDate: d.isoDate,
     ok: d.ok,
     reason: d.reason || null,
     dow: dayOfWeekFromIso(d.isoDate),
     tickers: d.tickers
-      .filter((t) => Number.isFinite(t.revenueEst) && t.revenueEst >= GRID_REVENUE_FLOOR)
+      .filter((t) => chartFilterMode.predicate(t))
       .map((t) => ({
       ticker: t.ticker,
       company: t.company,
@@ -845,7 +850,6 @@ export default async function handler(request) {
   const payload = {
     asOf: todayIso,
     masterRevenueFloor: MASTER_REVENUE_FLOOR,
-    gridRevenueFloor: GRID_REVENUE_FLOOR,
     chartFilter: chartFilterMode.id,
     chartFilterLabel: chartFilterMode.label,
     chartFilterModes: CHART_FILTER_MODES.map((m) => ({ id: m.id, label: m.label })),
