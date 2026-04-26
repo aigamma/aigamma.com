@@ -50,6 +50,16 @@
 //      Supabase Pro storage limits) but the scaffold deliberately
 //      keeps that complexity out of v0.
 //
+// Session anchoring. The function walks back from today's ET calendar
+// date through Massive's grouped-daily-bars endpoint to find the most
+// recent trading session with data. Weekends and Monday holidays land
+// on Friday; weekday in-session requests land on the in-progress
+// current day. The session date sets both the expiration window and
+// the per-ticker spot used by the skew computation, so a Saturday
+// request cleanly returns Friday's IV / skew picture rather than a
+// blank or empty response. This mirrors the heatmap function's
+// proven weekend-safe pattern from netlify/functions/heatmap.mjs.
+//
 // Cache profile mirrors heatmap.mjs:
 //   Market hours (09:30-16:00 ET, weekdays): max-age=60,  swr=300
 //   Off-hours / weekends:                    max-age=900, swr=86400
@@ -144,10 +154,105 @@ function addDaysIso(iso, n) {
   return d.toISOString().slice(0, 10);
 }
 
+function subtractDaysIso(iso, n) {
+  return addDaysIso(iso, -n);
+}
+
 function dteDays(expIso, todayIso) {
   const a = new Date(`${todayIso}T00:00:00Z`).getTime();
   const b = new Date(`${expIso}T00:00:00Z`).getTime();
   return Math.round((b - a) / 86400000);
+}
+
+// Fetch one date's grouped daily bars (every US ticker, one record per
+// ticker). Returns { ok, prices: Map<symbol, {close,...}>, barTime,
+// empty } or an error sentinel. Mirrors heatmap.mjs's
+// fetchMassiveGroupedDay — same endpoint, same response shape, same
+// 200-with-empty-results convention for non-trading days. Reused
+// (rather than imported) so this function stays self-contained as a
+// Netlify deploy unit.
+async function fetchMassiveGroupedDay(dateIso) {
+  if (!MASSIVE_API_KEY) return { ok: false, reason: 'no-key' };
+  const url = `${MASSIVE_BASE}/v2/aggs/grouped/locale/us/market/stocks/${dateIso}?adjusted=true`;
+  let res;
+  try {
+    res = await fetch(url, {
+      headers: { Authorization: `Bearer ${MASSIVE_API_KEY}` },
+      signal: AbortSignal.timeout(MASSIVE_TIMEOUT_MS),
+    });
+  } catch (err) {
+    return { ok: false, reason: String(err?.name || 'fetch-error') };
+  }
+  if (!res.ok) {
+    return { ok: false, reason: `http-${res.status}`, status: res.status };
+  }
+  let body;
+  try {
+    body = await res.json();
+  } catch {
+    return { ok: false, reason: 'invalid-json' };
+  }
+  const list = Array.isArray(body?.results) ? body.results : [];
+  if (list.length === 0) {
+    return { ok: true, empty: true, prices: new Map(), barTime: null };
+  }
+  const map = new Map();
+  let mostRecentBar = 0;
+  for (const r of list) {
+    const sym = String(r?.T || '').toUpperCase();
+    if (!sym) continue;
+    const close = Number(r?.c);
+    if (!Number.isFinite(close) || close <= 0) continue;
+    map.set(sym, {
+      close,
+      open: Number(r?.o) || null,
+      high: Number(r?.h) || null,
+      low: Number(r?.l) || null,
+      volume: Number(r?.v) || null,
+    });
+    const t = Number(r?.t) || 0;
+    if (t > mostRecentBar) mostRecentBar = t;
+  }
+  return { ok: true, empty: false, prices: map, barTime: mostRecentBar || null };
+}
+
+// Walk back from today's ET calendar date through the grouped daily
+// bars endpoint to find the most recent trading session with data.
+// On a Saturday or Sunday this returns Friday's bars; on a Monday
+// holiday it returns the preceding Friday; on a normal weekday during
+// market hours it returns the in-progress current-day bar (which is
+// what we want — IV from the snapshot endpoint is also intraday-
+// fresh, so the two data sources stay temporally aligned).
+//
+// The 8-day search ceiling covers any plausible weekend + multi-day
+// holiday gap (the longest US market closure in modern history was
+// the 4-session post-9/11 close, which fits in 6 days; 8 leaves
+// slack). Returns { ok, date, prices, barTime } on success.
+//
+// This mirrors heatmap.mjs's fetchMassiveRecentTwoSessions but only
+// needs the single most-recent session — skew computation doesn't
+// require a prior-close comparison the way the heatmap's percent-
+// change tile coloring does.
+async function fetchMostRecentSessionGrouped() {
+  if (!MASSIVE_API_KEY) return { ok: false, reason: 'no-key' };
+  const today = etTodayIso();
+  let lastReason = 'no-data-found';
+  for (let i = 0; i < 8; i++) {
+    const d = subtractDaysIso(today, i);
+    const result = await fetchMassiveGroupedDay(d);
+    if (!result.ok) {
+      lastReason = result.reason;
+      // Auth-class errors are permanent at the request level — bail
+      // out rather than fruitlessly walking further back.
+      if (result.status && result.status >= 400 && result.status < 500) {
+        return { ok: false, reason: result.reason, status: result.status };
+      }
+      continue;
+    }
+    if (result.empty) continue;
+    return { ok: true, date: d, prices: result.prices, barTime: result.barTime };
+  }
+  return { ok: false, reason: `no-session-in-8d:${lastReason}` };
 }
 
 // Per-ticker snapshot fetch. Returns the parsed contract list or an
@@ -193,16 +298,23 @@ async function fetchTickerSnapshot(ticker, todayIso) {
 // ticker honestly than fabricate a value from an under-populated
 // chain. The frontend handles holes by simply not plotting that
 // ticker on the relevant tab.
-function deriveSkew(contracts, todayIso) {
+//
+// `spotOverride` is the authoritative spot from the most-recent
+// trading session's grouped daily bars. We prefer it over the
+// snapshot's underlying_asset.price field because the latter can be
+// null or stale on weekends and off-hours (the snapshot endpoint's
+// "underlying_asset.price" is a live-quote field, not a session-
+// anchored close). When the override is finite we use it; otherwise
+// we fall back to the snapshot's per-contract underlying_asset.price.
+function deriveSkew(contracts, todayIso, spotOverride) {
   if (!Array.isArray(contracts) || contracts.length === 0) return null;
 
-  // Spot inference. Single-name snapshot responses reliably populate
-  // underlying_asset.price on every contract, so any contract works
-  // as the spot source. Pick the first one with a positive price.
-  let spot = null;
-  for (const c of contracts) {
-    const p = Number(c?.underlying_asset?.price);
-    if (Number.isFinite(p) && p > 0) { spot = p; break; }
+  let spot = Number.isFinite(spotOverride) && spotOverride > 0 ? spotOverride : null;
+  if (!(spot > 0)) {
+    for (const c of contracts) {
+      const p = Number(c?.underlying_asset?.price);
+      if (Number.isFinite(p) && p > 0) { spot = p; break; }
+    }
   }
   if (!(spot > 0)) return null;
 
@@ -384,14 +496,25 @@ export default async function handler(request) {
   const universe = roster.holdings.slice(0, topN);
   const todayIso = etTodayIso();
 
+  // Establish the session anchor. On weekdays during/after market
+  // hours this is today's date; on weekends and Monday holidays it
+  // walks back to Friday's session (or whichever was the most recent
+  // trading day). The session date is the single source of truth for
+  // both the expiration window and the per-ticker spot used by the
+  // skew computation.
+  const session = MASSIVE_API_KEY ? await fetchMostRecentSessionGrouped() : null;
+  const sessionDate = session?.ok ? session.date : todayIso;
+  const sessionSpots = session?.ok ? session.prices : new Map();
+
   // Try the live Massive path. Per-ticker errors are tolerated — a
   // single failed snapshot demotes that ticker to a null skew row, not
   // the whole response.
-  const liveAttempt = MASSIVE_API_KEY
+  const liveAttempt = (MASSIVE_API_KEY && session?.ok)
     ? await pmap(universe, FETCH_CONCURRENCY, async (h) => {
-        const snap = await fetchTickerSnapshot(h.symbol, todayIso);
+        const snap = await fetchTickerSnapshot(h.symbol, sessionDate);
         if (!snap.ok) return { holding: h, ok: false, reason: snap.reason };
-        const derived = deriveSkew(snap.contracts, todayIso);
+        const sessionSpot = sessionSpots.get(h.symbol)?.close ?? null;
+        const derived = deriveSkew(snap.contracts, sessionDate, sessionSpot);
         if (!derived) return { holding: h, ok: false, reason: 'thin-chain' };
         return { holding: h, ok: true, ...derived };
       })
@@ -403,7 +526,9 @@ export default async function handler(request) {
 
   if (!liveAttempt) {
     mode = 'seed';
-    degradeReason = 'no-massive-key';
+    degradeReason = !MASSIVE_API_KEY
+      ? 'no-massive-key'
+      : `session-lookup-failed:${session?.reason || 'unknown'}`;
     rows = universe.map((h) => ({ ...seedSkew(h.symbol), holding: h, ok: true, seeded: true }));
   } else {
     const liveOkCount = liveAttempt.filter((r) => r.ok).length;
@@ -459,7 +584,11 @@ export default async function handler(request) {
   const payload = {
     mode,                    // 'live' | 'seed'
     degradeReason,           // populated only when mode === 'seed'
-    asOf: todayIso,
+    asOf: todayIso,          // calendar date the request fired on
+    sessionDate,             // most-recent trading day the data anchors to
+    sourceUpdated: session?.ok && session.barTime
+      ? new Date(session.barTime).toISOString()
+      : null,
     universeSize: universe.length,
     pricedCount: tickers.filter((t) => t.atmIv != null).length,
     target: { dteMin: SKEW_DTE_MIN, dteMax: SKEW_DTE_MAX, dteTarget: SKEW_DTE_TARGET },

@@ -15,31 +15,21 @@ import { useEffect, useMemo, useRef, useState } from 'react';
 // whether VIX prints 12 or 35 today.
 //
 // Tab semantics:
-//   Call skew tab:  X axis is call_25Δ_iv − atm_iv. High X = right
-//                   wing (call) richer than ATM. The mega-cap cluster
-//                   typically sits top-left because heavy call demand
-//                   from covered-call writers and YOLO buyers leaves
-//                   the right wing well-bid even when ATM is also
-//                   well-bid.
-//   Put skew tab:   X axis is put_25Δ_iv − atm_iv. High X = left wing
-//                   (put) richer than ATM. The mega-cap cluster
-//                   typically sits bottom-right because their compressed
-//                   IV regime damps both wings simultaneously.
+//   Call skew tab:  X axis is call_25Δ_iv − atm_iv. High X (left side
+//                   of the canvas) = right wing (call) richer than ATM,
+//                   which on equity-index single names typically
+//                   indicates speculative-call demand or covered-call
+//                   selling pressure pulling ATM down rather than
+//                   wings up.
+//   Put skew tab:   X axis is put_25Δ_iv − atm_iv. High X (left side
+//                   of the canvas) = left wing (put) richer than ATM —
+//                   the typical equity-index resting state, with
+//                   over-the-median names pricing tail-risk more
+//                   aggressively than peers.
 //
-// View modes:
-//   Guided View:    Renders the four corner labels and the consensus-
-//                   corner highlight tag (e.g. "AAPL, MSFT, TSLA, NVDA"
-//                   sticker) so a first-time reader has scaffolding for
-//                   what each region means.
-//   Explorer View:  Strips the corner labels so the data points and
-//                   axes are unobstructed. Good for hunting for
-//                   outliers without the chrome.
-//
-// The consensus-corner sticker is data-driven, not hard-coded — it
-// names the actual mega-cap members of the relevant quadrant for the
-// current snapshot. If MSFT moved out of the high-IV cluster into a
-// quieter regime the sticker reflects that automatically rather than
-// going stale.
+// All universe members render with identical dot size, color, and
+// label weight. Hover is the only visual privilege; no ticker is
+// hard-coded as a "consensus" anchor.
 
 const TABS = {
   call: {
@@ -48,9 +38,12 @@ const TABS = {
     metricKey: 'callSkew',
     leftLabel: 'High call skew',
     rightLabel: 'Low call skew',
-    consensusQuadrant: 'topLeft',  // mega-caps live top-left on call
-    paletteAccent: '#04A29F',      // teal
-    paletteContrast: '#d85a30',    // coral
+    // Anchors the 2x2 background palette: the column the consensus
+    // direction lives in renders teal, the other column magenta. On
+    // the call tab the consensus side is "high call skew" (left
+    // column of the canvas), so tealLeft = true via this 'topLeft'
+    // anchor (any *Left value works; topLeft is conventional).
+    consensusQuadrant: 'topLeft',
   },
   put: {
     key: 'put',
@@ -58,18 +51,13 @@ const TABS = {
     metricKey: 'putSkew',
     leftLabel: 'High put skew',
     rightLabel: 'Low put skew',
-    consensusQuadrant: 'bottomRight',  // mega-caps live bottom-right on put
-    paletteAccent: '#04A29F',
-    paletteContrast: '#d85a30',
+    // On the put tab the consensus side is "low put skew" (right
+    // column of the canvas, where compressed equity put-skew names
+    // tend to land), so tealLeft = false via this 'bottomRight'
+    // anchor.
+    consensusQuadrant: 'bottomRight',
   },
 };
-
-// Mega-caps that traditionally illustrate the "consensus" quadrant of
-// each tab. Used only as a label-overlay hint in Guided View; the
-// scatter still plots whatever the live data says. Members are checked
-// against the actual response so a missing/skipped name doesn't show
-// in the sticker.
-const CONSENSUS_TICKERS = ['AAPL', 'MSFT', 'TSLA', 'NVDA'];
 
 function pctRank(values, valueAccessor) {
   // Returns a function symbol -> percentile in [0, 1]. Ties get the
@@ -120,7 +108,6 @@ export default function SkewScanner() {
   const [data, setData] = useState(null);
   const [error, setError] = useState(null);
   const [tab, setTab] = useState('call');
-  const [view, setView] = useState('guided'); // 'guided' | 'explorer'
   const [hoveredSymbol, setHoveredSymbol] = useState(null);
   const [containerWidth, setContainerWidth] = useState(0);
   const wrapRef = useRef(null);
@@ -171,32 +158,23 @@ export default function SkewScanner() {
     [plotted, spec.metricKey]
   );
 
-  // The "consensus" quadrant resident sticker. Filters CONSENSUS_TICKERS
-  // to those that landed in the expected quadrant for the current tab —
-  // empty if none of them did, in which case the sticker is hidden.
-  const consensusResidents = useMemo(() => {
-    if (view !== 'guided') return [];
-    const expected = spec.consensusQuadrant;
-    return plotted
-      .filter((t) => CONSENSUS_TICKERS.includes(t.symbol))
-      .filter((t) => {
-        const yp = ivRank(t.symbol);
-        const xp = skewRank(t.symbol);
-        if (yp == null || xp == null) return false;
-        // Note: y-axis is inverted in screen coords (top = high IV).
-        // High IV ⇒ yp > 0.5; high skew ⇒ xp > 0.5 (left side).
-        // For "high skew" we mean position closer to LEFT, so x_screen < 0.5.
-        // We'll re-encode the two boolean coordinates, then map to quadrant.
-        const isHighIv = yp >= 0.5;
-        const isHighSkew = xp >= 0.5;
-        if (expected === 'topLeft')     return isHighIv && isHighSkew;
-        if (expected === 'topRight')    return isHighIv && !isHighSkew;
-        if (expected === 'bottomLeft')  return !isHighIv && isHighSkew;
-        if (expected === 'bottomRight') return !isHighIv && !isHighSkew;
-        return false;
-      })
+  // Top-10-by-options-volume membership for bold-label highlighting.
+  // The roster JSON is already sorted desc by options volume, but the
+  // /api/scan response can drop tickers (thin chains, snapshot errors)
+  // so we re-derive the top 10 from the actual response payload rather
+  // than trusting position. The top 10 universally include the most-
+  // traded names — TSLA, NVDA, AAPL, MSFT, INTC, AMD, AMZN, etc. — and
+  // bolding them lets the eye find them faster without any visual
+  // privilege beyond label weight (no special dot, no special color).
+  const topTenSymbols = useMemo(() => {
+    if (!data?.tickers) return new Set();
+    const ranked = [...data.tickers]
+      .filter((t) => Number.isFinite(t.optionsVolume))
+      .sort((a, b) => b.optionsVolume - a.optionsVolume)
+      .slice(0, 10)
       .map((t) => t.symbol);
-  }, [plotted, view, spec.consensusQuadrant, ivRank, skewRank]);
+    return new Set(ranked);
+  }, [data]);
 
   // The plotted-points layout uses a square-ish quadrant. On wide
   // viewports we cap the side at 720 px so labels stay legible; on
@@ -210,9 +188,7 @@ export default function SkewScanner() {
     <div ref={wrapRef} style={{ display: 'flex', flexDirection: 'column', gap: '0.75rem' }}>
       <ScannerToolbar
         tab={tab}
-        view={view}
         onTabChange={setTab}
-        onViewChange={setView}
         data={data}
       />
 
@@ -270,14 +246,13 @@ export default function SkewScanner() {
         >
           <Quadrant
             spec={spec}
-            view={view}
             side={quadrantSide}
             plotted={plotted}
             ivRank={ivRank}
             skewRank={skewRank}
+            topTenSymbols={topTenSymbols}
             hoveredSymbol={hoveredSymbol}
             onHover={setHoveredSymbol}
-            consensusResidents={consensusResidents}
           />
         </div>
       )}
@@ -291,7 +266,7 @@ export default function SkewScanner() {
   );
 }
 
-function ScannerToolbar({ tab, view, onTabChange, onViewChange, data }) {
+function ScannerToolbar({ tab, onTabChange, data }) {
   return (
     <div
       style={{
@@ -302,25 +277,6 @@ function ScannerToolbar({ tab, view, onTabChange, onViewChange, data }) {
         justifyContent: 'space-between',
       }}
     >
-      <div
-        role="tablist"
-        aria-label="View mode"
-        style={{ display: 'flex', gap: '0.4rem' }}
-      >
-        <ToggleButton
-          active={view === 'guided'}
-          onClick={() => onViewChange('guided')}
-        >
-          Guided View
-        </ToggleButton>
-        <ToggleButton
-          active={view === 'explorer'}
-          onClick={() => onViewChange('explorer')}
-        >
-          Explorer View
-        </ToggleButton>
-      </div>
-
       <div
         role="tablist"
         aria-label="Skew side"
@@ -354,33 +310,9 @@ function ScannerToolbar({ tab, view, onTabChange, onViewChange, data }) {
           letterSpacing: '0.04em',
         }}
       >
-        {data && `${data.pricedCount}/${data.universeSize} priced · ~${data.target?.dteTarget ?? 30}D · ${formatDate(data.asOf)}`}
+        {data && `${data.pricedCount}/${data.universeSize} priced · ~${data.target?.dteTarget ?? 30}D · ${formatDate(data.sessionDate ?? data.asOf)}`}
       </div>
     </div>
-  );
-}
-
-function ToggleButton({ active, onClick, children }) {
-  return (
-    <button
-      type="button"
-      onClick={onClick}
-      style={{
-        padding: '0.4rem 0.75rem',
-        fontFamily: 'Courier New, monospace',
-        fontSize: '0.78rem',
-        letterSpacing: '0.04em',
-        textTransform: 'uppercase',
-        background: active ? 'var(--accent-blue)' : 'transparent',
-        color: active ? '#0d1016' : 'var(--accent-blue)',
-        border: '1px solid var(--accent-blue)',
-        borderRadius: '3px',
-        cursor: 'pointer',
-        fontWeight: 700,
-      }}
-    >
-      {children}
-    </button>
   );
 }
 
@@ -410,20 +342,15 @@ function TabButton({ active, onClick, children, tone }) {
 }
 
 function Quadrant({
-  spec, view, side, plotted, ivRank, skewRank,
-  hoveredSymbol, onHover, consensusResidents,
+  spec, side, plotted, ivRank, skewRank,
+  topTenSymbols, hoveredSymbol, onHover,
 }) {
   const PADDING = 8;
   const PLOT_SIZE = side - PADDING * 2;
   const HALF = PLOT_SIZE / 2;
 
-  // Background gradients per quadrant. Encoding: the "consensus"
-  // quadrant for this tab gets the deeper teal tint, the diagonal
-  // opposite (high contrast / low contrast pairing) gets a magenta-
-  // coral tint, and the off-diagonals get muted.
-  // For "Call skew": consensus = topLeft (mega-caps with high IV +
-  // high call demand). For "Put skew": consensus = bottomRight
-  // (mega-caps with compressed IV + compressed put skew).
+  // Background gradient palette per tab. See quadrantBackgrounds for
+  // the column/row encoding rules.
   const quadColors = quadrantBackgrounds(spec.consensusQuadrant);
 
   return (
@@ -475,62 +402,45 @@ function Quadrant({
         pointerEvents: 'none',
       }} />
 
-      {/* Guided-view annotations. Each label appears once and hugs an
-          edge of the quadrant rather than crowding all four corners.
-          Top edge:    "High IV"   (right-of-center, the conventional
-                                    finance reading: high IV is the
-                                    "stress" half of the canvas)
-          Bottom edge: "Low IV"    (right-of-center, mirror of top)
-          Left edge:   "High [side] skew"  (mid-Y, axis label)
-          Right edge:  "Low [side] skew"   (mid-Y, axis label)
-          Plus a ConsensusSticker placed inside the consensus quadrant
-          listing the mega-cap residents that landed there.
-          Hidden when view==='explorer' so a power user can read the
-          scatter without label chrome competing for the eye. */}
-      {view === 'guided' && (
-        <>
-          <EdgeLabel
-            edge="top"
-            offsetPx={PADDING + 12}
-            plotPadding={PADDING}
-            plotSize={PLOT_SIZE}
-            text="High IV"
-            color="#f0a8d6"
-          />
-          <EdgeLabel
-            edge="bottom"
-            offsetPx={PADDING + 12}
-            plotPadding={PADDING}
-            plotSize={PLOT_SIZE}
-            text="Low IV"
-            color="#9aa6c2"
-          />
-          <EdgeLabel
-            edge="left"
-            offsetPx={PADDING + 12}
-            plotPadding={PADDING}
-            plotSize={PLOT_SIZE}
-            text={spec.leftLabel}
-            color="#e8edf6"
-          />
-          <EdgeLabel
-            edge="right"
-            offsetPx={PADDING + 12}
-            plotPadding={PADDING}
-            plotSize={PLOT_SIZE}
-            text={spec.rightLabel}
-            color="#9aa6c2"
-          />
-          {consensusResidents.length > 0 && (
-            <ConsensusSticker
-              residents={consensusResidents}
-              quadrant={spec.consensusQuadrant}
-              padding={PADDING}
-              plotSize={PLOT_SIZE}
-            />
-          )}
-        </>
-      )}
+      {/* Edge-anchored axis annotations. Always rendered. Each label
+          appears once and hugs an edge of the quadrant. Top/bottom
+          name the IV pole; left/right name the skew pole.
+            Top edge:    "High IV"   (right-of-center)
+            Bottom edge: "Low IV"    (right-of-center)
+            Left edge:   "High [side] skew"  (mid-Y)
+            Right edge:  "Low [side] skew"   (mid-Y) */}
+      <EdgeLabel
+        edge="top"
+        offsetPx={PADDING + 12}
+        plotPadding={PADDING}
+        plotSize={PLOT_SIZE}
+        text="High IV"
+        color="#f0a8d6"
+      />
+      <EdgeLabel
+        edge="bottom"
+        offsetPx={PADDING + 12}
+        plotPadding={PADDING}
+        plotSize={PLOT_SIZE}
+        text="Low IV"
+        color="#9aa6c2"
+      />
+      <EdgeLabel
+        edge="left"
+        offsetPx={PADDING + 12}
+        plotPadding={PADDING}
+        plotSize={PLOT_SIZE}
+        text={spec.leftLabel}
+        color="#e8edf6"
+      />
+      <EdgeLabel
+        edge="right"
+        offsetPx={PADDING + 12}
+        plotPadding={PADDING}
+        plotSize={PLOT_SIZE}
+        text={spec.rightLabel}
+        color="#9aa6c2"
+      />
 
       {/* SVG scatter overlay. Positioned absolutely on top of the
           background mosaic, sized identically to the inner plot
@@ -552,13 +462,17 @@ function Quadrant({
           if (yp == null || xp == null) return null;
           // Y inverted: high IV → low pixel y (top of canvas).
           // X: high skew → low pixel x (left of canvas) so the natural
-          // "more skew" reading goes left, matching the screenshots.
+          // "more skew" reading goes left, matching the screenshot
+          // convention.
           const cy = (1 - yp) * PLOT_SIZE;
           const cx = (1 - xp) * PLOT_SIZE;
           const isHovered = hoveredSymbol === t.symbol;
-          const isMega = CONSENSUS_TICKERS.includes(t.symbol);
-          const r = isHovered ? 7 : isMega ? 5 : 3.5;
-          const dotColor = isHovered ? '#f0a030' : isMega ? '#4a9eff' : '#9ab2d8';
+          const isTopTen = topTenSymbols.has(t.symbol);
+          // All dots are the same size and color — only the LABEL
+          // weight communicates options-volume rank. Hover gets the
+          // amber accent treatment as the only privileged visual.
+          const r = isHovered ? 7 : 3.5;
+          const dotColor = isHovered ? '#f0a030' : '#9ab2d8';
           return (
             <g key={t.symbol} style={{ pointerEvents: 'auto' }}>
               <circle
@@ -575,10 +489,10 @@ function Quadrant({
               <text
                 x={cx + r + 3}
                 y={cy + 4}
-                fill={isHovered ? '#f3f4f6' : isMega ? '#cfdcf3' : '#7e8aa0'}
+                fill={isHovered ? '#f3f4f6' : isTopTen ? '#e1e8f4' : '#7e8aa0'}
                 fontFamily="Courier New, monospace"
-                fontSize={isHovered ? 12 : isMega ? 11 : 10}
-                fontWeight={isHovered || isMega ? 700 : 400}
+                fontSize={isHovered ? 12 : isTopTen ? 11 : 10}
+                fontWeight={isHovered || isTopTen ? 700 : 400}
                 style={{ pointerEvents: 'none', userSelect: 'none' }}
               >
                 {t.symbol}
@@ -668,36 +582,6 @@ function EdgeLabel({ edge, offsetPx, plotPadding, plotSize, text, color }) {
   );
 }
 
-function ConsensusSticker({ residents, quadrant, padding, plotSize }) {
-  // Position the sticker offset slightly into the named quadrant from
-  // the corner, so it doesn't overlap CornerLabel.
-  const isRight = quadrant.endsWith('Right');
-  const isBottom = quadrant.startsWith('bottom');
-  const x = padding + (isRight ? plotSize - 16 : 16);
-  const y = padding + (isBottom ? plotSize - 60 : 60);
-  const transform = `translate(${isRight ? '-100%' : '0'}, ${isBottom ? '-100%' : '0'})`;
-  return (
-    <div
-      style={{
-        position: 'absolute',
-        left: x,
-        top: y,
-        transform,
-        pointerEvents: 'none',
-        fontFamily: 'Courier New, monospace',
-        fontSize: '1.0rem',
-        fontWeight: 700,
-        color: '#4a9eff',
-        textShadow: '0 1px 2px rgba(0, 0, 0, 0.85)',
-        lineHeight: 1.25,
-        maxWidth: plotSize * 0.4,
-      }}
-    >
-      {residents.join(', ')}
-    </div>
-  );
-}
-
 function ScannerLegend({ data, spec, hovered }) {
   return (
     <div
@@ -715,22 +599,25 @@ function ScannerLegend({ data, spec, hovered }) {
       <div style={{ display: 'flex', alignItems: 'center', gap: '0.4rem' }}>
         <span style={{
           display: 'inline-block',
-          width: 10,
-          height: 10,
-          borderRadius: '50%',
-          background: '#4a9eff',
-        }} />
-        <span style={{ color: 'var(--text-secondary)' }}>mega-cap reference</span>
-      </div>
-      <div style={{ display: 'flex', alignItems: 'center', gap: '0.4rem' }}>
-        <span style={{
-          display: 'inline-block',
           width: 8,
           height: 8,
           borderRadius: '50%',
           background: '#9ab2d8',
         }} />
         <span style={{ color: 'var(--text-secondary)' }}>universe member</span>
+      </div>
+      <div style={{ display: 'flex', alignItems: 'center', gap: '0.4rem' }}>
+        <span
+          style={{
+            color: '#e1e8f4',
+            fontWeight: 700,
+            fontFamily: 'Courier New, monospace',
+            fontSize: '0.95rem',
+          }}
+        >
+          BOLD
+        </span>
+        <span style={{ color: 'var(--text-secondary)' }}>top 10 by options volume</span>
       </div>
       <div style={{ display: 'flex', alignItems: 'center', gap: '0.4rem' }}>
         <span style={{
