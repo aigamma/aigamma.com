@@ -225,7 +225,9 @@ export default function SpxHeatmap() {
       >
         <span>
           {data
-            ? `${data.pricedCount}/${data.count} priced · ${data.mode === 'sector-etf-fallback' ? 'sector ETFs (fallback)' : 'top by options volume'}`
+            ? (data.mode === 'sector-etf-fallback'
+                ? 'Sector ETFs · fallback view'
+                : 'Top 250 SPX stocks by option volume')
             : 'Loading…'}
         </span>
         <span style={{ color: 'var(--text-secondary)' }}>
