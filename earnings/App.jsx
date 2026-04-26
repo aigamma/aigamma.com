@@ -69,17 +69,6 @@ export default function App() {
           <span className="lab-home-button__mobile-text">Home</span>
         </a>
         <Menu />
-        <span
-          className="lab-badge lab-badge--coral"
-          title="This page is a v0 — implied moves are currently not rendering on weekends/off-hours because Massive's snapshot endpoint returns a null underlying_asset.price outside live sessions. A grouped-bars spot fallback (already proven in scan.mjs) is the planned fix."
-          style={{
-            borderColor: 'var(--accent-coral)',
-            color: 'var(--accent-coral)',
-          }}
-        >
-          <span className="lab-badge__desktop-text">Under Construction</span>
-          <span className="lab-badge__mobile-text">WIP</span>
-        </span>
       </header>
 
       <section className="lab-slot earnings-slot">
