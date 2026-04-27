@@ -417,7 +417,7 @@ export default function App() {
     <div className="app-shell">
       <header className="site-header">
         {/* Header is now just the right-side nav cluster: the six
-            promoted TopNav buttons (Tactical Vol, Earnings, Scan,
+            promoted TopNav buttons (Vol, Earnings, Scan,
             Rotations, VIX, Seasonality) plus the Menu trigger.
             The aigamma wordmark and the dealer-gamma regime status
             pill that used to sit in the upper-left both moved into

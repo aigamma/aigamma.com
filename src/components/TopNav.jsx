@@ -1,15 +1,17 @@
-// Promoted top-level navigation. Six lab pages — Tactical,
+// Promoted top-level navigation. Six lab pages — Vol,
 // Earnings, Scan, Rotations, VIX, Seasonality — are surfaced as
 // their own buttons in every page header so a reader does not
 // have to open the Menu dropdown to reach them. The remaining
 // labs continue to live in the Menu component. Order is curated
 // left-to-right by importance and clustering:
-//   1. Tactical — densest tactical-positioning surface, top priority
-//                 (the page's own in-page lab-badge still identifies
-//                 the lab as "Tactical Vol"; the top-nav button was
-//                 shortened to single-word "Tactical" to match the
-//                 single-word labels on the other five buttons and to
-//                 reduce header overflow risk on split-screen widths)
+//   1. Vol      — densest tactical-positioning surface, top priority
+//                 (the destination /tactical/ page's own in-page
+//                 lab-badge still identifies the lab as "Tactical
+//                 Vol"; the top-nav button was shortened — first to
+//                 single-word "Tactical" and then again to the
+//                 three-letter "Vol" — to match the short single-word
+//                 labels on the other five buttons and to reduce
+//                 header overflow risk on split-screen widths)
 //   2. Earnings     — dated catalyst calendar
 //   3. Scan         — 25Δ skew vs ATM IV scanner (placed in the literal
 //                     middle per the directive "between Tactical Vol
@@ -66,7 +68,7 @@
 // destinations (e.g. /rough/, /risk/, /jump/) omit the prop and
 // see all six buttons.
 const TOP_NAV_ITEMS = [
-  { key: 'tactical',    href: '/tactical/',    label: 'Tactical'     },
+  { key: 'tactical',    href: '/tactical/',    label: 'Vol'          },
   { key: 'earnings',    href: '/earnings/',    label: 'Earnings'     },
   { key: 'scan',        href: '/scan/',        label: 'Scan'         },
   { key: 'rotations',   href: '/rotations/',   label: 'Rotations'    },

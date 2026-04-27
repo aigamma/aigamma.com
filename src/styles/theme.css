@@ -178,7 +178,7 @@ body {
 }
 
 /* ===== TOP NAV =====
-   Promoted lab buttons (Tactical Vol, Earnings, Scan, Rotations,
+   Promoted lab buttons (Vol, Earnings, Scan, Rotations,
    VIX, Seasonality) that live in every page header beside the
    Menu trigger. Outlined buttons whose fill alternates by
    displayed position — even indices use accent-blue, odd indices
@@ -260,7 +260,7 @@ body {
    cluster anymore — the aigamma wordmark and the dealer-gamma
    regime indicator both moved into the LevelsPanel card directly
    below — so the row is just the right-side nav cluster: the six
-   TopNav buttons (Tactical Vol, Earnings, Scan, Rotations, VIX,
+   TopNav buttons (Vol, Earnings, Scan, Rotations, VIX,
    Seasonality) plus the Menu trigger.
 
    Mobile-first uses justify-content: flex-end so the cluster

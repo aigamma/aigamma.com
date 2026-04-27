@@ -43,10 +43,10 @@ export default function App() {
         <div className="lab-brand">
           <span
             className="lab-badge"
-            title="Skew Scanner · 25-delta call/put skew vs ATM IV across the top options-active single names"
+            title="Scan · 25-delta call/put skew vs ATM IV across the top options-active single names"
           >
-            <span className="lab-badge__desktop-text">Skew Scanner</span>
-            <span className="lab-badge__mobile-text">Skew</span>
+            <span className="lab-badge__desktop-text">Scan</span>
+            <span className="lab-badge__mobile-text">Scan</span>
           </span>
         </div>
         <TopNav />
@@ -117,7 +117,7 @@ export default function App() {
 
       <footer className="lab-footer">
         <span className="lab-footer-line">
-          AI Gamma · Skew Scanner · top by options volume, 25Δ wings vs ATM · v0.3.0
+          AI Gamma · Scan · top by options volume, 25Δ wings vs ATM · v0.3.0
         </span>
         <a href="/" className="lab-footer-home">Return Home</a>
       </footer>
