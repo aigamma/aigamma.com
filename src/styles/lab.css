@@ -1402,7 +1402,71 @@
   color: var(--text-secondary);
   text-transform: uppercase;
   letter-spacing: 0.06em;
+  margin-left: 0.4rem;
+}
+
+/* Freshness pill — three states (live / stale / closed) keyed off the
+   server's asOf timestamp vs. the client's wall clock. The pill is
+   small (0.65rem) so it sits as visual chrome next to the Call γ /
+   Put γ legend without dominating the meta band, but the colored
+   border + background tint distinguishes it from the surrounding
+   muted Courier text so it reads as state rather than as label.
+   Tones map to the existing accent palette: live=green, stale=amber,
+   closed=secondary-text gray (no accent — closed is the "neutral
+   baseline" state, not an alert state). */
+.expiring-gamma-freshness {
+  display: inline-block;
+  font-family: 'Courier New', monospace;
+  font-size: 0.65rem;
+  font-weight: 700;
+  letter-spacing: 0.1em;
+  padding: 0.15rem 0.4rem;
+  border-radius: 2px;
+  border: 1px solid;
   margin-left: 0.6rem;
+  text-transform: uppercase;
+}
+
+.expiring-gamma-freshness--live {
+  color: var(--accent-green);
+  border-color: var(--accent-green);
+  background: rgba(46, 204, 113, 0.12);
+}
+
+.expiring-gamma-freshness--stale {
+  color: var(--accent-amber);
+  border-color: var(--accent-amber);
+  background: rgba(241, 196, 15, 0.12);
+}
+
+.expiring-gamma-freshness--closed {
+  color: var(--text-secondary);
+  border-color: var(--bg-card-border);
+  background: rgba(138, 143, 156, 0.08);
+}
+
+/* Historical percentile chip rendered next to each total. Small, low-
+   emphasis chrome so the dollar value remains the primary read; the
+   chip is the secondary "context" that helps a reader judge whether
+   the value is high, low, or middle. Uses text-secondary borders so
+   it doesn't compete with the colored Call γ / Put γ totals
+   themselves. The "th" suffix makes the chip parse as ordinal
+   ("85th"), which reads more naturally than a bare number. */
+.expiring-gamma-pctile {
+  display: inline-block;
+  font-family: 'Courier New', monospace;
+  font-size: 0.65rem;
+  font-weight: 700;
+  letter-spacing: 0.08em;
+  padding: 0.1rem 0.35rem;
+  border-radius: 2px;
+  border: 1px solid var(--bg-card-border);
+  background: rgba(138, 143, 156, 0.08);
+  color: var(--text-secondary);
+  margin-left: 0.4rem;
+  text-transform: lowercase;
+  vertical-align: middle;
+  cursor: help;
 }
 
 .expiring-gamma-totals {
@@ -1428,6 +1492,57 @@
 .expiring-gamma-chart {
   width: 100%;
   height: 620px;
+}
+
+/* Chart-legend strip rendered beneath the bar chart. Names the new
+   dotted cumulative-rolloff overlay traces and the per-bar Q / M /
+   0DTE expiration-type tags. Small, single-row by default; wraps to
+   multi-row on narrow viewports. Each item carries a visual swatch
+   (a short dotted line for traces, a small bordered chip for tag
+   types) followed by a brief verbal label so the legend reads as
+   "swatch — name". */
+.expiring-gamma-chart-legend {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 0.4rem 1.1rem;
+  font-family: 'Courier New', monospace;
+  font-size: 0.7rem;
+  letter-spacing: 0.06em;
+  color: var(--text-secondary);
+  text-transform: uppercase;
+  padding-top: 0.2rem;
+}
+
+.expiring-gamma-chart-legend__item {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.4rem;
+}
+
+.expiring-gamma-chart-legend__line {
+  display: inline-block;
+  width: 22px;
+  height: 0;
+  border-top: 1.5px dotted;
+  vertical-align: middle;
+}
+
+.expiring-gamma-chart-legend__chip {
+  display: inline-block;
+  font-family: 'Courier New', monospace;
+  font-size: 0.6rem;
+  font-weight: 700;
+  letter-spacing: 0.1em;
+  padding: 0.05rem 0.3rem;
+  border-radius: 2px;
+  border: 1px solid;
+  background: rgba(13, 16, 22, 0.85);
+  text-transform: uppercase;
+}
+
+.expiring-gamma-chart-legend__divider {
+  opacity: 0.4;
 }
 
 /* Plotly draws SVG <text> elements with inline font-family that beats

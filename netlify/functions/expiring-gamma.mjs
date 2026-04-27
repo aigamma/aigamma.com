@@ -126,6 +126,90 @@ function nextAmExpirationIso(refTradingDateIso) {
   return adjustForHoliday(ymd(next));
 }
 
+// Classify each listed expiration by its calendar role so the chart can
+// visually tag bars (0DTE / quarterly OPEX / monthly OPEX) without the
+// reader having to mentally parse dates. Uses the same thirdFriday +
+// adjustForHoliday machinery the auto-zoom uses, so a 3rd-Friday OPEX
+// that rolled to Thursday for a Good Friday holiday still classifies as
+// "monthly" (it's the same contract, just renamed by SOQ).
+//
+// Categories:
+//   - 0DTE       — expiration_date matches the trading date
+//   - quarterly  — 3rd Friday (holiday-adjusted) of Mar / Jun / Sep / Dec
+//   - monthly    — 3rd Friday (holiday-adjusted) of any other month
+//   - weekly     — anything else (Mon / Wed / Fri SPXW root weeklies,
+//                  end-of-month, mid-week)
+//
+// The quarterly/monthly OPEX dates are AM-settled SPX root contracts
+// (SOQ at 9:30 ET); the rest are PM-settled SPXW. Both carry dealer
+// gamma, but the AM monthlies / quarterlies always carry far more OI
+// because that's where the long-vol hedger flow concentrates and
+// where index-tracking-fund roll cycles align — visually tagging them
+// gives the reader the "this is the structural gamma date" cue
+// without needing a per-bar annotation.
+function classifyExpiration(expIso, tradingDateIso) {
+  if (expIso === tradingDateIso) return '0DTE';
+  const d = new Date(`${expIso}T12:00:00Z`);
+  const year = d.getUTCFullYear();
+  const month = d.getUTCMonth();
+  const thirdFri = adjustForHoliday(ymd(thirdFriday(year, month)));
+  if (expIso === thirdFri) {
+    const isQuarterly = month === 2 || month === 5 || month === 8 || month === 11;
+    return isQuarterly ? 'quarterly' : 'monthly';
+  }
+  return 'weekly';
+}
+
+// 30-day historical context for the current-snapshot total gamma values.
+// Sources from daily_gex_stats.call_gex / put_gex which is the same
+// γ · OI · 100 · S² · 0.01 construction the live ingest uses (verified
+// empirically: most-recent daily_gex_stats rows match the live
+// totalCallGammaNotional within the day-over-day variance you'd expect
+// from a single intraday tick vs an EOD snapshot). The historical
+// distribution is sampled from EOD rows; the live point being compared
+// is intraday, but for a percentile-of-30-days context that small
+// time-of-day mismatch is well below the daily variance and the
+// framing "current value at the 60th percentile of the last 30 closes"
+// stays accurate.
+//
+// Returns null if fewer than 5 historical samples are available — the
+// percentile is too noisy with N<5 to be worth surfacing, and the
+// client treats null as "skip the pill" rather than rendering a
+// possibly-misleading low-N rank.
+function percentileRank(sortedAsc, x) {
+  if (!sortedAsc.length || x == null || !Number.isFinite(x)) return null;
+  let countLess = 0;
+  let countEqual = 0;
+  for (const v of sortedAsc) {
+    if (v < x) countLess++;
+    else if (v === x) countEqual++;
+    else break;
+  }
+  return Math.round(((countLess + 0.5 * countEqual) / sortedAsc.length) * 100);
+}
+
+async function fetchHistoricalGammaContext(headers, tradingDateIso) {
+  if (!tradingDateIso) return null;
+  // Pull the 30 most recent daily_gex_stats rows STRICTLY before the
+  // current run's trading date. Excluding the current trading date
+  // ensures the percentile is computed against a distribution that
+  // does not include the value being ranked, which is the standard
+  // "rank vs prior history" framing rather than a self-rank that
+  // would always center near the median by construction.
+  const url = `${SUPABASE_URL}/rest/v1/daily_gex_stats?trading_date=lt.${tradingDateIso}&select=trading_date,call_gex,put_gex&order=trading_date.desc&limit=30`;
+  try {
+    const res = await fetchWithTimeout(url, { headers }, 'daily_gex_stats');
+    if (!res.ok) return null;
+    const rows = await res.json();
+    if (!Array.isArray(rows) || rows.length < 5) return null;
+    const callValues = rows.map((r) => toNum(r.call_gex)).filter((v) => v != null && v > 0).sort((a, b) => a - b);
+    const putValues = rows.map((r) => toNum(r.put_gex)).filter((v) => v != null && v > 0).sort((a, b) => a - b);
+    return { callValues, putValues, sampleSize: rows.length };
+  } catch {
+    return null;
+  }
+}
+
 async function fetchWithTimeout(url, options, label) {
   try {
     return await fetch(url, { ...options, signal: AbortSignal.timeout(SUPABASE_TIMEOUT_MS) });
@@ -301,7 +385,10 @@ export default async function handler() {
     // per share at S; ΔS = 0.01 · S gives γ · S² · 0.01).
     const dollarFactor = 100 * spot * spot * 0.01;
 
-    const expirations = [...buckets.keys()].sort().map((exp) => {
+    const tradingDate = run.trading_date || null;
+
+    const sortedExpKeys = [...buckets.keys()].sort();
+    const baseExpirations = sortedExpKeys.map((exp) => {
       const b = buckets.get(exp);
       return {
         expiration_date: exp,
@@ -309,11 +396,35 @@ export default async function handler() {
         putGammaNotional: round(b.putShares * dollarFactor, 0),
         callContractCount: b.callCount,
         putContractCount: b.putCount,
+        // Tag each bar with its calendar role so the chart can render a
+        // small type marker above non-weekly bars without the reader
+        // having to reason about which Fridays are 3rd-of-month and
+        // which months are quarterly.
+        expirationType: tradingDate ? classifyExpiration(exp, tradingDate) : 'weekly',
       };
     });
 
-    const totalCallGamma = expirations.reduce((s, e) => s + (e.callGammaNotional || 0), 0);
-    const totalPutGamma = expirations.reduce((s, e) => s + (e.putGammaNotional || 0), 0);
+    const totalCallGamma = baseExpirations.reduce((s, e) => s + (e.callGammaNotional || 0), 0);
+    const totalPutGamma = baseExpirations.reduce((s, e) => s + (e.putGammaNotional || 0), 0);
+
+    // Walk the expirations again to fold in the running cumulative
+    // share — emitted as a 0-100 percent so the client can plot it on
+    // a fixed-domain secondary y-axis without needing to know the
+    // dollar totals. Cumulative is computed against the in-window
+    // total, so cumulativeCallPct of the last expiration is exactly
+    // 100 (modulo float). The reading is "by this expiration date,
+    // X% of the book's gamma has rolled off, inclusive of this date."
+    let runningCall = 0;
+    let runningPut = 0;
+    const expirations = baseExpirations.map((e) => {
+      runningCall += e.callGammaNotional || 0;
+      runningPut += e.putGammaNotional || 0;
+      return {
+        ...e,
+        cumulativeCallPct: totalCallGamma > 0 ? round((runningCall / totalCallGamma) * 100, 2) : null,
+        cumulativePutPct: totalPutGamma > 0 ? round((runningPut / totalPutGamma) * 100, 2) : null,
+      };
+    });
 
     // Default visible x-axis window: a fixed 100-calendar-day forward
     // span starting at the trading date. The rangeslider underneath
@@ -340,10 +451,23 @@ export default async function handler() {
     // If trading_date is null (degenerate run header that somehow
     // passed the spot-price guard above), we omit defaultWindow and
     // the client falls through to the natural full-data range.
-    const tradingDate = run.trading_date || null;
     const nextAmExpiration = tradingDate ? nextAmExpirationIso(tradingDate) : null;
     const defaultWindow = tradingDate
       ? { start: tradingDate, end: addCalendarDaysIso(tradingDate, 100) }
+      : null;
+
+    // Historical 30-day percentile context for the totals row — fired
+    // in parallel with the snapshot pagination above would have been
+    // ideal, but the two paths each need at most one round-trip to
+    // Supabase here so the wall-clock cost of a sequential await is
+    // ~80ms (single REST query against an indexed trading_date) and
+    // not worth restructuring the handler around.
+    const historical = await fetchHistoricalGammaContext(headers, tradingDate);
+    const callPercentile = historical
+      ? percentileRank(historical.callValues, totalCallGamma)
+      : null;
+    const putPercentile = historical
+      ? percentileRank(historical.putValues, totalPutGamma)
       : null;
 
     const payload = {
@@ -356,6 +480,13 @@ export default async function handler() {
       totalPutGammaNotional: round(totalPutGamma, 0),
       nextAmExpiration,
       defaultWindow,
+      // 30-day percentile rank against daily_gex_stats — null when the
+      // historical lookback has fewer than 5 samples (the threshold
+      // baked into fetchHistoricalGammaContext). Client treats null as
+      // "skip the pill" rather than rendering a noisy low-N rank.
+      historicalCallPercentile: callPercentile,
+      historicalPutPercentile: putPercentile,
+      historicalSampleSize: historical ? historical.sampleSize : 0,
       expirations,
     };
 

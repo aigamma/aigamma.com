@@ -4,6 +4,7 @@ import useIsMobile from '../hooks/useIsMobile';
 import {
   PLOTLY_BASE_LAYOUT_2D,
   PLOTLY_COLORS,
+  PLOTLY_FONTS,
   plotlyAxis,
 } from '../lib/plotlyTheme';
 
@@ -38,8 +39,22 @@ import {
 
 const COLOR_CALL = PLOTLY_COLORS.secondary;  // #e74c3c — orange/coral
 const COLOR_PUT = PLOTLY_COLORS.primary;     // #4a9eff — blue
+const COLOR_CUMULATIVE_CALL = 'rgba(231, 76, 60, 0.55)';   // call coral, semi-transparent line
+const COLOR_CUMULATIVE_PUT = 'rgba(74, 158, 255, 0.55)';   // put blue, semi-transparent line
 const BAR_OPACITY = 0.95;
 const BAR_WIDTH_MS = 12 * 60 * 60 * 1000;    // ~half a calendar day
+
+// Per-expiration-type marker styling for the Plotly annotations
+// rendered above each non-weekly bar. Quarterly Mar/Jun/Sep/Dec OPEX
+// in purple to match the VIX chrome elsewhere on the site, regular
+// monthly OPEX in amber, 0DTE in green, weekly suppressed (default,
+// no annotation). Same color tokens as CSS custom properties so the
+// chart legend in JSX can mirror them without redefining hexes.
+const EXPIRATION_TYPE_TAGS = {
+  '0DTE':      { label: '0DTE', color: '#2ecc71' },  // accent-green
+  quarterly:   { label: 'Q',    color: '#BF7FFF' },  // accent-purple
+  monthly:     { label: 'M',    color: '#f1c40f' },  // accent-amber
+};
 
 function formatDollar(v) {
   if (v == null || !Number.isFinite(v)) return '—';
@@ -65,9 +80,87 @@ function formatAsOf(iso) {
   });
 }
 
+// Format a captured-at timestamp as a relative-time string ("12 min
+// ago", "3 hours ago", "2 days ago"). Used by the stale-data pill so
+// a reader can immediately tell whether the snapshot is from this
+// minute's intraday tick or from last Friday's close, without having
+// to parse an absolute timestamp into a freshness judgment. Returns
+// "just now" for sub-minute deltas; falls through to the formatAsOf
+// absolute string when the relative formatting would round to 0
+// because of clock skew between the user's machine and the CDN.
+function formatRelative(iso, now = Date.now()) {
+  if (!iso) return '';
+  const t = new Date(iso).getTime();
+  if (!Number.isFinite(t)) return '';
+  const ageMs = Math.max(0, now - t);
+  const sec = Math.floor(ageMs / 1000);
+  if (sec < 30) return 'just now';
+  if (sec < 60) return `${sec}s ago`;
+  const min = Math.floor(sec / 60);
+  if (min < 60) return `${min} min ago`;
+  const hr = Math.floor(min / 60);
+  if (hr < 24) return `${hr} hour${hr === 1 ? '' : 's'} ago`;
+  const day = Math.floor(hr / 24);
+  return `${day} day${day === 1 ? '' : 's'} ago`;
+}
+
+// Determine whether the regular cash session is currently open in ET.
+// Mon-Fri 09:30-16:00 → open; otherwise closed. Holidays are NOT
+// excluded here — the surface only needs to distinguish "live tick
+// expected within minutes" from "snapshot frozen until next session"
+// and a holiday weekday with a stale 4pm-prior-day asOf is already
+// caught by the >2h staleness rule. Adding a holiday calendar would
+// be redundant and create a maintenance dependency on the same date
+// list the server already carries.
+function isMarketOpenET(now = new Date()) {
+  const parts = new Intl.DateTimeFormat('en-US', {
+    timeZone: 'America/New_York',
+    hour12: false,
+    weekday: 'short',
+    hour: '2-digit',
+    minute: '2-digit',
+  }).formatToParts(now);
+  const get = (t) => parts.find((p) => p.type === t)?.value;
+  const wd = get('weekday');
+  if (wd === 'Sat' || wd === 'Sun') return false;
+  const minutes = Number(get('hour')) * 60 + Number(get('minute'));
+  return minutes >= 570 && minutes < 960;
+}
+
+// Distill the freshness state into a single label the meta band can
+// render as a colored pill. Three states because three is the smallest
+// set that distinguishes the actionable cases:
+//   - LIVE (green)   — session open AND data <10 min old; trader can
+//                      assume the bar heights match a fresh print
+//   - STALE (amber)  — session open but data >10 min old; pipeline is
+//                      lagging or paused, treat the snapshot with
+//                      caution
+//   - CLOSED (gray)  — session closed (after-hours, weekend, holiday);
+//                      data is the most recent available but doesn't
+//                      reflect any post-close trading
+function classifyFreshness(asOfIso, now = new Date()) {
+  if (!asOfIso) return { label: 'NO DATA', tone: 'closed' };
+  const ageMs = now.getTime() - new Date(asOfIso).getTime();
+  const ageMin = ageMs / 60000;
+  const open = isMarketOpenET(now);
+  if (!open) return { label: 'MARKET CLOSED', tone: 'closed' };
+  if (ageMin <= 10) return { label: 'LIVE', tone: 'live' };
+  return { label: 'STALE', tone: 'stale' };
+}
+
 export default function ExpiringGamma() {
   const [data, setData] = useState(null);
   const [error, setError] = useState(null);
+  // Tick once a minute so the "X min ago" relative-time pill stays
+  // accurate without forcing a full re-fetch. 60s is the right cadence
+  // for minute-resolution labels — anything finer is wasted re-renders
+  // and anything coarser would let "1 min ago" linger as truth past
+  // the threshold where it's silently turned into "2 min ago".
+  const [now, setNow] = useState(() => new Date());
+  useEffect(() => {
+    const id = setInterval(() => setNow(new Date()), 60000);
+    return () => clearInterval(id);
+  }, []);
   const chartRef = useRef(null);
   const { plotly: Plotly, error: plotlyError } = usePlotly();
   const mobile = useIsMobile();
@@ -84,11 +177,16 @@ export default function ExpiringGamma() {
     return () => { cancelled = true; };
   }, []);
 
+  const freshness = useMemo(() => classifyFreshness(data?.asOf, now), [data?.asOf, now]);
+  const relativeAsOf = useMemo(() => formatRelative(data?.asOf, now.getTime()), [data?.asOf, now]);
+
   const traces = useMemo(() => {
     if (!data?.expirations || data.expirations.length === 0) return null;
     const xs = data.expirations.map((e) => e.expiration_date);
     const callY = data.expirations.map((e) => e.callGammaNotional || 0);
     const putY  = data.expirations.map((e) => -(e.putGammaNotional || 0));
+    const cumCallY = data.expirations.map((e) => e.cumulativeCallPct);
+    const cumPutY  = data.expirations.map((e) => e.cumulativePutPct);
     // Pre-format the dollar magnitudes server-side rather than relying
     // on d3-format's :$.2s in hovertemplate. The reason is that Plotly's
     // SI-suffix output uses "G" for 1e9 instead of the "B" billions
@@ -102,12 +200,32 @@ export default function ExpiringGamma() {
       formatDollar(e.putGammaNotional || 0),
       e.callContractCount || 0,
       e.putContractCount || 0,
+      e.cumulativeCallPct == null ? '—' : `${e.cumulativeCallPct.toFixed(0)}%`,
+      e.cumulativePutPct == null ? '—' : `${e.cumulativePutPct.toFixed(0)}%`,
     ]);
     const hovertemplate =
       '<b>%{x|%b %-d, %Y}</b>' +
       '<br>Call γ: %{customdata[0]}  (%{customdata[2]} contracts)' +
       '<br>Put γ:  %{customdata[1]}  (%{customdata[3]} contracts)' +
+      '<br>Cumulative C/P: %{customdata[4]} / %{customdata[5]}' +
       '<extra></extra>';
+    // Cumulative-rolloff overlay traces. Two thin step lines on a
+    // 0-100 secondary y-axis (yaxis2, see layout below) — one for the
+    // running cumulative call γ share and one for puts. Plotted as
+    // mode='lines+markers' with a thin dotted line + small markers at
+    // each expiration so the reader sees both the gradient (line
+    // slope = how front-loaded the rolloff is at this date) and the
+    // discrete sampling points (markers anchor each step to its
+    // expiration). Both lines rise monotonically from low% at the
+    // first expiration to 100% at the last; the visual gap between
+    // them at any date answers "is the put book more front-loaded
+    // than the call book?" — the dealer-positioning question that
+    // raw-magnitude bars can't answer at a glance.
+    //
+    // hoverinfo='skip' on the cumulative traces because the bar
+    // tooltip already surfaces both cumulative percentages via the
+    // customdata pre-format above; a second tooltip on each marker
+    // would duplicate the rows and clutter the hover surface.
     return [
       {
         x: xs,
@@ -129,7 +247,70 @@ export default function ExpiringGamma() {
         width: BAR_WIDTH_MS,
         hovertemplate,
       },
+      {
+        x: xs,
+        y: cumCallY,
+        type: 'scatter',
+        mode: 'lines+markers',
+        name: 'Cumulative call %',
+        yaxis: 'y2',
+        line: { color: COLOR_CUMULATIVE_CALL, width: 1.5, dash: 'dot', shape: 'hv' },
+        marker: { color: COLOR_CUMULATIVE_CALL, size: 4, line: { width: 0 } },
+        hoverinfo: 'skip',
+      },
+      {
+        x: xs,
+        y: cumPutY,
+        type: 'scatter',
+        mode: 'lines+markers',
+        name: 'Cumulative put %',
+        yaxis: 'y2',
+        line: { color: COLOR_CUMULATIVE_PUT, width: 1.5, dash: 'dot', shape: 'hv' },
+        marker: { color: COLOR_CUMULATIVE_PUT, size: 4, line: { width: 0 } },
+        hoverinfo: 'skip',
+      },
     ];
+  }, [data]);
+
+  // Plotly annotations rendering the per-bar expiration-type tag
+  // (0DTE / Q / M) above each non-weekly bar. Weekly expirations are
+  // the default and don't get a tag so the chart stays uncluttered;
+  // the annotated bars are precisely the structural-gamma dates a
+  // reader cares about (front 0DTE wall + every monthly OPEX +
+  // every quarterly OPEX).
+  //
+  // Anchored to the bar's date on x and the call γ value on y (since
+  // calls render upward), with yshift to lift the tag above the bar
+  // top by a fixed pixel offset that doesn't depend on the y-axis
+  // scale. This keeps the tag floating ~14px above the bar regardless
+  // of whether a Linear / Log / Per-day mode rescales the y-axis in
+  // a future iteration.
+  const expirationTypeAnnotations = useMemo(() => {
+    if (!data?.expirations) return [];
+    return data.expirations
+      .map((e) => {
+        const tag = EXPIRATION_TYPE_TAGS[e.expirationType];
+        if (!tag) return null;
+        return {
+          x: e.expiration_date,
+          y: e.callGammaNotional || 0,
+          xref: 'x',
+          yref: 'y',
+          text: tag.label,
+          showarrow: false,
+          yshift: 14,
+          font: {
+            family: 'Courier New, monospace',
+            color: tag.color,
+            size: 10,
+          },
+          bgcolor: 'rgba(13, 16, 22, 0.85)',
+          bordercolor: tag.color,
+          borderwidth: 1,
+          borderpad: 2,
+        };
+      })
+      .filter(Boolean);
   }, [data]);
 
   useEffect(() => {
@@ -202,6 +383,37 @@ export default function ExpiringGamma() {
         tickcolor: 'transparent',
         showgrid: false,
       }),
+      // Secondary y-axis for the cumulative-rolloff lines. Fixed
+      // domain [0, 100] so the percent reading is always anchored —
+      // no autorange wobble between snapshots. side: 'right' puts
+      // the % ticks on the opposite edge from the dollar gamma ticks
+      // so the two scales don't share a label column. overlaying:
+      // 'y' makes Plotly draw both axes inside the same plot area
+      // rather than stacking them in separate subplots; the
+      // cumulative line then reads as a literal overlay on the bar
+      // chart, which is the desired "where is the bar height vs.
+      // the cumulative line" comparison.
+      yaxis2: {
+        ...plotlyAxis(mobile ? '' : 'Cumulative %', {
+          range: [0, 105],
+          autorange: false,
+          side: 'right',
+          overlaying: 'y',
+          ticksuffix: '%',
+          tickvals: [0, 25, 50, 75, 100],
+          showgrid: false,
+          ticks: 'outside',
+          ticklen: 4,
+          tickcolor: 'transparent',
+          tickfont: { ...PLOTLY_FONTS.axisTick, color: '#8a8f9c' },
+        }),
+        title: mobile ? { text: '' } : {
+          text: 'Cumulative %',
+          font: { ...PLOTLY_FONTS.axisTitleBold, color: '#8a8f9c' },
+          standoff: 10,
+        },
+      },
+      annotations: expirationTypeAnnotations,
       showlegend: false,
       paper_bgcolor: 'rgba(0,0,0,0)',
       plot_bgcolor: PLOTLY_COLORS.plot,
@@ -211,7 +423,7 @@ export default function ExpiringGamma() {
       responsive: true,
       displayModeBar: false,
     });
-  }, [Plotly, traces, mobile, data]);
+  }, [Plotly, traces, expirationTypeAnnotations, mobile, data]);
 
   if (plotlyError) {
     return (
@@ -250,9 +462,18 @@ export default function ExpiringGamma() {
           <span style={{ color: COLOR_CALL, fontWeight: 700 }}>Call γ</span>
           <span style={{ opacity: 0.5 }}>/</span>
           <span style={{ color: COLOR_PUT, fontWeight: 700 }}>Put γ</span>
-          <span className="expiring-gamma-asof">
-            {data.asOf ? `as of ${formatAsOf(data.asOf)}` : ''}
+          {/* Freshness pill: distinguishes a live intraday tick from a
+              stale snapshot from a closed market. The colored pill
+              gives the at-a-glance read; the relative-time text next
+              to it gives the precise age so a reader can tell "2 min
+              ago" (still useful) from "2 days ago" (use with care). */}
+          <span
+            className={`expiring-gamma-freshness expiring-gamma-freshness--${freshness.tone}`}
+            title={data.asOf ? `as of ${formatAsOf(data.asOf)}` : ''}
+          >
+            {freshness.label}
           </span>
+          <span className="expiring-gamma-asof">{relativeAsOf}</span>
         </div>
       </div>
       <div className="expiring-gamma-totals">
@@ -260,12 +481,32 @@ export default function ExpiringGamma() {
           <span style={{ color: COLOR_CALL, fontWeight: 700 }}>Total call γ</span>
           {' '}
           <span className="expiring-gamma-totals__value">{formatDollar(data.totalCallGammaNotional)}</span>
+          {/* 30d percentile pill — only renders when the server returned
+              a non-null rank (sample size >= 5). The tooltip carries
+              the sample size so a reader investigating an unexpected
+              rank can see whether it's vs. 5 days or vs. 30. */}
+          {data.historicalCallPercentile != null && (
+            <span
+              className="expiring-gamma-pctile"
+              title={`vs ${data.historicalSampleSize}d historical EOD call γ distribution`}
+            >
+              {data.historicalCallPercentile}th
+            </span>
+          )}
         </span>
         <span style={{ opacity: 0.4 }}>·</span>
         <span>
           <span style={{ color: COLOR_PUT, fontWeight: 700 }}>Total put γ</span>
           {' '}
           <span className="expiring-gamma-totals__value">{formatDollar(data.totalPutGammaNotional)}</span>
+          {data.historicalPutPercentile != null && (
+            <span
+              className="expiring-gamma-pctile"
+              title={`vs ${data.historicalSampleSize}d historical EOD put γ distribution`}
+            >
+              {data.historicalPutPercentile}th
+            </span>
+          )}
         </span>
         {data.nextAmExpiration && (
           <>
@@ -279,6 +520,36 @@ export default function ExpiringGamma() {
         )}
       </div>
       <div ref={chartRef} className="expiring-gamma-chart" />
+      {/* Chart-legend strip below the bars. Two roles: (1) name the new
+          dotted overlay traces so a reader doesn't have to hover or
+          guess that the dotted line is the cumulative %; (2) name
+          the per-bar Q / M / 0DTE tags with their color swatches.
+          Anchored as a flex row so it wraps cleanly on mobile, where
+          the chart itself doesn't have room for the legend inside
+          the plot area. */}
+      <div className="expiring-gamma-chart-legend">
+        <span className="expiring-gamma-chart-legend__item">
+          <span className="expiring-gamma-chart-legend__line" style={{ borderColor: COLOR_CUMULATIVE_CALL }} />
+          Cumulative call %
+        </span>
+        <span className="expiring-gamma-chart-legend__item">
+          <span className="expiring-gamma-chart-legend__line" style={{ borderColor: COLOR_CUMULATIVE_PUT }} />
+          Cumulative put %
+        </span>
+        <span className="expiring-gamma-chart-legend__divider">·</span>
+        <span className="expiring-gamma-chart-legend__item">
+          <span className="expiring-gamma-chart-legend__chip" style={{ borderColor: EXPIRATION_TYPE_TAGS['0DTE'].color, color: EXPIRATION_TYPE_TAGS['0DTE'].color }}>0DTE</span>
+          same-day
+        </span>
+        <span className="expiring-gamma-chart-legend__item">
+          <span className="expiring-gamma-chart-legend__chip" style={{ borderColor: EXPIRATION_TYPE_TAGS.quarterly.color, color: EXPIRATION_TYPE_TAGS.quarterly.color }}>Q</span>
+          quarterly OPEX
+        </span>
+        <span className="expiring-gamma-chart-legend__item">
+          <span className="expiring-gamma-chart-legend__chip" style={{ borderColor: EXPIRATION_TYPE_TAGS.monthly.color, color: EXPIRATION_TYPE_TAGS.monthly.color }}>M</span>
+          monthly OPEX
+        </span>
+      </div>
     </div>
   );
 }
