@@ -5,7 +5,7 @@ import { useCallback, useEffect, useRef, useState } from 'react';
 // dropdown trigger) with three larger-tap-target pills laid out left-to-
 // right in a single right-aligned row at ≤768px:
 //
-//   [HOME (green)] [RESEARCH (blue) ▾] [TOOLS (purple) ▾]
+//   [HOME (green)] [TOOLS (purple) ▾] [RESEARCH (blue) ▾]
 //
 // HOME is suppressed on the home page itself (where it would be a no-op
 // link to the page the reader is already on). The two dropdown pills open
@@ -13,19 +13,20 @@ import { useCallback, useEffect, useRef, useState } from 'react';
 // RESEARCH and opens TOOLS, and vice versa. Both panels anchor to the
 // right edge of the .mobile-nav container so their full content shows
 // inside the viewport regardless of where the trigger pill itself ended
-// up after flex layout — anchoring per-pill would push the RESEARCH panel
-// off the right edge on narrow phones (RESEARCH sits second-from-right,
-// so its panel anchored to its own trigger would clip the right edge).
+// up after flex layout — anchoring per-pill would push the TOOLS panel
+// off the right edge on narrow phones (TOOLS sits second-from-right, so
+// its panel anchored to its own trigger would clip the right edge).
 //
-// Color order — green / blue / purple — runs cool from left to right so
-// the eye reads the cluster as a continuous spectrum rather than three
-// independently colored chips. TOOLS lands in purple (the same accent
-// the desktop MENU trigger has used since the lab-rollup-pill rename)
-// because TOOLS is conceptually the descendant of the desktop Menu's
-// Tools section plus the TopNav buttons; RESEARCH lands in blue (the
-// platform's primary "you are here" / "active state" accent) because
-// the research dropdown is the gateway to the eight calibrated-model
-// research zoos that are the platform's main quantitative surface.
+// Color identity — TOOLS in purple, RESEARCH in blue. TOOLS keeps the
+// same accent the desktop MENU trigger has used since the lab-rollup-
+// pill rename (TOOLS is conceptually the descendant of the desktop
+// Menu's Tools section plus the TopNav buttons), and RESEARCH stays in
+// the platform's primary blue (the gateway to the eight calibrated-
+// model research zoos that are the platform's main quantitative
+// surface). RESEARCH lands at the right edge per Eric's directive so
+// the dropdown that holds the most-frequented research destinations
+// sits closest to the right-handed reader's thumb position on a phone
+// held in portrait, with TOOLS one pill to its left.
 //
 // The TOOLS dropdown contains the ten operational lab pages — the six
 // previously-promoted TopNav destinations (/tactical/, /earnings/, /scan/,
@@ -264,23 +265,6 @@ export default function MobileNav({ regimeIndicator } = {}) {
         </a>
       )}
       <button
-        ref={researchTriggerRef}
-        type="button"
-        className="mobile-nav__pill mobile-nav__pill--research"
-        onClick={() => togglePanel('research')}
-        aria-expanded={openPanel === 'research'}
-        aria-haspopup="menu"
-        aria-label="Research menu"
-      >
-        <span>RESEARCH</span>
-        <span
-          className={`mobile-nav__caret${openPanel === 'research' ? ' is-open' : ''}`}
-          aria-hidden="true"
-        >
-          &#x25BE;
-        </span>
-      </button>
-      <button
         ref={toolsTriggerRef}
         type="button"
         className="mobile-nav__pill mobile-nav__pill--tools"
@@ -292,6 +276,23 @@ export default function MobileNav({ regimeIndicator } = {}) {
         <span>TOOLS</span>
         <span
           className={`mobile-nav__caret${openPanel === 'tools' ? ' is-open' : ''}`}
+          aria-hidden="true"
+        >
+          &#x25BE;
+        </span>
+      </button>
+      <button
+        ref={researchTriggerRef}
+        type="button"
+        className="mobile-nav__pill mobile-nav__pill--research"
+        onClick={() => togglePanel('research')}
+        aria-expanded={openPanel === 'research'}
+        aria-haspopup="menu"
+        aria-label="Research menu"
+      >
+        <span>RESEARCH</span>
+        <span
+          className={`mobile-nav__caret${openPanel === 'research' ? ' is-open' : ''}`}
           aria-hidden="true"
         >
           &#x25BE;
