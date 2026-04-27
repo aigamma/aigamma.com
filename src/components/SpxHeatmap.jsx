@@ -141,6 +141,7 @@ export default function SpxHeatmap() {
   const [data, setData] = useState(null);
   const [error, setError] = useState(null);
   const [containerWidth, setContainerWidth] = useState(0);
+  const [isMobile, setIsMobile] = useState(false);
   const wrapRef = useRef(null);
 
   useEffect(() => {
@@ -157,6 +158,31 @@ export default function SpxHeatmap() {
         if (!cancelled) setError(String(e?.message || e));
       });
     return () => { cancelled = true; };
+  }, []);
+
+  // Track phone-class viewports so the first sector band can lift
+  // its embedded page title + last-updated metadata into a stacked
+  // block above the strip. At ≤768px the three-column 22px-tall
+  // sector strip can't fit "Information Technology" + "Top 250 SPX
+  // stocks by option volume" + "Last Updated: Apr 24, 2026 · 49"
+  // legibly — whiteSpace: nowrap + textOverflow: ellipsis on the
+  // middle column truncates the page title to "Top 250 SPX stoc…"
+  // on a 375px iPhone-class width, which is exactly the legibility
+  // problem reported. Above-the-strip stacking gives the page title
+  // its own line at a bigger font and pushes the last-updated date
+  // onto a third line, costing ~50px of vertical chrome that a tall
+  // smartphone has plenty of.
+  useEffect(() => {
+    if (typeof window === 'undefined' || typeof window.matchMedia !== 'function') return;
+    const mql = window.matchMedia('(max-width: 768px)');
+    const update = (e) => setIsMobile(e ? e.matches : mql.matches);
+    update();
+    if (mql.addEventListener) {
+      mql.addEventListener('change', update);
+      return () => mql.removeEventListener('change', update);
+    }
+    mql.addListener(update);
+    return () => mql.removeListener(update);
   }, []);
 
   // Track container width only — height is determined by sector
@@ -307,6 +333,9 @@ export default function SpxHeatmap() {
 
         {data && cols > 0 && tileWidth > 0 && sectorBands.map((band, idx) => {
           const rowCount = Math.ceil(band.tiles.length / cols);
+          const isFirstBand = idx === 0;
+          const showStackedHeader = isFirstBand && isMobile;
+          const showEmbeddedTitle = isFirstBand && !isMobile;
           return (
             <div
               key={band.sector}
@@ -314,6 +343,52 @@ export default function SpxHeatmap() {
                 marginBottom: idx === sectorBands.length - 1 ? 0 : SECTOR_GAP + 'px',
               }}
             >
+              {showStackedHeader && (
+                // Mobile-only stacked page-header block. Lifts the
+                // page title + last-updated date out of the IT
+                // sector strip so the label can render at a legible
+                // font without ellipsis-truncation. Renders only
+                // before the first band; the strip below this block
+                // continues to carry the standard sector name +
+                // count just like every other sector strip.
+                <div
+                  style={{
+                    background: SECTOR_HEADER_BG,
+                    fontFamily: 'Courier New, monospace',
+                    padding: '0.6rem 0.65rem 0.55rem',
+                    marginBottom: '2px',
+                    borderBottom: '1px solid #131720',
+                  }}
+                >
+                  <div
+                    style={{
+                      fontSize: '0.85rem',
+                      letterSpacing: '0.06em',
+                      textTransform: 'uppercase',
+                      color: '#cdd2dc',
+                      lineHeight: 1.3,
+                    }}
+                  >
+                    {data.mode === 'sector-etf-fallback'
+                      ? 'Sector ETFs · fallback view'
+                      : 'Top 250 SPX stocks by option volume'}
+                  </div>
+                  {data.asOf && (
+                    <div
+                      style={{
+                        fontSize: '0.7rem',
+                        letterSpacing: '0.1em',
+                        textTransform: 'uppercase',
+                        color: '#9aa3b8',
+                        marginTop: '0.3rem',
+                        lineHeight: 1.3,
+                      }}
+                    >
+                      Last Updated: {formatLastUpdated(data.asOf)}
+                    </div>
+                  )}
+                </div>
+              )}
               <div
                 style={{
                   height: SECTOR_HEADER_HEIGHT,
@@ -333,17 +408,19 @@ export default function SpxHeatmap() {
                 {/* Three-column grid keeps the per-band layout uniform
                     across all eleven sectors: sector name pinned left,
                     count pinned right, middle column reserved for the
-                    page-level title (rendered only on the first band,
-                    which is Information Technology under the canonical
-                    SECTOR_ORDER). Using 1fr auto 1fr instead of flex
-                    space-between guarantees the middle text is centered
-                    on the strip's full width regardless of how wide the
-                    side elements grow — flex space-between would center
-                    the middle text on the gap between the sides, which
-                    drifts off-center as one side gets longer than the
-                    other. The standalone page-header row this folds
-                    into was redundant given the IT strip is already
-                    visually anchored at the top of every render. */}
+                    page-level title (rendered only on the first band
+                    AND only at desktop widths — phone-class viewports
+                    fall back to the stacked block above this strip,
+                    since 22px is too tight to fit "Information
+                    Technology" + page title + last-updated date
+                    legibly on a 375px iPhone-class width). Using
+                    1fr auto 1fr instead of flex space-between
+                    guarantees the middle text is centered on the
+                    strip's full width regardless of how wide the side
+                    elements grow — flex space-between would center
+                    the middle text on the gap between the sides,
+                    which drifts off-center as one side gets longer
+                    than the other. */}
                 <span style={{ justifySelf: 'start' }}>{band.sector}</span>
                 <span
                   style={{
@@ -354,7 +431,7 @@ export default function SpxHeatmap() {
                     textOverflow: 'ellipsis',
                   }}
                 >
-                  {idx === 0 && (
+                  {showEmbeddedTitle && (
                     data.mode === 'sector-etf-fallback'
                       ? 'Sector ETFs · fallback view'
                       : 'Top 250 SPX stocks by option volume'
@@ -366,7 +443,7 @@ export default function SpxHeatmap() {
                   alignItems: 'center',
                   gap: '0.75rem',
                 }}>
-                  {idx === 0 && data.asOf && (
+                  {showEmbeddedTitle && data.asOf && (
                     <>
                       <span style={{ color: '#9aa3b8' }}>
                         Last Updated: {formatLastUpdated(data.asOf)}
