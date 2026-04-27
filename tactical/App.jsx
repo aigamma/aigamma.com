@@ -329,9 +329,6 @@ export default function App() {
       </ErrorBoundary>
 
       <footer className="lab-footer">
-        <span className="lab-footer-line">
-          AI Gamma · tactical vol lab · VRP / term / smile / RND / fixed-strike · v0.1.0
-        </span>
         <a href="/" className="lab-footer-home">Return Home</a>
       </footer>
     </div>
