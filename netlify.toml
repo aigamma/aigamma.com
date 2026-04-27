@@ -66,10 +66,22 @@
 # headers are written (cold-start error, import failure, etc). The
 # extension has zero permissions and depends entirely on CORS for the
 # cross-origin fetch to succeed.
+#
+# Cache profile: 60-second edge fresh window plus a 5-minute
+# stale-while-revalidate tail. Aligns with the `/api/data` cache profile
+# and halves the cold-edge frequency observed during latency probes
+# (warm steady-state TTFB ~650 ms; cold-edge probes were measured at
+# ~4.3 s, which the s-maxage=60 + SWR=300 pattern moves further into the
+# tail by serving stale-on-async while a background refresh happens).
+# Maximum staleness vs underlying data is bounded by the 5-minute
+# intraday ingest cadence — even a fully stale-served edge response is
+# at most ~60 s + 300 s = 6 minutes behind the freshest snapshot, which
+# falls inside the next ingest tick anyway. Keep in sync with
+# snapshot.mjs's RESPONSE_HEADERS literal.
 [[headers]]
   for = "/api/snapshot.json"
   [headers.values]
-    Cache-Control = "public, max-age=30, s-maxage=30"
+    Cache-Control = "public, max-age=60, s-maxage=60, stale-while-revalidate=300"
     Content-Type = "application/json; charset=utf-8"
     Access-Control-Allow-Origin = "*"
 

@@ -43,10 +43,18 @@
 //     matches the dashboard's LevelsPanel behavior and is explicit in the
 //     extension's popup (no freshness annotation on the vol-stats side).
 //
-// Cache policy: `public, max-age=30, s-maxage=30`. The intraday ingest runs
-// every 5 minutes during market hours; 30-second edge caching keeps popup
-// latency under ~200ms without ever serving numbers that are more than 30
-// seconds stale behind the data-layer snapshot.
+// Cache policy: `public, max-age=60, s-maxage=60, stale-while-revalidate=300`.
+// The intraday ingest runs every 5 minutes during market hours, so a 60-second
+// edge fresh window paired with a 5-minute SWR tail keeps the popup snappy
+// (warm-edge TTFB ~650ms) without ever serving numbers more than ~6 minutes
+// behind the data-layer snapshot — and that worst case is fully bounded by
+// the next ingest tick. Earlier the values were 30 / 30 with no SWR; the
+// audit that produced this commit measured cold-edge probes at ~4s and
+// concluded that doubling s-maxage halves cold-edge frequency for free
+// (extension popups poll on user-open, not on a tight loop, so even a
+// 6-minute worst-case staleness is invisible to the user). Mirrored at
+// the platform level by netlify.toml's [[headers]] block for
+// /api/snapshot.json — keep both literals in sync.
 
 import { computeGammaProfile, findFlipFromProfile } from '../../src/lib/gammaProfile.js';
 import {
@@ -61,7 +69,7 @@ const IV_RANK_WINDOW = 252;
 
 const RESPONSE_HEADERS = {
   'Content-Type': 'application/json; charset=utf-8',
-  'Cache-Control': 'public, max-age=30, s-maxage=30',
+  'Cache-Control': 'public, max-age=60, s-maxage=60, stale-while-revalidate=300',
   'Access-Control-Allow-Origin': '*',
 };
 
