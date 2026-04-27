@@ -107,6 +107,18 @@ function formatVolPoints(v, digits = 1) {
   return `${sign}${(v * 100).toFixed(digits)}vp`;
 }
 
+// Compact daily-options-volume formatter for the tooltip "Options vol"
+// row. The roster JSON's optionsVolume field is contracts/day from the
+// Barchart screener (e.g., NVDA = 6,755,450), which displays cleanly as
+// "6.76M". For smaller-volume names we fall back to "780K" / raw
+// integer to keep the row width predictable.
+function formatOptionsVolume(v) {
+  if (!Number.isFinite(v)) return '—';
+  if (v >= 1e6) return `${(v / 1e6).toFixed(2)}M`;
+  if (v >= 1e3) return `${(v / 1e3).toFixed(0)}K`;
+  return String(Math.round(v));
+}
+
 function formatDate(iso) {
   if (!iso) return '';
   const d = new Date(`${iso}T12:00:00Z`);
@@ -191,6 +203,24 @@ export default function SkewScanner() {
     return new Set(ranked);
   }, [data]);
 
+  // Universe-wide options-volume ranks for the tooltip "Options vol"
+  // row. The Map maps each symbol to { rank, total } — the 1-based
+  // rank in the priced universe and the total count, so the tooltip
+  // can render "3.68M/day · #2 of 40" and a vol trader can immediately
+  // tell whether they're looking at one of the most-traded names or a
+  // mid-pack member. Total is the count of names with finite
+  // optionsVolume in the response (typically equal to data.tickers.length).
+  const optionsVolumeRanks = useMemo(() => {
+    const map = new Map();
+    if (!data?.tickers) return map;
+    const ranked = [...data.tickers]
+      .filter((t) => Number.isFinite(t.optionsVolume))
+      .sort((a, b) => b.optionsVolume - a.optionsVolume);
+    const total = ranked.length;
+    ranked.forEach((t, i) => map.set(t.symbol, { rank: i + 1, total }));
+    return map;
+  }, [data]);
+
   // The plotted-points layout uses a square-ish quadrant. On wide
   // viewports we cap the side at 720 px so labels stay legible; on
   // narrow viewports we let it shrink to fit. When outside labels
@@ -271,6 +301,7 @@ export default function SkewScanner() {
             ivRank={ivRank}
             skewRank={skewRank}
             topTenSymbols={topTenSymbols}
+            optionsVolumeRanks={optionsVolumeRanks}
             hoveredSymbol={hoveredSymbol}
             onHover={setHoveredSymbol}
           />
@@ -366,7 +397,7 @@ function TabButton({ active, onClick, children, tone }) {
 
 function Quadrant({
   spec, side, outsideLabels, plotted, ivRank, skewRank,
-  topTenSymbols, hoveredSymbol, onHover,
+  topTenSymbols, optionsVolumeRanks, hoveredSymbol, onHover,
 }) {
   const PADDING = 8;
   const PLOT_SIZE = side - PADDING * 2;
@@ -548,8 +579,49 @@ function Quadrant({
           const overflowsRight = (cx + r + 4 + labelWidthPx) > PLOT_SIZE;
           const labelX = overflowsRight ? (cx - r - 4) : (cx + r + 4);
           const labelAnchor = overflowsRight ? 'end' : 'start';
+          // Hit-target rect that envelops both the visible dot and the
+          // ticker label. Earlier the only hit target was the 3.5 px
+          // (idle) / 7 px (hovered) circle itself — a 7 px-diameter
+          // bullseye that's easy to miss with a mouse and impossible
+          // to land on a touchscreen. The transparent rect spans from
+          // the leftmost shape (dot or label, depending on the
+          // overflow flip) to the rightmost shape, with a small
+          // 2 px padding, and uses pointer-events="all" so it catches
+          // hovers on its empty area while the visible dot and text
+          // beneath stay non-interactive (pointer-events="none") so
+          // they don't fight for the cursor. The rect is rendered
+          // FIRST so it's beneath the dot+text in z-order, but
+          // pointer-events="all" forces hit-testing through the
+          // visible layers — hovering anywhere over the symbol
+          // cluster (label glyphs, the gap between dot and label, or
+          // the dot itself) shows the tooltip.
+          const dotLeft = cx - r;
+          const dotRight = cx + r;
+          const labelLeft = overflowsRight ? labelX - labelWidthPx : labelX;
+          const labelRight = overflowsRight ? labelX : labelX + labelWidthPx;
+          const hitX = Math.min(dotLeft, labelLeft) - 2;
+          const hitW = Math.max(dotRight, labelRight) + 2 - hitX;
+          const dotTop = cy - r;
+          const dotBot = cy + r;
+          const labelTop = cy + 5 - fontSize;
+          const labelBot = cy + 5;
+          const hitY = Math.min(dotTop, labelTop) - 2;
+          const hitH = Math.max(dotBot, labelBot) + 2 - hitY;
           return (
-            <g key={t.symbol} style={{ pointerEvents: 'auto' }}>
+            <g
+              key={t.symbol}
+              style={{ pointerEvents: 'auto', cursor: 'pointer' }}
+              onMouseEnter={() => onHover(t.symbol)}
+              onMouseLeave={() => onHover(null)}
+            >
+              <rect
+                x={hitX}
+                y={hitY}
+                width={hitW}
+                height={hitH}
+                fill="transparent"
+                style={{ pointerEvents: 'all' }}
+              />
               <circle
                 cx={cx}
                 cy={cy}
@@ -557,9 +629,7 @@ function Quadrant({
                 fill={dotColor}
                 stroke={isHovered ? '#f0a030' : 'rgba(10, 13, 18, 0.6)'}
                 strokeWidth={isHovered ? 2 : 1}
-                style={{ cursor: 'pointer', transition: 'r 0.12s ease' }}
-                onMouseEnter={() => onHover(t.symbol)}
-                onMouseLeave={() => onHover(null)}
+                style={{ pointerEvents: 'none', transition: 'r 0.12s ease' }}
               />
               <text
                 x={labelX}
@@ -608,8 +678,8 @@ function Quadrant({
           fontFamily: 'Courier New, monospace',
           fontSize: '0.78rem',
           color: '#e1e8f4',
-          minWidth: 200,
-          maxWidth: 260,
+          minWidth: 220,
+          maxWidth: 280,
           lineHeight: 1.45,
           boxShadow: '0 2px 12px rgba(0, 0, 0, 0.6)',
         };
@@ -623,13 +693,46 @@ function Quadrant({
         } else {
           style.bottom = (PLOT_SIZE - cy + offset) + plotTop;
         }
-        return <Tooltip ticker={t} style={style} />;
+        // Derive the quadrant-interpretation label using the same
+        // percentile-rank math the canvas uses to position the dot, so
+        // the tooltip's "Position" row stays in sync with where the
+        // viewer sees the dot land. The IV pole flips at the median
+        // (yp ≥ 0.5 → top half → "High IV"); the skew pole uses the
+        // tab-specific edge label so call-tab dots read "High call
+        // skew" / "Low call skew" and put-tab dots read "High put skew"
+        // / "Low put skew", matching the chart's edge annotations
+        // exactly. Median ties (yp/xp == 0.5) round to the high pole;
+        // the visual representation of an exactly-median dot sitting
+        // on the cross-hair is rare enough that the side-of-fence
+        // assignment doesn't matter in practice.
+        const ivHigh = yp >= 0.5;
+        const skewHigh = xp >= 0.5;
+        const quadrantLabel = `${ivHigh ? 'High IV' : 'Low IV'} · ${skewHigh ? spec.leftLabel : spec.rightLabel}`;
+        const volumeRank = optionsVolumeRanks?.get?.(t.symbol) ?? null;
+        const enriched = { ...t, quadrantLabel, volumeRank };
+        return <Tooltip ticker={enriched} style={style} />;
       })()}
     </div>
   );
 }
 
 function Tooltip({ ticker: t, style }) {
+  // Subhead concatenates the company name and sector. Both come from
+  // the roster JSON via the /api/scan response (t.name, t.sector). The
+  // sector is the cluster anchor a vol trader uses to read whether a
+  // ticker's quadrant position is idiosyncratic or part of a sector-
+  // wide vol move — Energy names piling into "high IV + high put skew"
+  // during an oil shock looks different from a single-name earnings
+  // event in the same coordinate.
+  const subhead = t.sector ? `${t.name} · ${t.sector}` : t.name;
+  // Volume-rank presentation: "3.68M/day · #2 of 40" tells the reader
+  // both the absolute scale (millions of contracts a day) and the
+  // relative position in the universe. The total comes from
+  // optionsVolumeRanks (set in SkewScanner) and equals the count of
+  // priced names in the roster slice — typically 40.
+  const volumeRankLabel = (t.volumeRank && Number.isFinite(t.volumeRank.rank))
+    ? `${formatOptionsVolume(t.optionsVolume)}/day · #${t.volumeRank.rank} of ${t.volumeRank.total}`
+    : formatOptionsVolume(t.optionsVolume);
   return (
     <div style={style}>
       <div style={{
@@ -655,7 +758,7 @@ function Tooltip({ ticker: t, style }) {
         overflow: 'hidden',
         textOverflow: 'ellipsis',
       }}>
-        {t.name}
+        {subhead}
       </div>
       <TooltipRow label="Spot" value={t.spot != null ? `$${t.spot.toFixed(2)}` : '—'} />
       <TooltipRow label="Prev close" value={t.prevClose != null ? `$${t.prevClose.toFixed(2)}` : '—'} />
@@ -668,7 +771,12 @@ function Tooltip({ ticker: t, style }) {
       />
       <TooltipRow label="25Δ call" value={`${formatPct(t.call25dIv)} (${formatVolPoints(t.callSkew)})`} />
       <TooltipRow label="25Δ put"  value={`${formatPct(t.put25dIv)} (${formatVolPoints(t.putSkew)})`} />
+      <TooltipRow label="25Δ RR" value={formatVolPoints(t.rrSkew)} />
+      {t.quadrantLabel && (
+        <TooltipRow label="Position" value={t.quadrantLabel} />
+      )}
       <TooltipRow label="Tenor" value={`${t.dte}D · ${t.expiration}`} subtle />
+      <TooltipRow label="Options vol" value={volumeRankLabel} subtle />
     </div>
   );
 }
