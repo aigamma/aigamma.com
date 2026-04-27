@@ -337,29 +337,25 @@ body {
 .mobile-nav__status {
   display: inline-flex;
   align-items: center;
-  gap: 0.25rem;
+  gap: 0.3rem;
 }
 
-.mobile-nav__status-icon {
-  height: 1.9rem;
-  width: 1.9rem;
+/* Status icon and Γ are sized identically so the badge reads as two
+   matched-height shapes — the dynamic +/- icon on a black ground (or
+   the AiGamma logo for NEAR FLIP) plus the Γ silhouette to its right.
+   Both rendered as 32x32 viewBox SVGs scaled to the wordmark height
+   (2.8rem at 768, 2.4rem at 480 — see the @media block below) so the
+   wordmark, icon, and Γ together form a cohesive AI-Gamma brand
+   badge at a single uniform visual height. Branding gets one
+   prominent surface on the landing page, and this is it; the icon
+   is sized for legibility on phone-class viewports rather than
+   compressed to make room. */
+.mobile-nav__status-icon,
+.mobile-nav__gamma {
+  height: 2.8rem;
+  width: 2.8rem;
   display: block;
   flex-shrink: 0;
-}
-
-/* Bolded capital Greek gamma. The single character carries the
-   dealer-gamma regime read with the same color the icon to its left
-   uses; together they form an "AI Gamma" status badge. Pre-data
-   fallback is the muted secondary text color so the brand cluster
-   doesn't render as an attention-grabbing colored letter before the
-   classifier resolves. */
-.mobile-nav__gamma {
-  font-family: 'Courier New', monospace;
-  font-size: 1.9rem;
-  font-weight: 900;
-  line-height: 1;
-  letter-spacing: 0;
-  user-select: none;
 }
 
 .mobile-nav__pill {
@@ -1158,12 +1154,9 @@ body {
 
   /* Match the brand cluster height to the shrunken pill height so the
      header row reads at a single uniform stripe. The wordmark height
-     drops from 2.8rem to 2.4rem; the status icon and bolded Γ drop a
-     corresponding step so the icon-Γ pair stays vertically centered
-     against the wordmark and the right-cluster pills, and the brand
-     cluster's intrinsic width ends up around 9rem on the left edge —
-     leaving ~12rem of room for the two right-cluster pills inside a
-     360px-class viewport's content area. */
+     drops from 2.8rem to 2.4rem; the status icon and the Γ silhouette
+     drop in tandem so the wordmark / icon / Γ trio stays at one
+     uniform visual height across the whole brand badge. */
   .mobile-nav__logo {
     height: 2.4rem;
   }
@@ -1172,13 +1165,10 @@ body {
     gap: 0.45rem;
   }
 
-  .mobile-nav__status-icon {
-    height: 1.7rem;
-    width: 1.7rem;
-  }
-
+  .mobile-nav__status-icon,
   .mobile-nav__gamma {
-    font-size: 1.7rem;
+    height: 2.4rem;
+    width: 2.4rem;
   }
 
   .mobile-nav__dropdown {

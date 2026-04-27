@@ -233,12 +233,28 @@ export default function MobileNav({ regimeIndicator } = {}) {
                 className="mobile-nav__status-icon"
               />
             )}
-            <span
+            {/* Γ rendered as an inline SVG path rather than a text glyph
+                so its width and height match the sibling status icon
+                exactly and visual height alignment between the two
+                badge elements is pixel-precise. A text Γ at the same
+                visual cap-height would require a font-size of ~4.5rem
+                with line-height: 1, which would push the .mobile-nav
+                row to ~4.5rem and dominate the entire page header.
+                The path traces a Γ silhouette: top horizontal bar
+                28x8 with a left vertical stem 8x28, both 8 units
+                thick on a 32x32 grid — the same stroke weight as the
+                positive icon's plus sign, so the two badge elements
+                read as siblings at matching visual weight. fill is
+                currentColor so a single inline color: prop drives
+                the regime tint. */}
+            <svg
+              viewBox="0 0 32 32"
               className="mobile-nav__gamma"
+              aria-hidden="true"
               style={{ color: gammaColor }}
             >
-              Γ
-            </span>
+              <path d="M2 2 H30 V10 H10 V30 H2 Z" fill="currentColor" />
+            </svg>
           </span>
         </div>
       )}
