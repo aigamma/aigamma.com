@@ -189,6 +189,22 @@ function daysBetweenIso(aIso, bIso) {
   return Math.max(1, Math.round((a - b) / 86400000));
 }
 
+// English ordinal suffix for the percentile pill labels. The previous
+// hardcoded "th" suffix produced "3th" / "1th" / "22th" — wrong for
+// 1/2/3 and the 21/22/23 / 31/32/33 / etc decades. The 11/12/13
+// exception is the standard rule (eleventh / twelfth / thirteenth all
+// take "th"). Reads at a glance: "80th", "1st", "23rd", "12th".
+function ordinalSuffix(n) {
+  const v = Math.abs(n) % 100;
+  if (v >= 11 && v <= 13) return 'th';
+  switch (v % 10) {
+    case 1: return 'st';
+    case 2: return 'nd';
+    case 3: return 'rd';
+    default: return 'th';
+  }
+}
+
 export default function ExpiringGamma() {
   const [data, setData] = useState(null);
   const [error, setError] = useState(null);
@@ -600,7 +616,7 @@ export default function ExpiringGamma() {
               className="expiring-gamma-pctile"
               title={`vs ${data.historicalSampleSize}d historical EOD call γ distribution`}
             >
-              {data.historicalCallPercentile}th
+              {data.historicalCallPercentile}{ordinalSuffix(data.historicalCallPercentile)}
             </span>
           )}
         </span>
@@ -614,7 +630,7 @@ export default function ExpiringGamma() {
               className="expiring-gamma-pctile"
               title={`vs ${data.historicalSampleSize}d historical EOD put γ distribution`}
             >
-              {data.historicalPutPercentile}th
+              {data.historicalPutPercentile}{ordinalSuffix(data.historicalPutPercentile)}
             </span>
           )}
         </span>
