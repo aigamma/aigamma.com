@@ -160,7 +160,7 @@ function RotationTailToggle({ tail, onChange, disabled }) {
   );
 }
 
-export default // Per-symbol visibility toggle row. Renders one pill per component
+// Per-symbol visibility toggle row. Renders one pill per component
 // using the component's current quadrant ink color when active so the
 // pill's appearance mirrors the color of that component's trail on
 // the chart. Inactive pills strip out the fill, dim the border and
@@ -595,3 +595,5 @@ function RotationChart() {
     </div>
   );
 }
+
+export default RotationChart;
