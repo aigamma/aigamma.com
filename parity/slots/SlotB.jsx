@@ -457,6 +457,33 @@ export default function SlotB() {
             maxWidth: '720px',
           }}
         >
+          {/* Calibration caveat. Mirrors the SlotA banner-paragraph
+              treatment so a reader who lands on this page via the Menu
+              entry (which lists the lab as "parity") encounters the
+              same accuracy disclosure on whichever slot they read first.
+              The layout pattern (chart first, prose intro below) is the
+              same on both slots, so positioning this paragraph at the
+              top of the prose block matches SlotA's positioning by
+              construction. */}
+          <p
+            style={{
+              margin: '0 0 0.65rem',
+              padding: '0.5rem 0.7rem',
+              borderLeft: '3px solid var(--accent-amber)',
+              background: 'rgba(240, 160, 48, 0.06)',
+              color: 'var(--text-primary)',
+              fontStyle: 'italic',
+            }}
+          >
+            <strong style={{ color: 'var(--accent-amber)', fontStyle: 'normal' }}>
+              Calibration in progress.
+            </strong>{' '}
+            Live readings show median r ≈ −222% (nearest ≈ −87%) where a
+            clean read should sit near the risk-free rate. Treat this
+            chart as a chain-integrity diagnostic — not a trading signal —
+            until the calibration lands. The same five root-cause
+            candidates as on the v4 composite slot are in play.
+          </p>
           <p style={{ margin: '0 0 0.55rem' }}>
             Options-implied borrow rate at every SPX expiration, computed
             from a 4-leg box spread at the tightest strike bracket around

@@ -852,6 +852,43 @@ export default function SlotA() {
             maxWidth: '820px',
           }}
         >
+          {/* Calibration caveat. Sits at the top of the intro paragraphs
+              that render below the chart. The chart itself is the first
+              thing in the viewport per the layout decision recorded in
+              the page-level App.jsx comment; this paragraph sits below
+              the chart so a reader who scrolls into the explanation
+              encounters the calibration state before the trading-action
+              prose ("Buy the box / Sell the box") that follows below.
+              The full-width top-of-page amber banner that previously
+              held this caveat was removed in a site-wide chrome-scrubbing
+              pass — this is the slot-level documentation the App.jsx
+              header comment claims should exist (and previously did
+              not). The italic + amber styling is the same accent-amber
+              hue (#f0a030, exposed via the --accent-amber CSS variable)
+              that the original banner used, just at much lower visual
+              weight to match the surrounding prose. */}
+          <p
+            style={{
+              margin: '0 0 0.7rem',
+              padding: '0.55rem 0.75rem',
+              borderLeft: '3px solid var(--accent-amber)',
+              background: 'rgba(240, 160, 48, 0.06)',
+              color: 'var(--text-primary)',
+              fontStyle: 'italic',
+            }}
+          >
+            <strong style={{ color: 'var(--accent-amber)', fontStyle: 'normal' }}>
+              Calibration in progress.
+            </strong>{' '}
+            Live readings show median r ≈ −222% (nearest ≈ −87%) where a
+            clean read should sit near the risk-free rate. Treat this
+            chart as a chain-integrity diagnostic — not a trading signal —
+            until the calibration lands. Five root-cause candidates are
+            open: box-leg construction at tight ATM brackets, mark quality
+            on deep-ITM legs, sign / unit / compounding conventions in the
+            rate solver, dividend treatment, and underlying-symbol
+            verification.
+          </p>
           <p style={{ margin: '0 0 0.6rem' }}>
             Two implied borrow-rate reads from the same SPX chain plus the
             PCP-recovered forward-price term structure, stacked so any gap
