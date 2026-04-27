@@ -8,7 +8,16 @@ import { useCallback, useEffect, useRef, useState } from 'react';
 //   [HOME (green)] [TOOLS (purple) ▾] [RESEARCH (blue) ▾]
 //
 // HOME is suppressed on the home page itself (where it would be a no-op
-// link to the page the reader is already on). The two dropdown pills open
+// link to the page the reader is already on). The same suppression rule
+// extends inside the dropdowns: when the reader is already on one of the
+// listed labs (e.g. at /tactical/ when tapping TOOLS, or at /garch/ when
+// tapping RESEARCH), that lab's row is filtered out so neither dropdown
+// ever offers an option to navigate to the page the reader is already
+// on. The desktop TopNav already enforces the same hygiene via its
+// `current` prop; this brings the rule to the mobile dropdowns. The
+// ABOUT_ITEM at the bottom of RESEARCH is an off-site link to
+// about.aigamma.com so it is never the current page on this site and is
+// exempt from the filter. The two dropdown pills open
 // mutually-exclusive panels: tapping TOOLS while RESEARCH is open closes
 // RESEARCH and opens TOOLS, and vice versa. Both panels anchor to the
 // right edge of the .mobile-nav container so their full content shows
@@ -118,14 +127,23 @@ export default function MobileNav({ regimeIndicator } = {}) {
   // render in JSX stays a simple equality check.
   const [openPanel, setOpenPanel] = useState(null);
 
-  // Hide HOME on the landing page. window.location is read once at first
-  // render (these pages are MPAs so the path never changes within a single
-  // mount); falling back to false on the SSR path is cheap because the
-  // home dashboard is hydrated client-side anyway.
-  const [isHome] = useState(() => {
-    if (typeof window === 'undefined') return false;
-    return window.location.pathname === '/' || window.location.pathname === '/index.html';
+  // Capture the current path once at first render. window.location is
+  // read once because these pages are MPAs so the path never changes
+  // within a single mount; falling back to null on the SSR path is cheap
+  // because the home dashboard is hydrated client-side anyway. The path
+  // is normalized by collapsing /index.html to / and forcing a trailing
+  // slash on non-root paths so the comparison against the items' href
+  // values (all of which end in '/') is robust to "/tactical" vs
+  // "/tactical/" and "/index.html" vs "/" address-bar variants. isHome
+  // is derived from currentPath so the existing home-page rules — HOME
+  // pill suppressed, brand cluster shown — keep working unchanged.
+  const [currentPath] = useState(() => {
+    if (typeof window === 'undefined') return null;
+    const p = window.location.pathname;
+    if (p === '/' || p === '/index.html') return '/';
+    return p.replace(/\/index\.html$/, '/').replace(/\/?$/, '/');
   });
+  const isHome = currentPath === '/';
 
   const containerRef = useRef(null);
   const toolsTriggerRef = useRef(null);
@@ -175,6 +193,21 @@ export default function MobileNav({ regimeIndicator } = {}) {
   const togglePanel = (which) => {
     setOpenPanel((prev) => (prev === which ? null : which));
   };
+
+  // Filter the dropdown item lists to suppress any entry that links back
+  // to the current page. Generalizes the HOME-pill rule (HOME is hidden
+  // on the home page) to every item in TOOLS and RESEARCH so neither
+  // dropdown ever offers the option to navigate to the page the reader
+  // is already on. ABOUT_ITEM is an off-site link to about.aigamma.com
+  // so it is never the current page on this site and is exempt from the
+  // filter. On SSR / pre-mount paths where currentPath is null the
+  // unfiltered lists render unchanged.
+  const visibleToolsItems = currentPath
+    ? TOOLS_ITEMS.filter((item) => item.href !== currentPath)
+    : TOOLS_ITEMS;
+  const visibleResearchItems = currentPath
+    ? RESEARCH_ITEMS.filter((item) => item.href !== currentPath)
+    : RESEARCH_ITEMS;
 
   // Brand cluster shows only on the home page. The Γ uses the regime tone
   // color (green / coral / amber) and falls back to the muted brand color
@@ -305,7 +338,7 @@ export default function MobileNav({ regimeIndicator } = {}) {
           role="menu"
           aria-label="Research"
         >
-          {RESEARCH_ITEMS.map((item) => (
+          {visibleResearchItems.map((item) => (
             <a
               key={item.href}
               href={item.href}
@@ -336,7 +369,7 @@ export default function MobileNav({ regimeIndicator } = {}) {
           role="menu"
           aria-label="Tools"
         >
-          {TOOLS_ITEMS.map((item) => (
+          {visibleToolsItems.map((item) => (
             <a
               key={item.href}
               href={item.href}
