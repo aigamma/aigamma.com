@@ -98,11 +98,20 @@ export default function App() {
         <div style={{ color: 'var(--text-secondary)', lineHeight: 1.7, fontSize: '1.1rem' }}>
           <p style={{ margin: '0 0 0.7rem' }}>
             Upcoming earnings releases on the next five trading days
-            are plotted as single dots, filtered to the top 100 names
-            by US options volume so the scatter shows the reporters
-            whose implied ranges are load-bearing for SPX vol regime
-            reading and drops the long tail of low-options-volume
-            mid-caps where the chart signal is too thin to be useful.
+            are plotted as single dots, filtered by default to
+            companies with a revenue estimate of at least $2B so the
+            scatter shows the reporters whose implied ranges are
+            load-bearing for SPX vol regime reading and drops the long
+            tail of low-revenue mid-caps where the chart signal is
+            mostly junky / unknown names rather than the day's
+            actually-market-moving reports. The toggle pills above the
+            chart relax the floor (Rev ≥ $1B, Rev ≥ $500M) for slow
+            earnings periods when the visible universe needs to expand
+            to fill the page, or tighten to a top-N options-volume
+            slice (Top 100 OV, Top 250 OV) when ranking by liquidity
+            matters more than ranking by company size — the same
+            toggle drives the calendar grid below the chart so both
+            views always show the same universe.
             The horizontal axis is the calendar date the company
             reports; the vertical axis is the options-market implied
             range as a percent of spot. The implied range is the
@@ -139,14 +148,15 @@ export default function App() {
             back to a less direct estimate.
           </p>
           <p style={{ margin: 0 }}>
-            The four-week upcoming grid below the chart lists every
-            release with a revenue estimate above one billion dollars,
-            sorted within each <span style={BMO_INK}>Before-Open</span>{' '}
-            / <span style={AMC_INK}>After-Close</span> cell by
-            revenue estimate descending. EarningsWhispers is the
-            universe source; their API orders rows by the site's
-            own sentiment-vote total, which conflates reader interest
-            with company size — sorting by revenue instead surfaces the
+            The four-week upcoming grid below the chart shares the
+            chart's filter, so by default it lists every release with
+            a revenue estimate of at least $2B, sorted within each{' '}
+            <span style={BMO_INK}>Before-Open</span> /{' '}
+            <span style={AMC_INK}>After-Close</span> cell by revenue
+            estimate descending. EarningsWhispers is the universe
+            source; their API orders rows by the site's own
+            sentiment-vote total, which conflates reader interest with
+            company size — sorting by revenue instead surfaces the
             day's most market-moving reporters first. The revenue
             estimate is q1RevEst from EW, with prior-quarter actual
             sales as a fallback when the estimate is null.

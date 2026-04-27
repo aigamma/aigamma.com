@@ -35,7 +35,7 @@
 //      {TICKER}) — per-ticker contract chain, same MASSIVE_API_KEY
 //      and same call signature already proven by /scan. We hit it
 //      only for the chart-window tickers (next ~5 trading days,
-//      ~50-75 names after the >$1B revenue filter), with an
+//      ~30-60 names after the default $2B revenue filter), with an
 //      expiration_date filter narrowed to [earningsDate,
 //      earningsDate+14] so the response payload stays tight.
 //
@@ -54,18 +54,25 @@
 //
 // Universe filter:
 //
-//   Revenue floor: $1,000,000,000 (one billion USD). Sourced
-//   primarily from q1RevEst; falls back to qSales * 1e6 (prior-
-//   quarter actual sales, in millions) when q1RevEst is null. Tickers
-//   below the floor are dropped entirely from both chartDays and
-//   calendarDays. This is the single most opinionated filter on the
-//   page — it intentionally truncates the EW universe (typically
-//   200-300 names per peak earnings day) to the 30-100 names where
-//   options-driven implied moves are actually liquid and the day's
-//   institutional positioning matters. Below the floor lives a
-//   long tail of microcaps, regional banks, small-cap biotech, and
-//   illiquid REITs whose earnings are real news to their employees
-//   but not load-bearing for SPX vol regime reading.
+//   Default visible floor: $2,000,000,000 (two billion USD), exposed
+//   as the 'rev-2B' chart-filter mode and selected by
+//   DEFAULT_CHART_FILTER_ID below. The user-facing toggle pills above
+//   the chart let a reader relax this floor down to $1B or $500M for
+//   slow earnings periods, or tighten to a top-N options-volume slice
+//   ('topN-100' / 'topN-250') when ranking by liquidity matters more
+//   than ranking by company size. Master ingestion floor stays at
+//   $500M (the most-permissive toggle) so the relaxing toggles have a
+//   universe to filter from. Revenue is sourced primarily from
+//   q1RevEst; falls back to qSales * 1e6 (prior-quarter actual sales,
+//   in millions) when q1RevEst is null. The $2B default is the single
+//   most opinionated knob on the page — it intentionally truncates
+//   the EW universe (typically 200-300 names per peak earnings day)
+//   to the 30-60 names where options-driven implied moves are
+//   actually liquid and the day's institutional positioning matters.
+//   Below the floor lives a long tail of microcaps, regional banks,
+//   small-cap biotech, and illiquid REITs whose earnings are real
+//   news to their employees but not load-bearing for SPX vol regime
+//   reading.
 //
 // Cache profile: 30 min during market hours, 4 h off-hours. Earnings
 //   schedules update through the day as companies confirm release
@@ -86,13 +93,14 @@ import { readFileSync } from 'node:fs';
 // /heatmap and /scan already consume — generated from the Barchart
 // "stocks screener" CSV at C:\sheets\ via
 // scripts/backfill/options-volume-roster.mjs. Holds ~250 names sorted
-// by options volume desc; we take the first CHART_TOP_N for the
-// chart's universe so the scatter shows the names whose implied
-// ranges are actually load-bearing for SPX vol regime reading and
-// drops the long tail of low-options-volume mid-caps. The 4-week
-// calendar grid below the chart keeps the wider revenue >= $1B
-// universe — that's a landscape view where comprehensive coverage
-// matters more than visual density.
+// by options volume desc; we take the first 100 / 250 for the
+// 'topN-100' and 'topN-250' chart-filter modes so the scatter can
+// show the names whose implied ranges are actually load-bearing for
+// SPX vol regime reading when a reader prefers to rank by liquidity
+// instead of by company size. The 4-week calendar grid below the
+// chart shares the active filter mode with the scatter (single
+// source of truth, two views), so toggling the pill changes both
+// surfaces together.
 const ROSTER_URL = new URL('../../src/data/options-volume-roster.json', import.meta.url);
 const roster = JSON.parse(readFileSync(ROSTER_URL, 'utf8'));
 const ROSTER_SYMBOLS = (roster?.holdings ?? []).map((h) => String(h.symbol || '').toUpperCase());
@@ -114,12 +122,20 @@ const CHART_FILTER_MODES = [
     predicate: (t) => CHART_TOP_250_SET.has(t.ticker) },
   { id: 'rev-5B',   label: 'Rev ≥ $5B',
     predicate: (t) => Number.isFinite(t.revenueEst) && t.revenueEst >= 5_000_000_000 },
+  { id: 'rev-2B',   label: 'Rev ≥ $2B',
+    predicate: (t) => Number.isFinite(t.revenueEst) && t.revenueEst >= 2_000_000_000 },
   { id: 'rev-1B',   label: 'Rev ≥ $1B',
     predicate: (t) => Number.isFinite(t.revenueEst) && t.revenueEst >= 1_000_000_000 },
   { id: 'rev-500M', label: 'Rev ≥ $500M',
     predicate: (t) => Number.isFinite(t.revenueEst) && t.revenueEst >= 500_000_000 },
 ];
-const DEFAULT_CHART_FILTER_ID = 'topN-100';
+// Default landed at 'rev-2B' on Eric's directive that anything below
+// a $2B revenue estimate is too junky/unknown to be load-bearing for
+// SPX vol regime reading by default — the existing 'rev-1B' and
+// 'rev-500M' toggles stay as relaxing options the reader can switch
+// to during a slower earnings period when the visible universe needs
+// to expand to fill the page.
+const DEFAULT_CHART_FILTER_ID = 'rev-2B';
 
 function resolveChartFilter(modeId) {
   return CHART_FILTER_MODES.find((m) => m.id === modeId)

@@ -81,7 +81,11 @@ function formatLongDate(iso) {
   });
 }
 
-const DEFAULT_FILTER_MODE = 'topN-100';
+// Mirrors DEFAULT_CHART_FILTER_ID in netlify/functions/earnings.mjs.
+// Eric's directive: $2B revenue is the default visible floor for
+// /earnings; the lower-rev pills ($1B / $500M) stay as relaxing
+// toggles for slow earnings periods.
+const DEFAULT_FILTER_MODE = 'rev-2B';
 
 // Text size multipliers — applied to chart SVG text, tooltip,
 // header summary, calendar grid, and toggle pills so a user who
@@ -269,6 +273,7 @@ const FILTER_MODE_FALLBACK = [
   { id: 'topN-100', label: 'Top 100 OV' },
   { id: 'topN-250', label: 'Top 250 OV' },
   { id: 'rev-5B',   label: 'Rev ≥ $5B' },
+  { id: 'rev-2B',   label: 'Rev ≥ $2B' },
   { id: 'rev-1B',   label: 'Rev ≥ $1B' },
   { id: 'rev-500M', label: 'Rev ≥ $500M' },
 ];
