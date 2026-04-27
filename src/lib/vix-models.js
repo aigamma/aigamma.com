@@ -8,8 +8,8 @@
 //   2. Mean reversion — Ornstein-Uhlenbeck calibration on log VIX
 //   3. Realized vol of VIX — annualized close-to-close on the level itself,
 //      compared to the implied vol-of-vol (VVIX)
-//   4. Term structure — slope, contango ratio, and curvature off the five
-//      points (VIX1D / VIX9D / VIX / VIX3M / VIX6M)
+//   4. Term structure — slope and contango ratio off the curve points
+//      (VIX1D / VIX9D / VIX / VIX3M / VIX6M)
 //   5. Regime classification — four discrete states (calm / normal / elevated
 //      / stressed) defined by long-history VIX percentiles
 //   6. Strategy index analytics — log-return cumulative growth, annualized
@@ -190,16 +190,14 @@ export function rollingRealizedVol(series, window) {
 // 4. Term structure metrics
 // ---------------------------------------------------------------------------
 //
-// Given an object { VIX1D, VIX9D, VIX, VIX3M, VIX6M } of latest closes,
-// returns slope (3M − 30D) / 30D, contango ratio (3M / 30D), and a curvature
-// proxy (9D + 3M) / 2 − 30D. Returns null fields when any input is missing.
+// Given an object { VIX1D, VIX, VIX3M } of latest closes, returns slope
+// (3M − 30D) / 30D, contango ratio (3M / 30D), and the front ratio
+// (1D / 30D). Returns null fields when any input is missing.
 
 export function termStructureMetrics(points) {
   const v1 = points?.VIX1D;
-  const v9 = points?.VIX9D;
   const v30 = points?.VIX;
   const v3m = points?.VIX3M;
-  const v6m = points?.VIX6M;
 
   const slope = Number.isFinite(v3m) && Number.isFinite(v30) && v30 > 0
     ? (v3m - v30) / v30
@@ -209,20 +207,13 @@ export function termStructureMetrics(points) {
     ? v3m / v30
     : null;
 
-  // Curvature: positive = belly above the wings (humped), negative = bowed.
-  // Computed as (V9 + V3M)/2 − VIX, so a flat or linear term structure
-  // returns ≈ 0.
-  const curvature = Number.isFinite(v9) && Number.isFinite(v3m) && Number.isFinite(v30)
-    ? (v9 + v3m) / 2 - v30
-    : null;
-
   // Front-to-spot ratio captures urgency at the very front of the curve;
   // VIX1D < VIX is normal, VIX1D > VIX flags imminent event-day repricing.
   const frontRatio = Number.isFinite(v1) && Number.isFinite(v30) && v30 > 0
     ? v1 / v30
     : null;
 
-  return { slope, contangoRatio, curvature, frontRatio };
+  return { slope, contangoRatio, frontRatio };
 }
 
 // Compute the contango ratio (VIX3M / VIX) for every date where both series

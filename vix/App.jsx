@@ -123,9 +123,10 @@ export default function App() {
             Friday-close levels for the six-point Cboe vol term structure
             (VIX1D / VIX9D / VIX / VIX3M / VIX6M / VIX1Y), VVIX (the
             option-implied vol of VIX itself), the two skew constructions
-            (Cboe SKEW and Nations SkewDex), and two derived term-structure
-            scalars (contango ratio = VIX3M ÷ VIX, curvature = (VIX9D +
-            VIX3M)/2 − VIX). Each cell carries a 1-year percentile rank
+            (Cboe SKEW and Nations SkewDex), and a derived term-structure
+            scalar (contango ratio = VIX3M ÷ VIX, rendered as a binary
+            regime label plus percent spread). Each cell carries a 1-year
+            percentile rank
             against its own trailing 252-day distribution as the color cue,
             so the eye reads "where in the distribution is this number"
             without parsing the value.

@@ -27,7 +27,15 @@ import {
 //      load-bearing read is "is the curve sloping up or down" — the regime
 //      word + a single integer percent communicates the same information
 //      without inviting the reader to over-parse the second decimal.
-//  11. Curvature — (VIX9D + VIX3M)/2 − VIX
+//
+// Removed cells (history): "Curvature" (the (VIX9D + VIX3M)/2 − VIX
+// butterfly of the front of the term structure) — Eric flagged that he
+// did not recognize it as a recognized vol-trader vocabulary item, and
+// the pill displayed a 2-decimal scalar with arbitrary ±0.3 thresholds
+// that had no empirical calibration. The Term Structure chart further
+// down the page already conveys the convexity of the curve in shape;
+// reducing it to a third decimal of a butterfly was redundant and read
+// as false precision.
 
 function PillCell({ label, value, sub, tone = 'neutral', title }) {
   const toneColor = TONE[tone] || 'var(--text-primary)';
@@ -97,10 +105,8 @@ export default function VixHeaderProfile({ data }) {
 
     const ts = termStructureMetrics({
       VIX1D: last('VIX1D'),
-      VIX9D: last('VIX9D'),
       VIX: last('VIX'),
       VIX3M: last('VIX3M'),
-      VIX6M: last('VIX6M'),
     });
 
     const vixRank = percentileRank(last('VIX'), window('VIX'));
@@ -118,7 +124,6 @@ export default function VixHeaderProfile({ data }) {
       SKEW: { value: last('SKEW'), rank: skewRank },
       SDEX: { value: last('SDEX') },
       contango: ts.contangoRatio,
-      curvature: ts.curvature,
     };
   }, [data]);
 
@@ -126,7 +131,7 @@ export default function VixHeaderProfile({ data }) {
     return (
       <div className="card vix-header-card">
         <div className="vix-pill-grid">
-          {Array.from({ length: 11 }).map((_, i) => (
+          {Array.from({ length: 10 }).map((_, i) => (
             <div key={i} className="vix-pill vix-pill--skeleton" />
           ))}
         </div>
@@ -206,17 +211,6 @@ export default function VixHeaderProfile({ data }) {
             ? cells.contango >= 1 ? 'green' : 'coral'
             : 'neutral'}
           title="VIX3M ÷ VIX. Above 1.0 = contango (curve sloping up, calm regime). Below 1.0 = backwardation (curve sloping down, urgent near-term vol). The percent reads as |ratio − 1| × 100%."
-        />
-        <PillCell
-          label="Curvature"
-          value={fmt(cells.curvature, 2)}
-          sub={cells.curvature != null
-            ? cells.curvature > 0.3 ? 'Belly above wings'
-            : cells.curvature < -0.3 ? 'Bowed'
-            : 'Linear'
-            : '—'}
-          tone="neutral"
-          title="(VIX9D + VIX3M)/2 − VIX. Positive = humped (front + back > middle). Negative = bowed (middle highest)."
         />
       </div>
     </div>
