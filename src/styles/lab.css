@@ -1127,6 +1127,60 @@
   outline-offset: 2px;
 }
 
+/* Per-symbol visibility toggle row that sits between the rotation meta
+   band and the chart canvas. Each pill is colored by the latest
+   quadrant of its component's trail (Leading green, Weakening amber,
+   Lagging coral, Improving blue) via inline style on the button so
+   the active pill mirrors the trail color a reader sees on the chart
+   — clicking the green XLK pill toggles the green XLK trace, and so
+   on. Inactive pills strip out the fill, dim the border and text, so
+   the row reads as a legend that doubles as a control: the colorful
+   pills are visible on the chart, the grayed pills are not. The
+   buttons wrap onto multiple rows on narrow screens via flex-wrap.
+   Hover dims via opacity rather than overriding background-color so
+   the inline quadrant fill stays in charge of the active pill's
+   color. */
+.rotation-symbol-toggle {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.4rem;
+  font-family: 'Courier New', monospace;
+  font-size: 0.72rem;
+  letter-spacing: 0.06em;
+}
+
+.rotation-symbol-toggle__btn {
+  appearance: none;
+  background: transparent;
+  border: 1px solid rgba(255, 255, 255, 0.18);
+  color: var(--text-secondary);
+  border-radius: 3px;
+  padding: 0.32rem 0.6rem;
+  font: inherit;
+  cursor: pointer;
+  text-transform: uppercase;
+  transition: opacity 0.15s ease;
+  min-width: 3.4rem;
+}
+
+.rotation-symbol-toggle__btn:hover:not(:disabled) {
+  opacity: 0.78;
+}
+
+.rotation-symbol-toggle__btn:disabled {
+  opacity: 0.55;
+  cursor: progress;
+}
+
+.rotation-symbol-toggle__btn:focus-visible {
+  outline: 2px solid var(--accent-green);
+  outline-offset: 2px;
+}
+
+.rotation-symbol-toggle__btn--active {
+  font-weight: 700;
+}
+
 /* Cursor hint inside the rotation chart so a reader knows the chart
    is interactive (drag-to-pan, wheel-to-zoom). Plotly applies its own
    cursor: crosshair when dragmode is active, which works fine for

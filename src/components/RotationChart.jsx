@@ -29,6 +29,17 @@ import {
 // symbol to scripts/backfill/daily-eod.mjs's DEFAULT_SYMBOLS list and
 // re-running the backfill will surface it on the chart automatically
 // with no client-side edits.
+//
+// Per-symbol visibility row (RotationSymbolToggle) sits between the meta
+// band and the chart canvas. Each pill is colored by the current
+// quadrant ink of its component's latest point so the active state
+// mirrors the trail color on the chart, and clicking a pill toggles
+// that component's trace on or off. The axis range stays computed from
+// every component (not just the visible subset) so toggling pills does
+// not warp the spatial layout — visible traces stay in the same
+// positions a reader saw before they hid the others. The hidden-set
+// state defaults to empty so a first-time reader lands on all 14
+// components rendered.
 
 const QUADRANT_FILL = {
   leading:   'rgba(46, 204, 113, 0.10)',
@@ -149,7 +160,58 @@ function RotationTailToggle({ tail, onChange, disabled }) {
   );
 }
 
-export default function RotationChart() {
+export default // Per-symbol visibility toggle row. Renders one pill per component
+// using the component's current quadrant ink color when active so the
+// pill's appearance mirrors the color of that component's trail on
+// the chart. Inactive pills strip out the fill, dim the border and
+// text, so the row reads as a legend that also acts as a control.
+// The toggle is built around a hiddenSymbols Set rather than a
+// selectedSymbols Set so the empty-state default (no entries =
+// everything visible) requires no initialization when payload arrives.
+function RotationSymbolToggle({ components, hiddenSymbols, onToggle, disabled }) {
+  return (
+    <div
+      className="rotation-symbol-toggle"
+      role="group"
+      aria-label="Visible components"
+    >
+      {components.map((c) => {
+        const last = c.points[c.points.length - 1];
+        const quad = quadrantOf(last.rs_ratio, last.rs_momentum);
+        const color = QUADRANT_INK[quad];
+        const active = !hiddenSymbols.has(c.symbol);
+        // Inline color/border because each pill picks up its own
+        // quadrant ink — there is no static class that knows which
+        // quadrant a ticker is currently in. Inactive pills fall back
+        // to neutral chrome (translucent border + secondary text)
+        // since their fill would otherwise inherit the last-active
+        // quadrant color and read as still-visible.
+        const style = active
+          ? { borderColor: color, backgroundColor: color, color: '#0d1016' }
+          : { borderColor: 'rgba(255,255,255,0.18)', color: 'var(--text-secondary)' };
+        return (
+          <button
+            key={c.symbol}
+            type="button"
+            className={
+              'rotation-symbol-toggle__btn' +
+              (active ? ' rotation-symbol-toggle__btn--active' : '')
+            }
+            aria-pressed={active}
+            disabled={disabled}
+            title={active ? `Hide ${c.symbol}` : `Show ${c.symbol}`}
+            style={style}
+            onClick={() => onToggle(c.symbol)}
+          >
+            {c.symbol}
+          </button>
+        );
+      })}
+    </div>
+  );
+}
+
+function RotationChart() {
   const chartRef = useRef(null);
   const { plotly: Plotly, error: plotlyError } = usePlotly();
   // Defaults: week step + 5-period tail. The weekly view shows the
@@ -161,6 +223,23 @@ export default function RotationChart() {
   const [payload, setPayload] = useState(null);
   const [fetchError, setFetchError] = useState(null);
   const [loading, setLoading] = useState(true);
+  // Hidden-set state for the per-symbol visibility row. Empty default
+  // = everything visible; toggling a pill adds or removes its symbol
+  // from the set. Using "hidden" rather than "selected" means a fresh
+  // payload (after a step or tail change) needs no initialization —
+  // any component the user previously hid stays hidden across refreshes
+  // because the symbols are stable across step/tail changes, and any
+  // brand-new symbol added to the universe later renders by default.
+  const [hiddenSymbols, setHiddenSymbols] = useState(() => new Set());
+
+  const handleToggleSymbol = (symbol) => {
+    setHiddenSymbols((prev) => {
+      const next = new Set(prev);
+      if (next.has(symbol)) next.delete(symbol);
+      else next.add(symbol);
+      return next;
+    });
+  };
 
   useEffect(() => {
     let cancelled = false;
@@ -239,8 +318,14 @@ export default function RotationChart() {
     // endpoint dot with the symbol label. marker.size as an array gives
     // every point its own size; text matches that — non-empty only at
     // the latest index so the tail dots stay unlabeled and don't cause
-    // visual clutter.
-    const traces = payload.components.map((c) => {
+    // visual clutter. Components are filtered through hiddenSymbols so
+    // a reader can hide individual tickers via the pill row above the
+    // chart; the filter happens here (not at the axis-range step) so
+    // the chart's spatial layout stays stable as pills are toggled.
+    const visibleComponents = payload.components.filter(
+      (c) => !hiddenSymbols.has(c.symbol),
+    );
+    const traces = visibleComponents.map((c) => {
       const last = c.points[c.points.length - 1];
       const quad = quadrantOf(last.rs_ratio, last.rs_momentum);
       const color = QUADRANT_INK[quad];
@@ -423,7 +508,7 @@ export default function RotationChart() {
       scrollZoom: true,
       doubleClick: 'reset',
     });
-  }, [Plotly, payload, chartData]);
+  }, [Plotly, payload, chartData, hiddenSymbols]);
 
   const handleResetView = () => {
     if (!Plotly || !chartRef.current || !chartData) return;
@@ -477,7 +562,10 @@ export default function RotationChart() {
         {payload && (
           <>
             <span className="rotation-meta-line">
-              {payload.tail} {stepLabel} · {payload.components.length} components
+              {payload.tail} {stepLabel} ·{' '}
+              {hiddenSymbols.size > 0
+                ? `${payload.components.length - hiddenSymbols.size} of ${payload.components.length} components`
+                : `${payload.components.length} components`}
             </span>
             <span className="rotation-asof">
               Through {formatDateLabel(payload.asOf)}
@@ -485,6 +573,14 @@ export default function RotationChart() {
           </>
         )}
       </div>
+      {!loading && !errorMessage && payload && (
+        <RotationSymbolToggle
+          components={payload.components}
+          hiddenSymbols={hiddenSymbols}
+          onToggle={handleToggleSymbol}
+          disabled={loading}
+        />
+      )}
       {loading && (
         <div className="rotation-status">Loading rotation chart…</div>
       )}
