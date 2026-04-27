@@ -55,21 +55,13 @@ export default function App() {
         <ErrorBoundary><ExpiringGamma /></ErrorBoundary>
       </section>
 
-      <div className="card" style={{ padding: '1.1rem 1.25rem', margin: '1.25rem 0' }}>
-        <div
-          style={{
-            fontFamily: 'Courier New, monospace',
-            fontSize: '0.7rem',
-            letterSpacing: '0.14em',
-            textTransform: 'uppercase',
-            color: 'var(--text-secondary)',
-            marginBottom: '0.45rem',
-          }}
-        >
-          what this page measures
-        </div>
-        <div style={{ color: 'var(--text-secondary)', lineHeight: 1.65, fontSize: '0.95rem' }}>
-          <p style={{ margin: '0 0 0.7rem' }}>
+      <details className="card expiring-gamma-explainer">
+        <summary className="expiring-gamma-explainer__summary">
+          <span className="expiring-gamma-explainer__title">What this page measures</span>
+          <span className="expiring-gamma-explainer__hint">tap to expand</span>
+        </summary>
+        <div className="expiring-gamma-explainer__body">
+          <p>
             Each bar is one listed SPX expiration. The height above the
             zero line is the total dollar gamma carried by every call
             at that expiration; the depth below the zero line is the
@@ -78,7 +70,7 @@ export default function App() {
             in dollars per 1% move at the current spot price — the
             standard SpotGamma-style dealer-hedging unit.
           </p>
-          <p style={{ margin: '0 0 0.7rem' }}>
+          <p>
             "If spot remains where it is" is the implicit framing.
             Every per-contract gamma value used in the sum was
             computed at the run's spot price by the ingest, so the
@@ -89,7 +81,7 @@ export default function App() {
             spot drift, so the right reading is "potential unwind
             magnitude", not "forecast hedging flow".
           </p>
-          <p style={{ margin: 0 }}>
+          <p>
             The data scope follows the live ingest pipeline — the
             next nine monthly OPEX dates plus every weekly within
             thirty calendar days of today. Far-dated LEAPS contracts
@@ -101,7 +93,7 @@ export default function App() {
             that is structurally certain to unwind in the near term.
           </p>
         </div>
-      </div>
+      </details>
 
       <footer className="lab-footer">
         <span className="lab-footer-line">

@@ -1544,6 +1544,24 @@
 .expiring-gamma-chart {
   width: 100%;
   height: 620px;
+  /* Inset frame anchors the chart visually within the card. The card's
+     own background is var(--bg-card) = #141820 and the Plotly plot
+     bgcolor is the same #141820 — without a frame, the chart visually
+     bleeds into the card chrome with no clear "the chart starts here"
+     cue. A 1px border using the card-border token (the same color
+     the .card class uses for its outer border) gives a quiet inset
+     boundary that matches the rest of the platform's card-within-
+     card pattern (e.g., the levels panel cells, the rotation chart
+     container, the heatmap grid frame). */
+  border: 1px solid var(--bg-card-border);
+  border-radius: 4px;
+  padding: 0.4rem;
+  /* Slightly darker than the card to visually recess the chart
+     surface. Reads as "the data lives inside this well" rather than
+     "the data is layered on top of the card." Subtle enough that it
+     doesn't compete with the bar colors but distinct enough that the
+     frame edge is unambiguous. */
+  background: #0d1016;
 }
 
 /* Chart-legend strip rendered beneath the bar chart. Names the new
@@ -1597,6 +1615,91 @@
   opacity: 0.4;
 }
 
+/* Collapsible "What this page measures" explainer card. Replaces the
+   prior always-expanded 3-paragraph card so a returning reader sees
+   a one-line title and the explainer body stays out of their way
+   until they want to revisit it. The native <details>/<summary>
+   primitives carry the open/close interaction without JavaScript;
+   the chevron rotation on [open] is a CSS-only transition.
+
+   Margin matches the prior 1.25rem 0 spacing the inline-style version
+   used so the layout doesn't shift when this card collapses or
+   expands; the card chrome is unchanged so the explainer reads as a
+   peer to the chart card directly above it. */
+.expiring-gamma-explainer {
+  margin: 1.25rem 0;
+  padding: 1.1rem 1.25rem;
+}
+
+.expiring-gamma-explainer__summary {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.6rem;
+  cursor: pointer;
+  font-family: 'Courier New', monospace;
+  font-size: 0.7rem;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  color: var(--text-secondary);
+  list-style: none;
+}
+
+/* Hide the default disclosure triangle in webkit browsers and Firefox
+   — the right-aligned "tap to expand" hint serves the same affordance
+   purpose without the inconsistent native triangle styling. */
+.expiring-gamma-explainer__summary::-webkit-details-marker {
+  display: none;
+}
+.expiring-gamma-explainer__summary {
+  list-style: none;
+}
+
+.expiring-gamma-explainer__title {
+  color: var(--text-secondary);
+}
+
+.expiring-gamma-explainer__hint {
+  color: var(--text-secondary);
+  opacity: 0.55;
+  font-size: 0.65rem;
+  letter-spacing: 0.1em;
+  transition: opacity 0.15s ease;
+}
+
+.expiring-gamma-explainer:hover .expiring-gamma-explainer__hint,
+.expiring-gamma-explainer:focus-within .expiring-gamma-explainer__hint {
+  opacity: 0.85;
+}
+
+.expiring-gamma-explainer[open] .expiring-gamma-explainer__hint::before {
+  content: 'tap to collapse';
+}
+.expiring-gamma-explainer[open] .expiring-gamma-explainer__hint {
+  font-size: 0;
+  /* swap the visible text via the ::before pseudo while suppressing
+     the original "tap to expand" via font-size: 0 — keeps the layout
+     stable without needing JS to swap textContent. */
+}
+.expiring-gamma-explainer[open] .expiring-gamma-explainer__hint::before {
+  font-size: 0.65rem;
+}
+
+.expiring-gamma-explainer__body {
+  color: var(--text-secondary);
+  line-height: 1.65;
+  font-size: 0.95rem;
+  margin-top: 0.7rem;
+}
+
+.expiring-gamma-explainer__body p {
+  margin: 0 0 0.7rem;
+}
+
+.expiring-gamma-explainer__body p:last-child {
+  margin-bottom: 0;
+}
+
 /* Plotly draws SVG <text> elements with inline font-family that beats
    class-level CSS. Force Courier New on every text element inside the
    chart so the tick labels, axis title, and rangeslider chrome match
@@ -1614,7 +1717,13 @@
 
 @media (max-width: 768px) {
   .expiring-gamma-chart {
-    height: 480px;
+    /* Tighter mobile chart height — the prior 480px was sized for the
+       full-width desktop chart but on a phone viewport the bars
+       compress to slivers anyway, so the extra vertical real estate
+       didn't translate into more readable bars. Reclaiming ~140px
+       moves the explainer card and footer into the natural scroll
+       position rather than leaving them off-screen on a fold-line. */
+    height: 360px;
   }
   .expiring-gamma-ticker {
     font-size: 1.3rem;
@@ -1626,6 +1735,6 @@
 
 @media (max-width: 480px) {
   .expiring-gamma-chart {
-    height: 420px;
+    height: 320px;
   }
 }
