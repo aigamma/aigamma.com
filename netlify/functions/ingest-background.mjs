@@ -854,9 +854,41 @@ async function insertAll({ run, contracts, computedLevels, expirationMetrics }) 
   const runId = runRows[0]?.id;
   if (!runId) throw new Error('ingest_runs insert returned no id');
 
-  // 2. Parallel: snapshots (batched), computed_levels, expiration_metrics
+  // 2. Parallel inserts. Storage policy: partial-status runs commit only
+  // the run header + scalar derivations (computed_levels +
+  // expiration_metrics, ~30 rows per run combined), and SKIP the per-
+  // strike `snapshots` insert (~7-10K rows per partial run). The
+  // 2026-04-26 audit measured a 16-75% partial rate per trading day
+  // (mean ~37%) over the prior two market weeks, with each partial
+  // capturing 7-13K contracts vs ~18-19K for a complete success — so
+  // the snapshots rows for partial runs were ~250-300K rows/day of
+  // never-read data accumulating in a 1.83 GB table. Every downstream
+  // reader of `snapshots` (data.mjs, snapshot.mjs, expiring-gamma.mjs,
+  // fixed-strike-iv.mjs) already filters `status='eq.success'` before
+  // joining to the snapshots rows, so dropping the partial-run rows
+  // costs zero observed reads — the policy is purely a storage hygiene
+  // improvement. The fallback path in snapshot.mjs and
+  // expiring-gamma.mjs (which falls through to the latest partial run
+  // if no success runs exist in the probe window) gracefully degrades
+  // to a 503 instead of silently serving incomplete-chain numbers,
+  // which is the more honest behavior — a vol-flip computed from 40%
+  // of the chain is worse than no answer. The scalar
+  // computed_levels and expiration_metrics rows are still written for
+  // partial runs because the storage cost is negligible (~50 bytes
+  // each) and the audit trail is occasionally useful when
+  // investigating Massive pagination outage windows. Note the
+  // contract_count column on the run header still reports the
+  // count of contracts that WOULD have been inserted (post-filter,
+  // pre-write), which means a developer querying
+  // `SELECT contract_count FROM ingest_runs WHERE id=X` for a partial
+  // run will see e.g. 7034 while `SELECT count(*) FROM snapshots
+  // WHERE run_id=X` returns 0; this is the intended discrepancy and
+  // run.status='partial' is the indicator.
+  const skipSnapshots = run.status === 'partial';
   await Promise.all([
-    insertSnapshotsBatched(runId, contracts),
+    skipSnapshots
+      ? Promise.resolve()
+      : insertSnapshotsBatched(runId, contracts),
     insertComputedLevels(runId, computedLevels),
     insertExpirationMetrics(runId, expirationMetrics),
   ]);
