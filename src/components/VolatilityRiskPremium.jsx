@@ -142,12 +142,29 @@ function addMonthsIso(iso, months) {
   return d.toISOString().slice(0, 10);
 }
 
+// Progressive-render phase. The card holds a 4-year backfill (~1000 daily
+// rows, with the SPX area trace ballooning to a 2000-vertex closed polygon
+// once x and reversed-x are concatenated) but the default x-axis zoom only
+// shows the last 6 months. Painting all 4 years on first render forces
+// Plotly to walk the full SVG path during initial layout — a 150-400 ms
+// blocking compute on a typical mid-tier laptop that the reader perceives
+// as "the first chart took forever." Phase 'initial' renders only the
+// 6-month visible slice (~125 rows), so the chart paints in 30-80 ms; an
+// idle callback then flips the phase to 'full' and Plotly.react re-renders
+// with the full backfill so the external RangeBrush tail extends back to
+// 2022. From the reader's perspective the chart appears immediately and
+// the historical tail materializes ~50-200 ms later as the rangeslider's
+// track grows leftward — exactly the shape Eric described as "render
+// what's zoomed in first, fill in the rest after."
+const INITIAL_VISIBLE_MONTHS = 6;
+
 export default function VolatilityRiskPremium({ spotPrice, capturedAt }) {
   const chartRef = useRef(null);
   const { plotly: Plotly, error: plotlyError } = usePlotly();
   const { data, loading, error } = useVrpHistory({});
   const mobile = useIsMobile();
   const [timeRange, setTimeRange] = useState(null);
+  const [renderPhase, setRenderPhase] = useState('initial');
 
   // Series visibility state. The chart's legend has been replaced by the
   // outlined toggle row rendered in JSX below the chart card; clicking a
@@ -169,7 +186,7 @@ export default function VolatilityRiskPremium({ spotPrice, capturedAt }) {
     setTraceVisibility((prev) => ({ ...prev, [key]: !prev[key] }));
   }, []);
 
-  const series = useMemo(() => {
+  const fullSeries = useMemo(() => {
     if (!data?.series) return [];
     return data.series
       .filter((r) => r.iv_30d_cm != null && r.hv_20d_yz != null && r.spx_close != null)
@@ -193,7 +210,7 @@ export default function VolatilityRiskPremium({ spotPrice, capturedAt }) {
   // Massive snapshot) so the rightmost point reflects where SPX actually
   // is right now rather than yesterday's settle — otherwise the line can
   // sit visually far below today's level on a fast-moving session.
-  const spxSeries = useMemo(() => {
+  const fullSpxSeries = useMemo(() => {
     if (!data?.series) return [];
     const base = data.series
       .filter((r) => r.spx_close != null)
@@ -207,6 +224,53 @@ export default function VolatilityRiskPremium({ spotPrice, capturedAt }) {
     }
     return base;
   }, [data, spotPrice, capturedAt]);
+
+  // Phase 'initial' slices both series to the last INITIAL_VISIBLE_MONTHS
+  // calendar months — the same window the chart zooms to by default — so
+  // first paint walks ~125 rows instead of ~1000. The brush min/max read
+  // from these same sliced arrays, so the rangeslider track also starts
+  // narrow and grows leftward when the phase flips. Phase 'full' returns
+  // the unsliced arrays for the rangeslider tail and the SPX y-axis range
+  // (which uses the historical low at 2022-01-03 to pin SPX to the top of
+  // the chart). The slice happens with .filter rather than .slice so the
+  // boundary condition (exactly 6 months back) lands on a calendar date
+  // and the brush starts at a natural-looking left edge.
+  const series = useMemo(() => {
+    if (renderPhase === 'full' || fullSeries.length === 0) return fullSeries;
+    const lastIso = fullSeries[fullSeries.length - 1].trading_date;
+    const cutoff = addMonthsIso(lastIso, -INITIAL_VISIBLE_MONTHS);
+    return fullSeries.filter((r) => r.trading_date >= cutoff);
+  }, [fullSeries, renderPhase]);
+
+  const spxSeries = useMemo(() => {
+    if (renderPhase === 'full' || fullSpxSeries.length === 0) return fullSpxSeries;
+    const lastIso = fullSpxSeries[fullSpxSeries.length - 1].trading_date;
+    const cutoff = addMonthsIso(lastIso, -INITIAL_VISIBLE_MONTHS);
+    return fullSpxSeries.filter((r) => r.trading_date >= cutoff);
+  }, [fullSpxSeries, renderPhase]);
+
+  // After the initial-slice chart paints, schedule an idle callback to
+  // flip the phase so Plotly.react re-renders with the full backfill.
+  // requestIdleCallback fires when the browser has finished its post-paint
+  // work, so the second render lands off the first-paint critical path.
+  // 1500 ms timeout guards against a permanently busy main thread (e.g.,
+  // a slow device chewing through other charts further down) — even if
+  // idle never fires naturally, the phase advances within 1.5 s of data
+  // arrival. Only fires once per data load; intraday refreshes that
+  // produce a new `data` object don't reset the phase because reverting
+  // to the slim render after the user has already seen the full tail
+  // would feel like the chart shrinking.
+  useEffect(() => {
+    if (renderPhase !== 'initial') return undefined;
+    if (fullSeries.length === 0) return undefined;
+    if (typeof window === 'undefined') return undefined;
+    const idle = window.requestIdleCallback
+      ? (cb) => window.requestIdleCallback(cb, { timeout: 1500 })
+      : (cb) => setTimeout(cb, 100);
+    const cancel = window.cancelIdleCallback || clearTimeout;
+    const handle = idle(() => setRenderPhase('full'));
+    return () => cancel(handle);
+  }, [renderPhase, fullSeries.length]);
 
   const vrpSegments = useMemo(() => buildVrpSegments(series), [series]);
 
@@ -223,14 +287,18 @@ export default function VolatilityRiskPremium({ spotPrice, capturedAt }) {
     const windowStart = timeRange ? timeRange[0] : defaultStart;
     const windowEnd = timeRange ? timeRange[1] : lastDate;
 
-    // Compute y-axis ranges from the full series (back to the ThetaData
-    // Index Standard floor at 2022-01-03 when SPX was ~3577). With spxMin
-    // anchored at that historical low, the 0.95 padding puts spxLo well
-    // below any value in a recent zoom, which naturally pins the SPX line
-    // to the top ~15-20% of the chart — the visual layout that separates
-    // SPX context cleanly from the IV/RV ribbon below.
-    const spxMin = Math.min(...spxSeries.map((r) => r.spx_close));
-    const spxMax = Math.max(...spxSeries.map((r) => r.spx_close));
+    // Compute y-axis ranges from the full backfill (back to the ThetaData
+    // Index Standard floor at 2022-01-03 when SPX was ~3577) regardless of
+    // the current renderPhase. With spxMin anchored at that historical
+    // low, the 0.95 padding puts spxLo well below any value in a recent
+    // zoom, which naturally pins the SPX line to the top ~15-20% of the
+    // chart — the visual layout that separates SPX context cleanly from
+    // the IV/RV ribbon below. Reading from the always-full fullSpxSeries
+    // (rather than the phase-sliced spxSeries used for trace data) keeps
+    // the SPX y-axis stable across the initial→full re-render so the
+    // chart doesn't visually jump when the historical tail lands.
+    const spxMin = Math.min(...fullSpxSeries.map((r) => r.spx_close));
+    const spxMax = Math.max(...fullSpxSeries.map((r) => r.spx_close));
     const spxLo = spxMin * 0.95;
     const spxHi = spxMax * 1.02;
 
@@ -450,7 +518,7 @@ export default function VolatilityRiskPremium({ spotPrice, capturedAt }) {
       responsive: true,
       displayModeBar: false,
     });
-  }, [Plotly, series, vrpSegments, spxSeries, mobile, timeRange, traceVisibility]);
+  }, [Plotly, series, vrpSegments, spxSeries, fullSpxSeries, mobile, timeRange, traceVisibility]);
 
   const handleBrushChange = useCallback((minMs, maxMs) => {
     setTimeRange([msToIso(minMs), msToIso(maxMs)]);

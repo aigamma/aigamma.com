@@ -77,11 +77,27 @@ function closedPolygon(xDates, yLower, yUpper, fillcolor) {
   };
 }
 
+// Progressive-render phase. The cloud bands extend out to ~700 calendar
+// days while the default x-axis zoom shows only the first ~100 days, so
+// rendering the full polygon set on first paint walks ~7x more vertices
+// than the reader can see. INITIAL_BAND_DTE_CAP slices the cloud bands to
+// the visible-by-default 100-day window for the first render — four
+// closed-polygon traces × ~30 cloud-band points × 2 (forward+reversed for
+// the toself fill) = ~240 SVG vertices instead of ~1700 — and an idle
+// callback then flips the phase to 'full' and Plotly.react re-renders
+// with the full-tail bands so the rangeslider track extends out to the
+// LEAPS at ~600 DTE. The observed-curve trace (`rows`) is left full-
+// length on both phases because it is small (~30 expirations) and
+// trimming it would force the brush extent to reflect a different scale
+// from the cloud, which would jump on the phase flip.
+const INITIAL_BAND_DTE_CAP = 100;
+
 export default function TermStructure({ expirationMetrics, capturedAt, cloudBands }) {
   const chartRef = useRef(null);
   const { plotly: Plotly, error: plotlyError } = usePlotly();
   const mobile = useIsMobile();
   const [timeRange, setTimeRange] = useState(null);
+  const [renderPhase, setRenderPhase] = useState('initial');
 
   const tradingDate = useMemo(
     () => tradingDateFromCapturedAt(capturedAt),
@@ -114,7 +130,7 @@ export default function TermStructure({ expirationMetrics, capturedAt, cloudBand
   // x-axis range computation below. The `>= 1` filter matches the rows
   // filter above so the cloud and the observed curve share a single
   // no-0DTE domain.
-  const sortedCloudBands = useMemo(() => {
+  const fullCloudBands = useMemo(() => {
     if (!cloudBands || cloudBands.length === 0 || !tradingDate) return [];
     return cloudBands
       .filter((b) =>
@@ -124,11 +140,44 @@ export default function TermStructure({ expirationMetrics, capturedAt, cloudBand
       .sort((a, b) => a.dte - b.dte);
   }, [cloudBands, tradingDate]);
 
+  // Phase 'initial' caps the cloud bands at INITIAL_BAND_DTE_CAP so the
+  // four closed-polygon traces walk ~30 vertices instead of ~200 on first
+  // paint. Phase 'full' returns the unsliced array so the brush track
+  // extends to the longest cloud-band DTE.
+  const sortedCloudBands = useMemo(() => {
+    if (renderPhase === 'full') return fullCloudBands;
+    return fullCloudBands.filter((b) => b.dte <= INITIAL_BAND_DTE_CAP);
+  }, [fullCloudBands, renderPhase]);
+
+  // After the initial-slice paint, schedule an idle callback to flip the
+  // phase. requestIdleCallback fires when the browser has finished its
+  // post-paint work, so the second render lands off the first-paint
+  // critical path. 1500 ms timeout guards against a permanently busy main
+  // thread; even if idle never fires naturally, the phase advances within
+  // 1.5 s of mount. Only fires once per mount; intraday refreshes don't
+  // reset the phase because reverting to the slim render after the user
+  // has seen the full tail would feel like the chart shrinking.
+  useEffect(() => {
+    if (renderPhase !== 'initial') return undefined;
+    if (fullCloudBands.length === 0) return undefined;
+    if (typeof window === 'undefined') return undefined;
+    const idle = window.requestIdleCallback
+      ? (cb) => window.requestIdleCallback(cb, { timeout: 1500 })
+      : (cb) => setTimeout(cb, 100);
+    const cancel = window.cancelIdleCallback || clearTimeout;
+    const handle = idle(() => setRenderPhase('full'));
+    return () => cancel(handle);
+  }, [renderPhase, fullCloudBands.length]);
+
   // Compute a tight y-axis range over the cloud bands' p10/p90 envelope and
   // the observed ATM IV trace, then floor the lower bound at 1% so Plotly's
   // auto-tick can never emit a "0.0" tick at the bottom-left corner where it
   // would collide with the first x-axis date label. Padded ±5% so the
-  // outermost data sits comfortably inside the plot area.
+  // outermost data sits comfortably inside the plot area. Reads from the
+  // always-full fullCloudBands (rather than the phase-sliced
+  // sortedCloudBands used for trace data) so the y-axis range stays stable
+  // across the initial→full re-render and the chart doesn't visually jump
+  // when the cloud's long tail lands.
   const yRange = useMemo(() => {
     let yMin = Infinity;
     let yMax = -Infinity;
@@ -139,7 +188,7 @@ export default function TermStructure({ expirationMetrics, capturedAt, cloudBand
         if (v > yMax) yMax = v;
       }
     }
-    for (const b of sortedCloudBands) {
+    for (const b of fullCloudBands) {
       const lo = b.iv_p10 * 100;
       const hi = b.iv_p90 * 100;
       if (lo < yMin) yMin = lo;
@@ -148,7 +197,7 @@ export default function TermStructure({ expirationMetrics, capturedAt, cloudBand
     if (!Number.isFinite(yMin) || !Number.isFinite(yMax)) return null;
     const pad = (yMax - yMin) * 0.05;
     return [Math.max(1, yMin - pad), yMax + pad];
-  }, [rows, sortedCloudBands]);
+  }, [rows, fullCloudBands]);
 
   // Compute the brush's outer domain and default initial window outside
   // the effect so the render path can share the same numbers with the
