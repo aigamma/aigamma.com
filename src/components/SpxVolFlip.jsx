@@ -243,6 +243,16 @@ function ToggleButton({ active, onClick, label, activeBg, activeBorder, mobile }
   );
 }
 
+// Progressive-render phase. The series spans ~600+ trading days (back to
+// 2022-01-03) but the default x-axis zoom shows only the trailing 60
+// calendar days. Phase 'initial' slices the series to that 60-day window
+// for first paint so buildSegments + densifyForStep walk ~60 rows instead
+// of ~600, and the four-to-eight fill polygons each render ~30 vertices
+// instead of ~300. Idle callback flips the phase to 'full' and the brush
+// extends backward to 2022 — the visible "rangeslider track grew" effect
+// that signals the historical tail has loaded.
+const INITIAL_VISIBLE_DAYS = 60;
+
 export default function SpxVolFlip() {
   const chartRef = useRef(null);
   const { plotly: Plotly, error: plotlyError } = usePlotly();
@@ -251,8 +261,9 @@ export default function SpxVolFlip() {
   const [timeRange, setTimeRange] = useState(null);
   const [showCallWall, setShowCallWall] = useState(false);
   const [showPutWall, setShowPutWall] = useState(false);
+  const [renderPhase, setRenderPhase] = useState('initial');
 
-  const series = useMemo(() => {
+  const fullSeries = useMemo(() => {
     if (!data?.series) return [];
     return data.series
       .map((r) => ({
@@ -264,6 +275,30 @@ export default function SpxVolFlip() {
       }))
       .filter((r) => r.t && Number.isFinite(r.s) && Number.isFinite(r.f));
   }, [data]);
+
+  const series = useMemo(() => {
+    if (renderPhase === 'full' || fullSeries.length === 0) return fullSeries;
+    const lastIso = fullSeries[fullSeries.length - 1].t;
+    const cutoff = addDaysIso(lastIso, -INITIAL_VISIBLE_DAYS);
+    return fullSeries.filter((r) => r.t >= cutoff);
+  }, [fullSeries, renderPhase]);
+
+  // Schedule the phase flip on idle after first paint. requestIdleCallback
+  // fires when the browser has finished its post-paint work; the 1500 ms
+  // timeout guards against a permanently busy main thread. Only fires
+  // once per data load — re-firing on intraday refresh would feel like
+  // the chart shrinking back to the slim render.
+  useEffect(() => {
+    if (renderPhase !== 'initial') return undefined;
+    if (fullSeries.length === 0) return undefined;
+    if (typeof window === 'undefined') return undefined;
+    const idle = window.requestIdleCallback
+      ? (cb) => window.requestIdleCallback(cb, { timeout: 1500 })
+      : (cb) => setTimeout(cb, 100);
+    const cancel = window.cancelIdleCallback || clearTimeout;
+    const handle = idle(() => setRenderPhase('full'));
+    return () => cancel(handle);
+  }, [renderPhase, fullSeries.length]);
 
   const segments = useMemo(() => buildSegments(densifyForStep(series)), [series]);
 

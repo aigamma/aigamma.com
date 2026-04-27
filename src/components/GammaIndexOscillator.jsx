@@ -279,6 +279,19 @@ function tailStreak(values) {
   return n;
 }
 
+// Progressive-render phase. The series spans ~1900 trading days back to
+// 2017-01-03 but the default x-axis zoom shows only the trailing six
+// calendar months. Painting all 1900 segments + the right-margin KDE
+// ribbon on first mount forces Plotly through a wide line trace plus an
+// ~87k-evaluation Gaussian-KDE compute (n=1900 × 81-point grid) and the
+// ribbon's two filled silhouettes — combined ~200-400 ms blocking on a
+// typical mid-tier laptop. Phase 'initial' slices `series` to the
+// 6-month window and skips the ribbon entirely so first paint walks ~125
+// rows with zero KDE work. Idle callback flips to 'full' and the second
+// render does the KDE compute + ribbon paint + full-history segments off
+// the critical path.
+const INITIAL_VISIBLE_MONTHS = 6;
+
 export default function GammaIndexOscillator() {
   const chartRef = useRef(null);
   const { plotly: Plotly, error: plotlyError } = usePlotly();
@@ -291,13 +304,41 @@ export default function GammaIndexOscillator() {
   const { data, loading, error } = useGexHistory({});
   const mobile = useIsMobile();
   const [timeRange, setTimeRange] = useState(null);
+  const [renderPhase, setRenderPhase] = useState('initial');
 
-  const series = useMemo(() => {
+  const fullSeries = useMemo(() => {
     if (!data?.series) return [];
     return data.series
       .filter((r) => r.gamma_index != null && Number.isFinite(r.gamma_index))
       .map((r) => ({ t: r.trading_date, g: r.gamma_index }));
   }, [data]);
+
+  // Phase 'initial' returns only the trailing INITIAL_VISIBLE_MONTHS of
+  // fullSeries so segments + line traces render the visible-window data
+  // only. Phase 'full' returns fullSeries unsliced so the brush extends
+  // back to 2017.
+  const series = useMemo(() => {
+    if (renderPhase === 'full' || fullSeries.length === 0) return fullSeries;
+    const lastIso = fullSeries[fullSeries.length - 1].t;
+    const cutoff = addMonthsIso(lastIso, -INITIAL_VISIBLE_MONTHS);
+    return fullSeries.filter((r) => r.t >= cutoff);
+  }, [fullSeries, renderPhase]);
+
+  // Schedule the phase flip on idle after first paint. requestIdleCallback
+  // fires when the browser has finished its post-paint work; the 1500 ms
+  // timeout guards against a permanently busy main thread. Only fires
+  // once per data load.
+  useEffect(() => {
+    if (renderPhase !== 'initial') return undefined;
+    if (fullSeries.length === 0) return undefined;
+    if (typeof window === 'undefined') return undefined;
+    const idle = window.requestIdleCallback
+      ? (cb) => window.requestIdleCallback(cb, { timeout: 1500 })
+      : (cb) => setTimeout(cb, 100);
+    const cancel = window.cancelIdleCallback || clearTimeout;
+    const handle = idle(() => setRenderPhase('full'));
+    return () => cancel(handle);
+  }, [renderPhase, fullSeries.length]);
 
   const segments = useMemo(() => buildSegments(series), [series]);
 
@@ -307,9 +348,17 @@ export default function GammaIndexOscillator() {
   // oscillator's green-above / red-below regime coloring. Both halves
   // include y=0 as an endpoint so the fills meet on a shared vertex
   // and the green/red boundary reads flush without a gap or overlap.
+  // Skipped during the initial-render phase so the ~87k-evaluation KDE
+  // compute lands off the first-paint critical path; the ribbon
+  // materializes on the second pass when the phase flips to 'full'.
+  // The KDE itself reads from fullSeries (not the phase-aware series)
+  // because the ribbon represents the historical distribution, not the
+  // visible-window distribution — a 6-month KDE would lose the
+  // bimodality the ribbon is meant to expose.
   const ribbon = useMemo(() => {
-    if (series.length === 0) return null;
-    const values = series.map((r) => r.g);
+    if (renderPhase !== 'full') return null;
+    if (fullSeries.length === 0) return null;
+    const values = fullSeries.map((r) => r.g);
     const bw = scottBandwidth(values);
     const raw = computeKde(values, RIBBON_GRID, bw);
     let peak = 0;
@@ -319,7 +368,7 @@ export default function GammaIndexOscillator() {
     const above = normalized.filter((p) => p.y >= 0);
     const below = normalized.filter((p) => p.y <= 0);
     return { above, below, bandwidth: bw };
-  }, [series]);
+  }, [fullSeries, renderPhase]);
 
   const firstDate = series.length > 0 ? series[0].t : null;
   const lastDate = series.length > 0 ? series[series.length - 1].t : null;
@@ -332,16 +381,18 @@ export default function GammaIndexOscillator() {
 
   const activeRange = timeRange || defaultRange;
 
-  // Stats are computed over the full history (not the brushed window)
-  // so the percentile rank answers "where does today sit in the whole
-  // historical distribution" — the stable frame of reference that
-  // doesn't shift as the user drags the brush. The streak is also
-  // global because a regime run that started inside the brushed
-  // window is not a complete streak count.
+  // Stats are computed over the full history (not the brushed window or
+  // the progressive-render slice) so the percentile rank answers "where
+  // does today sit in the whole historical distribution" — the stable
+  // frame of reference that doesn't shift as the user drags the brush
+  // or as the renderPhase flips. The streak is also global because a
+  // regime run that started inside the brushed window is not a complete
+  // streak count. Reads from fullSeries (not the phase-aware series) so
+  // the badge always reflects the full backfill regardless of phase.
   const stats = useMemo(() => {
-    if (series.length === 0) return null;
-    const values = series.map((r) => r.g);
-    const latest = series[series.length - 1];
+    if (fullSeries.length === 0) return null;
+    const values = fullSeries.map((r) => r.g);
+    const latest = fullSeries[fullSeries.length - 1];
     const pct = percentileRank(values, latest.g);
     const streak = tailStreak(values);
     return {
@@ -351,7 +402,7 @@ export default function GammaIndexOscillator() {
       streak,
       sign: latest.g >= 0 ? 'pos' : 'neg',
     };
-  }, [series]);
+  }, [fullSeries]);
 
   useEffect(() => {
     if (!Plotly || !chartRef.current || series.length === 0 || !activeRange) return;

@@ -91,20 +91,49 @@ function computeMarkerSize(visibleCount, chartWidth, mobile) {
   return Math.max(minSize, Math.min(maxSize, scaled));
 }
 
+// Progressive-render phase. The series spans ~2500 trading days back to
+// 2017-01-03 but the default x-axis zoom shows only the trailing 90
+// calendar days. Painting all 2500 markers + the connecting price-line on
+// first mount forces Plotly to walk a 2500-vertex line trace and 2500
+// marker positions during initial layout — a 200-500 ms blocking compute
+// on a typical mid-tier laptop. Phase 'initial' slices the series to that
+// 90-day visible window (~62 trading rows), so the chart paints in
+// 30-80 ms; the idle callback then flips the phase to 'full' and
+// Plotly.react re-renders with the complete 8-year backfill so the brush
+// extends back to 2017.
+const INITIAL_VISIBLE_DAYS = 90;
+
 export default function DealerGammaRegime() {
   const chartRef = useRef(null);
   const { plotly: Plotly, error: plotlyError } = usePlotly();
   const { data, loading, error } = useGexHistory({});
   const mobile = useIsMobile();
   const [timeRange, setTimeRange] = useState(null);
+  const [renderPhase, setRenderPhase] = useState('initial');
 
+  // Phase 'initial' filters data.series to the trailing 90 calendar days
+  // before the bucketing pass; phase 'full' returns every row. The split
+  // and the date/close arrays are derived in a single pass after the
+  // filter so we don't do the regime bucketing twice. Boundary computed
+  // by walking back from the last row's trading_date so the cutoff lands
+  // on a real calendar date rather than a synthesized one.
   const { positive, negative, allDates, allCloses } = useMemo(() => {
-    if (!data?.series) return { positive: [], negative: [], allDates: [], allCloses: [] };
+    if (!data?.series || data.series.length === 0) {
+      return { positive: [], negative: [], allDates: [], allCloses: [] };
+    }
+    let rows = data.series;
+    if (renderPhase === 'initial') {
+      const lastRow = rows[rows.length - 1];
+      if (lastRow?.trading_date) {
+        const cutoff = addDaysIso(lastRow.trading_date, -INITIAL_VISIBLE_DAYS);
+        rows = rows.filter((r) => r.trading_date >= cutoff);
+      }
+    }
     const pos = [];
     const neg = [];
     const dates = [];
     const closes = [];
-    for (const r of data.series) {
+    for (const r of rows) {
       if (r.spx_close == null) continue;
       dates.push(r.trading_date);
       closes.push(r.spx_close);
@@ -115,7 +144,25 @@ export default function DealerGammaRegime() {
       }
     }
     return { positive: pos, negative: neg, allDates: dates, allCloses: closes };
-  }, [data]);
+  }, [data, renderPhase]);
+
+  // Schedule the phase flip on idle after first paint. requestIdleCallback
+  // fires when the browser has finished its post-paint work; the 1500 ms
+  // timeout guards against a permanently busy main thread. Only fires
+  // once per data load — re-firing on intraday refresh would feel like
+  // the chart shrinking back to the slim render after the user has
+  // already seen the full tail.
+  useEffect(() => {
+    if (renderPhase !== 'initial') return undefined;
+    if (!data?.series || data.series.length === 0) return undefined;
+    if (typeof window === 'undefined') return undefined;
+    const idle = window.requestIdleCallback
+      ? (cb) => window.requestIdleCallback(cb, { timeout: 1500 })
+      : (cb) => setTimeout(cb, 100);
+    const cancel = window.cancelIdleCallback || clearTimeout;
+    const handle = idle(() => setRenderPhase('full'));
+    return () => cancel(handle);
+  }, [renderPhase, data]);
 
   const firstDate = allDates[0];
   const lastDate = allDates[allDates.length - 1];
