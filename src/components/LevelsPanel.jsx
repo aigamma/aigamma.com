@@ -391,6 +391,17 @@ export default function LevelsPanel({ levels, spotPrice, prevClose, expirationMe
           accent="var(--accent-green)"
           sub={callWallSub}
         />
+        <Stat
+          label="P/C Ratio (Volume)"
+          value={formatRatio(levels.put_call_ratio_volume)}
+          accent="var(--accent-purple)"
+          sub={
+            levels.total_put_volume != null && levels.total_call_volume != null
+              ? `${formatGamma(levels.total_put_volume)}P / ${formatGamma(levels.total_call_volume)}C`
+              : null
+          }
+          className="levels-pc-volume--mobile"
+        />
       </div>
 
       <Divider />
@@ -435,7 +446,7 @@ export default function LevelsPanel({ levels, spotPrice, prevClose, expirationMe
               ? `${formatGamma(levels.total_put_volume)}P / ${formatGamma(levels.total_call_volume)}C`
               : null
           }
-          className={relevantMetric ? 'levels-pc-volume--desktop' : undefined}
+          className="levels-pc-volume--desktop"
         />
       </div>
 
@@ -501,17 +512,6 @@ export default function LevelsPanel({ levels, spotPrice, prevClose, expirationMe
               label="25Δ Call IV"
               value={formatPercent(relevantMetric.call_25d_iv)}
               sub={ivDeltaSub(relevantMetric.call_25d_iv, prevMetric?.call_25d_iv)}
-            />
-            <Stat
-              label="P/C Ratio (Volume)"
-              value={formatRatio(levels.put_call_ratio_volume)}
-              accent="var(--accent-purple)"
-              sub={
-                levels.total_put_volume != null && levels.total_call_volume != null
-                  ? `${formatGamma(levels.total_put_volume)}P / ${formatGamma(levels.total_call_volume)}C`
-                  : null
-              }
-              className="levels-pc-volume--mobile"
             />
           </div>
         </>

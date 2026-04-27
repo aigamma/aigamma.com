@@ -511,16 +511,23 @@ body {
 }
 
 /* P/C Ratio (Volume) renders twice in LevelsPanel — once at the end of
-   row 2 (with class --desktop) and once at the end of row 3 (with class
+   row 2 (with class --desktop) and once at the end of row 1 (with class
    --mobile). On desktop both rows use 5 columns and we want the original
-   row-2 placement, so the row-3 mobile copy is display:none here. The
+   row-2 placement, so the row-1 mobile copy is display:none here. The
    mirror @media (max-width: 768px) rule below flips the visibility:
-   the row-2 desktop copy hides and the row-3 mobile copy shows so the
-   2-column mobile grid lays out as row 2 = [Gamma][Dist] / [VRP][IV
-   Rank] (4 cells, no trailing empty slot) and row 3 = [Expiration]
-   [Expected Move] / [25Δ Put][ATM] / [25Δ Call][P/C Volume] (6 cells,
-   no trailing empty slot). With display:none the hidden Stat is removed
-   from the grid entirely so neither row leaves an empty placeholder. */
+   the row-2 desktop copy hides and the row-1 mobile copy shows so the
+   2-column mobile grid lays out as row 1 = [Overnight][Vol Flip] / [SPX]
+   [Put Wall] / [Call Wall][P/C Volume] (6 cells, no trailing empty slot)
+   and row 2 = [Gamma][Dist] / [VRP][IV Rank] (4 cells, no trailing empty
+   slot). With display:none the hidden Stat is removed from the grid
+   entirely so neither row leaves an empty placeholder. Row-1 placement
+   (right of Call Wall, under Put Wall, above Dist from Risk Off) is
+   load-bearing: P/C Ratio (Volume) is a key sentiment scalar a reader
+   should see at a glance, and the previous row-2 placement put the cell
+   below the fold on phone-class viewports — the mobile reader had to
+   scroll to reach it. Promoting the cell into row 1 means it lands
+   above the fold alongside the price-levels grid and the customer sees
+   the full sentiment reading without scrolling. */
 .levels-pc-volume--mobile {
   display: none;
 }
