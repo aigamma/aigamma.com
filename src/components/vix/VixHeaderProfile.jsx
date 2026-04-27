@@ -21,7 +21,12 @@ import {
 //   7. VVIX — vol of vol + 1y percentile rank
 //   8. SKEW — Cboe SKEW index, color thresholds at 130/140/150
 //   9. SDEX — Nations SkewDex
-//  10. Contango — VIX3M / VIX ratio (>1 = contango, <1 = backwardation)
+//  10. Term Slope — VIX3M / VIX rendered as a binary regime label
+//      (Contango / Backwardation) plus percent spread |ratio − 1| × 100%.
+//      The earlier 3-decimal ratio gave false precision to a metric whose
+//      load-bearing read is "is the curve sloping up or down" — the regime
+//      word + a single integer percent communicates the same information
+//      without inviting the reader to over-parse the second decimal.
 //  11. Curvature — (VIX9D + VIX3M)/2 − VIX
 
 function PillCell({ label, value, sub, tone = 'neutral', title }) {
@@ -193,17 +198,14 @@ export default function VixHeaderProfile({ data }) {
           title="Nations SkewDex — alternative skewness construction. Cross-validates the Cboe SKEW reading via a different methodology."
         />
         <PillCell
-          label="Contango"
-          value={cells.contango != null ? cells.contango.toFixed(3) : '—'}
-          sub={cells.contango != null
-            ? cells.contango > 1.0 ? 'VIX3M > VIX' : 'VIX3M < VIX (back)'
+          label="Term Slope"
+          value={cells.contango != null
+            ? `${cells.contango >= 1 ? 'Contango' : 'Backwardation'} (${Math.round(Math.abs(cells.contango - 1) * 100)}%)`
             : '—'}
           tone={cells.contango != null
-            ? cells.contango > 1.05 ? 'green'
-            : cells.contango < 1.0 ? 'coral'
-            : 'amber'
+            ? cells.contango >= 1 ? 'green' : 'coral'
             : 'neutral'}
-          title="VIX3M ÷ VIX. >1 = upward-sloping (contango, the normal calm regime). <1 = backwardation (front > back, urgent pricing of near-term vol)."
+          title="VIX3M ÷ VIX. Above 1.0 = contango (curve sloping up, calm regime). Below 1.0 = backwardation (curve sloping down, urgent near-term vol). The percent reads as |ratio − 1| × 100%."
         />
         <PillCell
           label="Curvature"
