@@ -95,6 +95,7 @@ export default function App() {
             endpoint="/api/stock-performance"
             title="Stock Performance"
             noun="stock performance"
+            labelField="symbol"
           />
         </ErrorBoundary>
       </section>

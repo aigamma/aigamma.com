@@ -69,7 +69,13 @@ function formatDateLabel(iso) {
 // autorange='reversed' on the y-axis flips Plotly's default bottom-to-
 // top ordering so the best-performing sector appears at the top of the
 // chart, matching the reference image's layout.
-function buildPanelTraces(rows) {
+// labelField selects which row property feeds the y-axis category text.
+// Sectors use 'name' (full GICS sector name like "Technology") so the
+// chart reads at a glance; the /stocks page passes 'symbol' so the
+// y-axis shows tickers ("NVDA", "TSLA") rather than redundant "Nvidia
+// Inc" / "Tesla Inc" company names — vol traders read tickers, and
+// the full company name still appears in hover via customdata[2].
+function buildPanelTraces(rows, labelField = 'name') {
   if (!rows || rows.length === 0) return { traces: [], names: [] };
 
   const values = rows.map((r) => r.value);
@@ -82,13 +88,13 @@ function buildPanelTraces(rows) {
   // renders tick text through the same SVG-text path that supports a
   // subset of HTML — <b>, <i>, <span style="...">, etc. — so the colored
   // markup carries through correctly. Each panel computes its own colored
-  // labels because the same sector can be green in one horizon and red
+  // labels because the same row can be green in one horizon and red
   // in another (e.g. XLE leads on 1W and trails on 1M in the current
   // regime), and Plotly treats each unique string as its own categorical
   // value within the chart so cross-panel sharing is not a concern.
   const coloredNames = rows.map((r) => {
     const color = r.value >= 0 ? POSITIVE_INK : NEGATIVE_INK;
-    return `<span style="color:${color}">${r.name}</span>`;
+    return `<span style="color:${color}">${r[labelField]}</span>`;
   });
 
   const trace = {
@@ -122,7 +128,7 @@ function buildPanelTraces(rows) {
   return { traces: [trace], names: rows.map((r) => r.name) };
 }
 
-function buildPanelLayout(rows, panelTitle) {
+function buildPanelLayout(rows, panelTitle, labelField = 'name') {
   if (!rows || rows.length === 0) return null;
 
   const values = rows.map((r) => r.value);
@@ -132,6 +138,20 @@ function buildPanelLayout(rows, panelTitle) {
   // common baseline) and runs out to maxMag plus 25% padding so the bar-
   // tip ±N.NN labels never bump up against the plot's right edge.
   const xRange = [0, maxMag * 1.25];
+
+  // Left margin sized from the longest y-axis category label so short-
+  // ticker sets (3-5 chars on the /stocks page) don't waste 100+ pixels
+  // of dead chrome on the left, and long sector names ("Communication
+  // Services" at 21 chars) still get enough room to render without
+  // overlapping the bars. The 7px-per-char heuristic plus 30px slack is
+  // calibrated against the 12px sans-serif tick font: sectors land at
+  // ~177px (matches the original 170px hardcode within rounding), stock
+  // tickers land at ~65px which gives the bars a much wider plot area.
+  const longestLabel = rows.reduce(
+    (acc, r) => Math.max(acc, String(r[labelField] ?? '').length),
+    0,
+  );
+  const leftMargin = Math.max(60, Math.min(190, longestLabel * 7 + 30));
 
   return plotly2DChartLayout({
     title: {
@@ -172,26 +192,26 @@ function buildPanelLayout(rows, panelTitle) {
         size: 12,
       },
     }),
-    margin: { t: 44, r: 70, b: 40, l: 170 },
+    margin: { t: 44, r: 70, b: 40, l: leftMargin },
     hovermode: 'closest',
     bargap: 0.25,
   });
 }
 
-function PerformancePanel({ rows, title }) {
+function PerformancePanel({ rows, title, labelField }) {
   const chartRef = useRef(null);
   const { plotly: Plotly, error: plotlyError } = usePlotly();
 
   useEffect(() => {
     if (!Plotly || !chartRef.current || !rows) return;
-    const { traces } = buildPanelTraces(rows);
-    const layout = buildPanelLayout(rows, title);
+    const { traces } = buildPanelTraces(rows, labelField);
+    const layout = buildPanelLayout(rows, title, labelField);
     if (!layout) return;
     Plotly.react(chartRef.current, traces, layout, {
       displayModeBar: false,
       responsive: true,
     });
-  }, [Plotly, rows, title]);
+  }, [Plotly, rows, title, labelField]);
 
   if (plotlyError) {
     return (
@@ -224,10 +244,20 @@ function PerformancePanel({ rows, title }) {
 // rendering. Defaulting to 'sector performance' keeps the original
 // /rotations placeholder text identical to its pre-generalization
 // behavior.
+// labelField selects which row property feeds the y-axis category text:
+// 'name' (default) shows full sector / company names, 'symbol' shows the
+// ticker. The /stocks page passes 'symbol' so the eleven bars read as
+// "NVDA / TSLA / INTC / AMD / AMZN / AAPL / MU / MSFT / MSTR / META /
+// PLTR" (the way a vol trader scans them) rather than "Nvidia / Tesla
+// / Intel / AMD / Amazon / ..." which adds visual noise without
+// information for an audience that already reads tickers natively. The
+// hover still surfaces the full company name as secondary context, so
+// no information is lost.
 export default function SectorPerformanceBars({
   endpoint = '/api/sector-performance',
   title = 'Sector Performance',
   noun = 'sector performance',
+  labelField = 'name',
 } = {}) {
   const [payload, setPayload] = useState(null);
   const [fetchError, setFetchError] = useState(null);
@@ -290,9 +320,9 @@ export default function SectorPerformanceBars({
           Through {formatDateLabel(payload.asOf)}
         </span>
       </div>
-      <PerformancePanel rows={panels['1d']} title="1 DAY PERFORMANCE" />
-      <PerformancePanel rows={panels['1w']} title="1 WEEK PERFORMANCE" />
-      <PerformancePanel rows={panels['1m']} title="1 MONTH PERFORMANCE" />
+      <PerformancePanel rows={panels['1d']} title="1 DAY PERFORMANCE" labelField={labelField} />
+      <PerformancePanel rows={panels['1w']} title="1 WEEK PERFORMANCE" labelField={labelField} />
+      <PerformancePanel rows={panels['1m']} title="1 MONTH PERFORMANCE" labelField={labelField} />
     </div>
   );
 }
