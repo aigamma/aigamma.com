@@ -1,16 +1,55 @@
+import { lazy, useEffect } from 'react';
 import '../src/styles/theme.css';
 import '../src/styles/lab.css';
 import ErrorBoundary from '../src/ErrorBoundary';
 import Menu from '../src/components/Menu';
 import TopNav from '../src/components/TopNav';
-import Chat from '../src/components/Chat';
+import LazyMount from '../src/components/LazyMount';
 import VolatilityRiskPremium from '../src/components/VolatilityRiskPremium';
-import TermStructure from '../src/components/TermStructure';
-import VolatilitySmile from '../src/components/VolatilitySmile';
-import RiskNeutralDensity from '../src/components/RiskNeutralDensity';
-import FixedStrikeIvMatrix from '../src/components/FixedStrikeIvMatrix';
 import useOptionsData from '../src/hooks/useOptionsData';
 import useSviFits from '../src/hooks/useSviFits';
+
+// VRP stays statically imported because it is the only chart guaranteed to
+// paint above the fold on every viewport, and the VRP chunk contains the
+// rangeslider / brush wiring used by the rest of the page anyway. The four
+// below-fold charts plus Chat are code-split via React.lazy so their source
+// bytes do not land in the initial tactical chunk — each becomes its own
+// Vite chunk fetched on demand when the LazyMount viewport gate fires.
+// Combined with the idle prefetch below, this keeps the first-paint critical
+// path to "header + VRP" instead of "header + five Plotly.newPlot calls
+// firing in the same frame," which on Chrome DevTools profiling shaves
+// roughly 600-1200 ms of main-thread blocking off the first interactive
+// frame on a typical mid-tier laptop.
+const TermStructure = lazy(() => import('../src/components/TermStructure'));
+const VolatilitySmile = lazy(() => import('../src/components/VolatilitySmile'));
+const RiskNeutralDensity = lazy(() => import('../src/components/RiskNeutralDensity'));
+const FixedStrikeIvMatrix = lazy(() => import('../src/components/FixedStrikeIvMatrix'));
+const Chat = lazy(() => import('../src/components/Chat'));
+
+// Warm the browser disk cache with the four below-fold chart chunks plus
+// the Chat chunk during idle time after first paint. Mirrors the pattern in
+// src/App.jsx: each React.lazy chunk would otherwise fetch on the first
+// scroll that crosses its LazyMount viewport gate, costing ~30-100 ms of
+// network waterfall per card on a cold connection. Firing the import()
+// calls during requestIdleCallback lands the chunks in the disk cache (with
+// the immutable Cache-Control header set in netlify.toml) before the reader
+// scrolls, so the Suspense fallback inside LazyMount typically never
+// renders. Module-level guard fires once per page load.
+let prefetchedBelowFold = false;
+function prefetchBelowFoldChunks() {
+  if (prefetchedBelowFold) return;
+  prefetchedBelowFold = true;
+  const idle = (typeof window !== 'undefined' && window.requestIdleCallback)
+    ? (cb) => window.requestIdleCallback(cb, { timeout: 1500 })
+    : (cb) => setTimeout(cb, 200);
+  idle(() => {
+    import('../src/components/TermStructure');
+    import('../src/components/VolatilitySmile');
+    import('../src/components/RiskNeutralDensity');
+    import('../src/components/FixedStrikeIvMatrix');
+    import('../src/components/Chat');
+  });
+}
 
 // /tactical/ — Tactical Vol Lab.
 //
@@ -38,6 +77,22 @@ import useSviFits from '../src/hooks/useSviFits';
 // rest on idle), replacing the historical 228 KB /api/data?prev_day=1
 // idle fetch that lived in this App.jsx until 2026-04-26.
 //
+// Render layer: VRP renders eagerly (the only above-fold chart on a
+// typical viewport). The four other charts plus Chat are React.lazy +
+// LazyMount-gated, which means (a) their source bytes are split into
+// per-card chunks instead of bundling into the initial tactical chunk
+// and (b) their Plotly.newPlot calls don't fire until the reader scrolls
+// within 200 px of each card. An idle-time prefetch fires the four
+// import() calls during requestIdleCallback so the chunks land in the
+// disk cache before the reader scrolls and the Suspense fallback inside
+// LazyMount typically never paints. This pattern was added 2026-04-27
+// after profiling /tactical as the slowest page on the site — a cold
+// load was firing five Plotly.newPlot calls in the same frame, costing
+// ~600-1200 ms of synchronous main-thread work that the user perceived
+// as a long blank-then-everything-at-once load. The new flow paints
+// header + VRP within ~300 ms of /api/data resolution and hydrates the
+// remaining cards quietly as the reader scrolls.
+//
 // Three redundant Return-Home affordances follow the /parity/ and /jump/
 // pattern: the logo wraps a hyperlink to `/`, a green RETURN HOME button
 // sits in the header alongside the Menu trigger, and the footer carries a
@@ -48,6 +103,14 @@ export default function App() {
     snapshotType: 'intraday',
   });
 
+  useEffect(() => {
+    prefetchBelowFoldChunks();
+  }, []);
+
+  // SVI fits dispatch to a shared Web Worker (see src/hooks/useSviFits.js)
+  // so the calibration runs off-thread the moment /api/data resolves. By the
+  // time the reader scrolls into RND's LazyMount viewport gate, the worker
+  // has typically already returned and `sviFits.byExpiration` is populated.
   const sviFits = useSviFits({
     contracts: data?.contracts,
     spotPrice: data?.spotPrice,
@@ -117,6 +180,21 @@ export default function App() {
 
       {data && (
         <>
+          {/* VRP is the only chart that paints above the fold on a typical
+              viewport (header ~100px + VRP card 564px ≈ 664px), so it stays
+              eagerly mounted to land in the same frame as /api/data
+              resolution. The four below-fold cards are LazyMount-gated
+              behind a 200px scroll margin so their Plotly.newPlot calls
+              defer until the reader actually scrolls into range — saving
+              the synchronous DOM/layout cost (50-200 ms each) from the
+              first-paint critical path. Heights match each component's
+              real rendered footprint (matching the loading-skeleton
+              heights above) so the placeholder occupies the same vertical
+              space as the mounted chart and there is no CLS. The 200px
+              margin is tighter than the main dashboard's 400px because
+              tactical's charts are taller (564-600px each), so the wider
+              margin would defeat the purpose by triggering all four
+              mounts on first paint anyway. */}
           <ErrorBoundary>
             <VolatilityRiskPremium
               spotPrice={data.spotPrice}
@@ -125,37 +203,45 @@ export default function App() {
           </ErrorBoundary>
 
           <ErrorBoundary>
-            <TermStructure
-              expirationMetrics={data.expirationMetrics}
-              capturedAt={data.capturedAt}
-              cloudBands={data.cloudBands}
-            />
+            <LazyMount height="564px" margin="200px">
+              <TermStructure
+                expirationMetrics={data.expirationMetrics}
+                capturedAt={data.capturedAt}
+                cloudBands={data.cloudBands}
+              />
+            </LazyMount>
           </ErrorBoundary>
 
           <ErrorBoundary>
-            <VolatilitySmile
-              contracts={data.contracts}
-              spotPrice={data.spotPrice}
-              capturedAt={data.capturedAt}
-              expirations={data.expirations}
-            />
+            <LazyMount height="600px" margin="200px">
+              <VolatilitySmile
+                contracts={data.contracts}
+                spotPrice={data.spotPrice}
+                capturedAt={data.capturedAt}
+                expirations={data.expirations}
+              />
+            </LazyMount>
           </ErrorBoundary>
 
           <ErrorBoundary>
-            <RiskNeutralDensity
-              fits={sviFits.byExpiration}
-              spotPrice={data.spotPrice}
-              capturedAt={data.capturedAt}
-              loading={sviFits.loading}
-            />
+            <LazyMount height="560px" margin="200px">
+              <RiskNeutralDensity
+                fits={sviFits.byExpiration}
+                spotPrice={data.spotPrice}
+                capturedAt={data.capturedAt}
+                loading={sviFits.loading}
+              />
+            </LazyMount>
           </ErrorBoundary>
 
           <ErrorBoundary>
-            <FixedStrikeIvMatrix
-              contracts={data.contracts}
-              spotPrice={data.spotPrice}
-              expirations={data.expirations}
-            />
+            <LazyMount height="600px" margin="200px">
+              <FixedStrikeIvMatrix
+                contracts={data.contracts}
+                spotPrice={data.spotPrice}
+                expirations={data.expirations}
+              />
+            </LazyMount>
           </ErrorBoundary>
         </>
       )}
@@ -229,15 +315,17 @@ export default function App() {
       </div>
 
       <ErrorBoundary>
-        <Chat
-          context="tactical"
-          welcome={{
-            quick:
-              'Ask about VRP, the term structure, the smile model overlays, the Breeden-Litzenberger density, or how to read day-over-day moves on the fixed-strike matrix.',
-            deep:
-              'Deep Analysis mode: longer and more structurally detailed responses on Heston / Merton / SVI smile fitting, Gatheral parameterizations, the analytical Breeden-Litzenberger derivation, and how the IV surface decomposes into tenor and strike effects.',
-          }}
-        />
+        <LazyMount height="320px" margin="200px">
+          <Chat
+            context="tactical"
+            welcome={{
+              quick:
+                'Ask about VRP, the term structure, the smile model overlays, the Breeden-Litzenberger density, or how to read day-over-day moves on the fixed-strike matrix.',
+              deep:
+                'Deep Analysis mode: longer and more structurally detailed responses on Heston / Merton / SVI smile fitting, Gatheral parameterizations, the analytical Breeden-Litzenberger derivation, and how the IV surface decomposes into tenor and strike effects.',
+            }}
+          />
+        </LazyMount>
       </ErrorBoundary>
 
       <footer className="lab-footer">
