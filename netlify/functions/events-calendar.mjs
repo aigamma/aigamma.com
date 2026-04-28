@@ -70,6 +70,19 @@
 const FF_URL = 'https://nfs.faireconomy.media/ff_calendar_thisweek.xml';
 const FETCH_TIMEOUT_MS = 8000;
 
+// USD-only by default. The /beta/ events listener is an SPX-positioning
+// surface, and the rest-of-world rows in the FF feed are mostly noise
+// for the reader: ~70% of the weekly XML is non-USD content the page
+// would just hide on the client side. Filtering at the server cuts the
+// wire payload from ~12 KB to ~3-4 KB and lets the client simplify
+// (no country state machine, no per-event country gate on the implied-
+// move resolver). The query-param hatch lets a future caller request
+// other currencies — e.g. /api/events-calendar?countries=EUR,GBP — but
+// the default keeps the page lean. Empty / unrecognized values fall
+// back to the default set rather than returning everything, so a
+// malformed URL doesn't accidentally re-introduce the noise.
+const DEFAULT_COUNTRIES = ['USD'];
+
 // Spoof a real browser User-Agent. The Cloudflare layer in front of
 // faireconomy.media will serve the rate-limited HTML to obvious bot
 // UAs (curl/* and friends). A standard Chrome UA gets the XML.
@@ -80,7 +93,19 @@ const FETCH_HEADERS = {
   'Accept': 'application/xml, text/xml, */*;q=0.8',
 };
 
-export default async function handler() {
+export default async function handler(request) {
+  const url = new URL(request.url);
+  const requestedCountries = url.searchParams.get('countries');
+  let countries = DEFAULT_COUNTRIES;
+  if (requestedCountries) {
+    const parsed = requestedCountries
+      .split(',')
+      .map((s) => s.trim().toUpperCase())
+      .filter(Boolean);
+    if (parsed.length > 0) countries = parsed;
+  }
+  const countrySet = new Set(countries);
+
   let xml;
   try {
     const res = await fetch(FF_URL, {
@@ -104,7 +129,7 @@ export default async function handler() {
 
   let events;
   try {
-    events = parseEvents(xml);
+    events = parseEvents(xml).filter((e) => countrySet.has(e.country));
   } catch (err) {
     return jsonError(500, `XML parse error: ${err.message || String(err)}`);
   }
@@ -113,6 +138,7 @@ export default async function handler() {
     fetchedAt: new Date().toISOString(),
     source: 'forexfactory',
     sourceUrl: FF_URL,
+    countries,
     events,
   };
 

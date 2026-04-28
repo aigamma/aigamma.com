@@ -1,4 +1,4 @@
-// Slot B — Economic Events Listener (PoC)
+// Slot B — Economic Events Listener (PoC, US-only)
 //
 // First experimental tenant of the /beta/ shell after the SlotA-graduates
 // rotation cleared the lab. The earlier draft of this slot embedded a
@@ -7,69 +7,92 @@
 // widget rendered as a near-full-viewport white-screen funnel back to
 // tradingview.com instead of usable content. This rewrite cuts the
 // embed entirely and rebuilds the surface around the FF feed itself
-// — the function /api/events-calendar (see netlify/functions/events-
-// calendar.mjs) is now the only data source, and every byte of the
-// rendered UI comes from FF rows directly.
+// joined with the platform's own SPX implied-volatility data, so a
+// reader sees both "what's coming" and "what's the SPX vol surface
+// pricing for it" on one page.
+//
+// USD-only by design: this is an SPX-positioning surface, so the FF
+// proxy filters non-USD rows out at the server (see
+// netlify/functions/events-calendar.mjs). The client therefore has
+// no country state machine, no country pills, no country column in
+// the schedule, and the implied-move resolver runs unconditionally
+// on every event rather than gating on `e.country === 'USD'`.
+//
+// Two parallel data fetches drive the page:
+//
+//   1. /api/events-calendar — the FF weekly XML proxy. Polled every
+//      10 min; returns the USD subset (~30 events / week) with title /
+//      impact / forecast / previous / dateTime per row.
+//
+//   2. /api/data?skip_contracts=1 — the SPX intraday snapshot endpoint
+//      (the same wire path the main dashboard reads). With the
+//      contracts payload skipped this fetch is small (~6 KB) and
+//      delivers spotPrice + capturedAt + expirationMetrics (per-
+//      expiration ATM IV / 25-delta put IV / 25-delta call IV). For
+//      each upcoming event the page resolves the next expiration
+//      AT-OR-AFTER the event date, computes the IV-implied move
+//      (move = spot × atm_iv × √(DTE/365)), and surfaces it inline on
+//      the row, in the hero, and in a Plotly bar chart that maps each
+//      upcoming event to its priced-in dollar / percent move.
 //
 // Page composition top-to-bottom:
 //
 //   StickyHeroBar ─ a slim compact strip that fixes to the top of the
-//     viewport when the main hero card has scrolled out of view, so
-//     the next-event countdown stays visible while the reader scrolls
-//     down through the day-by-day schedule. IntersectionObserver-driven
-//     so it only renders when needed; collapses to a single row of
-//     family dot + title + countdown + impact chip.
+//     viewport when the main hero card has scrolled out of view.
 //
-//   FilterBar ─ country / impact / family pills the reader toggles
-//     to scope the rest of the page, plus a free-text search input
-//     for matching against event titles, plus toggles for "Hide past"
-//     and "Notify me 5m before next high-impact event." USD +
-//     medium-and-high impact is the default scope (this is an SPX-
-//     positioning surface) but the reader can broaden in one click.
+//   FilterBar ─ impact pills, free-text search, "Hide past" and
+//     "Notify" toggles. (Country pills were removed when the surface
+//     committed to USD-only.)
 //
-//   HeroNextEvent ─ big featured card for the next event (or family
-//     of co-scheduled events) inside the active filter scope. The
-//     card carries a live HH:MM:SS countdown that ticks every second,
-//     the family badge, the forecast / previous values, and an
-//     urgency tint that ramps coral as the event approaches. The
-//     hero is the "listener" cue — the page IS reactive to FF and
-//     the countdown is the visible proof.
+//   HeroNextEvent ─ big featured card with countdown, family badge,
+//     forecast/previous, and the new "Implied SPX move at next exp"
+//     line (±$ and %, plus DTE).
 //
-//   StatusBar ─ "Listening to Forex Factory · fetched N minutes ago
-//     · next refresh in M minutes" with a manual refresh button.
-//     Re-fetch fires on a 10-minute interval (matching the function's
-//     1-hour edge cache; the page polls more often than the function
-//     re-fetches upstream so the "last published actual" gets
-//     surfaced as soon as a future actuals feed lands).
+//   StatusBar ─ "Listening to Forex Factory" pulsing-dot status.
 //
-//   Totals ─ summary count of events inside the active filter scope.
+//   Totals ─ High / Medium / Low / Upcoming counts (the redundant
+//     "In scope" and "Past" tiles were dropped per Eric's audit;
+//     scope.length is derivable from the impact triple, and the
+//     past count is exposed both via the Hide-past toggle and the
+//     fading on past-event rows).
+//
+//   ImpliedMoveChart ─ Plotly bar chart, one bar per upcoming
+//     high+medium-impact USD event in scope. Y axis is implied move
+//     in % (translated to $ in hover), X axis is the chronologic
+//     event sequence labeled with day + time. Bars are colored by
+//     macro family (FOMC amber, CPI coral, NFP green, etc.) so the
+//     reader sees both magnitude and macro identity at a glance. The
+//     chart is the first explicit visualization on a page that was
+//     conspicuously chart-free; it's the page's quantitative
+//     centerpiece.
 //
 //   SpotlightStrip ─ one card per macro family with at least one
-//     event in scope this week, sorted chronologically.
+//     event in scope this week.
 //
-//   DaySchedule ─ chronological timeline grouped by date. Each date
-//     header carries day name, full date, scope-filtered event count,
-//     and an impact-count chip cluster (High / Medium / Low /
-//     Holiday) so a reader sees at a glance which day of the week
-//     carries the heaviest catalyst weight. Each event row is
-//     click-to-expand: the inline detail panel exposes the FF source
-//     URL, an "Add to calendar (.ics)" download, a "Notify me 5m
-//     before" button, and a one-line forecast-vs-previous read.
+//   DaySchedule ─ chronological timeline grouped by date, per-day
+//     impact-count chips, click-to-expand event rows with FF link /
+//     .ics download / forecast-vs-previous interpretation.
 
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import usePlotly from '../../src/hooks/usePlotly';
+import {
+  PLOTLY_BASE_LAYOUT_2D,
+  PLOTLY_COLORS,
+  PLOTLY_FONTS,
+  plotlyAxis,
+} from '../../src/lib/plotlyTheme';
 
 export const slotName = 'Economic Events';
 
-// Big Eight event-name patterns we want to spotlight for SPX traders.
 const SPOTLIGHT_PATTERNS = [
-  { key: 'FOMC',      label: 'FOMC',      rx: /\bFOMC\b|Federal Funds Rate/i,        color: 'amber'  },
-  { key: 'CPI',       label: 'CPI',       rx: /\bCPI\b|Consumer Price/i,              color: 'coral'  },
-  { key: 'NFP',       label: 'NFP',       rx: /Non[- ]?Farm Employment Change|^NFP$/i, color: 'green'  },
-  { key: 'GDP',       label: 'GDP',       rx: /\bGDP\b/i,                              color: 'blue'   },
-  { key: 'PCE',       label: 'PCE',       rx: /\bPCE\b/i,                              color: 'purple' },
-  { key: 'PPI',       label: 'PPI',       rx: /\bPPI\b/i,                              color: 'amber'  },
-  { key: 'ISM',       label: 'ISM',       rx: /\bISM\b/i,                              color: 'cyan'   },
-  { key: 'JOBS',      label: 'JOBS',      rx: /Unemployment Claims|Employment Change|Job Openings/i, color: 'green' },
+  { key: 'FOMC',  label: 'FOMC',  rx: /\bFOMC\b|Federal Funds Rate/i,        color: 'amber',  hex: '#f1c40f' },
+  { key: 'CPI',   label: 'CPI',   rx: /\bCPI\b|Consumer Price/i,              color: 'coral',  hex: '#e74c3c' },
+  { key: 'NFP',   label: 'NFP',   rx: /Non[- ]?Farm Employment Change|^NFP$/i, color: 'green',  hex: '#2ecc71' },
+  { key: 'GDP',   label: 'GDP',   rx: /\bGDP\b/i,                              color: 'blue',   hex: '#4a9eff' },
+  { key: 'PCE',   label: 'PCE',   rx: /\bPCE\b/i,                              color: 'purple', hex: '#BF7FFF' },
+  { key: 'PPI',   label: 'PPI',   rx: /\bPPI\b/i,                              color: 'amber',  hex: '#f1c40f' },
+  { key: 'ISM',   label: 'ISM',   rx: /\bISM\b/i,                              color: 'cyan',   hex: '#1abc9c' },
+  { key: 'JOBS',  label: 'JOBS',  rx: /Unemployment Claims|Employment Change|Job Openings/i, color: 'green', hex: '#2ecc71' },
 ];
 
 function classifySpotlight(title) {
@@ -80,26 +103,28 @@ function classifySpotlight(title) {
   return null;
 }
 
-const ALL_COUNTRIES = ['USD', 'EUR', 'GBP', 'JPY', 'AUD', 'CAD', 'NZD', 'CHF', 'CNY'];
-const DEFAULT_COUNTRIES = ['USD'];
+// Default-by-impact bar color for events that don't match a macro family.
+function impactHex(impact) {
+  if (impact === 'High') return '#e74c3c';
+  if (impact === 'Medium') return '#f1c40f';
+  if (impact === 'Holiday') return '#BF7FFF';
+  return '#8a8f9c';
+}
+
 const ALL_IMPACTS = ['High', 'Medium', 'Low', 'Holiday'];
 const DEFAULT_IMPACTS = ['High', 'Medium'];
 
-const POLL_MS = 10 * 60 * 1000;       // 10 min
-const CLOCK_TICK_MS = 1000;           // 1 s
-const NOTIFY_LEAD_MS = 5 * 60 * 1000; // notify 5 min before next high-impact
+const POLL_MS = 10 * 60 * 1000;
+const CLOCK_TICK_MS = 1000;
+const NOTIFY_LEAD_MS = 5 * 60 * 1000;
 
-// Stable identifier for an event row — used as the key for the
-// "currently expanded row" state. The dateTime + title pair is unique
-// in practice (FF doesn't list the same event twice at the same
-// minute), and falls back gracefully if either field is missing.
 function eventId(e) {
   return `${e.dateTime || ''}::${e.title || ''}`;
 }
 
 export default function SlotB() {
   const [feed, setFeed] = useState({ status: 'loading', data: null, error: null, fetchedAt: null });
-  const [countries, setCountries] = useState(new Set(DEFAULT_COUNTRIES));
+  const [iv, setIv] = useState({ status: 'loading', data: null });
   const [impacts, setImpacts] = useState(new Set(DEFAULT_IMPACTS));
   const [searchQuery, setSearchQuery] = useState('');
   const [hidePast, setHidePast] = useState(false);
@@ -111,6 +136,7 @@ export default function SlotB() {
   const heroRef = useRef(null);
   const [heroVisible, setHeroVisible] = useState(true);
 
+  // FF feed fetch + 10-minute poll + visibility refresh.
   const fetchFeed = useCallback(async (signal) => {
     try {
       const res = await fetch('/api/events-calendar', { signal, headers: { Accept: 'application/json' } });
@@ -129,15 +155,38 @@ export default function SlotB() {
     }
   }, []);
 
-  // Initial fetch + 10-minute poll + refresh on tab focus.
+  // SPX intraday snapshot fetch — skip_contracts=1 keeps the wire
+  // small (we only need spotPrice + capturedAt + expirationMetrics).
+  // Refreshed on the same 10-minute cadence as the FF feed; the main
+  // dashboard's underlying ingest cadence is 5-minute, so a 10-minute
+  // poll here picks up at most one ingest cycle of staleness.
+  const fetchIv = useCallback(async (signal) => {
+    try {
+      const res = await fetch('/api/data?skip_contracts=1', { signal, headers: { Accept: 'application/json' } });
+      if (!res.ok) throw new Error(`HTTP ${res.status}`);
+      const json = await res.json();
+      setIv({ status: 'ready', data: json });
+    } catch (err) {
+      if (err?.name === 'AbortError') return;
+      setIv((cur) => ({ status: cur.data ? 'ready' : 'error', data: cur.data }));
+    }
+  }, []);
+
   useEffect(() => {
     const ac = new AbortController();
     fetchFeed(ac.signal);
-    const interval = setInterval(() => fetchFeed(ac.signal), POLL_MS);
+    fetchIv(ac.signal);
+    const interval = setInterval(() => {
+      fetchFeed(ac.signal);
+      fetchIv(ac.signal);
+    }, POLL_MS);
     const onVis = () => {
       if (document.visibilityState === 'visible') {
         const idleFor = Date.now() - lastFetchRef.current;
-        if (idleFor > 5 * 60 * 1000) fetchFeed(ac.signal);
+        if (idleFor > 5 * 60 * 1000) {
+          fetchFeed(ac.signal);
+          fetchIv(ac.signal);
+        }
       }
     };
     document.addEventListener('visibilitychange', onVis);
@@ -146,9 +195,9 @@ export default function SlotB() {
       clearInterval(interval);
       document.removeEventListener('visibilitychange', onVis);
     };
-  }, [fetchFeed]);
+  }, [fetchFeed, fetchIv]);
 
-  // Clock tick — drives the live hero countdown.
+  // Clock tick.
   useEffect(() => {
     let id = null;
     const start = () => {
@@ -170,20 +219,13 @@ export default function SlotB() {
     };
   }, []);
 
-  // Mount-time check on the Notification permission. Browsers without
-  // the API (older Safari iOS) silently disable the toggle.
   useEffect(() => {
     if (typeof window === 'undefined' || !('Notification' in window)) return;
     if (Notification.permission === 'granted') setNotifyEnabled(true);
     if (Notification.permission === 'denied') setNotifyDenied(true);
   }, []);
 
-  // IntersectionObserver wired to the hero card. The sticky compact
-  // bar at the top of the viewport renders only when the main hero
-  // has scrolled out of view, so the reader scrolling down through
-  // the day schedule still sees the next-event countdown without the
-  // header chrome competing with the schedule for vertical space when
-  // the hero is already on-screen.
+  // IntersectionObserver for sticky hero bar.
   useEffect(() => {
     const el = heroRef.current;
     if (!el || typeof IntersectionObserver === 'undefined') return;
@@ -195,41 +237,69 @@ export default function SlotB() {
     return () => obs.disconnect();
   }, [feed.data]);
 
-  // Decorate every event with parsed Date + spotlight family + past flag.
+  // IV/expiration lookup table — sorted by expiration_date ascending.
+  // Stored as a memoized array so the per-event resolver below can do
+  // a linear scan in chronological order without re-sorting every
+  // render.
+  const ivContext = useMemo(() => {
+    if (!iv.data) return null;
+    const { spotPrice, capturedAt, expirationMetrics } = iv.data;
+    if (!spotPrice || !capturedAt || !Array.isArray(expirationMetrics)) return null;
+    const refMs = new Date(capturedAt).getTime();
+    if (Number.isNaN(refMs)) return null;
+    const sorted = expirationMetrics
+      .filter((m) => m.atm_iv != null && m.expiration_date)
+      .map((m) => {
+        const expMs = new Date(`${m.expiration_date}T16:00:00-04:00`).getTime();
+        const dte = Math.max(0, (expMs - refMs) / 86400000);
+        return {
+          expiration: m.expiration_date,
+          dte,
+          atmIv: Number(m.atm_iv),
+          put25Iv: m.put_25d_iv != null ? Number(m.put_25d_iv) : null,
+          call25Iv: m.call_25d_iv != null ? Number(m.call_25d_iv) : null,
+        };
+      })
+      .filter((m) => m.dte != null && Number.isFinite(m.atmIv))
+      .sort((a, b) => a.expiration.localeCompare(b.expiration));
+    return { spotPrice: Number(spotPrice), capturedAt, refMs, expirations: sorted };
+  }, [iv.data]);
+
+  // Decorate every event with parsed Date + spotlight family + IV-
+  // implied move. Implied move is only computed for USD events
+  // because the IV data is SPX-only; non-USD events get _impliedMove
+  // = null.
   const allEvents = useMemo(() => {
     if (!feed.data) return [];
     const out = [];
     for (const e of feed.data.events || []) {
       const at = new Date(e.dateTime);
       if (Number.isNaN(at.getTime())) continue;
+      const sp = classifySpotlight(e.title);
+      const implied = ivContext ? resolveImpliedMove(e, ivContext) : null;
       out.push({
         ...e,
         _id: eventId(e),
         _at: at,
         _ms: at.getTime(),
-        _spotlight: classifySpotlight(e.title),
+        _spotlight: sp,
+        _impliedMove: implied,
       });
     }
     return out.sort((a, b) => a._ms - b._ms);
-  }, [feed.data]);
+  }, [feed.data, ivContext]);
 
-  // Active scope: filtered by country + impact pills + free-text search.
   const scoped = useMemo(() => {
     const q = searchQuery.trim().toLowerCase();
     return allEvents.filter((e) => {
-      if (countries.size > 0 && !countries.has(e.country)) return false;
       if (impacts.size > 0 && !impacts.has(e.impact)) return false;
       if (q && !e.title.toLowerCase().includes(q)) return false;
       return true;
     });
-  }, [allEvents, countries, impacts, searchQuery]);
+  }, [allEvents, impacts, searchQuery]);
 
   const upcoming = useMemo(() => scoped.filter((e) => e._ms >= now), [scoped, now]);
   const past = useMemo(() => scoped.filter((e) => e._ms < now), [scoped, now]);
-
-  // What the schedule actually renders. When `hidePast` is on, past
-  // rows are dropped entirely; when off, they stay in DOM with reduced
-  // opacity so the timeline reads continuously.
   const scheduleEvents = useMemo(
     () => (hidePast ? upcoming : scoped),
     [hidePast, upcoming, scoped],
@@ -245,11 +315,23 @@ export default function SlotB() {
     return { anchor: head, events: cluster };
   }, [upcoming]);
 
-  // Notification scheduling. Tracks the next high-impact event in
-  // scope; sets a single setTimeout that fires NOTIFY_LEAD_MS before
-  // the event. Re-runs whenever the scoped set or the toggle state
-  // changes. On unmount or scope change the prior timeout is cleared
-  // so the reader's filter changes don't leave dangling alarms.
+  // Chart input: upcoming high+medium-impact events with computed
+  // implied moves. Filtered to the impact tiers that actually move
+  // SPX (Low rarely matters for vol traders) and to events that
+  // resolved to a valid IV (events without IV data are skipped from
+  // the chart even when in scope, since plotting them with a null
+  // bar would be visually noisy). Country filtering already happened
+  // server-side, so every row in `upcoming` is USD by construction.
+  const chartEvents = useMemo(() => {
+    return upcoming.filter(
+      (e) =>
+        (e.impact === 'High' || e.impact === 'Medium') &&
+        e._impliedMove &&
+        e._impliedMove.movePct > 0,
+    );
+  }, [upcoming]);
+
+  // Notification scheduling.
   const notifyTimeoutRef = useRef(null);
   useEffect(() => {
     if (notifyTimeoutRef.current != null) {
@@ -264,20 +346,16 @@ export default function SlotB() {
     );
     if (!target) return;
     const delay = target._ms - Date.now() - NOTIFY_LEAD_MS;
-    // setTimeout's 32-bit signed-int delay cap is 2^31-1 ms ≈ 24.8 d.
-    // The FF feed only carries this week, so any delay past 7 days
-    // is already an outlier; the cap below is a defensive guard
-    // against the rare edge case rather than an expected branch.
     if (delay <= 0 || delay > 7 * 24 * 60 * 60 * 1000) return;
     notifyTimeoutRef.current = setTimeout(() => {
       try {
-        new Notification(`AI Gamma · ${target.country} · ${target.title}`, {
+        new Notification(`AI Gamma · ${target.title}`, {
           body: `In 5 minutes. Forecast ${target.forecast || 'n/a'} · Prev ${target.previous || 'n/a'}`,
           icon: '/favicon.ico',
           tag: `ff-${target._id}`,
         });
       } catch {
-        /* notification API can throw on iOS WKWebView etc.; swallow */
+        /* notification API can throw on iOS WKWebView etc. */
       }
     }, delay);
     return () => {
@@ -342,7 +420,6 @@ export default function SlotB() {
       )}
 
       <FilterBar
-        countries={countries} setCountries={setCountries}
         impacts={impacts} setImpacts={setImpacts}
         searchQuery={searchQuery} setSearchQuery={setSearchQuery}
         hidePast={hidePast} setHidePast={setHidePast}
@@ -352,7 +429,7 @@ export default function SlotB() {
 
       <div ref={heroRef}>
         {heroGroup ? (
-          <HeroNextEvent group={heroGroup} now={now} />
+          <HeroNextEvent group={heroGroup} now={now} ivContext={ivContext} />
         ) : (
           <div className="econ-events__hero econ-events__hero--empty">
             <div className="econ-events__hero-empty-text">
@@ -367,11 +444,15 @@ export default function SlotB() {
         fetchedAt={feed.fetchedAt}
         now={now}
         nextRefreshAt={feed.fetchedAt ? feed.fetchedAt + POLL_MS : null}
-        onRefresh={() => fetchFeed()}
+        onRefresh={() => { fetchFeed(); fetchIv(); }}
         error={feed.error}
+        ivStatus={iv.status}
+        ivContext={ivContext}
       />
 
-      <Totals scoped={scoped} upcoming={upcoming} past={past} />
+      <Totals scoped={scoped} upcoming={upcoming} />
+
+      <ImpliedMoveChart events={chartEvents} ivContext={ivContext} />
 
       <SpotlightStrip events={scoped} now={now} />
 
@@ -383,18 +464,57 @@ export default function SlotB() {
       />
 
       <footer className="econ-events__footnote">
-        Source: Forex Factory weekly XML at <code>nfs.faireconomy.media/ff_calendar_thisweek.xml</code>,
-        proxied through <code>/api/events-calendar</code> with a 1-hour edge cache. Click any row to expose its
-        FF source link, an .ics calendar download, and a 5-minute lead-time notification toggle. Notifications
-        require the browser-level Notification permission and only fire while this tab is open. Times render
-        in your local timezone after server-side normalization to America/New_York.
+        Source: Forex Factory weekly XML at <code>nfs.faireconomy.media/ff_calendar_thisweek.xml</code> +
+        the platform's SPX intraday snapshot at <code>/api/data</code> for the implied-move overlays.
+        The FF proxy filters to USD events only at the server (this is an SPX-positioning surface).
+        Implied move per event = <code>spot × ATM IV × √(DTE/365)</code> evaluated against the next
+        SPX expiration AT-OR-AFTER the event date — the move you'd be hedging if you bought a
+        straddle at that expiration today, conditional on the event being the next material catalyst.
+        Click any row to expose its FF source link, an .ics calendar download, and a 5-minute
+        lead-time notification toggle. Times render in your local timezone after server-side
+        normalization to America/New_York.
       </footer>
     </div>
   );
 }
 
+// ── Implied-move resolver ─────────────────────────────────────────────
+// Find the first SPX expiration AT-OR-AFTER the event's calendar date,
+// then compute the IV-implied 1-σ move from now to that expiration.
+// Notes:
+//   - Calendar-date comparison only — events that fall after the
+//     expiration's 16:00 ET cash close on the same day are an edge
+//     case (most US macro releases hit the wire 8:30am-2pm ET; FOMC
+//     press conferences end ~3pm; Trump speech rows in the FF feed
+//     occasionally read 11:00pm ET) and the same-day expiration is
+//     the right answer for everything except those evening rows. The
+//     evening-row case maps to "next-day expiration" but the loss
+//     of fidelity is one trading day of vol scaling and not worth
+//     the complexity at this PoC stage.
+//   - The implied move is the to-expiration σ move, not an isolated
+//     event-only premium. Computing the isolated event premium would
+//     require subtracting the variance of the expiration immediately
+//     before the event from the variance of the expiration immediately
+//     after, which is meaningful but adds a second resolver and a
+//     forward-variance arithmetic step.
+function resolveImpliedMove(event, ivContext) {
+  if (!ivContext || !event?.date) return null;
+  const exp = ivContext.expirations.find((m) => m.expiration >= event.date);
+  if (!exp) return null;
+  if (exp.dte == null || exp.dte <= 0) return null;
+  const sigmaMove = ivContext.spotPrice * exp.atmIv * Math.sqrt(exp.dte / 365);
+  const movePct = exp.atmIv * Math.sqrt(exp.dte / 365) * 100;
+  return {
+    expiration: exp.expiration,
+    dte: exp.dte,
+    atmIv: exp.atmIv,
+    moveDollars: sigmaMove,
+    movePct,
+    spotPrice: ivContext.spotPrice,
+  };
+}
+
 // ── Sticky compact countdown bar ──────────────────────────────────────
-// Fixes to the top of the viewport when the main hero is offscreen.
 function StickyHeroBar({ group, now }) {
   const a = group.anchor;
   const family = a._spotlight;
@@ -410,6 +530,9 @@ function StickyHeroBar({ group, now }) {
         </span>
       )}
       <span className="econ-events__sticky-title">{a.title}</span>
+      {a._impliedMove && (
+        <span className="econ-events__sticky-move">±{formatPct(a._impliedMove.movePct)}</span>
+      )}
       <span className={`econ-events__hero-impact econ-events__hero-impact--${(a.impact || '').toLowerCase()}`}>
         <span className={`econ-events__dot econ-events__dot--${(a.impact || '').toLowerCase()}`} aria-hidden="true" />
         {a.impact || '—'}
@@ -420,6 +543,8 @@ function StickyHeroBar({ group, now }) {
     </div>
   );
 }
+// (StickyHeroBar drops country in favor of family + impact + countdown
+// since every row is USD now.)
 
 function CompactCountdown({ ms, dayKind }) {
   if (dayKind === 'all-day' || dayKind === 'tentative') {
@@ -443,19 +568,11 @@ function CompactCountdown({ ms, dayKind }) {
 
 // ── Filter bar ────────────────────────────────────────────────────────
 function FilterBar({
-  countries, setCountries,
   impacts, setImpacts,
   searchQuery, setSearchQuery,
   hidePast, setHidePast,
   notifyEnabled, notifyDenied, toggleNotify,
 }) {
-  const toggleCountry = (c) => {
-    setCountries((prev) => {
-      const next = new Set(prev);
-      if (next.has(c)) next.delete(c); else next.add(c);
-      return next;
-    });
-  };
   const toggleImpact = (i) => {
     setImpacts((prev) => {
       const next = new Set(prev);
@@ -465,25 +582,6 @@ function FilterBar({
   };
   return (
     <div className="econ-events__filterbar">
-      <div className="econ-events__filtergroup">
-        <span className="econ-events__filtergroup-label">Country</span>
-        <div className="econ-events__pills">
-          {ALL_COUNTRIES.map((c) => {
-            const active = countries.has(c);
-            return (
-              <button
-                key={c}
-                type="button"
-                className={`econ-events__pill ${active ? 'econ-events__pill--active' : ''}`}
-                onClick={() => toggleCountry(c)}
-                aria-pressed={active}
-              >
-                {c}
-              </button>
-            );
-          })}
-        </div>
-      </div>
       <div className="econ-events__filtergroup">
         <span className="econ-events__filtergroup-label">Impact</span>
         <div className="econ-events__pills">
@@ -557,7 +655,6 @@ function HeroNextEvent({ group, now }) {
               {family.label}
             </span>
           )}
-          <span className="econ-events__hero-country">{anchor.country}</span>
           <span className={`econ-events__hero-impact econ-events__hero-impact--${(anchor.impact || '').toLowerCase()}`}>
             <span className={`econ-events__dot econ-events__dot--${(anchor.impact || '').toLowerCase()}`} aria-hidden="true" />
             {anchor.impact || 'Unknown'}
@@ -578,6 +675,9 @@ function HeroNextEvent({ group, now }) {
           <HeroNumber label="Actual" value={anchor.actual} accent="green" pending />
         </div>
         <ForecastInterpretation forecast={anchor.forecast} previous={anchor.previous} title={anchor.title} />
+        {anchor._impliedMove && (
+          <ImpliedMovePanel imove={anchor._impliedMove} />
+        )}
         {group.events.length > 1 && (
           <div className="econ-events__hero-cluster">
             <div className="econ-events__hero-cluster-label">
@@ -602,6 +702,21 @@ function HeroNextEvent({ group, now }) {
         )}
       </div>
     </section>
+  );
+}
+
+function ImpliedMovePanel({ imove }) {
+  return (
+    <div className="econ-events__hero-imove">
+      <div className="econ-events__hero-imove-label">SPX implied move at next exp</div>
+      <div className="econ-events__hero-imove-row">
+        <span className="econ-events__hero-imove-value">±${formatNum(imove.moveDollars, 0)}</span>
+        <span className="econ-events__hero-imove-pct">±{formatPct(imove.movePct)}</span>
+        <span className="econ-events__hero-imove-meta">
+          ATM IV {formatPct(imove.atmIv * 100)} · DTE {formatNum(imove.dte, 1)} · exp {imove.expiration}
+        </span>
+      </div>
+    </div>
   );
 }
 
@@ -652,26 +767,14 @@ function urgencyTier(ms) {
   return 'far';
 }
 
-// ── Forecast vs previous interpretation ───────────────────────────────
-// One-liner that helps a non-macro reader understand what direction
-// the consensus expects relative to the prior reading. Intentionally
-// terse — the page is for context, not commentary.
 function ForecastInterpretation({ forecast, previous, title }) {
   const f = parseNumeric(forecast);
   const p = parseNumeric(previous);
   if (f == null || p == null) return null;
   if (Math.abs(f - p) < 1e-9) {
-    return (
-      <div className="econ-events__hero-interp">
-        Consensus expects no change from prior reading.
-      </div>
-    );
+    return <div className="econ-events__hero-interp">Consensus expects no change from prior reading.</div>;
   }
   const hotter = f > p;
-  // Inflation-style series read coral when the print is hotter than
-  // prior; growth/labor read green for hotter prints (more activity =
-  // typically equity-positive). The lookup is heuristic — readers
-  // should treat the color as a hint, not a forecast.
   const hot = isInflationary(title);
   const colorClass = hotter
     ? (hot ? 'econ-events__hero-interp--coral' : 'econ-events__hero-interp--green')
@@ -706,7 +809,7 @@ function isInflationary(title) {
 }
 
 // ── Status bar ────────────────────────────────────────────────────────
-function StatusBar({ fetchedAt, now, nextRefreshAt, onRefresh, error }) {
+function StatusBar({ fetchedAt, now, nextRefreshAt, onRefresh, error, ivStatus, ivContext }) {
   const fetchedAgo = fetchedAt ? formatDuration(now - fetchedAt) : 'never';
   const refreshIn = nextRefreshAt ? Math.max(0, nextRefreshAt - now) : 0;
   return (
@@ -717,6 +820,11 @@ function StatusBar({ fetchedAt, now, nextRefreshAt, onRefresh, error }) {
       </span>
       <span className="econ-events__statusbar-meta">
         fetched {fetchedAgo} ago · next refresh in {formatDuration(refreshIn)}
+      </span>
+      <span className={`econ-events__iv-status econ-events__iv-status--${ivStatus}`}>
+        SPX vol surface: {ivStatus === 'ready' && ivContext
+          ? `spot $${formatNum(ivContext.spotPrice, 0)} · ${ivContext.expirations.length} exps`
+          : ivStatus === 'loading' ? 'loading…' : 'unavailable'}
       </span>
       {error && (
         <span className="econ-events__statusbar-error">last error: {error}</span>
@@ -729,7 +837,7 @@ function StatusBar({ fetchedAt, now, nextRefreshAt, onRefresh, error }) {
 }
 
 // ── Totals ────────────────────────────────────────────────────────────
-function Totals({ scoped, upcoming, past }) {
+function Totals({ scoped, upcoming }) {
   const high = scoped.filter((e) => e.impact === 'High').length;
   const medium = scoped.filter((e) => e.impact === 'Medium').length;
   const low = scoped.filter((e) => e.impact === 'Low').length;
@@ -739,7 +847,6 @@ function Totals({ scoped, upcoming, past }) {
       <Stat label="Medium" value={medium} accent="amber" />
       <Stat label="Low" value={low} accent="muted" />
       <Stat label="Upcoming" value={upcoming.length} accent="green" />
-      <Stat label="Past" value={past.length} accent="muted" />
     </div>
   );
 }
@@ -750,6 +857,149 @@ function Stat({ label, value, accent }) {
       <div className="econ-events__stat-value">{value}</div>
       <div className="econ-events__stat-label">{label}</div>
     </div>
+  );
+}
+
+// ── Implied-move chart ────────────────────────────────────────────────
+// One vertical bar per upcoming high+medium-impact USD event in scope.
+// Bar height = implied move %; bar color = macro family (or impact tier
+// when no family matches). The chart is the page's quantitative
+// centerpiece — a reader who has filtered to USD + High + Medium and
+// has /api/data live should see a roughly chronological bar profile
+// showing which events the SPX surface is pricing the largest move
+// for.
+function ImpliedMoveChart({ events, ivContext }) {
+  const containerRef = useRef(null);
+  const { plotly: Plotly } = usePlotly();
+
+  useEffect(() => {
+    if (!Plotly) return;
+    const el = containerRef.current;
+    if (!el) return;
+    if (events.length === 0) return;
+
+    // X-axis labels: "Tue 8:30am · Core CPI" — short enough to fit on
+    // a vertical-bars chart but specific enough to identify the row.
+    const xLabels = events.map((e) => {
+      const day = e._at.toLocaleDateString(undefined, { weekday: 'short' });
+      const time = e.dayKind === 'all-day' || e.dayKind === 'tentative'
+        ? e.dayKind === 'all-day' ? 'all day' : 'tba'
+        : e._at.toLocaleTimeString(undefined, { hour: 'numeric', minute: '2-digit', hour12: true });
+      return `${day} ${time} · ${e.title.length > 30 ? e.title.slice(0, 28) + '…' : e.title}`;
+    });
+    const yValues = events.map((e) => e._impliedMove.movePct);
+    const colors = events.map((e) =>
+      e._spotlight ? e._spotlight.hex : impactHex(e.impact),
+    );
+
+    // Custom hover content per bar — the default Plotly hover shows
+    // only x-label + y-value, but the reader wants the full vol
+    // context (DTE, ATM IV, dollar move, forecast/previous) on a
+    // single hover. customdata + hovertemplate gives line-by-line
+    // control over the popup body.
+    const customdata = events.map((e) => [
+      `$${formatNum(e._impliedMove.moveDollars, 0)}`,
+      `${formatPct(e._impliedMove.atmIv * 100)}`,
+      `${formatNum(e._impliedMove.dte, 1)}`,
+      e._impliedMove.expiration,
+      e.forecast || '—',
+      e.previous || '—',
+      e.impact || '—',
+      e._spotlight ? e._spotlight.label : 'event',
+    ]);
+    const hovertemplate =
+      '<b>%{x}</b><br>' +
+      '%{customdata[6]} · <b>%{customdata[7]}</b><br>' +
+      '<br>' +
+      'Implied move: ±%{y:.2f}%  (±%{customdata[0]})<br>' +
+      'ATM IV: %{customdata[1]}  ·  DTE %{customdata[2]}  ·  exp %{customdata[3]}<br>' +
+      'Forecast: %{customdata[4]}  ·  Previous: %{customdata[5]}' +
+      '<extra></extra>';
+
+    const trace = {
+      x: xLabels,
+      y: yValues,
+      type: 'bar',
+      marker: {
+        color: colors,
+        line: { color: 'rgba(255,255,255,0.18)', width: 1 },
+      },
+      customdata,
+      hovertemplate,
+      hoverlabel: {
+        align: 'left',
+        bgcolor: '#0d1016',
+        bordercolor: '#2a3040',
+        font: { family: 'Courier New, monospace', color: '#e0e0e0', size: 12 },
+      },
+    };
+
+    const layout = {
+      ...PLOTLY_BASE_LAYOUT_2D,
+      hovermode: 'closest',
+      margin: { t: 20, r: 20, b: 110, l: 60 },
+      xaxis: plotlyAxis('', {
+        tickangle: -38,
+        automargin: true,
+        tickfont: { ...PLOTLY_FONTS.axisTick, size: 11 },
+      }),
+      yaxis: plotlyAxis('Implied move (%)', {
+        rangemode: 'tozero',
+        ticksuffix: '%',
+      }),
+      showlegend: false,
+      bargap: 0.4,
+    };
+
+    const config = {
+      displayModeBar: false,
+      responsive: true,
+    };
+
+    Plotly.react(el, [trace], layout, config);
+  }, [Plotly, events]);
+
+  if (!ivContext) {
+    return (
+      <section className="econ-events__chart-card">
+        <div className="econ-events__chart-meta">
+          <span className="econ-events__chart-title">SPX implied move per event</span>
+          <span className="econ-events__chart-source">awaiting /api/data — vol surface unavailable</span>
+        </div>
+        <div className="econ-events__chart-empty">
+          The vol-surface fetch hasn't returned yet (or the SPX intraday ingest is currently down).
+          Implied-move overlays will populate as soon as <code>/api/data</code> answers.
+        </div>
+      </section>
+    );
+  }
+  if (events.length === 0) {
+    return (
+      <section className="econ-events__chart-card">
+        <div className="econ-events__chart-meta">
+          <span className="econ-events__chart-title">SPX implied move per event</span>
+          <span className="econ-events__chart-source">no qualifying events</span>
+        </div>
+        <div className="econ-events__chart-empty">
+          No upcoming high- or medium-impact USD events in the current scope. The chart populates
+          when the FF feed carries a USD print whose date resolves to an SPX expiration in the
+          fetched surface.
+        </div>
+      </section>
+    );
+  }
+
+  return (
+    <section className="econ-events__chart-card">
+      <div className="econ-events__chart-meta">
+        <span className="econ-events__chart-title">SPX implied move per event</span>
+        <span className="econ-events__chart-source">
+          spot ${formatNum(ivContext.spotPrice, 0)} · {events.length} events ·
+          {' '}move = spot × ATM&nbsp;IV × √(DTE/365) at next expiration
+        </span>
+      </div>
+      <div ref={containerRef} className="econ-events__chart" />
+    </section>
   );
 }
 
@@ -793,6 +1043,11 @@ function SpotlightStrip({ events, now }) {
                   {e.previous && (
                     <span className="econ-events__spotlight-row-meta">
                       prev <strong>{e.previous}</strong>
+                    </span>
+                  )}
+                  {e._impliedMove && (
+                    <span className="econ-events__spotlight-row-meta econ-events__spotlight-row-meta--imove">
+                      ±<strong>{formatPct(e._impliedMove.movePct)}</strong>
                     </span>
                   )}
                 </div>
@@ -903,7 +1158,6 @@ function EventRow({ event: e, past, expanded, onToggle }) {
         <span className={`econ-events__row-impact econ-events__row-impact--${(e.impact || '').toLowerCase()}`}>
           <span className={`econ-events__dot econ-events__dot--${(e.impact || '').toLowerCase()}`} aria-hidden="true" />
         </span>
-        <span className="econ-events__row-country">{e.country}</span>
         <span className="econ-events__row-title">
           <span className="econ-events__row-title-text">{e.title}</span>
           {sp && <span className="econ-events__row-family">{sp.label}</span>}
@@ -916,9 +1170,8 @@ function EventRow({ event: e, past, expanded, onToggle }) {
           <span className="econ-events__row-num-label">P</span>
           {e.previous || '—'}
         </span>
-        <span className="econ-events__row-num econ-events__row-num--actual">
-          <span className="econ-events__row-num-label">A</span>
-          {e.actual || '—'}
+        <span className={`econ-events__row-imove${e._impliedMove ? '' : ' econ-events__row-imove--empty'}`}>
+          {e._impliedMove ? `±${formatPct(e._impliedMove.movePct)}` : '—'}
         </span>
         <span className="econ-events__row-toggle" aria-hidden="true">{expanded ? '▾' : '▸'}</span>
       </button>
@@ -955,6 +1208,14 @@ function EventRowDetail({ event: e, past }) {
           {formatLongWhen(e._at, e.dayKind)}
         </span>
       </div>
+      {e._impliedMove && (
+        <div className="econ-events__row-detail-imove">
+          SPX implied move at next expiration: <strong>±${formatNum(e._impliedMove.moveDollars, 0)}</strong>{' '}
+          (<strong>±{formatPct(e._impliedMove.movePct)}</strong>) ·
+          ATM IV {formatPct(e._impliedMove.atmIv * 100)} · DTE {formatNum(e._impliedMove.dte, 1)} ·
+          exp {e._impliedMove.expiration}
+        </div>
+      )}
       <ForecastInterpretation
         forecast={e.forecast}
         previous={e.previous}
@@ -973,14 +1234,6 @@ function EventRowDetail({ event: e, past }) {
 function downloadIcs(event) {
   const start = event._at instanceof Date ? event._at : new Date(event.dateTime);
   if (Number.isNaN(start.getTime())) return;
-  // Default 30-minute event duration. Most macro releases are
-  // instantaneous prints on a wire (CPI, NFP, ISM, GDP) where the
-  // notional "duration" is academic and 30 min is enough for a desk
-  // reader's calendar to show the slot. FOMC events with longer
-  // press-conferences (~1h) are still mostly single moments for
-  // calendar purposes; the reader can stretch the block manually if
-  // they want. All-day rows are suppressed (no .ics for the bank-
-  // holiday-style passthrough events).
   if (event.dayKind === 'all-day' || event.dayKind === 'tentative') return;
   const end = new Date(start.getTime() + 30 * 60 * 1000);
   const lines = [
@@ -994,14 +1247,13 @@ function downloadIcs(event) {
     `DTSTAMP:${formatIcsDate(new Date())}`,
     `DTSTART:${formatIcsDate(start)}`,
     `DTEND:${formatIcsDate(end)}`,
-    `SUMMARY:${icsEscape(`${event.country || ''} · ${event.title}`)}`,
+    `SUMMARY:${icsEscape(event.title)}`,
     `DESCRIPTION:${icsEscape(buildIcsDescription(event))}`,
     event.url ? `URL:${icsEscape(event.url)}` : null,
     `CATEGORIES:${icsEscape(`Forex Factory · ${event.impact || 'Unknown'}`)}`,
     'END:VEVENT',
     'END:VCALENDAR',
   ].filter(Boolean);
-  // The .ics line break is CRLF per RFC 5545.
   const ics = lines.join('\r\n');
   const blob = new Blob([ics], { type: 'text/calendar;charset=utf-8' });
   const url = URL.createObjectURL(blob);
@@ -1020,13 +1272,14 @@ function buildIcsDescription(e) {
   if (e.forecast) lines.push(`Forecast: ${e.forecast}`);
   if (e.previous) lines.push(`Previous: ${e.previous}`);
   if (e._spotlight) lines.push(`Family: ${e._spotlight.label}`);
+  if (e._impliedMove) {
+    lines.push(`SPX implied move: ±$${formatNum(e._impliedMove.moveDollars, 0)} (±${formatPct(e._impliedMove.movePct)})`);
+  }
   lines.push('Source: Forex Factory · ff_calendar_thisweek.xml');
   if (e.url) lines.push(`Source URL: ${e.url}`);
   return lines.join('\\n');
 }
 
-// RFC 5545 says DTSTART/DTSTAMP must be in YYYYMMDDTHHMMSSZ form.
-// Convert to UTC and strip dashes/colons/milliseconds.
 function formatIcsDate(d) {
   return d.toISOString().replace(/[-:]/g, '').replace(/\.\d{3}/, '');
 }
@@ -1048,6 +1301,19 @@ function slugifyForUid(s) {
 }
 
 // ── Formatting helpers ────────────────────────────────────────────────
+function formatNum(n, decimals) {
+  if (!Number.isFinite(n)) return '—';
+  return n.toLocaleString(undefined, {
+    minimumFractionDigits: decimals,
+    maximumFractionDigits: decimals,
+  });
+}
+
+function formatPct(n) {
+  if (!Number.isFinite(n)) return '—';
+  return n < 1 ? `${n.toFixed(2)}%` : `${n.toFixed(1)}%`;
+}
+
 function formatLongWhen(dt, dayKind) {
   if (!(dt instanceof Date) || Number.isNaN(dt.getTime())) return '—';
   const day = dt.toLocaleDateString(undefined, { weekday: 'long', month: 'long', day: 'numeric' });

@@ -8,32 +8,36 @@ import SlotB, { slotName as slotBName } from './slots/SlotB';
 // Beta Lab shell — single slot for models under test. Graduated
 // slots (previously SlotA/SPX-vs-Vol-Flip and SlotC/Gamma-Index-
 // Oscillator) now live on the main dashboard; SlotB remains as the
-// one experimental surface in the lab. Current tenant: an Economic
-// Events listener built around the Forex Factory weekly XML feed
-// (proxied through /api/events-calendar — see
-// netlify/functions/events-calendar.mjs). The page renders a hero
-// next-event card with a live HH:MM:SS countdown that ticks every
-// second (paused on hidden tabs), a green-pulsing "Listening to
-// Forex Factory" status bar with a 10-minute poll cadence, totals,
-// a per-macro-family spotlight strip (FOMC / CPI / NFP / GDP / PCE
-// / PPI / ISM / JOBS), and a chronological day-by-day schedule.
-// Interactive surfaces: an IntersectionObserver-driven sticky
-// compact countdown bar that pins to the top of the viewport when
-// the main hero scrolls out of view; a free-text title search and
-// a "Hide past" toggle in the FilterBar; a browser-Notification
-// opt-in that fires a 5-minute lead-time alert ahead of the next
-// scoped high-impact print; per-day impact-count chips (High /
-// Medium / Low / Holiday) in each date header so the heaviest day
-// of the week reads at a glance; and click-to-expand event rows
-// that expose the Forex Factory source URL, an .ics calendar
-// download (RFC 5545 single-event blob, 30-min default duration),
-// and a one-line forecast-vs-previous interpretation tinted coral
-// (hotter inflation print) or green (more activity / typically
-// equity-positive). An earlier draft embedded a TradingView
-// "Economic Calendar" iframe widget on top of the FF panel; that
-// draft was abandoned because the TV widget rendered as a near-
-// full-viewport white-screen funnel back to tradingview.com instead
-// of usable content.
+// one experimental surface in the lab. Current tenant: a US-only
+// Economic Events listener with SPX implied-volatility overlays.
+// Two parallel data fetches drive the page — /api/events-calendar
+// (the FF weekly XML proxy, USD-only by default at the server) and
+// /api/data?skip_contracts=1 (the SPX intraday snapshot for spot +
+// per-expiration ATM IV). For each upcoming event the page
+// resolves the next SPX expiration AT-OR-AFTER the event date and
+// computes the IV-implied 1-σ move = spot × ATM IV × √(DTE/365),
+// surfacing it inline on each schedule row, in the hero card, and
+// in a Plotly bar chart that maps every upcoming high+medium-impact
+// event to its priced-in % move. The hero card runs a live
+// HH:MM:SS countdown (1-second tick, paused on hidden tabs); a
+// green-pulsing "Listening to Forex Factory" status bar reports
+// poll cadence; an IntersectionObserver-driven sticky compact bar
+// pins the next-event countdown to the top of the viewport when
+// the hero scrolls out of view; per-day impact-count chips and a
+// macro-family spotlight strip (FOMC / CPI / NFP / GDP / PCE / PPI
+// / ISM / JOBS) summarize the week at a glance; click-to-expand
+// rows expose the FF source link, an .ics calendar download, the
+// per-event implied-move detail line, and a forecast-vs-previous
+// interpretation tinted coral (hotter inflation) or green (more
+// activity); a browser-Notification opt-in fires a 5-minute lead-
+// time alert ahead of the next high-impact print. An earlier draft
+// embedded a TradingView "Economic Calendar" iframe widget on top
+// of the FF panel; that draft was abandoned because the TV widget
+// rendered as a near-full-viewport white-screen funnel back to
+// tradingview.com instead of usable content. An interim draft
+// also carried a non-USD country-pill cluster in the FilterBar;
+// the surface committed to USD-only for SPX-positioning and the
+// country chrome was retired in favor of server-side filtering.
 // Visual language intentionally mirrors the production dashboard
 // (dark card chrome, Courier New monospace accents, four-token
 // palette) so that a component developed here can be dropped into
