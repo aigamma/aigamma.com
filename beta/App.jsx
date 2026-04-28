@@ -9,12 +9,18 @@ import SlotB, { slotName as slotBName } from './slots/SlotB';
 // slots (previously SlotA/SPX-vs-Vol-Flip and SlotC/Gamma-Index-
 // Oscillator) now live on the main dashboard; SlotB remains as the
 // one experimental surface in the lab. Current tenant: an Economic
-// Events page that pairs a near-full-viewport TradingView Economic
-// Calendar widget with a Forex Factory analytics panel (NFP, CPI,
-// FOMC, GDP, PCE spotlight cards, plus Upcoming / Past Week tables
-// keyed off the FF weekly XML feed proxied through
-// /api/events-calendar). See beta/slots/SlotB.jsx and
-// netlify/functions/events-calendar.mjs for the full data path.
+// Events listener built around the Forex Factory weekly XML feed
+// (proxied through /api/events-calendar — see
+// netlify/functions/events-calendar.mjs). The page renders a hero
+// next-event card with a live HH:MM:SS countdown, a green-pulsing
+// "Listening to Forex Factory" status bar with a 10-minute poll
+// cadence, totals, a per-macro-family spotlight strip (FOMC / CPI
+// / NFP / GDP / PCE / PPI / ISM / JOBS), and a chronological day-
+// by-day schedule. An earlier draft embedded a TradingView
+// "Economic Calendar" iframe widget on top of the FF panel; that
+// draft was abandoned because the TV widget rendered as a near-
+// full-viewport white-screen funnel back to tradingview.com instead
+// of usable content.
 // Visual language intentionally mirrors the production dashboard
 // (dark card chrome, Courier New monospace accents, four-token
 // palette) so that a component developed here can be dropped into
