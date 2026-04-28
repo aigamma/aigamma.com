@@ -461,7 +461,9 @@ export default function SlotB() {
         Implied move per event = <code>spot × ATM IV × √(DTE/365)</code> evaluated against the next
         SPX expiration AT-OR-AFTER the event date — the move you'd be hedging if you bought a
         straddle at that expiration today, conditional on the event being the next material
-        catalyst. Click any row to add the event to Google Calendar in one click. Times render
+        catalyst. Click any row to add the event to Google Calendar or Outlook in one click —
+        both open the destination's web compose form in a new tab pre-populated with the
+        event's title, time, and detail payload. Times render
         in your local timezone.
       </footer>
     </div>
@@ -1526,7 +1528,8 @@ function EventRow({ event: e, past, expanded, onToggle }) {
 }
 
 function EventRowDetail({ event: e, past }) {
-  const calendarHref = useMemo(() => googleCalendarUrl(e), [e]);
+  const googleHref = useMemo(() => googleCalendarUrl(e), [e]);
+  const outlookHref = useMemo(() => outlookCalendarUrl(e), [e]);
   const [news, setNews] = useState({ status: 'loading', items: [] });
 
   // Lazy fetch the news feed when the row is expanded. The function
@@ -1560,14 +1563,24 @@ function EventRowDetail({ event: e, past }) {
   return (
     <div className="econ-events__row-detail">
       <div className="econ-events__row-detail-row">
-        {calendarHref && (
+        {googleHref && (
           <a
             className="econ-events__row-action econ-events__row-action--link"
-            href={calendarHref}
+            href={googleHref}
             target="_blank"
             rel="noopener noreferrer"
           >
             Add to Google Calendar ↗
+          </a>
+        )}
+        {outlookHref && (
+          <a
+            className="econ-events__row-action econ-events__row-action--link"
+            href={outlookHref}
+            target="_blank"
+            rel="noopener noreferrer"
+          >
+            Add to Outlook ↗
           </a>
         )}
         <span className="econ-events__row-detail-when">
@@ -1698,6 +1711,37 @@ function googleCalendarUrl(event) {
     ctz: 'America/New_York',
   });
   return `${GCAL_BASE}?${params.toString()}`;
+}
+
+// Outlook web (outlook.live.com) deep-link template — same idea as
+// Google's URL-template handoff but Microsoft's path. Critical
+// distinction: this opens Outlook's WEB compose form in a new tab,
+// NOT a download that triggers the OS-level Outlook desktop file
+// association. Eric's prior .ics flow handed the file off to the
+// desktop Outlook app which spun up an "extended upgrade animation
+// with an envelope" loop — that's exactly the path this URL
+// avoids. Personal outlook.live.com handles the redirect for
+// outlook.office.com (work/school) tenants automatically when the
+// user is signed in there, so a single URL covers both consumer
+// and business Outlook web users.
+const OUTLOOK_BASE = 'https://outlook.live.com/calendar/0/deeplink/compose';
+
+function outlookCalendarUrl(event) {
+  if (!event) return null;
+  if (event.dayKind === 'all-day' || event.dayKind === 'tentative') return null;
+  const start = event._at instanceof Date ? event._at : new Date(event.dateTime);
+  if (Number.isNaN(start.getTime())) return null;
+  const end = new Date(start.getTime() + 30 * 60 * 1000);
+  const params = new URLSearchParams({
+    subject: event.title || 'Event',
+    body: buildEventDescription(event),
+    startdt: start.toISOString(),
+    enddt: end.toISOString(),
+    allday: 'false',
+    path: '/calendar/action/compose',
+    rru: 'addevent',
+  });
+  return `${OUTLOOK_BASE}?${params.toString()}`;
 }
 
 function buildEventDescription(e) {
