@@ -12,11 +12,24 @@ import SlotB, { slotName as slotBName } from './slots/SlotB';
 // Events listener built around the Forex Factory weekly XML feed
 // (proxied through /api/events-calendar — see
 // netlify/functions/events-calendar.mjs). The page renders a hero
-// next-event card with a live HH:MM:SS countdown, a green-pulsing
-// "Listening to Forex Factory" status bar with a 10-minute poll
-// cadence, totals, a per-macro-family spotlight strip (FOMC / CPI
-// / NFP / GDP / PCE / PPI / ISM / JOBS), and a chronological day-
-// by-day schedule. An earlier draft embedded a TradingView
+// next-event card with a live HH:MM:SS countdown that ticks every
+// second (paused on hidden tabs), a green-pulsing "Listening to
+// Forex Factory" status bar with a 10-minute poll cadence, totals,
+// a per-macro-family spotlight strip (FOMC / CPI / NFP / GDP / PCE
+// / PPI / ISM / JOBS), and a chronological day-by-day schedule.
+// Interactive surfaces: an IntersectionObserver-driven sticky
+// compact countdown bar that pins to the top of the viewport when
+// the main hero scrolls out of view; a free-text title search and
+// a "Hide past" toggle in the FilterBar; a browser-Notification
+// opt-in that fires a 5-minute lead-time alert ahead of the next
+// scoped high-impact print; per-day impact-count chips (High /
+// Medium / Low / Holiday) in each date header so the heaviest day
+// of the week reads at a glance; and click-to-expand event rows
+// that expose the Forex Factory source URL, an .ics calendar
+// download (RFC 5545 single-event blob, 30-min default duration),
+// and a one-line forecast-vs-previous interpretation tinted coral
+// (hotter inflation print) or green (more activity / typically
+// equity-positive). An earlier draft embedded a TradingView
 // "Economic Calendar" iframe widget on top of the FF panel; that
 // draft was abandoned because the TV widget rendered as a near-
 // full-viewport white-screen funnel back to tradingview.com instead

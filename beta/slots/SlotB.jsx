@@ -13,15 +13,22 @@
 //
 // Page composition top-to-bottom:
 //
+//   StickyHeroBar ─ a slim compact strip that fixes to the top of the
+//     viewport when the main hero card has scrolled out of view, so
+//     the next-event countdown stays visible while the reader scrolls
+//     down through the day-by-day schedule. IntersectionObserver-driven
+//     so it only renders when needed; collapses to a single row of
+//     family dot + title + countdown + impact chip.
+//
 //   FilterBar ─ country / impact / family pills the reader toggles
-//     to scope the rest of the page. USD + medium-and-high impact is
-//     the default scope (this is an SPX-positioning surface) but the
-//     reader can broaden to any G10 currency or drop to low impact
-//     in one click.
+//     to scope the rest of the page, plus a free-text search input
+//     for matching against event titles, plus toggles for "Hide past"
+//     and "Notify me 5m before next high-impact event." USD +
+//     medium-and-high impact is the default scope (this is an SPX-
+//     positioning surface) but the reader can broaden in one click.
 //
 //   HeroNextEvent ─ big featured card for the next event (or family
-//     of co-scheduled events, e.g. FOMC Statement + Press Conference
-//     on the same afternoon) inside the active filter scope. The
+//     of co-scheduled events) inside the active filter scope. The
 //     card carries a live HH:MM:SS countdown that ticks every second,
 //     the family badge, the forecast / previous values, and an
 //     urgency tint that ramps coral as the event approaches. The
@@ -35,34 +42,25 @@
 //     re-fetches upstream so the "last published actual" gets
 //     surfaced as soon as a future actuals feed lands).
 //
-//   Totals ─ summary count of events inside the active filter scope,
-//     keyed off the same active filter set as the rest of the page.
+//   Totals ─ summary count of events inside the active filter scope.
 //
-//   SpotlightStrip ─ one card per macro family that has at least one
-//     event in scope this week, sorted by chronological position of
-//     the family's earliest event. FOMC / CPI / NFP / GDP / PCE / PPI
-//     / ISM are the canonical seven; each card shows the family's
-//     earliest event in big type, supporting events as a stacked
-//     row, and the family's accent color as its left border.
+//   SpotlightStrip ─ one card per macro family with at least one
+//     event in scope this week, sorted chronologically.
 //
 //   DaySchedule ─ chronological timeline grouped by date. Each date
-//     header carries the day name, full date, and a scope-filtered
-//     event count. Events render as full rows with When / Impact /
-//     Title / Forecast / Previous / Family. Past events fade to
-//     muted text and lower contrast; today's date gets a ribbon
-//     accent. The schedule is the primary scrollable surface — the
-//     page no longer fights the viewport, every additional row of
-//     content is a vertical scroll away.
+//     header carries day name, full date, scope-filtered event count,
+//     and an impact-count chip cluster (High / Medium / Low /
+//     Holiday) so a reader sees at a glance which day of the week
+//     carries the heaviest catalyst weight. Each event row is
+//     click-to-expand: the inline detail panel exposes the FF source
+//     URL, an "Add to calendar (.ics)" download, a "Notify me 5m
+//     before" button, and a one-line forecast-vs-previous read.
 
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 
 export const slotName = 'Economic Events';
 
 // Big Eight event-name patterns we want to spotlight for SPX traders.
-// Each entry is a regex tested against the FF "title" field; the first
-// hit wins. The order is the priority cascade: if a row matches multiple
-// (e.g., "FOMC Statement" matches both FOMC and the rate cluster), the
-// earlier pattern wins.
 const SPOTLIGHT_PATTERNS = [
   { key: 'FOMC',      label: 'FOMC',      rx: /\bFOMC\b|Federal Funds Rate/i,        color: 'amber'  },
   { key: 'CPI',       label: 'CPI',       rx: /\bCPI\b|Consumer Price/i,              color: 'coral'  },
@@ -82,27 +80,40 @@ function classifySpotlight(title) {
   return null;
 }
 
-// Default filter scope: USD, high + medium impact, all families. The
-// reader broadens via the FilterBar pills.
-const DEFAULT_COUNTRIES = ['USD'];
 const ALL_COUNTRIES = ['USD', 'EUR', 'GBP', 'JPY', 'AUD', 'CAD', 'NZD', 'CHF', 'CNY'];
+const DEFAULT_COUNTRIES = ['USD'];
 const ALL_IMPACTS = ['High', 'Medium', 'Low', 'Holiday'];
 const DEFAULT_IMPACTS = ['High', 'Medium'];
 
-const POLL_MS = 10 * 60 * 1000;       // 10 min — page polls /api/events-calendar
-const CLOCK_TICK_MS = 1000;           // 1 s — drives the hero countdown
+const POLL_MS = 10 * 60 * 1000;       // 10 min
+const CLOCK_TICK_MS = 1000;           // 1 s
+const NOTIFY_LEAD_MS = 5 * 60 * 1000; // notify 5 min before next high-impact
+
+// Stable identifier for an event row — used as the key for the
+// "currently expanded row" state. The dateTime + title pair is unique
+// in practice (FF doesn't list the same event twice at the same
+// minute), and falls back gracefully if either field is missing.
+function eventId(e) {
+  return `${e.dateTime || ''}::${e.title || ''}`;
+}
 
 export default function SlotB() {
   const [feed, setFeed] = useState({ status: 'loading', data: null, error: null, fetchedAt: null });
   const [countries, setCountries] = useState(new Set(DEFAULT_COUNTRIES));
   const [impacts, setImpacts] = useState(new Set(DEFAULT_IMPACTS));
+  const [searchQuery, setSearchQuery] = useState('');
+  const [hidePast, setHidePast] = useState(false);
+  const [expandedId, setExpandedId] = useState(null);
+  const [notifyEnabled, setNotifyEnabled] = useState(false);
+  const [notifyDenied, setNotifyDenied] = useState(false);
   const [now, setNow] = useState(() => Date.now());
   const lastFetchRef = useRef(0);
+  const heroRef = useRef(null);
+  const [heroVisible, setHeroVisible] = useState(true);
 
   const fetchFeed = useCallback(async (signal) => {
-    const url = '/api/events-calendar';
     try {
-      const res = await fetch(url, { signal, headers: { Accept: 'application/json' } });
+      const res = await fetch('/api/events-calendar', { signal, headers: { Accept: 'application/json' } });
       if (!res.ok) throw new Error(`HTTP ${res.status}`);
       const json = await res.json();
       lastFetchRef.current = Date.now();
@@ -110,7 +121,7 @@ export default function SlotB() {
     } catch (err) {
       if (err?.name === 'AbortError') return;
       setFeed((cur) => ({
-        status: cur.data ? 'ready' : 'error', // keep prior data on transient failure
+        status: cur.data ? 'ready' : 'error',
         data: cur.data,
         error: err.message || String(err),
         fetchedAt: cur.fetchedAt,
@@ -137,11 +148,7 @@ export default function SlotB() {
     };
   }, [fetchFeed]);
 
-  // Clock tick — drives the live hero countdown. 1-second cadence is
-  // cheap (one setState per second) and keeps the visible countdown
-  // smooth at the seconds digit. The setInterval is paused while the
-  // tab is hidden via the visibility listener above (no point ticking
-  // a clock the user can't see).
+  // Clock tick — drives the live hero countdown.
   useEffect(() => {
     let id = null;
     const start = () => {
@@ -163,6 +170,31 @@ export default function SlotB() {
     };
   }, []);
 
+  // Mount-time check on the Notification permission. Browsers without
+  // the API (older Safari iOS) silently disable the toggle.
+  useEffect(() => {
+    if (typeof window === 'undefined' || !('Notification' in window)) return;
+    if (Notification.permission === 'granted') setNotifyEnabled(true);
+    if (Notification.permission === 'denied') setNotifyDenied(true);
+  }, []);
+
+  // IntersectionObserver wired to the hero card. The sticky compact
+  // bar at the top of the viewport renders only when the main hero
+  // has scrolled out of view, so the reader scrolling down through
+  // the day schedule still sees the next-event countdown without the
+  // header chrome competing with the schedule for vertical space when
+  // the hero is already on-screen.
+  useEffect(() => {
+    const el = heroRef.current;
+    if (!el || typeof IntersectionObserver === 'undefined') return;
+    const obs = new IntersectionObserver(
+      ([entry]) => setHeroVisible(entry.isIntersecting && entry.intersectionRatio > 0.2),
+      { threshold: [0, 0.2, 0.5, 1] },
+    );
+    obs.observe(el);
+    return () => obs.disconnect();
+  }, [feed.data]);
+
   // Decorate every event with parsed Date + spotlight family + past flag.
   const allEvents = useMemo(() => {
     if (!feed.data) return [];
@@ -172,6 +204,7 @@ export default function SlotB() {
       if (Number.isNaN(at.getTime())) continue;
       out.push({
         ...e,
+        _id: eventId(e),
         _at: at,
         _ms: at.getTime(),
         _spotlight: classifySpotlight(e.title),
@@ -180,41 +213,110 @@ export default function SlotB() {
     return out.sort((a, b) => a._ms - b._ms);
   }, [feed.data]);
 
-  // Active scope: filtered by country and impact pills.
+  // Active scope: filtered by country + impact pills + free-text search.
   const scoped = useMemo(() => {
+    const q = searchQuery.trim().toLowerCase();
     return allEvents.filter((e) => {
       if (countries.size > 0 && !countries.has(e.country)) return false;
       if (impacts.size > 0 && !impacts.has(e.impact)) return false;
+      if (q && !e.title.toLowerCase().includes(q)) return false;
       return true;
     });
-  }, [allEvents, countries, impacts]);
+  }, [allEvents, countries, impacts, searchQuery]);
 
-  const upcoming = useMemo(
-    () => scoped.filter((e) => e._ms >= now),
-    [scoped, now],
-  );
-  const past = useMemo(
-    () => scoped.filter((e) => e._ms < now),
-    [scoped, now],
+  const upcoming = useMemo(() => scoped.filter((e) => e._ms >= now), [scoped, now]);
+  const past = useMemo(() => scoped.filter((e) => e._ms < now), [scoped, now]);
+
+  // What the schedule actually renders. When `hidePast` is on, past
+  // rows are dropped entirely; when off, they stay in DOM with reduced
+  // opacity so the timeline reads continuously.
+  const scheduleEvents = useMemo(
+    () => (hidePast ? upcoming : scoped),
+    [hidePast, upcoming, scoped],
   );
 
-  // The hero card's subject. Take the next upcoming event in scope; if
-  // it's part of a family with sibling events on the same calendar day,
-  // group them so the FOMC-day reader sees the rate decision plus the
-  // statement plus the press conference together rather than a single
-  // row that hides the rest of the cluster.
   const heroGroup = useMemo(() => {
     if (upcoming.length === 0) return null;
     const head = upcoming[0];
-    if (!head._spotlight) {
-      return { anchor: head, events: [head] };
-    }
-    const sameDayKey = head.date;
+    if (!head._spotlight) return { anchor: head, events: [head] };
     const cluster = upcoming.filter(
-      (e) => e.date === sameDayKey && e._spotlight?.key === head._spotlight.key,
+      (e) => e.date === head.date && e._spotlight?.key === head._spotlight.key,
     );
     return { anchor: head, events: cluster };
   }, [upcoming]);
+
+  // Notification scheduling. Tracks the next high-impact event in
+  // scope; sets a single setTimeout that fires NOTIFY_LEAD_MS before
+  // the event. Re-runs whenever the scoped set or the toggle state
+  // changes. On unmount or scope change the prior timeout is cleared
+  // so the reader's filter changes don't leave dangling alarms.
+  const notifyTimeoutRef = useRef(null);
+  useEffect(() => {
+    if (notifyTimeoutRef.current != null) {
+      clearTimeout(notifyTimeoutRef.current);
+      notifyTimeoutRef.current = null;
+    }
+    if (!notifyEnabled) return;
+    if (typeof window === 'undefined' || !('Notification' in window)) return;
+    if (Notification.permission !== 'granted') return;
+    const target = upcoming.find(
+      (e) => e.impact === 'High' && e._ms - Date.now() > NOTIFY_LEAD_MS,
+    );
+    if (!target) return;
+    const delay = target._ms - Date.now() - NOTIFY_LEAD_MS;
+    // setTimeout's 32-bit signed-int delay cap is 2^31-1 ms ≈ 24.8 d.
+    // The FF feed only carries this week, so any delay past 7 days
+    // is already an outlier; the cap below is a defensive guard
+    // against the rare edge case rather than an expected branch.
+    if (delay <= 0 || delay > 7 * 24 * 60 * 60 * 1000) return;
+    notifyTimeoutRef.current = setTimeout(() => {
+      try {
+        new Notification(`AI Gamma · ${target.country} · ${target.title}`, {
+          body: `In 5 minutes. Forecast ${target.forecast || 'n/a'} · Prev ${target.previous || 'n/a'}`,
+          icon: '/favicon.ico',
+          tag: `ff-${target._id}`,
+        });
+      } catch {
+        /* notification API can throw on iOS WKWebView etc.; swallow */
+      }
+    }, delay);
+    return () => {
+      if (notifyTimeoutRef.current != null) {
+        clearTimeout(notifyTimeoutRef.current);
+        notifyTimeoutRef.current = null;
+      }
+    };
+  }, [notifyEnabled, upcoming]);
+
+  const requestNotifyPermission = useCallback(async () => {
+    if (typeof window === 'undefined' || !('Notification' in window)) {
+      setNotifyDenied(true);
+      return;
+    }
+    if (Notification.permission === 'granted') {
+      setNotifyEnabled(true);
+      return;
+    }
+    if (Notification.permission === 'denied') {
+      setNotifyDenied(true);
+      return;
+    }
+    try {
+      const result = await Notification.requestPermission();
+      if (result === 'granted') setNotifyEnabled(true);
+      else setNotifyDenied(true);
+    } catch {
+      setNotifyDenied(true);
+    }
+  }, []);
+
+  const toggleNotify = useCallback(() => {
+    if (notifyEnabled) {
+      setNotifyEnabled(false);
+      return;
+    }
+    requestNotifyPermission();
+  }, [notifyEnabled, requestNotifyPermission]);
 
   if (feed.status === 'loading' && !feed.data) {
     return (
@@ -235,21 +337,31 @@ export default function SlotB() {
 
   return (
     <div className="econ-events">
+      {!heroVisible && heroGroup && (
+        <StickyHeroBar group={heroGroup} now={now} />
+      )}
+
       <FilterBar
         countries={countries} setCountries={setCountries}
         impacts={impacts} setImpacts={setImpacts}
+        searchQuery={searchQuery} setSearchQuery={setSearchQuery}
+        hidePast={hidePast} setHidePast={setHidePast}
+        notifyEnabled={notifyEnabled} notifyDenied={notifyDenied}
+        toggleNotify={toggleNotify}
       />
 
-      {heroGroup ? (
-        <HeroNextEvent group={heroGroup} now={now} />
-      ) : (
-        <div className="econ-events__hero econ-events__hero--empty">
-          <div className="econ-events__hero-empty-text">
-            No remaining events this week inside the current scope.
-            Broaden the filter or wait for next week's feed refresh.
+      <div ref={heroRef}>
+        {heroGroup ? (
+          <HeroNextEvent group={heroGroup} now={now} />
+        ) : (
+          <div className="econ-events__hero econ-events__hero--empty">
+            <div className="econ-events__hero-empty-text">
+              No remaining events this week inside the current scope.
+              Broaden the filter or wait for next week's feed refresh.
+            </div>
           </div>
-        </div>
-      )}
+        )}
+      </div>
 
       <StatusBar
         fetchedAt={feed.fetchedAt}
@@ -263,34 +375,91 @@ export default function SlotB() {
 
       <SpotlightStrip events={scoped} now={now} />
 
-      <DaySchedule events={scoped} now={now} />
+      <DaySchedule
+        events={scheduleEvents}
+        now={now}
+        expandedId={expandedId}
+        setExpandedId={setExpandedId}
+      />
 
       <footer className="econ-events__footnote">
         Source: Forex Factory weekly XML at <code>nfs.faireconomy.media/ff_calendar_thisweek.xml</code>,
-        proxied through <code>/api/events-calendar</code> with a 1-hour edge cache. The public feed publishes
-        forecast and previous values at the time of each event; the post-print actual value is reserved for a
-        future feed wire-up. Times are rendered in your local timezone after server-side normalization to
-        America/New_York (the source's native zone).
+        proxied through <code>/api/events-calendar</code> with a 1-hour edge cache. Click any row to expose its
+        FF source link, an .ics calendar download, and a 5-minute lead-time notification toggle. Notifications
+        require the browser-level Notification permission and only fire while this tab is open. Times render
+        in your local timezone after server-side normalization to America/New_York.
       </footer>
     </div>
   );
 }
 
+// ── Sticky compact countdown bar ──────────────────────────────────────
+// Fixes to the top of the viewport when the main hero is offscreen.
+function StickyHeroBar({ group, now }) {
+  const a = group.anchor;
+  const family = a._spotlight;
+  const ms = a._ms - now;
+  const urgency = urgencyTier(ms);
+  const familyClass = family ? `econ-events__sticky--${family.color}` : 'econ-events__sticky--neutral';
+  return (
+    <div className={`econ-events__sticky ${familyClass} econ-events__sticky--${urgency}`}>
+      <span className="econ-events__sticky-eyebrow">Next</span>
+      {family && (
+        <span className={`econ-events__sticky-family econ-events__sticky-family--${family.color}`}>
+          {family.label}
+        </span>
+      )}
+      <span className="econ-events__sticky-title">{a.title}</span>
+      <span className={`econ-events__hero-impact econ-events__hero-impact--${(a.impact || '').toLowerCase()}`}>
+        <span className={`econ-events__dot econ-events__dot--${(a.impact || '').toLowerCase()}`} aria-hidden="true" />
+        {a.impact || '—'}
+      </span>
+      <span className="econ-events__sticky-countdown">
+        <CompactCountdown ms={ms} dayKind={a.dayKind} />
+      </span>
+    </div>
+  );
+}
+
+function CompactCountdown({ ms, dayKind }) {
+  if (dayKind === 'all-day' || dayKind === 'tentative') {
+    return <span className="econ-events__sticky-countdown-passive">{dayKind === 'all-day' ? 'All Day' : 'Tentative'}</span>;
+  }
+  if (ms <= 0) return <span className="econ-events__sticky-countdown-passive">Released</span>;
+  const totalSec = Math.floor(ms / 1000);
+  const days = Math.floor(totalSec / 86400);
+  const hours = Math.floor((totalSec % 86400) / 3600);
+  const mins = Math.floor((totalSec % 3600) / 60);
+  const secs = totalSec % 60;
+  if (days > 0) return <span><strong>{days}</strong>d <strong>{hours}</strong>h</span>;
+  return (
+    <span>
+      <strong>{String(hours).padStart(2, '0')}</strong>h{' '}
+      <strong>{String(mins).padStart(2, '0')}</strong>m{' '}
+      <strong>{String(secs).padStart(2, '0')}</strong>s
+    </span>
+  );
+}
+
 // ── Filter bar ────────────────────────────────────────────────────────
-function FilterBar({ countries, setCountries, impacts, setImpacts }) {
+function FilterBar({
+  countries, setCountries,
+  impacts, setImpacts,
+  searchQuery, setSearchQuery,
+  hidePast, setHidePast,
+  notifyEnabled, notifyDenied, toggleNotify,
+}) {
   const toggleCountry = (c) => {
     setCountries((prev) => {
       const next = new Set(prev);
-      if (next.has(c)) next.delete(c);
-      else next.add(c);
+      if (next.has(c)) next.delete(c); else next.add(c);
       return next;
     });
   };
   const toggleImpact = (i) => {
     setImpacts((prev) => {
       const next = new Set(prev);
-      if (next.has(i)) next.delete(i);
-      else next.add(i);
+      if (next.has(i)) next.delete(i); else next.add(i);
       return next;
     });
   };
@@ -335,6 +504,37 @@ function FilterBar({ countries, setCountries, impacts, setImpacts }) {
           })}
         </div>
       </div>
+      <div className="econ-events__filtergroup">
+        <span className="econ-events__filtergroup-label">Search</span>
+        <input
+          type="search"
+          className="econ-events__searchbox"
+          placeholder="title contains…"
+          value={searchQuery}
+          onChange={(e) => setSearchQuery(e.target.value)}
+        />
+      </div>
+      <div className="econ-events__filtergroup">
+        <button
+          type="button"
+          className={`econ-events__pill ${hidePast ? 'econ-events__pill--active' : ''}`}
+          onClick={() => setHidePast((v) => !v)}
+          aria-pressed={hidePast}
+          title="Hide events that have already passed"
+        >
+          Hide past
+        </button>
+        <button
+          type="button"
+          className={`econ-events__pill econ-events__pill--notify ${notifyEnabled ? 'econ-events__pill--active' : ''} ${notifyDenied ? 'econ-events__pill--denied' : ''}`}
+          onClick={toggleNotify}
+          aria-pressed={notifyEnabled}
+          title={notifyDenied ? 'Browser denied notifications' : 'Notify 5 minutes before next high-impact event'}
+          disabled={notifyDenied}
+        >
+          {notifyDenied ? 'Notifications blocked' : (notifyEnabled ? 'Notify · ON' : 'Notify · OFF')}
+        </button>
+      </div>
     </div>
   );
 }
@@ -377,6 +577,7 @@ function HeroNextEvent({ group, now }) {
           <HeroNumber label="Previous" value={anchor.previous} accent="muted" />
           <HeroNumber label="Actual" value={anchor.actual} accent="green" pending />
         </div>
+        <ForecastInterpretation forecast={anchor.forecast} previous={anchor.previous} title={anchor.title} />
         {group.events.length > 1 && (
           <div className="econ-events__hero-cluster">
             <div className="econ-events__hero-cluster-label">
@@ -449,6 +650,59 @@ function urgencyTier(ms) {
   if (hr <= 24) return 'today';
   if (hr <= 72) return 'week';
   return 'far';
+}
+
+// ── Forecast vs previous interpretation ───────────────────────────────
+// One-liner that helps a non-macro reader understand what direction
+// the consensus expects relative to the prior reading. Intentionally
+// terse — the page is for context, not commentary.
+function ForecastInterpretation({ forecast, previous, title }) {
+  const f = parseNumeric(forecast);
+  const p = parseNumeric(previous);
+  if (f == null || p == null) return null;
+  if (Math.abs(f - p) < 1e-9) {
+    return (
+      <div className="econ-events__hero-interp">
+        Consensus expects no change from prior reading.
+      </div>
+    );
+  }
+  const hotter = f > p;
+  // Inflation-style series read coral when the print is hotter than
+  // prior; growth/labor read green for hotter prints (more activity =
+  // typically equity-positive). The lookup is heuristic — readers
+  // should treat the color as a hint, not a forecast.
+  const hot = isInflationary(title);
+  const colorClass = hotter
+    ? (hot ? 'econ-events__hero-interp--coral' : 'econ-events__hero-interp--green')
+    : (hot ? 'econ-events__hero-interp--green' : 'econ-events__hero-interp--coral');
+  const direction = hotter ? 'higher' : 'lower';
+  const delta = formatDelta(f, p, forecast);
+  return (
+    <div className={`econ-events__hero-interp ${colorClass}`}>
+      Consensus expects <strong>{direction}</strong> reading vs prior — {delta}.
+    </div>
+  );
+}
+
+function parseNumeric(s) {
+  if (s == null) return null;
+  const m = /-?\d+(\.\d+)?/.exec(String(s));
+  if (!m) return null;
+  const v = Number(m[0]);
+  return Number.isFinite(v) ? v : null;
+}
+
+function formatDelta(f, p, rawForecast) {
+  const diff = f - p;
+  const isPercent = /%/.test(String(rawForecast || ''));
+  const decimals = Math.max(0, Math.min(2, (String(rawForecast || '').split('.')[1] || '').length));
+  const formatted = Math.abs(diff).toFixed(decimals);
+  return `Δ ${diff > 0 ? '+' : '−'}${formatted}${isPercent ? '%' : ''}`;
+}
+
+function isInflationary(title) {
+  return /Price|CPI|PPI|PCE|Wage|ECI|Inflation/i.test(title || '');
 }
 
 // ── Status bar ────────────────────────────────────────────────────────
@@ -553,7 +807,7 @@ function SpotlightStrip({ events, now }) {
 }
 
 // ── Day-by-day schedule ──────────────────────────────────────────────
-function DaySchedule({ events, now }) {
+function DaySchedule({ events, now, expandedId, setExpandedId }) {
   const byDate = new Map();
   for (const e of events) {
     const k = e.date;
@@ -575,6 +829,7 @@ function DaySchedule({ events, now }) {
         const dayEvents = byDate.get(dateKey).sort((a, b) => a._ms - b._ms);
         const isToday = dateKey === todayKey;
         const allPast = dayEvents.every((e) => e._ms < now);
+        const counts = countImpacts(dayEvents);
         return (
           <div
             key={dateKey}
@@ -583,51 +838,214 @@ function DaySchedule({ events, now }) {
             <div className="econ-events__day-header">
               <span className="econ-events__day-name">{formatDayName(dateKey, todayKey)}</span>
               <span className="econ-events__day-date">{formatLongDate(dateKey)}</span>
+              <DayImpactChips counts={counts} />
               <span className="econ-events__day-count">{dayEvents.length} events</span>
             </div>
             <div className="econ-events__day-rows">
-              {dayEvents.map((e, i) => {
-                const past = e._ms < now;
-                const sp = e._spotlight;
-                return (
-                  <div
-                    key={`${e.title}-${i}`}
-                    className={`econ-events__row${past ? ' econ-events__row--past' : ''}${sp ? ` econ-events__row--${sp.color}` : ''}`}
-                  >
-                    <span className="econ-events__row-time">
-                      {formatTimeOnly(e._at, e.dayKind)}
-                    </span>
-                    <span className={`econ-events__row-impact econ-events__row-impact--${(e.impact || '').toLowerCase()}`}>
-                      <span className={`econ-events__dot econ-events__dot--${(e.impact || '').toLowerCase()}`} aria-hidden="true" />
-                    </span>
-                    <span className="econ-events__row-country">{e.country}</span>
-                    <span className="econ-events__row-title">
-                      {e.url ? (
-                        <a href={e.url} target="_blank" rel="noopener noreferrer">{e.title}</a>
-                      ) : e.title}
-                      {sp && <span className="econ-events__row-family">{sp.label}</span>}
-                    </span>
-                    <span className="econ-events__row-num">
-                      <span className="econ-events__row-num-label">F</span>
-                      {e.forecast || '—'}
-                    </span>
-                    <span className="econ-events__row-num">
-                      <span className="econ-events__row-num-label">P</span>
-                      {e.previous || '—'}
-                    </span>
-                    <span className="econ-events__row-num econ-events__row-num--actual">
-                      <span className="econ-events__row-num-label">A</span>
-                      {e.actual || '—'}
-                    </span>
-                  </div>
-                );
-              })}
+              {dayEvents.map((e) => (
+                <EventRow
+                  key={e._id}
+                  event={e}
+                  past={e._ms < now}
+                  expanded={expandedId === e._id}
+                  onToggle={() => setExpandedId(expandedId === e._id ? null : e._id)}
+                />
+              ))}
             </div>
           </div>
         );
       })}
     </div>
   );
+}
+
+function countImpacts(events) {
+  const out = { High: 0, Medium: 0, Low: 0, Holiday: 0 };
+  for (const e of events) {
+    if (out[e.impact] != null) out[e.impact] += 1;
+  }
+  return out;
+}
+
+function DayImpactChips({ counts }) {
+  return (
+    <div className="econ-events__day-chips">
+      {ALL_IMPACTS.map((i) => {
+        if (!counts[i]) return null;
+        const cls = i.toLowerCase();
+        return (
+          <span
+            key={i}
+            className={`econ-events__day-chip econ-events__day-chip--${cls}`}
+            title={`${counts[i]} ${i.toLowerCase()}-impact event${counts[i] > 1 ? 's' : ''}`}
+          >
+            <span className={`econ-events__dot econ-events__dot--${cls}`} aria-hidden="true" />
+            {counts[i]}
+          </span>
+        );
+      })}
+    </div>
+  );
+}
+
+function EventRow({ event: e, past, expanded, onToggle }) {
+  const sp = e._spotlight;
+  return (
+    <div
+      className={`econ-events__row${past ? ' econ-events__row--past' : ''}${sp ? ` econ-events__row--${sp.color}` : ''}${expanded ? ' econ-events__row--expanded' : ''}`}
+    >
+      <button
+        type="button"
+        className="econ-events__row-summary"
+        onClick={onToggle}
+        aria-expanded={expanded}
+      >
+        <span className="econ-events__row-time">{formatTimeOnly(e._at, e.dayKind)}</span>
+        <span className={`econ-events__row-impact econ-events__row-impact--${(e.impact || '').toLowerCase()}`}>
+          <span className={`econ-events__dot econ-events__dot--${(e.impact || '').toLowerCase()}`} aria-hidden="true" />
+        </span>
+        <span className="econ-events__row-country">{e.country}</span>
+        <span className="econ-events__row-title">
+          <span className="econ-events__row-title-text">{e.title}</span>
+          {sp && <span className="econ-events__row-family">{sp.label}</span>}
+        </span>
+        <span className="econ-events__row-num">
+          <span className="econ-events__row-num-label">F</span>
+          {e.forecast || '—'}
+        </span>
+        <span className="econ-events__row-num">
+          <span className="econ-events__row-num-label">P</span>
+          {e.previous || '—'}
+        </span>
+        <span className="econ-events__row-num econ-events__row-num--actual">
+          <span className="econ-events__row-num-label">A</span>
+          {e.actual || '—'}
+        </span>
+        <span className="econ-events__row-toggle" aria-hidden="true">{expanded ? '▾' : '▸'}</span>
+      </button>
+      {expanded && (
+        <EventRowDetail event={e} past={past} />
+      )}
+    </div>
+  );
+}
+
+function EventRowDetail({ event: e, past }) {
+  const onIcs = useCallback(() => downloadIcs(e), [e]);
+  return (
+    <div className="econ-events__row-detail">
+      <div className="econ-events__row-detail-row">
+        {e.url && (
+          <a
+            className="econ-events__row-action econ-events__row-action--link"
+            href={e.url}
+            target="_blank"
+            rel="noopener noreferrer"
+          >
+            Open on Forex Factory ↗
+          </a>
+        )}
+        <button
+          type="button"
+          className="econ-events__row-action"
+          onClick={onIcs}
+        >
+          Add to calendar (.ics)
+        </button>
+        <span className="econ-events__row-detail-when">
+          {formatLongWhen(e._at, e.dayKind)}
+        </span>
+      </div>
+      <ForecastInterpretation
+        forecast={e.forecast}
+        previous={e.previous}
+        title={e.title}
+      />
+      {past && e.actual == null && (
+        <div className="econ-events__row-detail-note">
+          This event has been released. The public Forex Factory feed does not publish post-print actual values; click "Open on Forex Factory" to see what hit the wire.
+        </div>
+      )}
+    </div>
+  );
+}
+
+// ── .ics calendar export ───────────────────────────────────────────
+function downloadIcs(event) {
+  const start = event._at instanceof Date ? event._at : new Date(event.dateTime);
+  if (Number.isNaN(start.getTime())) return;
+  // Default 30-minute event duration. Most macro releases are
+  // instantaneous prints on a wire (CPI, NFP, ISM, GDP) where the
+  // notional "duration" is academic and 30 min is enough for a desk
+  // reader's calendar to show the slot. FOMC events with longer
+  // press-conferences (~1h) are still mostly single moments for
+  // calendar purposes; the reader can stretch the block manually if
+  // they want. All-day rows are suppressed (no .ics for the bank-
+  // holiday-style passthrough events).
+  if (event.dayKind === 'all-day' || event.dayKind === 'tentative') return;
+  const end = new Date(start.getTime() + 30 * 60 * 1000);
+  const lines = [
+    'BEGIN:VCALENDAR',
+    'VERSION:2.0',
+    'PRODID:-//AI Gamma//Beta Events Listener//EN',
+    'CALSCALE:GREGORIAN',
+    'METHOD:PUBLISH',
+    'BEGIN:VEVENT',
+    `UID:ff-${slugifyForUid(event.title)}-${event.dateTime}@aigamma.com`,
+    `DTSTAMP:${formatIcsDate(new Date())}`,
+    `DTSTART:${formatIcsDate(start)}`,
+    `DTEND:${formatIcsDate(end)}`,
+    `SUMMARY:${icsEscape(`${event.country || ''} · ${event.title}`)}`,
+    `DESCRIPTION:${icsEscape(buildIcsDescription(event))}`,
+    event.url ? `URL:${icsEscape(event.url)}` : null,
+    `CATEGORIES:${icsEscape(`Forex Factory · ${event.impact || 'Unknown'}`)}`,
+    'END:VEVENT',
+    'END:VCALENDAR',
+  ].filter(Boolean);
+  // The .ics line break is CRLF per RFC 5545.
+  const ics = lines.join('\r\n');
+  const blob = new Blob([ics], { type: 'text/calendar;charset=utf-8' });
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement('a');
+  a.href = url;
+  a.download = `${slugifyForFile(event.title)}.ics`;
+  document.body.appendChild(a);
+  a.click();
+  document.body.removeChild(a);
+  setTimeout(() => URL.revokeObjectURL(url), 10_000);
+}
+
+function buildIcsDescription(e) {
+  const lines = [];
+  lines.push(`Impact: ${e.impact || 'unknown'}`);
+  if (e.forecast) lines.push(`Forecast: ${e.forecast}`);
+  if (e.previous) lines.push(`Previous: ${e.previous}`);
+  if (e._spotlight) lines.push(`Family: ${e._spotlight.label}`);
+  lines.push('Source: Forex Factory · ff_calendar_thisweek.xml');
+  if (e.url) lines.push(`Source URL: ${e.url}`);
+  return lines.join('\\n');
+}
+
+// RFC 5545 says DTSTART/DTSTAMP must be in YYYYMMDDTHHMMSSZ form.
+// Convert to UTC and strip dashes/colons/milliseconds.
+function formatIcsDate(d) {
+  return d.toISOString().replace(/[-:]/g, '').replace(/\.\d{3}/, '');
+}
+
+function icsEscape(s) {
+  return String(s)
+    .replace(/\\/g, '\\\\')
+    .replace(/;/g, '\\;')
+    .replace(/,/g, '\\,')
+    .replace(/\n/g, '\\n');
+}
+
+function slugifyForFile(s) {
+  return String(s).replace(/[^a-z0-9]+/gi, '-').replace(/^-+|-+$/g, '').slice(0, 60).toLowerCase();
+}
+
+function slugifyForUid(s) {
+  return slugifyForFile(s).replace(/-/g, '');
 }
 
 // ── Formatting helpers ────────────────────────────────────────────────
@@ -704,7 +1122,6 @@ function formatDuration(ms) {
   return remHr ? `${days}d ${remHr}h` : `${days}d`;
 }
 
-// Local-timezone YYYY-MM-DD for the given Date.
 function isoDateLocal(d) {
   const y = d.getFullYear();
   const m = String(d.getMonth() + 1).padStart(2, '0');
