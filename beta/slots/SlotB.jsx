@@ -892,11 +892,18 @@ function ImpliedMoveChart({ events, ivContext }) {
     return () => obs.disconnect();
   }, []);
 
-  // Distinct event dates in chronological order. The chart shows only
-  // the dates that have at least one event in scope — empty calendar
-  // days are not padded out, because for USD high+medium most weeks
-  // have ~4 distinct event dates and showing a 7-day skeleton with 3
-  // empty columns wastes horizontal space.
+  // ---- All hooks must be called BEFORE any early return. Earlier
+  // versions of this component placed the `labelGroups` and
+  // `pointMeta` useMemo calls below the empty-state early returns,
+  // which produced a React #310 ("rendered more hooks than during
+  // the previous render") on the first transition from
+  // ivContext=null to ivContext=present. Hoisting all useMemo calls
+  // above the conditional renders fixes the violation. The empty-
+  // state branches read these memos but get back empty arrays /
+  // empty maps, which is fine because they don't actually use the
+  // values — they just need the hook count to match across
+  // renders. ----
+
   const chartDays = useMemo(() => {
     const byDate = new Map();
     for (const e of events) {
@@ -912,67 +919,25 @@ function ImpliedMoveChart({ events, ivContext }) {
       }));
   }, [events]);
 
-  if (!ivContext) {
-    return (
-      <section className="econ-events__chart-card">
-        <div className="econ-events__chart-meta">
-          <span className="econ-events__chart-title">SPX implied move per event</span>
-          <span className="econ-events__chart-source">awaiting /api/data — vol surface unavailable</span>
-        </div>
-        <div className="econ-events__chart-empty">
-          The vol-surface fetch hasn't returned yet (or the SPX intraday ingest is currently down).
-          Implied-move overlays will populate as soon as <code>/api/data</code> answers.
-        </div>
-      </section>
-    );
-  }
-  if (events.length === 0) {
-    return (
-      <section className="econ-events__chart-card">
-        <div className="econ-events__chart-meta">
-          <span className="econ-events__chart-title">SPX implied move per event</span>
-          <span className="econ-events__chart-source">no qualifying events</span>
-        </div>
-        <div className="econ-events__chart-empty">
-          No upcoming high- or medium-impact events in the current scope. The chart populates
-          when the FF feed carries a print whose date resolves to an SPX expiration in the
-          fetched surface.
-        </div>
-      </section>
-    );
-  }
-
-  const width = Math.max(Math.min(containerWidth - 16, 1100), 320);
-  const height = Math.round(Math.min(width * 0.55, 520));
-  const PADDING = { top: 32, right: 40, bottom: 64, left: 64 };
-  const plotW = width - PADDING.left - PADDING.right;
-  const plotH = height - PADDING.top - PADDING.bottom;
-
-  // Y axis: top = 1.1 × max move, rounded up to nearest 0.5%. Floor at
-  // 1.5% so a low-vol week doesn't squish all dots against the top
-  // gridline.
-  const yMaxRaw = Math.max(0.015, Math.max(...events.map((e) => e._impliedMove.movePct / 100)));
-  const yMax = Math.ceil((yMaxRaw * 1.10) * 200) / 200;
-
-  const xForDay = (dayIdx) => {
-    if (chartDays.length <= 1) return PADDING.left + plotW / 2;
-    return PADDING.left + (plotW * dayIdx) / (chartDays.length - 1);
-  };
-  const yForMove = (movePct) => PADDING.top + plotH * (1 - (movePct / 100) / yMax);
-
-  // Flatten back to per-event points with their dayIdx for rendering.
-  const points = chartDays.flatMap((d, dayIdx) =>
-    d.events.map((e) => ({ ...e, dayIdx, isoDate: d.isoDate })),
+  // Flatten chartDays to per-event points carrying their dayIdx.
+  // Memoized so labelGroups (which depends on points) only
+  // recomputes when chartDays actually changes, not on every render.
+  const points = useMemo(
+    () =>
+      chartDays.flatMap((d, dayIdx) =>
+        d.events.map((e) => ({ ...e, dayIdx, isoDate: d.isoDate })),
+      ),
+    [chartDays],
   );
 
-  // Cluster dots that fall in the same (dayIdx, Y bucket of 0.05%) so
-  // overlapping markers spread horizontally and labels stack into a
-  // comma-joined group. Bucket width is tighter than earnings (which
-  // uses 0.75%) because most events on the same day map to the same
-  // expiration's IV — so the implied move IS literally identical, not
-  // just nearby.
+  // Cluster dots that fall in the same (dayIdx, Y bucket of 0.05%)
+  // so overlapping markers spread horizontally and labels stack
+  // into a comma-joined group. Bucket width is tighter than the
+  // earnings-page chart (0.75%) because most same-date events here
+  // map to the same SPX expiration's IV — they literally share
+  // the same Y, not just neighbor it.
   const labelGroups = useMemo(() => {
-    const bucket = 0.05; // 0.05% Y-bucket — events sharing a date often share an expiration's IV exactly
+    const bucket = 0.05;
     const groups = new Map();
     for (const p of points) {
       const yBkt = Math.round(p._impliedMove.movePct / bucket);
@@ -991,6 +956,65 @@ function ImpliedMoveChart({ events, ivContext }) {
     return map;
   }, [labelGroups]);
 
+  // ---- End of hook calls. Early returns are safe below. ----
+
+  if (!ivContext) {
+    return (
+      <section className="econ-events__chart-card">
+        <div className="econ-events__chart-meta">
+          <span className="econ-events__chart-title">SPX Implied Move per Event</span>
+          <span className="econ-events__chart-source">awaiting /api/data — vol surface unavailable</span>
+        </div>
+        <div className="econ-events__chart-empty">
+          The vol-surface fetch hasn't returned yet (or the SPX intraday ingest is currently down).
+          Implied-move overlays will populate as soon as <code>/api/data</code> answers.
+        </div>
+      </section>
+    );
+  }
+  if (events.length === 0) {
+    return (
+      <section className="econ-events__chart-card">
+        <div className="econ-events__chart-meta">
+          <span className="econ-events__chart-title">SPX Implied Move per Event</span>
+          <span className="econ-events__chart-source">no qualifying events</span>
+        </div>
+        <div className="econ-events__chart-empty">
+          No upcoming high- or medium-impact events in the current scope. The chart populates
+          when the FF feed carries a print whose date resolves to an SPX expiration in the
+          fetched surface.
+        </div>
+      </section>
+    );
+  }
+
+  // Layout. Top padding (52px) gives multi-event cluster labels room
+  // to render above the topmost dot without overhanging the chart
+  // border or colliding with the meta header. Left padding (76px)
+  // gives the y-axis title and tick labels (e.g. "1.50%") clear
+  // breathing room. Right padding (60px) leaves room for a label
+  // anchored to the rightmost column to extend leftward without
+  // butting against the plot border.
+  const width = Math.max(Math.min(containerWidth - 16, 1100), 320);
+  const height = Math.round(Math.min(width * 0.6, 560));
+  const PADDING = { top: 52, right: 60, bottom: 68, left: 76 };
+  const plotW = width - PADDING.left - PADDING.right;
+  const plotH = height - PADDING.top - PADDING.bottom;
+
+  // Y axis: top = 1.15 × max move, rounded up to nearest 0.5%. The
+  // 1.15 (vs the prior 1.10) headroom factor gives the topmost
+  // cluster's label more vertical air so it never crowds the chart
+  // border. Floor at 1.5% so a low-vol week doesn't squish all dots
+  // against the top gridline.
+  const yMaxRaw = Math.max(0.015, Math.max(...events.map((e) => e._impliedMove.movePct / 100)));
+  const yMax = Math.ceil((yMaxRaw * 1.15) * 200) / 200;
+
+  const xForDay = (dayIdx) => {
+    if (chartDays.length <= 1) return PADDING.left + plotW / 2;
+    return PADDING.left + (plotW * dayIdx) / (chartDays.length - 1);
+  };
+  const yForMove = (movePct) => PADDING.top + plotH * (1 - (movePct / 100) / yMax);
+
   const hoveredKey = hovered ? hovered._id : null;
 
   // Y-axis tick step: 0.25% under 2%, 0.5% under 5%, 1% above.
@@ -999,7 +1023,7 @@ function ImpliedMoveChart({ events, ivContext }) {
   return (
     <section className="econ-events__chart-card">
       <div className="econ-events__chart-meta">
-        <span className="econ-events__chart-title">SPX implied move per event</span>
+        <span className="econ-events__chart-title">SPX Implied Move per Event</span>
         <span className="econ-events__chart-source">
           spot ${formatNum(ivContext.spotPrice, 0)} · {events.length} event{events.length === 1 ? '' : 's'} ·
           {' '}±1σ move = spot × ATM&nbsp;IV × √(DTE/365) at next expiration
@@ -1131,12 +1155,27 @@ function ImpliedMoveChart({ events, ivContext }) {
             const labels = g.members.map((m) =>
               m._spotlight ? m._spotlight.label : shortLabelForEvent(m.title),
             );
+            // Dedupe consecutive same-family entries so a 3-row FOMC
+            // afternoon collapses to a single "FOMC" tag rather than
+            // "FOMC · FOMC · FOMC". The cap below is per-cluster,
+            // applied after dedup, so a Thursday 12:30 cluster of
+            // [GDP, PCE, Employment, JOBS, GDP] dedups to those four
+            // distinct families and renders without truncation.
             const dedup = [];
             for (const l of labels) {
               if (dedup[dedup.length - 1] !== l) dedup.push(l);
             }
-            const display = dedup.length > 3
-              ? `${dedup.slice(0, 3).join(' · ')} · …`
+            // Cap at 5 entries before truncating with ellipsis. Per-
+            // cluster label widths past 5 entries start to collide
+            // with the next column even at the tightened 6-char
+            // shortLabelForEvent cap; 5 with " · " separators sits
+            // around 30-35 chars worst case, comfortable for a
+            // ~150px column allotment in a 900px chart. Family
+            // labels (FOMC, CPI, NFP, GDP, PCE, PPI, ISM, JOBS) are
+            // 3-4 chars each so 5 family entries renders ~25 chars.
+            const CAP = 5;
+            const display = dedup.length > CAP
+              ? `${dedup.slice(0, CAP).join(' · ')} · …`
               : dedup.join(' · ');
 
             // Anchor at the column edge: leftmost column anchors to
@@ -1177,6 +1216,10 @@ function ImpliedMoveChart({ events, ivContext }) {
           const openLeft = cx > width * 0.55;
           const openDown = cy < height * 0.30;
           const o = 14;
+          // Tooltip widened from 240/320 → 280/400 so wider event
+          // titles (e.g. "Advance GDP Price Index q/q") render on a
+          // single line, plus word-wrap on the title row catches the
+          // rare row that exceeds even the 400px cap.
           const style = {
             position: 'absolute',
             zIndex: 5,
@@ -1184,12 +1227,12 @@ function ImpliedMoveChart({ events, ivContext }) {
             background: 'rgba(8, 11, 16, 0.96)',
             border: '1px solid rgba(160, 172, 200, 0.35)',
             borderRadius: '4px',
-            padding: '0.65rem 0.85rem',
+            padding: '0.7rem 0.95rem',
             fontFamily: 'Courier New, monospace',
             fontSize: '0.85rem',
             color: '#e1e8f4',
-            minWidth: 240,
-            maxWidth: 320,
+            minWidth: 280,
+            maxWidth: 400,
             lineHeight: 1.5,
             boxShadow: '0 2px 12px rgba(0, 0, 0, 0.6)',
           };
