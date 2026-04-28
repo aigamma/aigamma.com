@@ -430,7 +430,7 @@ export default function SlotB() {
         ) : (
           <div className="econ-events__hero econ-events__hero--empty">
             <div className="econ-events__hero-empty-text">
-              No remaining events in the next 4 weeks inside the current scope.
+              No upcoming events match the current filter scope.
               Broaden the impact filter or wait for the next feed refresh.
             </div>
           </div>
@@ -873,11 +873,18 @@ function TimelineStrip({ events, now }) {
       }));
   }, [events]);
 
+  // The title is derived from the actual data on the page rather
+  // than a fixed "Next 4 Weeks" promise — the function attempts to
+  // fetch 4 weeks, but the HTML scrape for any of weeks 1-3 can fail
+  // (Cloudflare bot-challenge spike, FF rate-limit, etc.) and on
+  // those days the page only carries the XML week. A fixed-horizon
+  // header would mislead the reader into thinking 4 weeks of data
+  // is shown when it isn't.
   if (events.length === 0) {
     return (
       <section className="econ-events__timeline">
         <div className="econ-events__timeline-meta">
-          <span className="econ-events__timeline-title">Next 4 Weeks of Catalysts</span>
+          <span className="econ-events__timeline-title">Upcoming Catalysts</span>
           <span className="econ-events__timeline-source">no qualifying events in scope</span>
         </div>
         <div className="econ-events__timeline-empty">
@@ -895,12 +902,26 @@ function TimelineStrip({ events, now }) {
 
   const todayIso = isoDateLocal(new Date(now));
 
+  // Compute the actual horizon from the data: latest event's date.
+  // The title and meta line both quote this so the page never claims
+  // a wider horizon than what's actually shown.
+  const lastEventMs = events.reduce((m, e) => (e._ms > m ? e._ms : m), 0);
+  const horizonDate = lastEventMs > 0 ? new Date(lastEventMs) : null;
+  const horizonLabel = horizonDate
+    ? horizonDate.toLocaleDateString(undefined, { month: 'short', day: 'numeric' })
+    : null;
+  const horizonDays = horizonDate
+    ? Math.max(1, Math.ceil((horizonDate.getTime() - now) / 86400000))
+    : 0;
+
   return (
     <section className="econ-events__timeline">
       <div className="econ-events__timeline-meta">
-        <span className="econ-events__timeline-title">Next 4 Weeks of Catalysts</span>
+        <span className="econ-events__timeline-title">
+          {horizonLabel ? `Catalysts through ${horizonLabel}` : 'Upcoming Catalysts'}
+        </span>
         <span className="econ-events__timeline-source">
-          {events.length} event{events.length === 1 ? '' : 's'} · circle size keys impact, color keys family
+          {events.length} event{events.length === 1 ? '' : 's'} · {horizonDays} day{horizonDays === 1 ? '' : 's'} forward · circle size keys impact, color keys family
         </span>
       </div>
       <div className="econ-events__timeline-rows" ref={containerRef}>
