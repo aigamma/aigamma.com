@@ -9,6 +9,7 @@ import {
   plotlyAxis,
 } from '../lib/plotlyTheme';
 import { computeGexByStrike, symlog, symlogTicks } from '../lib/gex';
+import { computeGammaProfile, findFlipFromProfile } from '../lib/gammaProfile';
 import { formatInteger } from '../lib/format';
 import { formatExpirationOption } from '../lib/dates';
 import RangeBrush from './RangeBrush';
@@ -74,6 +75,48 @@ function toggleBtnStyle(active) {
     cursor: 'pointer',
     color: active ? '#e0e0e0' : '#8a8f9c',
   };
+}
+
+// Single row inside the per-expiration custom-levels overlay panel that
+// pops into the chart's upper-left when a single expiration is picked.
+// Label-on-the-left, value-on-the-right; renders an em-dash when the
+// value is null (e.g., a 0DTE with no zero crossing inside the swept
+// spot range) so the row count stays stable across selections and the
+// reader sees explicitly which level couldn't be resolved rather than
+// a missing row.
+function CustomLevelRow({ label, value, color, mobile }) {
+  return (
+    <div
+      style={{
+        display: 'flex',
+        justifyContent: 'space-between',
+        alignItems: 'baseline',
+        gap: '0.75rem',
+      }}
+    >
+      <span
+        style={{
+          color: 'var(--text-secondary)',
+          fontSize: mobile ? '0.6rem' : '0.7rem',
+          textTransform: 'uppercase',
+          letterSpacing: '0.05em',
+          fontFamily: 'Courier New, monospace',
+        }}
+      >
+        {label}
+      </span>
+      <span
+        style={{
+          color,
+          fontSize: mobile ? '0.8rem' : '0.95rem',
+          fontWeight: 'bold',
+          fontFamily: 'Courier New, monospace',
+        }}
+      >
+        {value != null ? formatInteger(value) : '—'}
+      </span>
+    </div>
+  );
 }
 
 export default function GexProfile({ contracts, spotPrice, levels, prevContracts, prevSpotPrice, capturedAt }) {
@@ -156,6 +199,49 @@ export default function GexProfile({ contracts, spotPrice, levels, prevContracts
     const upper = spotPrice * 1.2;
     return all.filter((e) => e.strike >= lower && e.strike <= upper);
   }, [filteredPrevContracts, prevSpotPrice, spotPrice]);
+
+  // Per-expiration walls and flip — recomputed from the picked chain's
+  // contracts alone so the reader sees where THIS expiration's gamma is
+  // concentrated rather than the rolled-up aggregate the chart's vertical
+  // reference lines (and the chip row above the chart) keep showing. The
+  // panel only renders when an expiration is picked; in ALL EXPIRATIONS
+  // mode this returns null and the panel JSX short-circuits.
+  //
+  // Mirrors the convention in netlify/functions/ingest-background.mjs that
+  // produces the aggregate-chain levels Supabase persists: walls are the
+  // signed-net-GEX (callGex - putGex) extremes constrained to strikes
+  // within ±15% of spot to exclude stale-OI deep-OTM winners (the same
+  // WALL_WINDOW_PCT the backend uses), and the flip is the smooth
+  // dealer-gamma profile zero crossing from computeGammaProfile +
+  // findFlipFromProfile. Re-computing client-side keeps the methodology
+  // identical to the backend's aggregate-chain math without needing a
+  // round-trip through Supabase for every picker change.
+  const customLevels = useMemo(() => {
+    if (!selectedExpiration || !filteredContracts || filteredContracts.length === 0 || !spotPrice) return null;
+    const all = computeGexByStrike(filteredContracts, spotPrice);
+    if (all.length === 0) return null;
+    const wallMin = spotPrice * 0.85;
+    const wallMax = spotPrice * 1.15;
+    let callWall = null;
+    let putWall = null;
+    let callMaxNet = -Infinity;
+    let putMinNet = Infinity;
+    for (const e of all) {
+      if (e.strike < wallMin || e.strike > wallMax) continue;
+      const net = e.callGex - e.putGex;
+      if (net > callMaxNet) {
+        callMaxNet = net;
+        callWall = e.strike;
+      }
+      if (net < putMinNet) {
+        putMinNet = net;
+        putWall = e.strike;
+      }
+    }
+    const profile = computeGammaProfile(filteredContracts, spotPrice, capturedAt);
+    const flip = profile ? findFlipFromProfile(profile) : null;
+    return { put_wall: putWall, volatility_flip: flip, call_wall: callWall };
+  }, [selectedExpiration, filteredContracts, spotPrice, capturedAt]);
 
   const hasPrior = prevGexData != null && prevGexData.length > 0;
 
@@ -411,10 +497,55 @@ export default function GexProfile({ contracts, spotPrice, levels, prevContracts
           <LevelLabel name="Call Wall" value={levels?.call_wall} color={PLOTLY_COLORS.positive} />
         </div>
       </div>
-      <div
-        ref={chartRef}
-        style={{ width: '100%', height: '700px', backgroundColor: 'var(--bg-card)' }}
-      />
+      {/* Chart wrapper carries position: relative so the per-expiration
+          custom-levels panel below can absolute-position itself into the
+          upper-left of the plot area — the empty space above the y-axis
+          label and below the chip row that's wasted in single-chain mode
+          when the leftmost deep-OTM bars contribute little gamma. The
+          panel renders only when an expiration is picked; in ALL
+          EXPIRATIONS mode it short-circuits and the chart's left margin
+          carries only the y-axis title and tick labels as before. */}
+      <div style={{ position: 'relative' }}>
+        <div
+          ref={chartRef}
+          style={{ width: '100%', height: '700px', backgroundColor: 'var(--bg-card)' }}
+        />
+        {customLevels && (
+          <div
+            style={{
+              position: 'absolute',
+              top: mobile ? '8px' : '14px',
+              left: mobile ? '6px' : '14px',
+              zIndex: 2,
+              background: 'var(--bg-card)',
+              border: '1px solid var(--bg-card-border)',
+              borderRadius: '4px',
+              padding: mobile ? '0.4rem 0.5rem' : '0.55rem 0.75rem',
+              display: 'flex',
+              flexDirection: 'column',
+              gap: mobile ? '0.25rem' : '0.35rem',
+              minWidth: mobile ? '110px' : '155px',
+            }}
+          >
+            <div
+              style={{
+                color: 'var(--text-secondary)',
+                fontSize: mobile ? '0.55rem' : '0.62rem',
+                textTransform: 'uppercase',
+                letterSpacing: '0.08em',
+                fontFamily: 'Courier New, monospace',
+                paddingBottom: mobile ? '0.2rem' : '0.3rem',
+                borderBottom: '1px solid var(--bg-card-border)',
+              }}
+            >
+              Single-chain levels
+            </div>
+            <CustomLevelRow label="Put Wall" value={customLevels.put_wall} color={PLOTLY_COLORS.negative} mobile={mobile} />
+            <CustomLevelRow label="Vol Flip" value={customLevels.volatility_flip} color={PLOTLY_COLORS.highlight} mobile={mobile} />
+            <CustomLevelRow label="Call Wall" value={customLevels.call_wall} color={PLOTLY_COLORS.positive} mobile={mobile} />
+          </div>
+        )}
+      </div>
       {brushDomain && activeRange && (
         <RangeBrush
           min={brushDomain.strikeMin}
