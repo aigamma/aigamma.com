@@ -169,6 +169,7 @@ export default defineConfig({
         heatmap: fileURLToPath(new URL('./heatmap/index.html', import.meta.url)),
         scan: fileURLToPath(new URL('./scan/index.html', import.meta.url)),
         earnings: fileURLToPath(new URL('./earnings/index.html', import.meta.url)),
+        events: fileURLToPath(new URL('./events/index.html', import.meta.url)),
         'expiring-gamma': fileURLToPath(new URL('./expiring-gamma/index.html', import.meta.url)),
         vix: fileURLToPath(new URL('./vix/index.html', import.meta.url)),
       },
