@@ -78,7 +78,7 @@
 //
 //   DaySchedule ─ chronological timeline grouped by date, per-day
 //     impact-count chips, click-to-expand event rows with FF link /
-//     .ics download / forecast-vs-previous interpretation.
+//     Google Calendar add-event link / forecast-vs-previous interpretation.
 
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 
@@ -461,7 +461,7 @@ export default function SlotB() {
         Implied move per event = <code>spot × ATM IV × √(DTE/365)</code> evaluated against the next
         SPX expiration AT-OR-AFTER the event date — the move you'd be hedging if you bought a
         straddle at that expiration today, conditional on the event being the next material
-        catalyst. Click any row to download its event as an .ics calendar entry. Times render
+        catalyst. Click any row to add the event to Google Calendar in one click. Times render
         in your local timezone.
       </footer>
     </div>
@@ -1526,7 +1526,7 @@ function EventRow({ event: e, past, expanded, onToggle }) {
 }
 
 function EventRowDetail({ event: e, past }) {
-  const onIcs = useCallback(() => downloadIcs(e), [e]);
+  const calendarHref = useMemo(() => googleCalendarUrl(e), [e]);
   const [news, setNews] = useState({ status: 'loading', items: [] });
 
   // Lazy fetch the news feed when the row is expanded. The function
@@ -1560,13 +1560,16 @@ function EventRowDetail({ event: e, past }) {
   return (
     <div className="econ-events__row-detail">
       <div className="econ-events__row-detail-row">
-        <button
-          type="button"
-          className="econ-events__row-action"
-          onClick={onIcs}
-        >
-          Add to calendar (.ics)
-        </button>
+        {calendarHref && (
+          <a
+            className="econ-events__row-action econ-events__row-action--link"
+            href={calendarHref}
+            target="_blank"
+            rel="noopener noreferrer"
+          >
+            Add to Google Calendar ↗
+          </a>
+        )}
         <span className="econ-events__row-detail-when">
           {formatLongWhen(e._at, e.dayKind)}
         </span>
@@ -1658,72 +1661,61 @@ function NewsFeed({ news }) {
   );
 }
 
-// ── .ics calendar export ───────────────────────────────────────────
-function downloadIcs(event) {
+// ── Google Calendar handoff ───────────────────────────────────────
+// Builds a calendar.google.com/render?action=TEMPLATE URL pre-filled
+// with the event's title, start/end times (UTC, Z-suffix), and a
+// description that carries the impact / forecast / previous /
+// implied-move payload. Clicking the link opens Google Calendar's
+// new-event form in a new tab with everything pre-populated; the
+// user clicks Save and the event lands on their calendar — no file
+// download, no Outlook handoff, no per-platform .ics quirks. The
+// prior implementation generated an .ics blob the browser handed
+// off to whatever default-calendar handler the OS had registered;
+// on macOS that opens Calendar.app (fast), on iOS it opens an
+// approval modal (slow), on Windows defaults route to Outlook
+// (very slow on first-time setup). Eric's directive: ditch .ics
+// entirely, route to Google Calendar which most readers actually
+// use.
+//
+// Returns null for events without a precise time (all-day /
+// tentative entries) so the action button suppresses for those —
+// pre-filling Google Calendar with a midnight-anchored entry that
+// the user has to manually edit isn't an improvement.
+const GCAL_BASE = 'https://calendar.google.com/calendar/render';
+
+function googleCalendarUrl(event) {
+  if (!event) return null;
+  if (event.dayKind === 'all-day' || event.dayKind === 'tentative') return null;
   const start = event._at instanceof Date ? event._at : new Date(event.dateTime);
-  if (Number.isNaN(start.getTime())) return;
-  if (event.dayKind === 'all-day' || event.dayKind === 'tentative') return;
+  if (Number.isNaN(start.getTime())) return null;
   const end = new Date(start.getTime() + 30 * 60 * 1000);
-  const lines = [
-    'BEGIN:VCALENDAR',
-    'VERSION:2.0',
-    'PRODID:-//AI Gamma//Beta Events Listener//EN',
-    'CALSCALE:GREGORIAN',
-    'METHOD:PUBLISH',
-    'BEGIN:VEVENT',
-    `UID:ff-${slugifyForUid(event.title)}-${event.dateTime}@aigamma.com`,
-    `DTSTAMP:${formatIcsDate(new Date())}`,
-    `DTSTART:${formatIcsDate(start)}`,
-    `DTEND:${formatIcsDate(end)}`,
-    `SUMMARY:${icsEscape(event.title)}`,
-    `DESCRIPTION:${icsEscape(buildIcsDescription(event))}`,
-    event.url ? `URL:${icsEscape(event.url)}` : null,
-    `CATEGORIES:${icsEscape(`Economic Events · ${event.impact || 'Unknown'}`)}`,
-    'END:VEVENT',
-    'END:VCALENDAR',
-  ].filter(Boolean);
-  const ics = lines.join('\r\n');
-  const blob = new Blob([ics], { type: 'text/calendar;charset=utf-8' });
-  const url = URL.createObjectURL(blob);
-  const a = document.createElement('a');
-  a.href = url;
-  a.download = `${slugifyForFile(event.title)}.ics`;
-  document.body.appendChild(a);
-  a.click();
-  document.body.removeChild(a);
-  setTimeout(() => URL.revokeObjectURL(url), 10_000);
+  const fmtUtc = (d) => d.toISOString().replace(/[-:]/g, '').replace(/\.\d{3}/, '');
+  const params = new URLSearchParams({
+    action: 'TEMPLATE',
+    text: event.title || 'Event',
+    dates: `${fmtUtc(start)}/${fmtUtc(end)}`,
+    details: buildEventDescription(event),
+    ctz: 'America/New_York',
+  });
+  return `${GCAL_BASE}?${params.toString()}`;
 }
 
-function buildIcsDescription(e) {
+function buildEventDescription(e) {
   const lines = [];
-  lines.push(`Impact: ${e.impact || 'unknown'}`);
+  if (e.impact) lines.push(`Impact: ${e.impact}`);
   if (e.forecast) lines.push(`Forecast: ${e.forecast}`);
   if (e.previous) lines.push(`Previous: ${e.previous}`);
   if (e._spotlight) lines.push(`Family: ${e._spotlight.label}`);
   if (e._impliedMove) {
     lines.push(`SPX implied move: ±$${formatNum(e._impliedMove.moveDollars, 0)} (±${formatPct(e._impliedMove.movePct)})`);
   }
-  return lines.join('\\n');
-}
-
-function formatIcsDate(d) {
-  return d.toISOString().replace(/[-:]/g, '').replace(/\.\d{3}/, '');
-}
-
-function icsEscape(s) {
-  return String(s)
-    .replace(/\\/g, '\\\\')
-    .replace(/;/g, '\\;')
-    .replace(/,/g, '\\,')
-    .replace(/\n/g, '\\n');
-}
-
-function slugifyForFile(s) {
-  return String(s).replace(/[^a-z0-9]+/gi, '-').replace(/^-+|-+$/g, '').slice(0, 60).toLowerCase();
-}
-
-function slugifyForUid(s) {
-  return slugifyForFile(s).replace(/-/g, '');
+  if (e._kind === 'earnings' && e._earnings) {
+    const t = e._earnings;
+    if (t.company) lines.push(`Company: ${t.company}`);
+    if (t.sessionLabel) lines.push(`Session: ${t.sessionLabel}`);
+    if (t.epsEst != null) lines.push(`EPS estimate: $${Number(t.epsEst).toFixed(2)}`);
+  }
+  return lines.join('\n');
 }
 
 // ── Formatting helpers ────────────────────────────────────────────────
