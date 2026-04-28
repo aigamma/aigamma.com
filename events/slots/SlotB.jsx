@@ -511,12 +511,12 @@ function StickyHeroBar({ group, now }) {
   const family = a._spotlight;
   const ms = a._ms - now;
   const urgency = urgencyTier(ms);
-  const familyClass = family ? `econ-events__sticky--${family.color}` : 'econ-events__sticky--neutral';
+  const impactToken = (a.impact || 'neutral').toLowerCase();
   return (
-    <div className={`econ-events__sticky ${familyClass} econ-events__sticky--${urgency}`}>
+    <div className={`econ-events__sticky econ-events__sticky--impact-${impactToken} econ-events__sticky--${urgency}`}>
       <span className="econ-events__sticky-eyebrow">Next</span>
       {family && (
-        <span className={`econ-events__sticky-family econ-events__sticky-family--${family.color}`}>
+        <span className={`econ-events__sticky-family econ-events__sticky-family--impact-${impactToken}`}>
           {family.label}
         </span>
       )}
@@ -627,15 +627,15 @@ function HeroNextEvent({ group, now }) {
   const family = anchor._spotlight;
   const ms = anchor._ms - now;
   const urgency = urgencyTier(ms);
-  const familyClass = family ? `econ-events__hero--${family.color}` : 'econ-events__hero--neutral';
+  const impactToken = (anchor.impact || 'neutral').toLowerCase();
   return (
-    <section className={`econ-events__hero ${familyClass} econ-events__hero--${urgency}`}>
+    <section className={`econ-events__hero econ-events__hero--impact-${impactToken} econ-events__hero--${urgency}`}>
       <div className="econ-events__hero-stripe" aria-hidden="true" />
       <div className="econ-events__hero-content">
         <div className="econ-events__hero-meta">
           <span className="econ-events__hero-eyebrow">Next event</span>
           {family && (
-            <span className={`econ-events__hero-family-badge econ-events__hero-family-badge--${family.color}`}>
+            <span className={`econ-events__hero-family-badge econ-events__hero-family-badge--impact-${impactToken}`}>
               {family.label}
             </span>
           )}
@@ -1116,11 +1116,11 @@ function TimelineStrip({ events, now }) {
 
 function TimelineTooltip({ event: e, style }) {
   const family = e._spotlight;
-  const familyColor = family ? family.hex : impactHex(e.impact);
+  const impactColor = impactHex(e.impact);
   return (
     <div className="econ-events__chart-tooltip" style={style}>
       <div className="econ-events__chart-tooltip-head">
-        <strong style={{ color: familyColor }}>
+        <strong style={{ color: impactColor }}>
           {family ? family.label : (e.impact || 'Event')}
         </strong>
         <span className={`econ-events__hero-impact econ-events__hero-impact--${(e.impact || '').toLowerCase()}`}>
@@ -1366,10 +1366,18 @@ function SpotlightStrip({ events, now }) {
       {ordered.map((g) => {
         const head = g.events[0];
         const past = head._ms < now;
+        // Spotlight cards are family-grouped (FOMC card holds all
+        // FOMC events, etc.) but Eric's directive is to drop family
+        // color coding and color by impact instead. The card's
+        // border picks up the impact tier of the head event — most
+        // family clusters are uniform-tier in practice (FOMC =
+        // High, ISM = Medium, etc.), so the head's tier is a
+        // faithful summary of the card's contents.
+        const impactToken = (head.impact || 'neutral').toLowerCase();
         return (
           <div
             key={g.spotlight.key}
-            className={`econ-events__spotlight-card econ-events__spotlight-card--${g.spotlight.color}${past ? ' econ-events__spotlight-card--past' : ''}`}
+            className={`econ-events__spotlight-card econ-events__spotlight-card--impact-${impactToken}${past ? ' econ-events__spotlight-card--past' : ''}`}
           >
             <div className="econ-events__spotlight-key">{g.spotlight.label}</div>
             <div className="econ-events__spotlight-when">
@@ -1488,9 +1496,10 @@ function DayImpactChips({ counts }) {
 
 function EventRow({ event: e, past, expanded, onToggle }) {
   const sp = e._spotlight;
+  const impactToken = (e.impact || 'neutral').toLowerCase();
   return (
     <div
-      className={`econ-events__row${past ? ' econ-events__row--past' : ''}${sp ? ` econ-events__row--${sp.color}` : ''}${expanded ? ' econ-events__row--expanded' : ''}`}
+      className={`econ-events__row econ-events__row--impact-${impactToken}${past ? ' econ-events__row--past' : ''}${expanded ? ' econ-events__row--expanded' : ''}`}
     >
       <button
         type="button"

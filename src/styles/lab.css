@@ -1807,13 +1807,11 @@
   transition: background-color 0.3s ease;
 }
 
-.econ-events__hero--amber  .econ-events__hero-stripe { background: var(--accent-amber); }
-.econ-events__hero--coral  .econ-events__hero-stripe { background: var(--accent-coral); }
-.econ-events__hero--green  .econ-events__hero-stripe { background: var(--accent-green); }
-.econ-events__hero--blue   .econ-events__hero-stripe { background: var(--accent-blue); }
-.econ-events__hero--purple .econ-events__hero-stripe { background: var(--accent-purple); }
-.econ-events__hero--cyan   .econ-events__hero-stripe { background: var(--accent-cyan); }
-.econ-events__hero--neutral .econ-events__hero-stripe { background: var(--text-secondary); }
+.econ-events__hero--impact-high     .econ-events__hero-stripe { background: var(--accent-coral); }
+.econ-events__hero--impact-medium   .econ-events__hero-stripe { background: var(--accent-amber); }
+.econ-events__hero--impact-low      .econ-events__hero-stripe { background: var(--text-secondary); }
+.econ-events__hero--impact-holiday  .econ-events__hero-stripe { background: var(--accent-cyan); }
+.econ-events__hero--impact-neutral  .econ-events__hero-stripe { background: var(--text-secondary); }
 
 /* Urgency tints — coral glow as the event approaches, neutral for far out. */
 .econ-events__hero--now {
@@ -1879,12 +1877,11 @@
   font-size: 0.7rem;
 }
 
-.econ-events__hero-family-badge--amber  { color: var(--accent-amber);  }
-.econ-events__hero-family-badge--coral  { color: var(--accent-coral);  }
-.econ-events__hero-family-badge--green  { color: var(--accent-green);  }
-.econ-events__hero-family-badge--blue   { color: var(--accent-blue);   }
-.econ-events__hero-family-badge--purple { color: var(--accent-purple); }
-.econ-events__hero-family-badge--cyan   { color: var(--accent-cyan);   }
+.econ-events__hero-family-badge--impact-high     { color: var(--accent-coral); }
+.econ-events__hero-family-badge--impact-medium   { color: var(--accent-amber); }
+.econ-events__hero-family-badge--impact-low      { color: var(--text-secondary); }
+.econ-events__hero-family-badge--impact-holiday  { color: var(--accent-cyan); }
+.econ-events__hero-family-badge--impact-neutral  { color: var(--text-secondary); }
 
 .econ-events__hero-impact {
   display: inline-flex;
@@ -1942,12 +1939,11 @@
   letter-spacing: 0.02em;
 }
 
-.econ-events__hero--amber  .econ-events__countdown strong { color: var(--accent-amber);  }
-.econ-events__hero--coral  .econ-events__countdown strong { color: var(--accent-coral);  }
-.econ-events__hero--green  .econ-events__countdown strong { color: var(--accent-green);  }
-.econ-events__hero--blue   .econ-events__countdown strong { color: var(--accent-blue);   }
-.econ-events__hero--purple .econ-events__countdown strong { color: var(--accent-purple); }
-.econ-events__hero--cyan   .econ-events__countdown strong { color: var(--accent-cyan);   }
+.econ-events__hero--impact-high     .econ-events__countdown strong { color: var(--accent-coral); }
+.econ-events__hero--impact-medium   .econ-events__countdown strong { color: var(--accent-amber); }
+.econ-events__hero--impact-low      .econ-events__countdown strong { color: var(--text-secondary); }
+.econ-events__hero--impact-holiday  .econ-events__countdown strong { color: var(--accent-cyan); }
+.econ-events__hero--impact-neutral  .econ-events__countdown strong { color: var(--text-secondary); }
 
 .econ-events__hero--now .econ-events__countdown strong { color: var(--accent-coral); }
 
@@ -2118,12 +2114,11 @@
   opacity: 0.55;
 }
 
-.econ-events__spotlight-card--amber  { border-left-color: var(--accent-amber); }
-.econ-events__spotlight-card--coral  { border-left-color: var(--accent-coral); }
-.econ-events__spotlight-card--green  { border-left-color: var(--accent-green); }
-.econ-events__spotlight-card--blue   { border-left-color: var(--accent-blue); }
-.econ-events__spotlight-card--purple { border-left-color: var(--accent-purple); }
-.econ-events__spotlight-card--cyan   { border-left-color: var(--accent-cyan); }
+.econ-events__spotlight-card--impact-high     { border-left-color: var(--accent-coral); }
+.econ-events__spotlight-card--impact-medium   { border-left-color: var(--accent-amber); }
+.econ-events__spotlight-card--impact-low      { border-left-color: var(--text-secondary); }
+.econ-events__spotlight-card--impact-holiday  { border-left-color: var(--accent-cyan); }
+.econ-events__spotlight-card--impact-neutral  { border-left-color: var(--text-secondary); }
 
 .econ-events__spotlight-key {
   font-family: 'Courier New', monospace;
@@ -2134,12 +2129,11 @@
   color: var(--text-primary);
 }
 
-.econ-events__spotlight-card--amber  .econ-events__spotlight-key { color: var(--accent-amber); }
-.econ-events__spotlight-card--coral  .econ-events__spotlight-key { color: var(--accent-coral); }
-.econ-events__spotlight-card--green  .econ-events__spotlight-key { color: var(--accent-green); }
-.econ-events__spotlight-card--blue   .econ-events__spotlight-key { color: var(--accent-blue); }
-.econ-events__spotlight-card--purple .econ-events__spotlight-key { color: var(--accent-purple); }
-.econ-events__spotlight-card--cyan   .econ-events__spotlight-key { color: var(--accent-cyan); }
+.econ-events__spotlight-card--impact-high     .econ-events__spotlight-key { color: var(--accent-coral); }
+.econ-events__spotlight-card--impact-medium   .econ-events__spotlight-key { color: var(--accent-amber); }
+.econ-events__spotlight-card--impact-low      .econ-events__spotlight-key { color: var(--text-secondary); }
+.econ-events__spotlight-card--impact-holiday  .econ-events__spotlight-key { color: var(--accent-cyan); }
+.econ-events__spotlight-card--impact-neutral  .econ-events__spotlight-key { color: var(--text-secondary); }
 
 .econ-events__spotlight-when {
   font-family: 'Courier New', monospace;
@@ -2270,12 +2264,11 @@
   opacity: 0.55;
 }
 
-.econ-events__row--amber  { border-left: 3px solid var(--accent-amber);  }
-.econ-events__row--coral  { border-left: 3px solid var(--accent-coral);  }
-.econ-events__row--green  { border-left: 3px solid var(--accent-green);  }
-.econ-events__row--blue   { border-left: 3px solid var(--accent-blue);   }
-.econ-events__row--purple { border-left: 3px solid var(--accent-purple); }
-.econ-events__row--cyan   { border-left: 3px solid var(--accent-cyan);   }
+.econ-events__row--impact-high     { border-left: 3px solid var(--accent-coral); }
+.econ-events__row--impact-medium   { border-left: 3px solid var(--accent-amber); }
+.econ-events__row--impact-low      { border-left: 3px solid var(--text-secondary); }
+.econ-events__row--impact-holiday  { border-left: 3px solid var(--accent-cyan); }
+.econ-events__row--impact-neutral  { border-left: 3px solid var(--bg-card-border); }
 
 .econ-events__row-time {
   color: var(--text-secondary);
@@ -2328,12 +2321,11 @@
   opacity: 0.85;
 }
 
-.econ-events__row--amber  .econ-events__row-family { color: var(--accent-amber);  }
-.econ-events__row--coral  .econ-events__row-family { color: var(--accent-coral);  }
-.econ-events__row--green  .econ-events__row-family { color: var(--accent-green);  }
-.econ-events__row--blue   .econ-events__row-family { color: var(--accent-blue);   }
-.econ-events__row--purple .econ-events__row-family { color: var(--accent-purple); }
-.econ-events__row--cyan   .econ-events__row-family { color: var(--accent-cyan);   }
+.econ-events__row--impact-high     .econ-events__row-family { color: var(--accent-coral); }
+.econ-events__row--impact-medium   .econ-events__row-family { color: var(--accent-amber); }
+.econ-events__row--impact-low      .econ-events__row-family { color: var(--text-secondary); }
+.econ-events__row--impact-holiday  .econ-events__row-family { color: var(--accent-cyan); }
+.econ-events__row--impact-neutral  .econ-events__row-family { color: var(--text-secondary); }
 
 .econ-events__row-num {
   font-variant-numeric: tabular-nums;
@@ -2420,13 +2412,11 @@
   to   { transform: translateY(0);     opacity: 1; }
 }
 
-.econ-events__sticky--neutral { border-bottom-color: var(--text-secondary); }
-.econ-events__sticky--amber   { border-bottom-color: var(--accent-amber);   }
-.econ-events__sticky--coral   { border-bottom-color: var(--accent-coral);   }
-.econ-events__sticky--green   { border-bottom-color: var(--accent-green);   }
-.econ-events__sticky--blue    { border-bottom-color: var(--accent-blue);    }
-.econ-events__sticky--purple  { border-bottom-color: var(--accent-purple);  }
-.econ-events__sticky--cyan    { border-bottom-color: var(--accent-cyan);    }
+.econ-events__sticky--impact-neutral  { border-bottom-color: var(--text-secondary); }
+.econ-events__sticky--impact-high     { border-bottom-color: var(--accent-coral); }
+.econ-events__sticky--impact-medium   { border-bottom-color: var(--accent-amber); }
+.econ-events__sticky--impact-low      { border-bottom-color: var(--text-secondary); }
+.econ-events__sticky--impact-holiday  { border-bottom-color: var(--accent-cyan); }
 
 .econ-events__sticky--now    { box-shadow: inset 0 -2px var(--accent-coral); }
 .econ-events__sticky--soon   { box-shadow: inset 0 -2px var(--accent-amber); }
@@ -2448,12 +2438,11 @@
   border: 1px solid currentColor;
 }
 
-.econ-events__sticky-family--amber  { color: var(--accent-amber);  }
-.econ-events__sticky-family--coral  { color: var(--accent-coral);  }
-.econ-events__sticky-family--green  { color: var(--accent-green);  }
-.econ-events__sticky-family--blue   { color: var(--accent-blue);   }
-.econ-events__sticky-family--purple { color: var(--accent-purple); }
-.econ-events__sticky-family--cyan   { color: var(--accent-cyan);   }
+.econ-events__sticky-family--impact-high     { color: var(--accent-coral); }
+.econ-events__sticky-family--impact-medium   { color: var(--accent-amber); }
+.econ-events__sticky-family--impact-low      { color: var(--text-secondary); }
+.econ-events__sticky-family--impact-holiday  { color: var(--accent-cyan); }
+.econ-events__sticky-family--impact-neutral  { color: var(--text-secondary); }
 
 .econ-events__sticky-title {
   flex: 1 1 auto;
@@ -2475,12 +2464,11 @@
   color: var(--accent-blue);
 }
 
-.econ-events__sticky--amber  .econ-events__sticky-countdown strong { color: var(--accent-amber); }
-.econ-events__sticky--coral  .econ-events__sticky-countdown strong { color: var(--accent-coral); }
-.econ-events__sticky--green  .econ-events__sticky-countdown strong { color: var(--accent-green); }
-.econ-events__sticky--blue   .econ-events__sticky-countdown strong { color: var(--accent-blue);  }
-.econ-events__sticky--purple .econ-events__sticky-countdown strong { color: var(--accent-purple);}
-.econ-events__sticky--cyan   .econ-events__sticky-countdown strong { color: var(--accent-cyan);  }
+.econ-events__sticky--impact-high     .econ-events__sticky-countdown strong { color: var(--accent-coral); }
+.econ-events__sticky--impact-medium   .econ-events__sticky-countdown strong { color: var(--accent-amber); }
+.econ-events__sticky--impact-low      .econ-events__sticky-countdown strong { color: var(--text-secondary); }
+.econ-events__sticky--impact-holiday  .econ-events__sticky-countdown strong { color: var(--accent-cyan); }
+.econ-events__sticky--impact-neutral  .econ-events__sticky-countdown strong { color: var(--text-secondary); }
 .econ-events__sticky--now    .econ-events__sticky-countdown strong { color: var(--accent-coral); }
 
 .econ-events__sticky-countdown-passive {
