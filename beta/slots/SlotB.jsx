@@ -1115,10 +1115,15 @@ function ImpliedMoveChart({ events, ivContext }) {
             );
           })}
 
-          {/* Stacked labels above each cluster — leftmost member dot
-              anchors the label group; multi-member groups join with
-              " · " and clip with ellipsis at 4 entries to keep the
-              label band readable. */}
+          {/* Stacked labels above each cluster — multi-member groups
+              join with " · " and clip with ellipsis. textAnchor flips
+              based on column position so labels at the leftmost /
+              rightmost columns extend INTO the plot area rather than
+              overhang the Y-axis tick labels (the prior centered
+              anchor put a 200-character cluster like
+              "FOMC · GDP · Employment · JOBS · …" centered at the
+              left padding column, where its left half overflowed the
+              plot box and collided with the y-axis labels). */}
           {labelGroups.map((g) => {
             const member = g.members[0];
             const cx = xForDay(g.dayIdx);
@@ -1126,22 +1131,29 @@ function ImpliedMoveChart({ events, ivContext }) {
             const labels = g.members.map((m) =>
               m._spotlight ? m._spotlight.label : shortLabelForEvent(m.title),
             );
-            // Dedupe consecutive same-label entries so 3 FOMC rows on
-            // the same day collapse to one "FOMC" tag instead of
-            // "FOMC · FOMC · FOMC".
             const dedup = [];
             for (const l of labels) {
               if (dedup[dedup.length - 1] !== l) dedup.push(l);
             }
-            const display = dedup.length > 4
-              ? `${dedup.slice(0, 4).join(' · ')} · …`
+            const display = dedup.length > 3
+              ? `${dedup.slice(0, 3).join(' · ')} · …`
               : dedup.join(' · ');
+
+            // Anchor at the column edge: leftmost column anchors to
+            // 'start' (label extends rightward from the dot's X);
+            // rightmost column anchors to 'end' (label extends
+            // leftward); inner columns stay centered on the dot.
+            const isLeftEdge = g.dayIdx === 0;
+            const isRightEdge = g.dayIdx === chartDays.length - 1 && chartDays.length > 1;
+            const textAnchor = isLeftEdge ? 'start' : isRightEdge ? 'end' : 'middle';
+            const xOffset = isLeftEdge ? -4 : isRightEdge ? 4 : 0;
+
             return (
               <text
                 key={`lbl-${g.dayIdx}-${g.yBkt}`}
-                x={cx}
+                x={cx + xOffset}
                 y={cy - 12}
-                textAnchor="middle"
+                textAnchor={textAnchor}
                 fontFamily="Courier New, monospace"
                 fontSize={11.5}
                 fontWeight={600}
@@ -1239,13 +1251,15 @@ function ChartTooltipRow({ label, value, highlight }) {
 
 // Short human-readable label for non-family events, used as the
 // scatter label above the dot when the title doesn't match any of
-// the spotlight families. First 1-2 words, capped at ~8 chars so the
-// label stays compact in the chart band.
+// the spotlight families. First word, capped at 6 chars + ellipsis
+// so multi-event clusters stay narrow enough to fit in their
+// column's allotment without colliding with the next column or
+// overhanging the chart's left/right edges.
 function shortLabelForEvent(title) {
   if (!title) return '?';
   const cleaned = title.replace(/\s+m\/m$|\s+y\/y$|\s+q\/q$/i, '').trim();
   const firstWord = cleaned.split(/\s+/)[0];
-  if (firstWord.length > 8) return firstWord.slice(0, 7) + '…';
+  if (firstWord.length > 6) return firstWord.slice(0, 5) + '…';
   return firstWord;
 }
 
