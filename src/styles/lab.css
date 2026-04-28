@@ -1787,93 +1787,6 @@
   color: var(--accent-coral);
 }
 
-/* Filter bar -------------------------------------------------------- */
-.econ-events__filterbar {
-  background-color: var(--bg-card);
-  border: 1px solid var(--bg-card-border);
-  border-radius: 6px;
-  padding: 0.7rem 0.85rem;
-  display: flex;
-  flex-wrap: wrap;
-  gap: 1.2rem;
-  align-items: center;
-}
-
-.econ-events__filtergroup {
-  display: flex;
-  align-items: center;
-  gap: 0.6rem;
-  flex-wrap: wrap;
-}
-
-.econ-events__filtergroup-label {
-  font-family: 'Courier New', monospace;
-  font-size: 0.65rem;
-  letter-spacing: 0.16em;
-  text-transform: uppercase;
-  color: var(--text-secondary);
-}
-
-.econ-events__pills {
-  display: inline-flex;
-  flex-wrap: wrap;
-  gap: 0.35rem;
-}
-
-.econ-events__pill {
-  appearance: none;
-  background: transparent;
-  color: var(--text-secondary);
-  border: 1px solid var(--bg-card-border);
-  border-radius: 999px;
-  padding: 0.3rem 0.7rem;
-  font-family: 'Courier New', monospace;
-  font-size: 0.72rem;
-  letter-spacing: 0.08em;
-  text-transform: uppercase;
-  cursor: pointer;
-  transition: background-color 0.15s ease, color 0.15s ease, border-color 0.15s ease;
-  display: inline-flex;
-  align-items: center;
-  gap: 0.35rem;
-}
-
-.econ-events__pill:hover {
-  color: var(--text-primary);
-  border-color: rgba(255, 255, 255, 0.25);
-}
-
-.econ-events__pill--active {
-  color: #0d1016;
-  background: var(--text-primary);
-  border-color: var(--text-primary);
-  font-weight: 700;
-}
-
-.econ-events__pill--impact-high.econ-events__pill--active {
-  background: var(--accent-coral);
-  border-color: var(--accent-coral);
-  color: #0d1016;
-}
-
-.econ-events__pill--impact-medium.econ-events__pill--active {
-  background: var(--accent-amber);
-  border-color: var(--accent-amber);
-  color: #0d1016;
-}
-
-.econ-events__pill--impact-low.econ-events__pill--active {
-  background: var(--text-secondary);
-  border-color: var(--text-secondary);
-  color: #0d1016;
-}
-
-.econ-events__pill--impact-holiday.econ-events__pill--active {
-  background: var(--accent-cyan);
-  border-color: var(--accent-cyan);
-  color: #0d1016;
-}
-
 /* Hero card --------------------------------------------------------- */
 .econ-events__hero {
   position: relative;
@@ -2577,40 +2490,6 @@
   color: var(--text-secondary);
 }
 
-/* Search input ---------------------------------------------------- */
-.econ-events__searchbox {
-  appearance: none;
-  background: rgba(13, 16, 22, 0.6);
-  border: 1px solid var(--bg-card-border);
-  color: var(--text-primary);
-  font-family: 'Courier New', monospace;
-  font-size: 0.75rem;
-  letter-spacing: 0.04em;
-  padding: 0.32rem 0.65rem;
-  border-radius: 999px;
-  min-width: 180px;
-  outline: none;
-  transition: border-color 0.15s ease;
-}
-
-.econ-events__searchbox::placeholder {
-  color: var(--text-secondary);
-  opacity: 0.7;
-  text-transform: uppercase;
-  letter-spacing: 0.08em;
-  font-size: 0.7rem;
-}
-
-.econ-events__searchbox:focus {
-  border-color: var(--accent-blue);
-}
-
-.econ-events__pill--notify.econ-events__pill--denied {
-  cursor: not-allowed;
-  opacity: 0.55;
-  border-style: dashed;
-}
-
 /* Per-day impact chips -------------------------------------------- */
 .econ-events__day-chips {
   display: inline-flex;
@@ -3299,9 +3178,6 @@
   .econ-events__sticky-eyebrow,
   .econ-events__sticky-family {
     display: none;
-  }
-  .econ-events__searchbox {
-    min-width: 140px;
   }
 }
 

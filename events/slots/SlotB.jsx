@@ -48,10 +48,6 @@
 //   StickyHeroBar ─ a slim compact strip that fixes to the top of the
 //     viewport when the main hero card has scrolled out of view.
 //
-//   FilterBar ─ impact pills, free-text search, "Hide past" and
-//     "Notify" toggles. (Country pills were removed when the surface
-//     committed to USD-only.)
-//
 //   HeroNextEvent ─ big featured card with countdown, family badge,
 //     forecast/previous, and the new "Implied SPX move at next exp"
 //     line (±$ and %, plus DTE).
@@ -133,7 +129,6 @@ const TIMELINE_WINDOW_MS = 7 * 24 * 3600 * 1000;
 
 const POLL_MS = 10 * 60 * 1000;
 const CLOCK_TICK_MS = 1000;
-const NOTIFY_LEAD_MS = 5 * 60 * 1000;
 
 function eventId(e) {
   return `${e.dateTime || ''}::${e.title || ''}`;
@@ -145,11 +140,7 @@ export default function SlotB() {
   const [earningsFeed, setEarningsFeed] = useState({ status: 'loading', data: null });
   const [impacts, setImpacts] = useState(new Set(DEFAULT_IMPACTS));
   const [showEarnings, setShowEarnings] = useState(true);
-  const [searchQuery, setSearchQuery] = useState('');
-  const [hidePast, setHidePast] = useState(false);
   const [expandedId, setExpandedId] = useState(null);
-  const [notifyEnabled, setNotifyEnabled] = useState(false);
-  const [notifyDenied, setNotifyDenied] = useState(false);
   const [now, setNow] = useState(() => Date.now());
   const lastFetchRef = useRef(0);
   const heroRef = useRef(null);
@@ -263,12 +254,6 @@ export default function SlotB() {
     };
   }, []);
 
-  useEffect(() => {
-    if (typeof window === 'undefined' || !('Notification' in window)) return;
-    if (Notification.permission === 'granted') setNotifyEnabled(true);
-    if (Notification.permission === 'denied') setNotifyDenied(true);
-  }, []);
-
   // IntersectionObserver for sticky hero bar.
   useEffect(() => {
     const el = heroRef.current;
@@ -333,21 +318,14 @@ export default function SlotB() {
     return out.sort((a, b) => a._ms - b._ms);
   }, [feed.data, ivContext]);
 
-  const scoped = useMemo(() => {
-    const q = searchQuery.trim().toLowerCase();
-    return allEvents.filter((e) => {
-      if (impacts.size > 0 && !impacts.has(e.impact)) return false;
-      if (q && !e.title.toLowerCase().includes(q)) return false;
-      return true;
-    });
-  }, [allEvents, impacts, searchQuery]);
+  const scoped = useMemo(
+    () => allEvents.filter((e) => impacts.size === 0 || impacts.has(e.impact)),
+    [allEvents, impacts],
+  );
 
   const upcoming = useMemo(() => scoped.filter((e) => e._ms >= now), [scoped, now]);
   const past = useMemo(() => scoped.filter((e) => e._ms < now), [scoped, now]);
-  const scheduleEvents = useMemo(
-    () => (hidePast ? upcoming : scoped),
-    [hidePast, upcoming, scoped],
-  );
+  const scheduleEvents = scoped;
 
   const heroGroup = useMemo(() => {
     if (upcoming.length === 0) return null;
@@ -422,75 +400,10 @@ export default function SlotB() {
     return [...macro, ...upcomingEarnings].sort((a, b) => a._ms - b._ms);
   }, [upcoming, earningsEvents, showEarnings, now]);
 
-  // Notification scheduling.
-  const notifyTimeoutRef = useRef(null);
-  useEffect(() => {
-    if (notifyTimeoutRef.current != null) {
-      clearTimeout(notifyTimeoutRef.current);
-      notifyTimeoutRef.current = null;
-    }
-    if (!notifyEnabled) return;
-    if (typeof window === 'undefined' || !('Notification' in window)) return;
-    if (Notification.permission !== 'granted') return;
-    const target = upcoming.find(
-      (e) => e.impact === 'High' && e._ms - Date.now() > NOTIFY_LEAD_MS,
-    );
-    if (!target) return;
-    const delay = target._ms - Date.now() - NOTIFY_LEAD_MS;
-    if (delay <= 0 || delay > 7 * 24 * 60 * 60 * 1000) return;
-    notifyTimeoutRef.current = setTimeout(() => {
-      try {
-        new Notification(`AI Gamma · ${target.title}`, {
-          body: `In 5 minutes. Forecast ${target.forecast || 'n/a'} · Prev ${target.previous || 'n/a'}`,
-          icon: '/favicon.ico',
-          tag: `ff-${target._id}`,
-        });
-      } catch {
-        /* notification API can throw on iOS WKWebView etc. */
-      }
-    }, delay);
-    return () => {
-      if (notifyTimeoutRef.current != null) {
-        clearTimeout(notifyTimeoutRef.current);
-        notifyTimeoutRef.current = null;
-      }
-    };
-  }, [notifyEnabled, upcoming]);
-
-  const requestNotifyPermission = useCallback(async () => {
-    if (typeof window === 'undefined' || !('Notification' in window)) {
-      setNotifyDenied(true);
-      return;
-    }
-    if (Notification.permission === 'granted') {
-      setNotifyEnabled(true);
-      return;
-    }
-    if (Notification.permission === 'denied') {
-      setNotifyDenied(true);
-      return;
-    }
-    try {
-      const result = await Notification.requestPermission();
-      if (result === 'granted') setNotifyEnabled(true);
-      else setNotifyDenied(true);
-    } catch {
-      setNotifyDenied(true);
-    }
-  }, []);
-
-  const toggleNotify = useCallback(() => {
-    if (notifyEnabled) {
-      setNotifyEnabled(false);
-      return;
-    }
-    requestNotifyPermission();
-  }, [notifyEnabled, requestNotifyPermission]);
-
   if (feed.status === 'loading' && !feed.data) {
     return (
       <section className="econ-events econ-events--bare">
-        <div className="econ-events__status">Listening to Forex Factory…</div>
+        <div className="econ-events__status">Loading the events calendar…</div>
       </section>
     );
   }
@@ -509,13 +422,6 @@ export default function SlotB() {
       {!heroVisible && heroGroup && (
         <StickyHeroBar group={heroGroup} now={now} />
       )}
-
-      <FilterBar
-        searchQuery={searchQuery} setSearchQuery={setSearchQuery}
-        hidePast={hidePast} setHidePast={setHidePast}
-        notifyEnabled={notifyEnabled} notifyDenied={notifyDenied}
-        toggleNotify={toggleNotify}
-      />
 
       <div ref={heroRef}>
         {heroGroup ? (
@@ -552,16 +458,11 @@ export default function SlotB() {
       />
 
       <footer className="econ-events__footnote">
-        Source: Forex Factory rolling 4-week aggregate (XML for the current week from
-        <code>nfs.faireconomy.media/ff_calendar_thisweek.xml</code> plus the next three weeks
-        scraped from <code>forexfactory.com/calendar?week=&lt;slug&gt;</code>) joined with the
-        platform's SPX intraday snapshot at <code>/api/data</code> for the implied-move overlays.
-        The FF proxy filters to USD events only at the server (this is an SPX-positioning surface).
         Implied move per event = <code>spot × ATM IV × √(DTE/365)</code> evaluated against the next
         SPX expiration AT-OR-AFTER the event date — the move you'd be hedging if you bought a
-        straddle at that expiration today, conditional on the event being the next material catalyst.
-        Click any row to expose its FF source link, an .ics calendar download, and a 5-minute
-        lead-time notification toggle. Times render in your local timezone.
+        straddle at that expiration today, conditional on the event being the next material
+        catalyst. Click any row to download its event as an .ics calendar entry. Times render
+        in your local timezone.
       </footer>
     </div>
   );
@@ -652,56 +553,6 @@ function CompactCountdown({ ms, dayKind }) {
       <strong>{String(mins).padStart(2, '0')}</strong>m{' '}
       <strong>{String(secs).padStart(2, '0')}</strong>s
     </span>
-  );
-}
-
-// ── Filter bar ────────────────────────────────────────────────────────
-// FilterBar carries the page-wide chrome that is NOT tied to the
-// timeline's data scope: the title-substring search input, the Hide-
-// past toggle, and the browser-Notification opt-in. Impact tier
-// pills used to live here too but were moved up to the ChartFilters
-// row directly above the timeline so the inviting "+ Medium / + Low"
-// pattern Eric called for sits next to the visualization those
-// toggles affect.
-function FilterBar({
-  searchQuery, setSearchQuery,
-  hidePast, setHidePast,
-  notifyEnabled, notifyDenied, toggleNotify,
-}) {
-  return (
-    <div className="econ-events__filterbar">
-      <div className="econ-events__filtergroup">
-        <span className="econ-events__filtergroup-label">Search</span>
-        <input
-          type="search"
-          className="econ-events__searchbox"
-          placeholder="title contains…"
-          value={searchQuery}
-          onChange={(e) => setSearchQuery(e.target.value)}
-        />
-      </div>
-      <div className="econ-events__filtergroup">
-        <button
-          type="button"
-          className={`econ-events__pill ${hidePast ? 'econ-events__pill--active' : ''}`}
-          onClick={() => setHidePast((v) => !v)}
-          aria-pressed={hidePast}
-          title="Hide events that have already passed"
-        >
-          Hide past
-        </button>
-        <button
-          type="button"
-          className={`econ-events__pill econ-events__pill--notify ${notifyEnabled ? 'econ-events__pill--active' : ''} ${notifyDenied ? 'econ-events__pill--denied' : ''}`}
-          onClick={toggleNotify}
-          aria-pressed={notifyEnabled}
-          title={notifyDenied ? 'Browser denied notifications' : 'Notify 5 minutes before next high-impact event'}
-          disabled={notifyDenied}
-        >
-          {notifyDenied ? 'Notifications blocked' : (notifyEnabled ? 'Notify · ON' : 'Notify · OFF')}
-        </button>
-      </div>
-    </div>
   );
 }
 
@@ -1686,7 +1537,7 @@ function EventRowDetail({ event: e, past }) {
             target="_blank"
             rel="noopener noreferrer"
           >
-            Open on Forex Factory ↗
+            Open source page ↗
           </a>
         )}
         <button
@@ -1715,7 +1566,7 @@ function EventRowDetail({ event: e, past }) {
       />
       {past && e.actual == null && (
         <div className="econ-events__row-detail-note">
-          This event has been released. The public Forex Factory feed does not publish post-print actual values; click "Open on Forex Factory" to see what hit the wire.
+          This event has been released. The public feed does not publish post-print actual values; click "Open source page" to see what hit the wire.
         </div>
       )}
     </div>
@@ -1742,7 +1593,7 @@ function downloadIcs(event) {
     `SUMMARY:${icsEscape(event.title)}`,
     `DESCRIPTION:${icsEscape(buildIcsDescription(event))}`,
     event.url ? `URL:${icsEscape(event.url)}` : null,
-    `CATEGORIES:${icsEscape(`Forex Factory · ${event.impact || 'Unknown'}`)}`,
+    `CATEGORIES:${icsEscape(`Economic Events · ${event.impact || 'Unknown'}`)}`,
     'END:VEVENT',
     'END:VCALENDAR',
   ].filter(Boolean);
@@ -1767,8 +1618,6 @@ function buildIcsDescription(e) {
   if (e._impliedMove) {
     lines.push(`SPX implied move: ±$${formatNum(e._impliedMove.moveDollars, 0)} (±${formatPct(e._impliedMove.movePct)})`);
   }
-  lines.push('Source: Forex Factory · ff_calendar_thisweek.xml');
-  if (e.url) lines.push(`Source URL: ${e.url}`);
   return lines.join('\\n');
 }
 
