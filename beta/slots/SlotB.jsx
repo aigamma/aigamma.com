@@ -48,8 +48,6 @@
 //     forecast/previous, and the new "Implied SPX move at next exp"
 //     line (±$ and %, plus DTE).
 //
-//   StatusBar ─ "Listening to Forex Factory" pulsing-dot status.
-//
 //   Totals ─ High / Medium / Low / Upcoming counts (the redundant
 //     "In scope" and "Past" tiles were dropped per Eric's audit;
 //     scope.length is derivable from the impact triple, and the
@@ -433,16 +431,6 @@ export default function SlotB() {
         )}
       </div>
 
-      <StatusBar
-        fetchedAt={feed.fetchedAt}
-        now={now}
-        nextRefreshAt={feed.fetchedAt ? feed.fetchedAt + POLL_MS : null}
-        onRefresh={() => { fetchFeed(); fetchIv(); }}
-        error={feed.error}
-        ivStatus={iv.status}
-        ivContext={ivContext}
-      />
-
       <Totals scoped={scoped} upcoming={upcoming} />
 
       <ImpliedMoveChart events={chartEvents} ivContext={ivContext} />
@@ -799,34 +787,6 @@ function formatDelta(f, p, rawForecast) {
 
 function isInflationary(title) {
   return /Price|CPI|PPI|PCE|Wage|ECI|Inflation/i.test(title || '');
-}
-
-// ── Status bar ────────────────────────────────────────────────────────
-function StatusBar({ fetchedAt, now, nextRefreshAt, onRefresh, error, ivStatus, ivContext }) {
-  const fetchedAgo = fetchedAt ? formatDuration(now - fetchedAt) : 'never';
-  const refreshIn = nextRefreshAt ? Math.max(0, nextRefreshAt - now) : 0;
-  return (
-    <div className="econ-events__statusbar">
-      <span className="econ-events__listening">
-        <span className="econ-events__listening-dot" aria-hidden="true" />
-        Listening to Forex Factory
-      </span>
-      <span className="econ-events__statusbar-meta">
-        fetched {fetchedAgo} ago · next refresh in {formatDuration(refreshIn)}
-      </span>
-      <span className={`econ-events__iv-status econ-events__iv-status--${ivStatus}`}>
-        SPX vol surface: {ivStatus === 'ready' && ivContext
-          ? `spot $${formatNum(ivContext.spotPrice, 0)} · ${ivContext.expirations.length} exps`
-          : ivStatus === 'loading' ? 'loading…' : 'unavailable'}
-      </span>
-      {error && (
-        <span className="econ-events__statusbar-error">last error: {error}</span>
-      )}
-      <button type="button" className="econ-events__refresh" onClick={onRefresh}>
-        Refresh now
-      </button>
-    </div>
-  );
 }
 
 // ── Totals ────────────────────────────────────────────────────────────
@@ -1680,20 +1640,6 @@ function formatLongDate(dateIso) {
   return new Date(`${dateIso}T12:00:00`).toLocaleDateString(undefined, {
     month: 'long', day: 'numeric', year: 'numeric',
   });
-}
-
-function formatDuration(ms) {
-  if (!Number.isFinite(ms) || ms < 0) return '0s';
-  const totalSec = Math.floor(ms / 1000);
-  if (totalSec < 60) return `${totalSec}s`;
-  const totalMin = Math.floor(totalSec / 60);
-  if (totalMin < 60) return `${totalMin}m`;
-  const hours = Math.floor(totalMin / 60);
-  const remMin = totalMin % 60;
-  if (hours < 24) return remMin ? `${hours}h ${remMin}m` : `${hours}h`;
-  const days = Math.floor(hours / 24);
-  const remHr = hours % 24;
-  return remHr ? `${days}d ${remHr}h` : `${days}d`;
 }
 
 function isoDateLocal(d) {

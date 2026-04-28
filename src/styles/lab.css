@@ -2144,80 +2144,6 @@
   font-variant-numeric: tabular-nums;
 }
 
-/* Status bar --------------------------------------------------------- */
-.econ-events__statusbar {
-  display: flex;
-  flex-wrap: wrap;
-  align-items: center;
-  gap: 0.8rem;
-  padding: 0.6rem 0.85rem;
-  background: rgba(46, 204, 113, 0.04);
-  border: 1px solid rgba(46, 204, 113, 0.18);
-  border-radius: 6px;
-  font-family: 'Courier New', monospace;
-  font-size: 0.72rem;
-  letter-spacing: 0.06em;
-  color: var(--text-secondary);
-}
-
-.econ-events__listening {
-  color: var(--accent-green);
-  text-transform: uppercase;
-  font-weight: 700;
-  letter-spacing: 0.14em;
-  display: inline-flex;
-  align-items: center;
-  gap: 0.4rem;
-}
-
-.econ-events__listening-dot {
-  display: inline-block;
-  width: 0.55rem;
-  height: 0.55rem;
-  border-radius: 50%;
-  background: var(--accent-green);
-  animation: econ-events-pulse 2s ease-in-out infinite;
-}
-
-@keyframes econ-events-pulse {
-  0%, 100% { opacity: 1; transform: scale(1); }
-  50%      { opacity: 0.4; transform: scale(0.7); }
-}
-
-.econ-events__statusbar-meta {
-  flex: 1 1 auto;
-  text-transform: uppercase;
-  letter-spacing: 0.1em;
-}
-
-.econ-events__statusbar-error {
-  color: var(--accent-coral);
-  text-transform: none;
-  letter-spacing: 0.04em;
-}
-
-.econ-events__refresh {
-  appearance: none;
-  background: transparent;
-  border: 1px solid var(--accent-green);
-  color: var(--accent-green);
-  border-radius: 3px;
-  padding: 0.3rem 0.7rem;
-  font-family: 'Courier New', monospace;
-  font-size: 0.7rem;
-  letter-spacing: 0.1em;
-  text-transform: uppercase;
-  cursor: pointer;
-  transition: background-color 0.15s ease, color 0.15s ease;
-}
-
-.econ-events__refresh:hover,
-.econ-events__refresh:focus-visible {
-  background: var(--accent-green);
-  color: #0d1016;
-  outline: none;
-}
-
 /* Totals and stats -------------------------------------------------- */
 .econ-events__totals {
   display: flex;
@@ -3004,33 +2930,6 @@
 .econ-events__chart-tooltip-value--highlight {
   color: var(--accent-blue);
   font-weight: 700;
-}
-
-/* IV status pill in the StatusBar ------------------------------- */
-.econ-events__iv-status {
-  display: inline-flex;
-  align-items: center;
-  font-family: 'Courier New', monospace;
-  font-size: 0.7rem;
-  letter-spacing: 0.06em;
-  text-transform: uppercase;
-  color: var(--text-secondary);
-  padding: 0.18rem 0.55rem;
-  border-radius: 999px;
-  border: 1px solid var(--bg-card-border);
-  background: rgba(255, 255, 255, 0.025);
-}
-
-.econ-events__iv-status--ready {
-  color: var(--accent-blue);
-  border-color: rgba(74, 158, 255, 0.4);
-  background: rgba(74, 158, 255, 0.08);
-}
-
-.econ-events__iv-status--error {
-  color: var(--accent-coral);
-  border-color: rgba(231, 76, 60, 0.4);
-  background: rgba(231, 76, 60, 0.08);
 }
 
 /* Hero implied-move panel --------------------------------------- */

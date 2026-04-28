@@ -22,9 +22,8 @@ import SlotB, { slotName as slotBName } from './slots/SlotB';
 // impact event as a family-colored dot at (event_date, move%) with
 // horizontal labels above and a hover-anchored tooltip carrying
 // the full IV + forecast detail. The hero card runs a live
-// HH:MM:SS countdown (1-second tick, paused on hidden tabs); a
-// green-pulsing "Listening to Forex Factory" status bar reports
-// poll cadence; an IntersectionObserver-driven sticky compact bar
+// HH:MM:SS countdown (1-second tick, paused on hidden tabs);
+// an IntersectionObserver-driven sticky compact bar
 // pins the next-event countdown to the top of the viewport when
 // the hero scrolls out of view; per-day impact-count chips and a
 // macro-family spotlight strip (FOMC / CPI / NFP / GDP / PCE / PPI
