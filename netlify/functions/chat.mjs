@@ -1,4 +1,4 @@
-// AI Gamma Dashboard Chat — Netlify Function (Streaming Proxy)
+// AI Gamma Dashboard Chat — Netlify Function (Streaming Proxy with RAG)
 //
 // Adapted from about.aigamma.com's chat function. The adaptations are: the
 // system prompt surface (one per page — see ./prompts/, keyed by the
@@ -15,11 +15,39 @@
 // tool loop to bound cost, and pre-flight validation of model id and request
 // body before the upstream fetch so we fail fast on malformed clients.
 //
-// Requires ANTHROPIC_API_KEY set as an environment variable in the Netlify
-// dashboard for the aigamma site (Project Settings → Environment variables).
-// This env var is NOT shared from about.aigamma.com; it has to be set on this
-// project separately. Without it the function returns a 500 with a clear
-// error message so the frontend can surface the state.
+// Three augmentations on top of the about-site proxy plumbing, all keyed
+// off the same Supabase project that holds the dashboard's market data:
+//
+//   1. Per-IP rate limit via check_rate_limit() RPC. 5 requests per minute
+//      is the per-IP ceiling on /api/chat — at Sonnet/Opus latency a human
+//      reader cannot legitimately exceed that pace, so anything above is
+//      assumed to be a scripted feeder. Rate-limited callers receive a 429
+//      with Retry-After. The check is fail-open: a degraded rate-limit
+//      table will not break the chat.
+//
+//   2. RAG retrieval via the rag-search Supabase Edge Function. Before the
+//      Anthropic call, we POST the user's message + the active surface to
+//      rag-search, which embeds the query inside the Edge Runtime via
+//      Supabase.ai gte-small and returns top-K relevant chunks from the
+//      rag_documents corpus (CLAUDE.md, docs/, the per-page prompts, etc.).
+//      The chunks are spliced into the system prompt under a "Retrieved
+//      context" header. The per-page prompts continue to load from the
+//      ./prompts/*.mjs imports as before — RAG augments, does not replace.
+//      Fail-open: if rag-search is unreachable or returns an error, we log
+//      and proceed with the bare system prompt.
+//
+//   3. Per-turn chat log via the public.chat_logs table. After the stream
+//      ends (or errors), we fire-and-forget an INSERT capturing the IP,
+//      surface, model, query, retrieved chunks, response text, tool uses,
+//      stop reason, and timing. This is the substrate for the iteration
+//      loop — query patterns, chunk-quality audit, and retrieval-vs-
+//      generation failure attribution all run off this table.
+//
+// Requires ANTHROPIC_API_KEY, SUPABASE_URL, and SUPABASE_SERVICE_KEY set as
+// environment variables in the Netlify dashboard for the aigamma site
+// (Project Settings → Environment variables). All three are already set on
+// this project as of 2026-04-29 — see scripts/rag/ingest.mjs for the
+// matching local-development env-var contract used by the ingestion walker.
 
 import mainPrompt from './prompts/main.mjs';
 import garchPrompt from './prompts/garch.mjs';
@@ -39,16 +67,6 @@ import { CORE_PERSONA } from './prompts/core_persona.mjs';
 import { BEHAVIORAL_CONSTRAINTS } from './prompts/behavior.mjs';
 import { SITE_NAVIGATION_CONTEXT } from './prompts/site_nav.mjs';
 
-// Per-page system prompt registry. Keyed by the `context` field the client
-// sends in the POST body. The keys are short slugs that match the URL path
-// segment of the page the chat is mounted on (main = landing page at /,
-// garch = /garch/, regime = /regime/, rough = /rough/, stochastic =
-// /stochastic/, local = /local/, jump = /jump/, risk = /risk/, discrete =
-// /discrete/, parity = /parity/, tactical = /tactical/, alpha = /alpha/,
-// beta = /beta/). Add a new key here and a new peer file in ./prompts/ when
-// a new lab page wants its own chat voice. An unknown or missing key falls
-// through to the main-dashboard prompt so a stale client that forgets to
-// pass context still gets a coherent answer.
 const SYSTEM_PROMPTS = {
   main: mainPrompt,
   garch: garchPrompt,
@@ -65,16 +83,6 @@ const SYSTEM_PROMPTS = {
   beta: betaPrompt,
 };
 
-// Two-model config mirroring about.aigamma.com — Sonnet powers the default
-// "Quick Analysis" tab (fast, affordable under arbitrary public load) and
-// Opus powers the "Deep Analysis" tab (longer, structurally deeper responses
-// for the math and philosophy questions this dashboard attracts). The max
-// output tokens are aligned with the about-site values that have already
-// survived months of production traffic: 128k for Opus, 64k for Sonnet.
-// Both ids are confirmed accessible with the ANTHROPIC_API_KEY provisioned
-// on this Netlify project — earlier attempts at 'claude-opus-4-7' returned
-// upstream errors on this workspace, so 4.6 is the deepest tier pinned
-// until 4.7 access is promoted.
 const MODEL_CONFIG = {
   'claude-opus-4-6': { displayName: 'Claude Opus 4.6', maxTokens: 128000 },
   'claude-sonnet-4-6': { displayName: 'Claude Sonnet 4.6', maxTokens: 64000 }
@@ -86,13 +94,6 @@ const CORS_HEADERS = {
   'Access-Control-Allow-Methods': 'POST, OPTIONS'
 };
 
-// Tool surface is deliberately narrower than about.aigamma.com. The dashboard
-// chat does not need a document generator (users can screenshot or copy) or
-// image/PDF upload (questions are typed prose about math). Web search and
-// web fetch are kept because dashboard questions frequently reference papers
-// (Breeden and Litzenberger 1978, Gatheral's SVI notes, Heston 1993) or
-// external references where a live lookup is cheaper than the model's
-// training-data recollection.
 const TOOLS = [
   {
     type: 'web_search_20250305',
@@ -115,6 +116,19 @@ const TOOLS = [
 ];
 
 const MAX_TOOL_ROUNDS = 5;
+
+// Per-IP rate ceiling on /api/chat. 5/min is the threshold at which a
+// human-driven chat session against streaming Sonnet/Opus responses cannot
+// legitimately exceed — anything above is assumed to be a scripted feeder
+// extracting the API onto a command line.
+const CHAT_RATE_LIMIT_PER_MINUTE = 5;
+
+// Top-K chunks retrieved from rag_documents per turn. Six is a working
+// compromise between recall (more chunks → more chance the right context
+// is included) and prompt budget (more chunks → more tokens per turn,
+// counted against Anthropic's per-call max_tokens budget). Tune via the
+// match_rag_chunks RPC default if the right number turns out to be different.
+const RAG_TOP_K = 6;
 
 async function fetchUrl(url) {
   try {
@@ -186,6 +200,137 @@ async function executeTools(toolUseBlocks) {
   return results;
 }
 
+// Extract the originating client IP from Netlify's request headers. Netlify
+// sets x-nf-client-connection-ip with the literal originating IP; if absent
+// (e.g. local dev or a non-Netlify reverse proxy in the path) we fall back
+// to the first IP in x-forwarded-for and finally to a sentinel string so
+// the rate-limit row keying is well-defined even on malformed requests.
+function extractClientIp(req) {
+  const nf = req.headers.get('x-nf-client-connection-ip');
+  if (nf) return nf.trim();
+  const xff = req.headers.get('x-forwarded-for');
+  if (xff) return xff.split(',')[0].trim();
+  return 'unknown';
+}
+
+// Call the Supabase check_rate_limit RPC. Returns the RPC's JSONB envelope
+// { allowed, count, limit, window_start, reset_in_seconds } on success,
+// or null on any error (caller must treat null as "not blocked" — fail open
+// so a degraded rate-limit table doesn't break chat).
+async function checkRateLimit(supabaseUrl, supabaseKey, clientIp, endpoint, maxPerMinute) {
+  if (!supabaseUrl || !supabaseKey) return null;
+  try {
+    const res = await fetch(`${supabaseUrl}/rest/v1/rpc/check_rate_limit`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        apikey: supabaseKey,
+        Authorization: `Bearer ${supabaseKey}`,
+      },
+      body: JSON.stringify({
+        p_client_ip: clientIp,
+        p_endpoint: endpoint,
+        p_max_per_minute: maxPerMinute,
+      }),
+      signal: AbortSignal.timeout(3000),
+    });
+    if (!res.ok) {
+      console.error('rate_limit_check_http_error', res.status, await res.text().catch(() => ''));
+      return null;
+    }
+    return await res.json();
+  } catch (e) {
+    console.error('rate_limit_check_failed', e?.message || e);
+    return null;
+  }
+}
+
+// Call the rag-search Supabase Edge Function. Returns {system_prompts, chunks}
+// on success, or null on any error (caller must treat null as "no retrieval"
+// and proceed with the bare system prompt — fail open so RAG layer outages
+// don't break chat). The system_prompts list is intentionally ignored here
+// because the Netlify chat function continues to load the per-page prompt
+// blocks from the ./prompts/*.mjs imports; only the similarity-ranked chunks
+// are spliced into the system prompt as supplementary context.
+async function searchRag(supabaseUrl, query, surface, topK) {
+  if (!supabaseUrl) return null;
+  try {
+    const res = await fetch(`${supabaseUrl}/functions/v1/rag-search`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        query,
+        surface: surface || null,
+        top_k: topK,
+      }),
+      signal: AbortSignal.timeout(8000),
+    });
+    if (!res.ok) {
+      console.error('rag_search_http_error', res.status, await res.text().catch(() => ''));
+      return null;
+    }
+    return await res.json();
+  } catch (e) {
+    console.error('rag_search_failed', e?.message || e);
+    return null;
+  }
+}
+
+// Format the retrieved chunks as a markdown-flavored block to splice into the
+// system prompt under a "Retrieved context" heading. Each chunk gets a small
+// header line with its title (or source path) so the model can cite where
+// the context came from if asked. Chunks below a similarity floor are dropped
+// — gte-small produces noisy low-similarity hits on out-of-domain queries
+// and including them hurts more than it helps.
+const RETRIEVAL_SIMILARITY_FLOOR = 0.4;
+
+function formatRetrievedContext(chunks) {
+  if (!Array.isArray(chunks) || chunks.length === 0) return null;
+  const kept = chunks.filter((c) => (c?.similarity ?? 0) >= RETRIEVAL_SIMILARITY_FLOOR);
+  if (kept.length === 0) return null;
+  const lines = [
+    '[Retrieved context — pulled from the project knowledge corpus by similarity to the user query]',
+    '',
+  ];
+  for (const c of kept) {
+    const title = c?.metadata?.title || c?.source_path || 'untitled';
+    const sim = typeof c?.similarity === 'number' ? c.similarity.toFixed(3) : 'n/a';
+    lines.push(`---`);
+    lines.push(`Source: ${title} (similarity ${sim})`);
+    lines.push('');
+    lines.push(c.content || '');
+    lines.push('');
+  }
+  return lines.join('\n');
+}
+
+// Fire-and-forget chat_logs INSERT. Awaited at the end of the streaming
+// finally{} block but never blocks the response close — Netlify functions
+// allow finally-block work to outlive the response, and a slow log write
+// shouldn't add latency to the chat turn. Errors are swallowed: a degraded
+// chat_logs table cannot be allowed to surface as a chat error.
+async function writeChatLog(supabaseUrl, supabaseKey, row) {
+  if (!supabaseUrl || !supabaseKey) return;
+  try {
+    const res = await fetch(`${supabaseUrl}/rest/v1/chat_logs`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        apikey: supabaseKey,
+        Authorization: `Bearer ${supabaseKey}`,
+        Prefer: 'return=minimal',
+      },
+      body: JSON.stringify(row),
+      signal: AbortSignal.timeout(3000),
+    });
+    if (!res.ok) {
+      console.error('chat_log_write_http_error', res.status, await res.text().catch(() => ''));
+    }
+  } catch (e) {
+    console.error('chat_log_write_failed', e?.message || e);
+  }
+}
+
 export default async (req) => {
   if (req.method === 'OPTIONS') {
     return new Response(null, { status: 204, headers: CORS_HEADERS });
@@ -196,6 +341,40 @@ export default async (req) => {
     return new Response(
       JSON.stringify({ error: 'API key not configured.' }),
       { status: 500, headers: { ...CORS_HEADERS, 'Content-Type': 'application/json' } }
+    );
+  }
+
+  const supabaseUrl = Netlify.env.get('SUPABASE_URL');
+  const supabaseServiceKey = Netlify.env.get('SUPABASE_SERVICE_KEY') || Netlify.env.get('SUPABASE_KEY');
+
+  const clientIp = extractClientIp(req);
+
+  // Rate limit. Failure to call the RPC fails open — see checkRateLimit().
+  const rateLimit = await checkRateLimit(
+    supabaseUrl,
+    supabaseServiceKey,
+    clientIp,
+    'chat',
+    CHAT_RATE_LIMIT_PER_MINUTE
+  );
+  if (rateLimit && rateLimit.allowed === false) {
+    const retry = rateLimit.reset_in_seconds ?? 60;
+    return new Response(
+      JSON.stringify({
+        error: 'rate_limited',
+        message: `You are sending requests faster than the platform allows. Wait ${retry} seconds and try again.`,
+        retry_in_seconds: retry,
+        limit: rateLimit.limit,
+        count: rateLimit.count,
+      }),
+      {
+        status: 429,
+        headers: {
+          ...CORS_HEADERS,
+          'Content-Type': 'application/json',
+          'Retry-After': String(retry),
+        },
+      }
     );
   }
 
@@ -218,10 +397,6 @@ export default async (req) => {
     );
   }
 
-  // Default to Sonnet when the client omits a model id, matching the
-  // default-active "Quick Analysis" tab in the React component. A missing
-  // model id from the client is a signal of a stale or minimal caller and
-  // Sonnet is the cheaper, faster path to fall back to.
   const resolvedModel = model || 'claude-sonnet-4-6';
   const config = MODEL_CONFIG[resolvedModel];
   if (!config) {
@@ -231,22 +406,44 @@ export default async (req) => {
     );
   }
 
-  // Resolve which per-page prompt to use. An unknown or missing context key
-  // falls through to the main dashboard prompt so a stale or minimal client
-  // that forgets to pass context still produces a coherent response.
-  const rawTemplate = SYSTEM_PROMPTS[context] || SYSTEM_PROMPTS.main;
-  const promptTemplate = [
+  const surface = (context && SYSTEM_PROMPTS[context]) ? context : 'main';
+  const userMessage = message.trim();
+  const historyArray = Array.isArray(history) ? history : [];
+
+  const turnStart = Date.now();
+  const retrievalStart = Date.now();
+  const ragResult = await searchRag(supabaseUrl, userMessage, surface, RAG_TOP_K);
+  const retrievalMs = Date.now() - retrievalStart;
+  const retrievedChunks = Array.isArray(ragResult?.chunks) ? ragResult.chunks : [];
+  const retrievedContextBlock = formatRetrievedContext(retrievedChunks);
+
+  // Resolve which per-page prompt to use. We continue to load these from the
+  // ./prompts/*.mjs imports (not from rag_documents) so the bare-prompt
+  // shape is stable even if the RAG corpus is partially deindexed during a
+  // re-ingestion cycle.
+  const rawTemplate = SYSTEM_PROMPTS[surface] || SYSTEM_PROMPTS.main;
+  const promptParts = [
     CORE_PERSONA,
     SITE_NAVIGATION_CONTEXT,
     rawTemplate,
-    BEHAVIORAL_CONSTRAINTS
-  ].join('\n\n');
-  const systemPrompt = promptTemplate.replace(/MODEL_PLACEHOLDER/g, config.displayName);
+    BEHAVIORAL_CONSTRAINTS,
+  ];
+  if (retrievedContextBlock) {
+    promptParts.push(retrievedContextBlock);
+  }
+  const systemPrompt = promptParts.join('\n\n').replace(/MODEL_PLACEHOLDER/g, config.displayName);
 
   const initialMessages = [
-    ...(Array.isArray(history) ? history : []),
-    { role: 'user', content: message.trim() }
+    ...historyArray,
+    { role: 'user', content: userMessage },
   ];
+
+  // State accumulated across the streaming session, including any tool-use
+  // follow-up rounds. Captured into chat_logs after the stream closes.
+  const responseTextParts = [];
+  const allToolUses = [];
+  let finalStopReason = null;
+  let upstreamErrorMessage = null;
 
   const stream = new ReadableStream({
     async start(controller) {
@@ -261,6 +458,7 @@ export default async (req) => {
               delta: { type: 'text_delta', text: '\n\n[Tool execution limit reached]' }
             }) + '\n\n'
           ));
+          finalStopReason = 'tool_limit_reached';
           return;
         }
 
@@ -283,6 +481,7 @@ export default async (req) => {
             })
           });
         } catch (err) {
+          upstreamErrorMessage = `network_error: ${err?.message || err}`;
           console.error('Anthropic network error:', err?.message || err);
           controller.enqueue(encoder.encode(
             'data: ' + JSON.stringify({
@@ -291,6 +490,7 @@ export default async (req) => {
               delta: { type: 'text_delta', text: 'The AI is temporarily unavailable. Please try again in a moment, or reach eric@aigamma.com.' }
             }) + '\n\n'
           ));
+          finalStopReason = 'upstream_network_error';
           return;
         }
 
@@ -299,6 +499,7 @@ export default async (req) => {
           try {
             upstreamBody = await anthropicRes.text();
           } catch { /* body already consumed or stream errored */ }
+          upstreamErrorMessage = `upstream_${anthropicRes.status}: ${upstreamBody.substring(0, 500)}`;
           console.error(
             'Anthropic upstream error: status=' + anthropicRes.status +
             ' model=' + resolvedModel +
@@ -316,6 +517,7 @@ export default async (req) => {
               delta: { type: 'text_delta', text: errMsg }
             }) + '\n\n'
           ));
+          finalStopReason = `upstream_http_${status}`;
           return;
         }
 
@@ -378,12 +580,18 @@ export default async (req) => {
                     name: currentToolUse.name,
                     input: parsedInput
                   });
+                  allToolUses.push({
+                    name: currentToolUse.name,
+                    input: parsedInput,
+                    round,
+                  });
                   currentToolUse = null;
                 } else if (currentTextContent) {
                   assistantContent.push({
                     type: 'text',
                     text: currentTextContent
                   });
+                  responseTextParts.push(currentTextContent);
                   currentTextContent = '';
                 }
               }
@@ -396,6 +604,8 @@ export default async (req) => {
             } catch (e) {}
           }
         }
+
+        finalStopReason = stopReason;
 
         if (stopReason === 'tool_use') {
           const customToolBlocks = assistantContent.filter(
@@ -419,6 +629,7 @@ export default async (req) => {
       try {
         await callAnthropicStreaming(initialMessages, 1);
       } catch (err) {
+        upstreamErrorMessage = `unexpected: ${err?.message || err}`;
         try {
           controller.enqueue(encoder.encode(
             'data: ' + JSON.stringify({
@@ -430,6 +641,34 @@ export default async (req) => {
         } catch (e) {}
       } finally {
         try { controller.close(); } catch (e) {}
+
+        // Persist the per-turn log. Fire-and-forget — the response stream is
+        // already closed by this point, so any latency here only affects how
+        // soon the function instance can be reaped, not the user's TTLB.
+        const responseText = responseTextParts.join('');
+        const responseMs = Date.now() - turnStart;
+        const retrievedChunkSummary = retrievedChunks.map((c) => ({
+          source_path: c?.source_path,
+          chunk_index: c?.chunk_index,
+          title: c?.metadata?.title || null,
+          similarity: c?.similarity,
+          match_kind: c?.match_kind,
+        }));
+
+        writeChatLog(supabaseUrl, supabaseServiceKey, {
+          client_ip: clientIp,
+          surface,
+          model: resolvedModel,
+          user_message: userMessage,
+          history_length: historyArray.length,
+          retrieved_chunks: retrievedChunkSummary,
+          retrieval_ms: retrievalMs,
+          response_text: responseText || null,
+          response_ms: responseMs,
+          tool_uses: allToolUses,
+          stop_reason: finalStopReason,
+          error_message: upstreamErrorMessage,
+        }).catch(() => { /* swallow — already logged inside writeChatLog */ });
       }
     }
   });
