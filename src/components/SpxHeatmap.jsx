@@ -75,7 +75,15 @@ function pctToColor(pct) {
   if (Math.abs(clipped) <= NEUTRAL_BAND_PCT) return '#262b35';
   const intensity = (Math.abs(clipped) - NEUTRAL_BAND_PCT) / (STRONG_PCT - NEUTRAL_BAND_PCT);
   if (clipped > 0) return mixHex('#2a3038', '#1f8d4f', intensity);
-  return mixHex('#382828', '#a23a25', intensity);
+  // Pure-red gradient — green pinned at 30 (just below the start's
+  // green=40) so it never grows above red as intensity rises, which
+  // is what produced brown/brick tones in the previous endpoint
+  // (#a23a25 had g=58, so mid-intensity mixes like #6d3126 at 50%
+  // read unambiguously as brown). The new endpoint #b81e2a has the
+  // same brightness as before but with green clamped low and a
+  // small blue lift for crimson character, so every step from
+  // neutral to strong-red stays in the red family.
+  return mixHex('#382828', '#b81e2a', intensity);
 }
 
 function pctToTextColor(pct) {
