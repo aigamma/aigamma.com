@@ -479,7 +479,14 @@ function LegendDot({ color, label, scale = 1 }) {
 // Reproduces the SpotGamma earnings chart layout from the reference
 // at C:\i\earnings chart.png:
 //
-//   X axis: 5 evenly-spaced columns, one per chart day.
+//   X axis: chartDays.length evenly-spaced columns, one per chart
+//           day, inset from both edges by half an inter-day step so
+//           the leftmost column doesn't crowd the y-axis tick labels
+//           (5%, 10%, …) and the rightmost column doesn't crowd the
+//           plot border. The previous flush-to-edge layout placed
+//           ticker labels at the y-axis baseline, where 4-letter
+//           middle-anchored labels visibly painted over the y-axis
+//           tick text.
 //   Y axis: 0% to dataMax%, with horizontal gridlines every 5%.
 //
 // Multiple tickers reporting the same day at similar implied moves
@@ -537,7 +544,18 @@ function ScatterChart({ chartDays, containerWidth, impliedMovesLive, impliedMove
 
   const xForDay = (dayIdx) => {
     if (chartDays.length <= 1) return PADDING.left + plotW / 2;
-    return PADDING.left + (plotW * dayIdx) / (chartDays.length - 1);
+    // Inset both edges by half an inter-day step. n columns are
+    // placed at the centers of n equal sub-bands across plotW, so
+    // day 0 lands at plotW/(2n) from the y-axis (≈ half a column
+    // width) instead of flush against it. Without the inset, a
+    // 4-letter ticker like "MSFT" middle-anchored at x=PADDING.left
+    // extends ~15px to the left, where it overpaints the y-axis
+    // tick labels ("5%", "10%") rendered end-anchored at
+    // x=PADDING.left - 10. Inter-day spacing is plotW/n (was
+    // plotW/(n-1)), which compresses the column stride by ~20% at
+    // n=5 — a tradeoff Eric was explicit about, prioritizing legible
+    // y-axis labels over packing days edge-to-edge.
+    return PADDING.left + (plotW * (dayIdx + 0.5)) / chartDays.length;
   };
   const yForMove = (m) => PADDING.top + plotH * (1 - m / yMax);
 
