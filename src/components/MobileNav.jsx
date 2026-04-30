@@ -47,7 +47,16 @@ import { useCallback, useEffect, useRef, useState } from 'react';
 // pinned to the bottom — the same About entry that lives at the bottom
 // of the desktop Menu, just relocated under RESEARCH on mobile so it has
 // a natural home (the desktop Menu has its own "About" section header
-// that we don't reproduce on mobile to keep the dropdowns lean).
+// that we don't reproduce on mobile to keep the dropdowns lean). The
+// TOOLS dropdown carries the same About entry pinned to its bottom so a
+// reader who taps TOOLS first (the more frequented dropdown for the
+// daily operational read) does not have to back out and tap RESEARCH
+// just to reach about.aigamma.com — both dropdowns terminate in the
+// same off-site exit. The desktop counterpart of these dropdown
+// entries is the .lab-footer-about "Who made this?" link wired into
+// every lab footer (see src/styles/lab.css and the per-app footer
+// blocks); mobile users get the in-dropdown path because the footer
+// requires scrolling past the entire lab content to reach.
 //
 // The component is rendered automatically as a sibling of the desktop
 // .menu in src/components/Menu.jsx, so every page header that already
@@ -382,6 +391,16 @@ export default function MobileNav({ regimeIndicator } = {}) {
               <span className="mobile-nav__item-desc">{item.desc}</span>
             </a>
           ))}
+          <div className="mobile-nav__divider" role="presentation" />
+          <a
+            href={ABOUT_ITEM.href}
+            className="mobile-nav__item mobile-nav__item--about"
+            role="menuitem"
+            onClick={() => setOpenPanel(null)}
+          >
+            <span className="mobile-nav__item-path">{ABOUT_ITEM.label}</span>
+            <span className="mobile-nav__item-desc">{ABOUT_ITEM.desc}</span>
+          </a>
         </div>
       )}
     </div>

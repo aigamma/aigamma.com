@@ -100,6 +100,7 @@ export default function App() {
           AI Gamma · Expiring Gamma · per-expiration gamma scheduled to roll off · v0.1.2
         </span>
         <a href="/" className="lab-footer-home">Return Home</a>
+        <a href="https://about.aigamma.com/" className="lab-footer-about">Who made this?</a>
       </footer>
     </div>
   );

@@ -168,6 +168,7 @@ export default function App() {
           AI Gamma · Earnings Calendar · upcoming releases by implied move and date · v0.1.0
         </span>
         <a href="/" className="lab-footer-home">Return Home</a>
+        <a href="https://about.aigamma.com/" className="lab-footer-about">Who made this?</a>
       </footer>
     </div>
   );

@@ -113,6 +113,7 @@ export default function App() {
           AI Gamma · parity lab · v1.0.0
         </span>
         <a href="/" className="lab-footer-home">Return Home</a>
+        <a href="https://about.aigamma.com/" className="lab-footer-about">Who made this?</a>
       </footer>
     </div>
   );

@@ -177,6 +177,7 @@ export default function App() {
         <span className="lab-footer-line">
           AI Gamma · discrete &amp; parametric vol lab · six-slot fitting zoo · v0.1.0
         </span>
+        <a href="https://about.aigamma.com/" className="lab-footer-about">Who made this?</a>
       </footer>
     </div>
   );

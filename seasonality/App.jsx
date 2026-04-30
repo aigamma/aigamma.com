@@ -102,6 +102,7 @@ export default function App() {
           AI Gamma · SPX intraday seasonality · 30-min bars vs prior close · v0.1.0
         </span>
         <a href="/" className="lab-footer-home">Return Home</a>
+        <a href="https://about.aigamma.com/" className="lab-footer-about">Who made this?</a>
       </footer>
     </div>
   );

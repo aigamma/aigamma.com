@@ -120,6 +120,7 @@ export default function App() {
           AI Gamma · Scan · top by options volume, 25Δ wings vs ATM · v0.3.0
         </span>
         <a href="/" className="lab-footer-home">Return Home</a>
+        <a href="https://about.aigamma.com/" className="lab-footer-about">Who made this?</a>
       </footer>
     </div>
   );

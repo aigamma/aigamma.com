@@ -313,6 +313,35 @@
   outline: none;
 }
 
+/* Bolded footer attribution link to the sister site about.aigamma.com.
+   Sits below the lab-footer-home Return-Home link on lab pages where
+   both are present, or stands alone on the home-page footer where there
+   is no Return-Home (the reader is already home). Reads as a distinct
+   secondary affordance — accent-blue + bold, mixed case so the question
+   mark looks natural — separate from the green uppercase Return-Home
+   above and the muted grey lab-footer-line meta strip above that. The
+   link is the desktop counterpart to the About entry pinned at the
+   bottom of the mobile TOOLS and RESEARCH dropdowns; it stays visible
+   at every breakpoint (matching the Return-Home pattern) so a reader
+   who has scrolled past the header chrome still has an in-page path
+   to the about page without scrolling back up. */
+.lab-footer-about {
+  display: block;
+  margin-top: 0.75rem;
+  font-family: var(--font-base);
+  font-size: 0.9rem;
+  letter-spacing: 0.04em;
+  text-decoration: none;
+  color: var(--accent-blue);
+  font-weight: 700;
+}
+
+.lab-footer-about:hover,
+.lab-footer-about:focus-visible {
+  text-decoration: underline;
+  outline: none;
+}
+
 /* Desktop-only override that flips the lab-header from a left-anchored
    brand + right-anchored nav cluster (the mobile-first default above)
    into an evenly distributed row. justify-content: space-between on
@@ -506,6 +535,11 @@
     font-size: 0.82rem;
     margin-top: 0.6rem;
   }
+
+  .lab-footer-about {
+    font-size: 0.82rem;
+    margin-top: 0.6rem;
+  }
 }
 
 @media (max-width: 480px) {
@@ -604,6 +638,11 @@
   .lab-footer-home {
     font-size: 0.75rem;
     letter-spacing: 0.08em;
+  }
+
+  .lab-footer-about {
+    font-size: 0.75rem;
+    letter-spacing: 0.03em;
   }
 }
 
