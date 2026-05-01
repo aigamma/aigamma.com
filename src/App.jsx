@@ -2,6 +2,7 @@ import { lazy, Suspense, useEffect, useMemo, useState } from 'react';
 import './styles/theme.css';
 import ErrorBoundary from './ErrorBoundary';
 import LevelsPanel from './components/LevelsPanel';
+import CatalystBanner from './components/CatalystBanner';
 import Menu from './components/Menu';
 import TopNav from './components/TopNav';
 import LazyMount from './components/LazyMount';
@@ -513,6 +514,23 @@ export default function App() {
               regimeIndicator={regimeIndicatorObj}
               termStructure={data.termStructure}
             />
+          </ErrorBoundary>
+
+          {/* Catalyst banner — three time-bucketed pills sitting directly
+              under the LevelsPanel's three rows of key metrics. Red pill
+              (left) for catalysts firing in the next 0-24 hours, orange
+              (middle) for 24-48 hours, yellow (right) for 48-72 hours.
+              Pulls Top 100 OV earnings from /api/earnings and macro
+              events from /api/events-calendar (USD-only, High+Medium
+              impact tiers). Statically imported (not lazy + LazyMount-
+              gated) because it sits above the fold where the
+              IntersectionObserver gate fires immediately anyway and a
+              deferred chunk fetch would only add a round-trip without
+              saving any bytes from the critical path. The component
+              renders null when both buckets are empty so the page
+              draws as if it weren't there during quiet periods. */}
+          <ErrorBoundary>
+            <CatalystBanner />
           </ErrorBoundary>
 
           {/* Below-fold dealer-positioning charts are wrapped in LazyMount
