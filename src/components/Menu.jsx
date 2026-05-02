@@ -23,10 +23,17 @@ import MobileNav from './MobileNav';
 // lives entirely in CSS.
 // Tools is curated by importance rather than alphabetized: /stocks/
 // (top option-liquid single names) leads, followed by /heatmap/
-// (sector-weighted overview), /expiring-gamma/ (dated catalyst), and
-// /parity/ (diagnostic). The earlier alphabetized order put
-// /expiring-gamma/ at the top, which understated the centrality of
-// the single-names and sector views to the daily read.
+// (sector-weighted overview) and /expiring-gamma/ (dated catalyst).
+// The earlier alphabetized order put /expiring-gamma/ at the top,
+// which understated the centrality of the single-names and sector
+// views to the daily read. /parity/ was previously listed as a
+// fourth Tools entry but moved into the Research section because
+// it documents a no-arbitrage identity (put-call parity, the box-
+// spread funding rate, the implied dividend-adjusted forward) rather
+// than carrying an operational dashboard read like the other Tools
+// pages, so it sits more naturally next to the calibrated-model
+// research zoos. Its alphabetical-by-href slot in Research lands
+// between /local/ and /regime/.
 //
 // Six lab pages — /tactical/, /earnings/, /scan/, /rotations/,
 // /vix/, /seasonality/ — live in the TopNav component (see
@@ -57,12 +64,12 @@ const MENU_ITEMS = [
   { type: 'item', href: '/heatmap/',        label: '/heatmap/',        desc: 'Equal-size top-250-by-options-volume heatmap by sector' },
   { type: 'item', href: '/events/',         label: '/events/',         desc: 'US macro release calendar with SPX implied-move overlays' },
   { type: 'item', href: '/expiring-gamma/', label: '/expiring-gamma/', desc: 'Gamma scheduled to expire per date' },
-  { type: 'item', href: '/parity/',         label: '/parity/',         desc: 'Put-call parity, box-spread rate, implied forward' },
   { type: 'header', label: 'Research' },
   { type: 'item', href: '/discrete/',       label: '/discrete/',       desc: 'Binomial and trinomial trees, SVI and SSVI surfaces' },
   { type: 'item', href: '/garch/',          label: '/garch/',          desc: 'GARCH family and ensemble forecasts' },
   { type: 'item', href: '/jump/',           label: '/jump/',           desc: 'Merton, Kou, Bates, variance gamma' },
   { type: 'item', href: '/local/',          label: '/local/',          desc: 'Dupire extraction and local vol pricing' },
+  { type: 'item', href: '/parity/',         label: '/parity/',         desc: 'Put-call parity, box-spread rate, implied forward' },
   { type: 'item', href: '/regime/',         label: '/regime/',         desc: 'Mixture, Markov, Wasserstein regimes' },
   { type: 'item', href: '/risk/',           label: '/risk/',           desc: 'Cross-model Greeks, Vanna-Volga, second-order' },
   { type: 'item', href: '/rough/',          label: '/rough/',          desc: 'Rough Bergomi and rough vol exploration' },
