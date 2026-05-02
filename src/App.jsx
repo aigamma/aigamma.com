@@ -585,6 +585,130 @@ export default function App() {
         </>
       )}
 
+      {/* "What this page measures" explainer — same pattern used on
+          /vix/ and /tactical/. One bolded short heading per surface
+          rendered above (LevelsPanel, CatalystBanner, GammaInflection,
+          GexProfile, SpxVolFlip, DealerGammaRegime, GammaIndexOscillator,
+          GammaIndexScatter), each followed by a paragraph that names the
+          math and how to read it. Static block (no LazyMount) — it sits
+          near the bottom of the page where the LazyMount viewport gates
+          on the charts above have already fired by the time the reader
+          scrolls into range, so deferring it would only add a serial
+          chunk-fetch without saving any of the critical-path budget. */}
+      <div className="card" style={{ padding: '1.1rem 1.25rem', margin: '1.25rem 0' }}>
+        <div
+          style={{
+            fontFamily: "Calibri, 'Segoe UI', system-ui, sans-serif",
+            fontSize: '0.7rem',
+            letterSpacing: '0.14em',
+            textTransform: 'uppercase',
+            color: 'var(--text-secondary)',
+            marginBottom: '0.45rem',
+          }}
+        >
+          what this page measures
+        </div>
+        <div style={{ color: 'var(--text-secondary)', lineHeight: 1.65, fontSize: '0.95rem' }}>
+          <p style={{ margin: '0 0 0.7rem' }}>
+            <strong style={{ color: 'var(--text-primary)' }}>Levels &amp; Regime.</strong>{' '}
+            The status strip across the top reads in three rows: spot price
+            and the move from the prior session's close; the dealer-gamma
+            regime pill (green when SPX sits above the volatility flip,
+            where γ(spot) is positive and dealers dampen moves; coral when
+            below, where γ(spot) is negative and dealers amplify them);
+            and the put wall, vol flip, and call wall scalars — the
+            per-strike net-GEX extremes within ±15% of spot plus the
+            zero-crossing of the gamma profile. Auxiliary tiles carry
+            expected move (spot × ATM IV × √(DTE/365)), the VIX-style
+            VRP (30-day constant-maturity IV minus 20-day Yang-Zhang
+            realized vol), 1-year IV rank, and an overnight alignment
+            score in [−3, +3] that tracks which way each of the three
+            levels moved against yesterday's close.
+          </p>
+          <p style={{ margin: '0 0 0.7rem' }}>
+            <strong style={{ color: 'var(--text-primary)' }}>Catalyst Banner.</strong>{' '}
+            Three time-bucketed pills — red 0–24 h, orange 24–48 h, yellow
+            48–72 h — aggregating Top-100 options-volume earnings
+            (anchored to BMO 7:00 / AMC 16:30 ET session midpoints) and
+            High-or-Medium-impact USD macro events (FOMC, CPI, NFP, and
+            similar). The banner renders nothing during quiet windows so
+            the page reads the same as if it weren't there during stretches
+            with no near-term catalysts.
+          </p>
+          <p style={{ margin: '0 0 0.7rem' }}>
+            <strong style={{ color: 'var(--text-primary)' }}>Gamma Inflection.</strong>{' '}
+            Dealer dollar-gamma plotted across hypothetical spot,
+            ∑ᵢ γᵢ · OIᵢ · 100 · (S/100)², with the sum split positive
+            (green, calls dominate) and negative (coral, puts dominate)
+            and joined by a linearly interpolated zero crossing so the
+            band meets cleanly at the flip. The dashed blue line marks
+            today's spot, the amber dashed line marks the flip. Standing
+            on the green side of the flip means dealers buy dips and sell
+            rips; standing on the coral side means the opposite — small
+            moves get magnified into larger ones.
+          </p>
+          <p style={{ margin: '0 0 0.7rem' }}>
+            <strong style={{ color: 'var(--text-primary)' }}>GEX Profile.</strong>{' '}
+            Per-strike call (green) and put (coral) gamma exposure as bars,
+            with the previous session's bars rendered behind today's at low
+            opacity so re-pricings — a put wall migrating, a call wall
+            flattening, ATM gamma stacking up into a pin — are visible at
+            a glance. The vertical axis uses symlog compression so the deep-
+            OTM tail stays readable without crushing the ATM bars. Use the
+            expiration picker in the strip above to isolate a single chain;
+            "ALL EXPIRATIONS" reads the aggregate book.
+          </p>
+          <p style={{ margin: '0 0 0.7rem' }}>
+            <strong style={{ color: 'var(--text-primary)' }}>Vol Flip History.</strong>{' '}
+            Daily SPX close shaded green when above the prior-day vol flip
+            and coral when below, overlaid on the flip itself as an hv step
+            line. Optional put-wall and call-wall step lines toggle on; the
+            y-axis tightens when those walls are hidden so the spot/flip
+            band fills the frame. Reading regime durations off this chart
+            is the empirical answer to "how long do we typically stay on
+            one side of the flip" — much of the time-series sits on one
+            side for weeks before crossing.
+          </p>
+          <p style={{ margin: '0 0 0.7rem' }}>
+            <strong style={{ color: 'var(--text-primary)' }}>Dealer Gamma Regime.</strong>{' '}
+            SPX close drawn as a thin connector with one dot per session —
+            green on positive-gamma days, coral on negative — sourced from
+            the postmarket-stamped daily regime column. Reading top-down,
+            this is the historical companion to the live regime pill in
+            the Levels strip: same classification, same colors, but
+            stretched out across the full ThetaData Options Standard
+            backfill so persistent regime episodes (the long stretches of
+            negative gamma in 2018, 2020, 2022) read as continuous coral
+            bands rather than as isolated dots.
+          </p>
+          <p style={{ margin: '0 0 0.7rem' }}>
+            <strong style={{ color: 'var(--text-primary)' }}>Gamma Index Oscillator.</strong>{' '}
+            A bounded oscillator in [−10, +10] equal to
+            10 · (ATM call GEX − ATM put GEX) / (ATM call GEX + ATM put GEX),
+            filled coral below the zero line and green above, with dotted
+            amber bands at ±5 marking the empirical "extreme" thresholds.
+            The right-edge ribbon is the kernel-density estimate of the
+            full-history distribution split at zero; the badge in the top-
+            right reports the latest value, its percentile rank against
+            that backfill, and the consecutive-day streak length on the
+            current sign. The bounded scale converts what would otherwise
+            be a notional in the tens of billions into a dimensionless
+            number readable as "how skewed is the ATM book today".
+          </p>
+          <p style={{ margin: 0 }}>
+            <strong style={{ color: 'var(--text-primary)' }}>Gamma Index Scatter.</strong>{' '}
+            Each session is a dot at (gamma index, 10-day realized vol),
+            colored on a red → amber → blue ramp by the index sign. The
+            dashed exponential fit y = a · exp(b · x) traces the structural
+            negative correlation between dealer positioning and realized
+            vol: deeper-negative gamma days deliver materially higher
+            realized vol on average. The latest session is highlighted as
+            an open diamond so today's reading sits against the historical
+            cloud rather than disappearing into it.
+          </p>
+        </div>
+      </div>
+
       {/* Chat renders regardless of dashboard load state so users can ask
           questions about the math and philosophy of the dashboard even if
           the live options data is still loading or in an error state. It
