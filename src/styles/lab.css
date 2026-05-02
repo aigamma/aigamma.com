@@ -1695,74 +1695,24 @@
   opacity: 0.4;
 }
 
-/* Collapsible "What this page measures" explainer card. Replaces the
-   prior always-expanded 3-paragraph card so a returning reader sees
-   a one-line title and the explainer body stays out of their way
-   until they want to revisit it. The native <details>/<summary>
-   primitives carry the open/close interaction without JavaScript;
-   the chevron rotation on [open] is a CSS-only transition.
-
-   Margin matches the prior 1.25rem 0 spacing the inline-style version
-   used so the layout doesn't shift when this card collapses or
-   expands; the card chrome is unchanged so the explainer reads as a
-   peer to the chart card directly above it. */
+/* "What this page measures" explainer card. Always expanded — sits at
+   the bottom of the page beneath the chart, so the prior tap-to-expand
+   collapse afforded nothing a returning reader would actually use. The
+   margin matches the prior 1.25rem 0 spacing so the explainer reads as
+   a peer to the chart card directly above it. */
 .expiring-gamma-explainer {
   margin: 1.25rem 0;
   padding: 1.1rem 1.25rem;
 }
 
-.expiring-gamma-explainer__summary {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  gap: 0.6rem;
-  cursor: pointer;
+.expiring-gamma-explainer__title {
+  margin: 0;
   font-family: var(--font-base);
   font-size: 0.7rem;
   letter-spacing: 0.14em;
   text-transform: uppercase;
   color: var(--text-secondary);
-  list-style: none;
-}
-
-/* Hide the default disclosure triangle in webkit browsers and Firefox
-   — the right-aligned "tap to expand" hint serves the same affordance
-   purpose without the inconsistent native triangle styling. */
-.expiring-gamma-explainer__summary::-webkit-details-marker {
-  display: none;
-}
-.expiring-gamma-explainer__summary {
-  list-style: none;
-}
-
-.expiring-gamma-explainer__title {
-  color: var(--text-secondary);
-}
-
-.expiring-gamma-explainer__hint {
-  color: var(--text-secondary);
-  opacity: 0.55;
-  font-size: 0.65rem;
-  letter-spacing: 0.1em;
-  transition: opacity 0.15s ease;
-}
-
-.expiring-gamma-explainer:hover .expiring-gamma-explainer__hint,
-.expiring-gamma-explainer:focus-within .expiring-gamma-explainer__hint {
-  opacity: 0.85;
-}
-
-.expiring-gamma-explainer[open] .expiring-gamma-explainer__hint::before {
-  content: 'tap to collapse';
-}
-.expiring-gamma-explainer[open] .expiring-gamma-explainer__hint {
-  font-size: 0;
-  /* swap the visible text via the ::before pseudo while suppressing
-     the original "tap to expand" via font-size: 0 — keeps the layout
-     stable without needing JS to swap textContent. */
-}
-.expiring-gamma-explainer[open] .expiring-gamma-explainer__hint::before {
-  font-size: 0.65rem;
+  font-weight: 500;
 }
 
 .expiring-gamma-explainer__body {

@@ -35,8 +35,8 @@ export default function App() {
             className="lab-badge"
             title="Expiring Gamma · per-expiration call / put dollar gamma scheduled to expire at current spot"
           >
-            <span className="lab-badge__desktop-text">Expiring Gamma</span>
-            <span className="lab-badge__mobile-text">Expiring Gamma</span>
+            <span className="lab-badge__desktop-text">Expiring</span>
+            <span className="lab-badge__mobile-text">Expiring</span>
           </span>
         </div>
         <TopNav />
@@ -55,11 +55,8 @@ export default function App() {
         <ErrorBoundary><ExpiringGamma /></ErrorBoundary>
       </section>
 
-      <details className="card expiring-gamma-explainer">
-        <summary className="expiring-gamma-explainer__summary">
-          <span className="expiring-gamma-explainer__title">What this page measures</span>
-          <span className="expiring-gamma-explainer__hint">tap to expand</span>
-        </summary>
+      <section className="card expiring-gamma-explainer">
+        <h2 className="expiring-gamma-explainer__title">What this page measures</h2>
         <div className="expiring-gamma-explainer__body">
           <p>
             Each bar is one listed SPX expiration. The height above the
@@ -93,7 +90,7 @@ export default function App() {
             that is structurally certain to unwind in the near term.
           </p>
         </div>
-      </details>
+      </section>
 
       <footer className="lab-footer">
         <span className="lab-footer-line">
