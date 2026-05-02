@@ -94,9 +94,16 @@ const SOURCES = [
 //   export default `...prose...`;
 //   export const NAME = `...prose...`;
 // We strip the surrounding code and return the prose.
+//
+// The regex is anchored to the `export default` / `export const NAME =`
+// keyword so a backtick-quoted identifier inside a leading comment block
+// (e.g., "dispatch on the `context` field") cannot be mistaken for the
+// prompt body. An earlier non-anchored variant /`([\s\S]*?)`/ was matching
+// `context` in every per-page prompt's preamble and storing the literal
+// 7-character string "context" as the entire chunk in Supabase, silently
+// breaking RAG retrieval for every per-surface prompt.
 function extractTemplateLiteral(raw) {
-  // Match the FIRST template literal in the file (greedy across newlines).
-  const m = raw.match(/`([\s\S]*?)`/);
+  const m = raw.match(/export\s+(?:default|const\s+\w+\s*=)\s*`([\s\S]*?)`/);
   if (!m) {
     // Fall back to the whole file if no template literal is found — better
     // to over-index than to silently miss a prompt that uses a different shape.
