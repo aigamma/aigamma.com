@@ -152,10 +152,7 @@ export default function App() {
             the Top 100 OV roster, sorted within each{' '}
             <span style={BMO_INK}>Before-Open</span> /{' '}
             <span style={AMC_INK}>After-Close</span> cell by revenue
-            estimate descending. EarningsWhispers is the universe
-            source; their API orders rows by the site's own
-            sentiment-vote total, which conflates reader interest with
-            company size. Sorting by revenue instead surfaces the
+            estimate descending. Sorting by revenue surfaces the
             day's most market-moving reporters first. The revenue
             estimate is q1RevEst from EW, with prior-quarter actual
             sales as a fallback when the estimate is null.
