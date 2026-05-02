@@ -71,14 +71,14 @@ export default function App() {
         <ErrorBoundary><SlotB /></ErrorBoundary>
       </section>
 
-      {/* "What this page measures" explainer — same pattern used on
+      {/* "What this page measures" explainer, same pattern used on
           /vix/, /tactical/, /earnings/, and the main landing page. One
           bolded short heading per surface rendered above (Universe,
           Implied Move, Hero & Countdown, Sticky Pin, Totals, Chart
           Filters, Timeline Strip, Spotlight Strip, Day Schedule,
           Forecast Interpretation, Earnings Layer, Data Layer), each
           followed by a paragraph that names the math and how to read it.
-          Static block (no LazyMount) — the SlotB body above is itself
+          Static block (no LazyMount): the SlotB body above is itself
           eagerly mounted, so a reader scrolled to this card has already
           paid every chunk-fetch the page would defer; deferring the
           explainer would only add a serial round-trip without saving any
@@ -99,10 +99,8 @@ export default function App() {
         <div style={{ color: 'var(--text-secondary)', lineHeight: 1.65, fontSize: '0.95rem' }}>
           <p style={{ margin: '0 0 0.7rem' }}>
             <strong style={{ color: 'var(--text-primary)' }}>Universe.</strong>{' '}
-            US-only macro events for the next four weeks, sourced from
-            the Forex Factory rolling-4-week aggregator (this week's XML
-            feed plus the next three weeks scraped from the HTML
-            calendar). The /api/events-calendar Netlify Function filters
+            US-only macro events for the next four weeks. The
+            /api/events-calendar Netlify Function filters
             non-USD rows out at the server, so the wire payload is the
             ~80–100 USD events in scope. Each row carries a title, a
             High / Medium / Low / Holiday impact tier, the FF forecast
@@ -115,11 +113,11 @@ export default function App() {
             between now and the next listed expiration AT-OR-AFTER the
             event date: move = spot × ATM IV × √(DTE/365). Spot price
             and per-expiration ATM IV are pulled in parallel from
-            /api/data?skip_contracts=1 — the same intraday snapshot the
+            /api/data?skip_contracts=1, the same intraday snapshot the
             main dashboard reads, with the contracts column projection
             skipped so the wire is small. The framing is "what would
             you be hedging if you bought a straddle today, conditional
-            on the event being the next material catalyst" — it is the
+            on the event being the next material catalyst"; it is the
             to-expiration σ move, not an isolated event-only premium.
           </p>
           <p style={{ margin: '0 0 0.7rem' }}>
@@ -146,7 +144,7 @@ export default function App() {
           <p style={{ margin: '0 0 0.7rem' }}>
             <strong style={{ color: 'var(--text-primary)' }}>Totals.</strong>{' '}
             Per-impact event counts in scope (High / Medium / Low) plus
-            an Upcoming tally — the subset of scoped events whose
+            an Upcoming tally, the subset of scoped events whose
             timestamp is still in the future. Holiday rows are folded
             into the Low total since they affect session timing rather
             than carrying their own forecast / previous numerics.
@@ -180,10 +178,10 @@ export default function App() {
             <strong style={{ color: 'var(--text-primary)' }}>Spotlight Strip.</strong>{' '}
             One card per macro family with at least one event in scope
             this week. Family classification is regex-based against the
-            event title — \bFOMC\b / Federal Funds Rate, \bCPI\b /
+            event title (\bFOMC\b / Federal Funds Rate, \bCPI\b /
             Consumer Price, Non-Farm Employment Change, \bGDP\b,
             \bPCE\b, \bPPI\b, \bISM\b, Unemployment Claims / Job
-            Openings — eight families in total, each with its own
+            Openings), eight families in total, each with its own
             color identity that is shared with the Timeline Strip dots.
             The strip surfaces the next chronological release in each
             family with its countdown and implied move, so a desk
@@ -222,8 +220,8 @@ export default function App() {
             plots upcoming Top-100 options-volume earnings releases as
             their own purple-dot family, sourced from /api/earnings's
             calendarDays projection. Each ticker is positioned at its
-            session-derived hour-of-day — BMO at 07:00, AMC at 16:30,
-            unknown sessions at 12:00 noon — so the dots sit on the
+            session-derived hour-of-day (BMO at 07:00, AMC at 16:30,
+            unknown sessions at 12:00 noon), so the dots sit on the
             same per-day track as the macro events and the reader can
             see "FOMC at 14:00 with three large earnings stacked
             against it 30 minutes later" without flipping pages.
