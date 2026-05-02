@@ -263,7 +263,7 @@ export default function SlotD() {
         yref: 'container',
         yanchor: 'top',
       },
-      margin: mobile ? { t: 75, r: 25, b: 85, l: 70 } : { t: 70, r: 35, b: 100, l: 85 },
+      margin: mobile ? { t: 75, r: 25, b: 100, l: 70 } : { t: 70, r: 35, b: 115, l: 85 },
       xaxis: plotlyAxis('Log-Moneyness k = ln(K/F)', {
         range: [kLo, kHi],
         autorange: false,
@@ -276,9 +276,14 @@ export default function SlotD() {
       showlegend: true,
       legend: {
         orientation: 'h',
-        y: -0.22,
+        // y bumped from -0.22 to -0.32 to push the legend ~20px
+        // further below the "Log-Moneyness k = ln(K/F)" axis title.
+        // Bottom margin grows by 15px on each form factor so the
+        // newly-lowered legend stays inside the chart box.
+        y: -0.32,
         x: 0.5,
         xanchor: 'center',
+        yanchor: 'top',
         font: PLOTLY_FONTS.legend,
       },
       hovermode: 'closest',

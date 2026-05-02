@@ -295,7 +295,7 @@ export default function SlotE() {
         yref: 'container',
         yanchor: 'top',
       },
-      margin: mobile ? { t: 75, r: 25, b: 140, l: 60 } : { t: 70, r: 35, b: 150, l: 75 },
+      margin: mobile ? { t: 75, r: 25, b: 155, l: 60 } : { t: 70, r: 35, b: 165, l: 75 },
       xaxis: plotlyAxis('Log-Moneyness k = ln(K/F)', {
         range: [kLo, kHi],
         autorange: false,
@@ -309,9 +309,14 @@ export default function SlotE() {
       showlegend: true,
       legend: {
         orientation: 'h',
-        y: -0.28,
+        // y bumped from -0.28 to -0.34 to push the legend further
+        // below the "Log-Moneyness k = ln(K/F)" axis title; bottom
+        // margin grows by 15px so the lower legend (and its mobile
+        // two-row wrap) stays fully inside the chart box.
+        y: -0.34,
         x: 0.5,
         xanchor: 'center',
+        yanchor: 'top',
         font: PLOTLY_FONTS.legend,
         // Six-item legend wraps on mobile; let Plotly lay it out over two rows.
       },

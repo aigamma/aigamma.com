@@ -454,7 +454,7 @@ export default function App() {
             space-between with .top-nav using display: contents) is
             captured in src/styles/theme.css beside the .site-header
             and .top-nav rules. */}
-        <TopNav />
+        <TopNav landing />
         <Menu regimeIndicator={regimeIndicatorObj} />
       </header>
 

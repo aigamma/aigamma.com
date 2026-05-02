@@ -550,6 +550,28 @@ body {
     justify-content: space-between;
   }
 
+  /* Wrap-state override. The .is-menu-wrapped class is added by the
+     ResizeObserver in src/components/Menu.jsx whenever the Menu
+     trigger's bounding-rect top has dropped below the header's top
+     (= flex-wrap has reflowed it onto a second row). In the stock
+     space-between layout a single wrapped child lands at flex-start
+     of its new row — the LEFT edge of the header — and the
+     .menu-panel's right: 0 anchor then opens the dropdown leftward
+     from a trigger sitting at x=0, pushing the panel off the
+     viewport's left edge. Switching the wrapped header to flex-end
+     packs every child (the six top-nav buttons + the trigger) against
+     the right edge of whatever row each one is on, which keeps the
+     wrapped Menu trigger anchored to the right and the dropdown
+     panel on-screen. The companion override on .lab-header in
+     src/styles/lab.css keeps the lab-brand cluster pinned to the
+     left edge via an auto right-margin on .lab-brand; the main
+     dashboard has no brand cluster in its header (the wordmark and
+     the dealer-gamma regime indicator both moved into LevelsPanel),
+     so flex-end alone produces the right-clustered wrapped layout. */
+  .site-header.is-menu-wrapped {
+    justify-content: flex-end;
+  }
+
   /* display: contents lets .top-nav's anchor children participate
      in the parent flex layout (.site-header on the main page,
      .lab-header on the lab pages) as if they were direct siblings

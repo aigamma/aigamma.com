@@ -24,7 +24,24 @@
 //                     prominent mid-right position rather than
 //                     trailing the cluster)
 //   6. Seasonality  — intraday seasonality grid (last; immediately
-//                     before the Return Home button on lab pages)
+//                     before the Return Home button on lab pages).
+//                     The label is rendered as the full word
+//                     "Seasonality" only on the landing page (where
+//                     the header has no .lab-brand badge eating
+//                     horizontal space and the row reliably fits at
+//                     desktop widths) and as the shortened "Season"
+//                     on every lab page, where the brand badge plus
+//                     the Return Home button shrink the available
+//                     width enough that the longer label was the
+//                     specific item that pushed the Menu trigger
+//                     to a wrapped second row at split-screen and
+//                     narrow desktop widths. The shorter label
+//                     drops the rendered button width by roughly
+//                     half (six characters vs eleven, both rendered
+//                     uppercased via the .top-nav__item CSS rule),
+//                     which materially reduces wrap likelihood on
+//                     the lab headers without changing the landing
+//                     page's already-stable layout.
 // Items render as outlined buttons matching the 3.2rem chrome of
 // the Menu trigger and Return Home button. The fill color
 // alternates by displayed position — even indices use accent-blue,
@@ -76,15 +93,22 @@ const TOP_NAV_ITEMS = [
   { key: 'seasonality', href: '/seasonality/', label: 'Seasonality'  },
 ];
 
-export default function TopNav({ current } = {}) {
+export default function TopNav({ current, landing = false } = {}) {
   const items = TOP_NAV_ITEMS.filter((item) => item.key !== current);
   return (
     <nav className="top-nav" aria-label="Featured labs">
       {items.map((item, index) => {
         const variant = index % 2 === 0 ? 'top-nav__item--blue' : 'top-nav__item--white';
+        // Seasonality renders as "Season" on every page except the
+        // landing page; see the comment block above for the rationale
+        // (lab headers carry the brand badge + Return Home button and
+        // wrap at narrow desktop widths; the landing header is wider
+        // and reliably fits the full word).
+        const label =
+          item.key === 'seasonality' && !landing ? 'Season' : item.label;
         return (
           <a key={item.href} href={item.href} className={`top-nav__item ${variant}`}>
-            {item.label}
+            {label}
           </a>
         );
       })}

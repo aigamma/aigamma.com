@@ -498,7 +498,7 @@ export default function SlotF() {
         yref: 'container',
         yanchor: 'top',
       },
-      margin: mobile ? { t: 75, r: 25, b: 140, l: 60 } : { t: 70, r: 35, b: 160, l: 75 },
+      margin: mobile ? { t: 75, r: 25, b: 155, l: 60 } : { t: 70, r: 35, b: 175, l: 75 },
       xaxis: plotlyAxis('Log-Moneyness k = ln(K/F)', {
         range: [kLo, kHi],
         autorange: false,
@@ -512,9 +512,15 @@ export default function SlotF() {
       showlegend: true,
       legend: {
         orientation: 'h',
-        y: -0.28,
+        // y bumped from -0.28 to -0.34 to push the legend further
+        // below the "Log-Moneyness k = ln(K/F)" axis title. SSVI's
+        // multi-tenor legend can wrap to two rows on narrow widths,
+        // so the bottom margin also grows by 15px so the wrapped
+        // legend stays fully inside the chart box.
+        y: -0.34,
         x: 0.5,
         xanchor: 'center',
+        yanchor: 'top',
         font: PLOTLY_FONTS.legend,
       },
       hovermode: 'closest',

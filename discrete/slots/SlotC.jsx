@@ -275,7 +275,7 @@ export default function SlotC() {
         yref: 'container',
         yanchor: 'top',
       },
-      margin: mobile ? { t: 75, r: 25, b: 70, l: 60 } : { t: 60, r: 35, b: 80, l: 75 },
+      margin: mobile ? { t: 75, r: 25, b: 95, l: 60 } : { t: 60, r: 35, b: 95, l: 75 },
       xaxis: plotlyAxis('Log-Moneyness k = ln(K/F)', {
         range: [-W, W],
         autorange: false,
@@ -288,9 +288,22 @@ export default function SlotC() {
       showlegend: true,
       legend: {
         orientation: 'h',
-        y: -0.22,
+        // Mobile uses a much more negative y because this g(k) chart
+        // is the smallest plot on the discrete page (height 240 mobile,
+        // 280 desktop), which compresses the plot area to ~75-130px
+        // tall. At the previous y: -0.22 the legend's top edge sat
+        // ~21px below the plot bottom on mobile while the x-axis title
+        // bottom sat ~39px below the plot bottom — so the legend
+        // visually overlapped the "Log-Moneyness k = ln(K/F)" label.
+        // Mobile y: -0.70 pushes the legend's top to ~52px below the
+        // plot bottom (clear of the title); desktop y: -0.40 pushes
+        // it to ~50px below the plot bottom for the same buffer in
+        // the wider plot area. Bottom margin grows to 95 on both so
+        // the legend rendered below remains inside the chart box.
+        y: mobile ? -0.70 : -0.40,
         x: 0.5,
         xanchor: 'center',
+        yanchor: 'top',
         font: PLOTLY_FONTS.legend,
       },
       hovermode: 'x unified',

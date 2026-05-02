@@ -366,6 +366,36 @@
   .lab-brand {
     margin-right: 0;
   }
+
+  /* Wrap-state override. src/components/Menu.jsx uses a ResizeObserver
+     to detect when the Menu trigger's bounding-rect top has dropped
+     below the header's top (= it has been pushed onto a wrapped second
+     row by flex-wrap when the row's natural width exceeds the header's
+     box). In the stock space-between layout a single wrapped child
+     lands at flex-start of its new row — the LEFT edge — and the
+     .menu-panel's right: 0 anchor then opens the dropdown leftward
+     from a trigger sitting at x=0, which pushes the panel off the
+     viewport's left edge and makes its menuitems unreachable on
+     narrow desktop windows (notably split-screen). When the JS
+     observer adds .is-menu-wrapped, the desktop layout switches
+     from space-between to flex-end and re-arms the .lab-brand's
+     auto right-margin so the brand stays anchored to the left edge
+     while every other child — including the wrapped Menu trigger —
+     packs against the right edge of its row. The wrapped Menu sits
+     at the right edge of row 2 instead of the left, the .menu-panel's
+     right: 0 anchor remains on-screen, and the dropdown opens
+     normally. The trade-off is that the un-wrapped no-overflow
+     layout's "evenly distributed across the full row" feel switches
+     to "brand left, nav cluster right" only on the narrow widths
+     where wrap actually fired; widths that fit on a single row keep
+     the evenly-distributed layout the desktop block was designed for. */
+  .lab-header.is-menu-wrapped {
+    justify-content: flex-end;
+  }
+
+  .lab-header.is-menu-wrapped .lab-brand {
+    margin-right: auto;
+  }
 }
 
 /* The labs borrow the main dashboard's single-breakpoint approach at 768px

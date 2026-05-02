@@ -84,7 +84,70 @@ export default function Menu({ regimeIndicator } = {}) {
   const [activeIndex, setActiveIndex] = useState(-1);
   const triggerRef = useRef(null);
   const panelRef = useRef(null);
+  const menuBoxRef = useRef(null);
   const itemRefs = useRef([]);
+
+  // Wrap-detection. When the surrounding header (.site-header on the
+  // main dashboard, .lab-header on every lab page) is too narrow to
+  // fit the lab badge + the six TopNav buttons + the optional Return
+  // Home button + this Menu trigger on one row, flex-wrap reflows the
+  // overflowing children onto a second row. With the existing desktop
+  // layout (justify-content: space-between + display: contents on
+  // .top-nav so each nav button becomes a direct flex child), a
+  // single wrapped item lands at flex-start of its new row — the
+  // left edge of the header. The .menu-panel is positioned absolutely
+  // with right: 0 anchored to the .menu container, so when .menu sits
+  // at the left edge of the second row the panel extends LEFTWARD
+  // from the trigger and disappears off the viewport's left edge,
+  // which on Eric's split-screen setup makes the dropdown items
+  // unreachable. The fix observes the header with a ResizeObserver
+  // and, whenever the .menu element's bounding-rect top is more than
+  // a few pixels below the header's bounding-rect top (= it has
+  // wrapped), toggles an .is-menu-wrapped class on the header. The
+  // companion CSS in src/styles/theme.css and src/styles/lab.css
+  // overrides the desktop space-between to flex-end (with a brand
+  // auto-margin on the lab-header so the .lab-brand stays anchored
+  // to the left while the wrapped Menu trigger anchors to the right
+  // of its new row, keeping the dropdown panel on-screen). The
+  // class is scoped to the actual header element so adjacent pages
+  // / mounts don't fight each other. Mobile (<769px) is unaffected
+  // because the desktop .menu element is display:none — its
+  // bounding rect collapses and the early-return below skips the
+  // observer setup.
+  useEffect(() => {
+    const menuBox = menuBoxRef.current;
+    if (!menuBox) return;
+    const header = menuBox.closest('.site-header, .lab-header');
+    if (!header) return;
+
+    const update = () => {
+      // display:none on .menu at <=768px collapses both rects to
+      // (0, 0, 0, 0); skip the toggle in that case so a stale
+      // .is-menu-wrapped from a previous desktop width doesn't
+      // linger when the user resizes down to mobile.
+      const menuRect = menuBox.getBoundingClientRect();
+      if (menuRect.width === 0 && menuRect.height === 0) {
+        header.classList.remove('is-menu-wrapped');
+        return;
+      }
+      const headerRect = header.getBoundingClientRect();
+      // 8px tolerance absorbs sub-pixel rounding and prevents the
+      // observer from flickering between wrapped/unwrapped at the
+      // exact threshold width. The wrap delta in practice is at
+      // least one row height (~50px), so 8px is comfortably safe.
+      const wrapped = (menuRect.top - headerRect.top) > 8;
+      header.classList.toggle('is-menu-wrapped', wrapped);
+    };
+
+    const obs = new ResizeObserver(update);
+    obs.observe(header);
+    update();
+
+    return () => {
+      obs.disconnect();
+      header.classList.remove('is-menu-wrapped');
+    };
+  }, []);
 
   const close = useCallback((returnFocus) => {
     setIsOpen(false);
@@ -167,7 +230,7 @@ export default function Menu({ regimeIndicator } = {}) {
 
   return (
     <>
-    <div className="menu">
+    <div className="menu" ref={menuBoxRef}>
       <button
         ref={triggerRef}
         type="button"
