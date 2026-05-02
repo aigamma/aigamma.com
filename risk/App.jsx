@@ -66,7 +66,7 @@ export default function App() {
             className="lab-badge"
             title="Risk Lab · cross-model Greeks, delta comparison, Vanna-Volga, second-order Greeks"
           >
-            <span className="lab-badge__desktop-text">Risk Lab</span>
+            <span className="lab-badge__desktop-text">Risk</span>
             <span className="lab-badge__mobile-text">Risk</span>
           </span>
         </div>

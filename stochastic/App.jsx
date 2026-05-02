@@ -78,8 +78,8 @@ export default function App() {
             className="lab-badge"
             title="Stochastic Vol · Heston, SABR, LSV, Rough Bergomi"
           >
-            <span className="lab-badge__desktop-text">Stochastic Vol</span>
-            <span className="lab-badge__mobile-text">Stoch.</span>
+            <span className="lab-badge__desktop-text">Stochastic</span>
+            <span className="lab-badge__mobile-text">Stochastic</span>
           </span>
         </div>
         <TopNav />

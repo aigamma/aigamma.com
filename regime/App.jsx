@@ -51,7 +51,7 @@ export default function App() {
             className="lab-badge"
             title="Regime Lab · regime-identification model zoo"
           >
-            <span className="lab-badge__desktop-text">Regime Lab</span>
+            <span className="lab-badge__desktop-text">Regime</span>
             <span className="lab-badge__mobile-text">Regime</span>
           </span>
         </div>
