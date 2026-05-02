@@ -37,13 +37,17 @@ import { useCallback, useEffect, useRef, useState } from 'react';
 // sits closest to the right-handed reader's thumb position on a phone
 // held in portrait, with TOOLS one pill to its left.
 //
-// The TOOLS dropdown contains the ten operational lab pages — the six
+// The TOOLS dropdown contains the nine operational lab pages — the six
 // previously-promoted TopNav destinations (/tactical/, /earnings/, /scan/,
-// /rotations/, /vix/, /seasonality/) plus the four bookmark-only Tools
-// surfaces from the desktop Menu (/stocks/, /heatmap/, /expiring-gamma/,
-// /parity/). The RESEARCH dropdown contains the eight calibrated-model
-// research zoos (/discrete/, /garch/, /jump/, /local/, /regime/, /risk/,
-// /rough/, /stochastic/) followed by an "About This Page" off-site exit
+// /rotations/, /vix/, /seasonality/) plus the three bookmark-only Tools
+// surfaces from the desktop Menu (/stocks/, /heatmap/, /expiring-gamma/).
+// The RESEARCH dropdown contains the eight calibrated-model research
+// zoos (/discrete/, /garch/, /jump/, /local/, /regime/, /risk/, /rough/,
+// /stochastic/) plus /parity/ — the put-call parity / box-spread / implied-
+// forward surface that lives under research on mobile because it documents
+// a no-arbitrage identity rather than carrying an operational dashboard
+// read like the other Tools entries. The dropdown then closes with an
+// "About This Page" off-site exit
 // pinned to the bottom — the same About entry that lives at the bottom
 // of the desktop Menu, just relocated under RESEARCH on mobile so it has
 // a natural home (the desktop Menu has its own "About" section header
@@ -110,7 +114,6 @@ const TOOLS_ITEMS = [
   { href: '/heatmap/',        label: '/heatmap/',        desc: 'Equal-size top-250-by-options-volume heatmap by sector' },
   { href: '/events/',         label: '/events/',         desc: 'US macro release calendar with SPX implied-move overlays' },
   { href: '/expiring-gamma/', label: '/expiring-gamma/', desc: 'Gamma scheduled to expire per date' },
-  { href: '/parity/',         label: '/parity/',         desc: 'Put-call parity, box-spread rate, implied forward' },
 ];
 
 const RESEARCH_ITEMS = [
@@ -118,6 +121,7 @@ const RESEARCH_ITEMS = [
   { href: '/garch/',      label: '/garch/',      desc: 'GARCH family and ensemble forecasts' },
   { href: '/jump/',       label: '/jump/',       desc: 'Merton, Kou, Bates, variance gamma' },
   { href: '/local/',      label: '/local/',      desc: 'Dupire extraction and local vol pricing' },
+  { href: '/parity/',     label: '/parity/',     desc: 'Put-call parity, box-spread rate, implied forward' },
   { href: '/regime/',     label: '/regime/',     desc: 'Mixture, Markov, Wasserstein regimes' },
   { href: '/risk/',       label: '/risk/',       desc: 'Cross-model Greeks, Vanna-Volga, second-order' },
   { href: '/rough/',      label: '/rough/',      desc: 'Rough Bergomi and rough vol exploration' },
