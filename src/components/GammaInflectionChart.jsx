@@ -162,7 +162,7 @@ export default function GammaInflectionChart({ spotPrice, levels }) {
       ...PLOTLY_BASE_LAYOUT_2D,
       margin: mobile ? { t: 45, r: 15, b: 40, l: 50 } : { t: 85, r: 30, b: 45, l: 80 },
       title: {
-        ...plotlyTitle('AI Gamma Inflection'),
+        ...plotlyTitle('Gamma Inflection'),
         y: 0.97,
         yanchor: 'top',
       },

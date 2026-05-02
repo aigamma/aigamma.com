@@ -1,4 +1,4 @@
-// Gamma-exposure math and the symlog compression used by the AI Gamma Map
+// Gamma-exposure math and the symlog compression used by the Gamma Map
 // bars. Extracted from GexProfile so future historical-GEX models can reuse
 // the same conventions without pulling in the rendering component.
 //

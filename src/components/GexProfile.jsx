@@ -62,25 +62,9 @@ function LevelLabel({ name, value, color, format = formatInteger }) {
   );
 }
 
-function toggleBtnStyle(active) {
-  return {
-    background: active ? 'rgba(74,158,255,0.12)' : 'none',
-    border: `1px solid ${active ? 'rgba(74,158,255,0.4)' : 'rgba(255,255,255,0.25)'}`,
-    borderRadius: '3px',
-    padding: '0.15rem 0.45rem',
-    fontFamily: PLOTLY_FONT_FAMILY,
-    fontSize: '0.75rem',
-    letterSpacing: '0.08em',
-    textTransform: 'uppercase',
-    cursor: 'pointer',
-    color: active ? '#e0e0e0' : '#8a8f9c',
-  };
-}
-
 export default function GexProfile({ contracts, spotPrice, levels, prevContracts, prevSpotPrice, capturedAt }) {
   const chartRef = useRef(null);
   const { plotly: Plotly, error: plotlyError } = usePlotly();
-  const [showPrior, setShowPrior] = useState(true);
   const [strikeRange, setStrikeRange] = useState(null);
   // null = ALL EXPIRATIONS (the default — bars aggregate the full chain).
   // Non-null = single ISO expiration date; today's bars and the prior-day
@@ -160,7 +144,7 @@ export default function GexProfile({ contracts, spotPrice, levels, prevContracts
 
   // Per-expiration walls and flip — recomputed from the picked chain's
   // contracts alone so when a single expiration is selected, every
-  // level-bearing surface on the AI Gamma Map (the chip row above the
+  // level-bearing surface on the Gamma Map (the chip row above the
   // chart and the three vertical dashed reference lines drawn at Put
   // Wall / Vol Flip / Call Wall) all swap to that chain's values. In
   // ALL EXPIRATIONS mode this returns null and the surfaces fall back
@@ -238,7 +222,7 @@ export default function GexProfile({ contracts, spotPrice, levels, prevContracts
     // Build combined raw values for consistent symlog scaling when shadow is active.
     let allRaw = [...callGexRaw, ...putGexRaw];
     let prevCallGexRaw, prevPutGexRaw, prevStrikes;
-    if (showPrior && hasPrior) {
+    if (hasPrior) {
       prevStrikes = prevGexData.map((e) => e.strike);
       prevCallGexRaw = prevGexData.map((e) => e.callGex);
       prevPutGexRaw = prevGexData.map((e) => -e.putGex);
@@ -258,7 +242,7 @@ export default function GexProfile({ contracts, spotPrice, levels, prevContracts
     const traces = [];
 
     // Ghost bars from previous day — drawn first so they sit behind.
-    if (showPrior && hasPrior) {
+    if (hasPrior) {
       traces.push(
         {
           x: prevStrikes,
@@ -352,7 +336,7 @@ export default function GexProfile({ contracts, spotPrice, levels, prevContracts
       responsive: true,
       displayModeBar: false,
     });
-  }, [Plotly, gexData, spotPrice, displayLevels, prevGexData, showPrior, hasPrior, mobile, activeRange]);
+  }, [Plotly, gexData, spotPrice, displayLevels, prevGexData, hasPrior, mobile, activeRange]);
 
   const handleBrushChange = useCallback((min, max) => {
     setStrikeRange([min, max]);
@@ -383,14 +367,12 @@ export default function GexProfile({ contracts, spotPrice, levels, prevContracts
           gap: '0.6rem',
         }}
       >
-        {/* Title row holds three slots: an upper-left expiration picker
-            (single-chain isolation, default ALL EXPIRATIONS), the centered
-            chart title, and an upper-right Prior Day toggle. The picker
-            and the toggle are absolute-positioned so the title stays
-            optically centered regardless of either control's intrinsic
-            width. The picker option text and the toggle button text are
-            both compact (mobile font size at phone widths) so all three
-            slots fit on a single row down to ~360 px viewport widths. */}
+        {/* Title row: an upper-left expiration picker (single-chain
+            isolation, default ALL EXPIRATIONS) absolute-positioned so
+            the centered chart title stays optically centered regardless
+            of the picker's intrinsic width. The picker option text uses
+            mobile font size at phone widths so it fits on a single row
+            down to ~360 px viewport widths. */}
         <div
           style={{
             display: 'flex',
@@ -404,7 +386,7 @@ export default function GexProfile({ contracts, spotPrice, levels, prevContracts
             <div style={{ position: 'absolute', left: 0 }}>
               <select
                 className="expiration-picker"
-                aria-label="Filter AI Gamma Map by expiration"
+                aria-label="Filter Gamma Map by expiration"
                 value={selectedExpiration || ''}
                 onChange={(e) => setSelectedExpiration(e.target.value || null)}
                 style={{
@@ -433,15 +415,8 @@ export default function GexProfile({ contracts, spotPrice, levels, prevContracts
               lineHeight: 1,
             }}
           >
-            AI Gamma Map
+            Gamma Map
           </span>
-          {hasPrior && (
-            <div style={{ position: 'absolute', right: 0 }}>
-              <button type="button" onClick={() => setShowPrior((p) => !p)} style={toggleBtnStyle(showPrior)}>
-                Prior Day
-              </button>
-            </div>
-          )}
         </div>
         {/* Reference-level chips beneath the title. The values come from
             displayLevels — that resolves to the per-chain customLevels
