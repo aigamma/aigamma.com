@@ -71,7 +71,7 @@ export default function App() {
             className="lab-badge"
             title="Jump Diffusion · Merton, Kou, Bates SVJ, Variance Gamma"
           >
-            <span className="lab-badge__desktop-text">Jump Diffusion</span>
+            <span className="lab-badge__desktop-text">Jump</span>
             <span className="lab-badge__mobile-text">Jump</span>
           </span>
         </div>
