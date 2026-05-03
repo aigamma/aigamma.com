@@ -73,8 +73,6 @@ const SOURCES = [
   { rel: 'netlify/functions/prompts/discrete.mjs',   surface: 'discrete',   kind: 'system_prompt', extract: extractTemplateLiteral, title: 'Discrete lab system prompt' },
   { rel: 'netlify/functions/prompts/parity.mjs',     surface: 'parity',     kind: 'system_prompt', extract: extractTemplateLiteral, title: 'Put-Call Parity lab system prompt' },
   { rel: 'netlify/functions/prompts/tactical.mjs',   surface: 'tactical',   kind: 'system_prompt', extract: extractTemplateLiteral, title: 'Tactical Vol lab system prompt' },
-  { rel: 'netlify/functions/prompts/alpha.mjs',      surface: 'alpha',      kind: 'system_prompt', extract: extractTemplateLiteral, title: 'Alpha sandbox system prompt' },
-  { rel: 'netlify/functions/prompts/beta.mjs',       surface: 'beta',       kind: 'system_prompt', extract: extractTemplateLiteral, title: 'Beta sandbox system prompt' },
 
   // Globally-included system prompt blocks (always pulled regardless of surface)
   { rel: 'netlify/functions/prompts/core_persona.mjs', surface: 'all', kind: 'system_prompt_global', extract: extractTemplateLiteral, title: 'Core persona' },

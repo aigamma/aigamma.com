@@ -62,8 +62,6 @@ import riskPrompt from './prompts/risk.mjs';
 import discretePrompt from './prompts/discrete.mjs';
 import parityPrompt from './prompts/parity.mjs';
 import tacticalPrompt from './prompts/tactical.mjs';
-import alphaPrompt from './prompts/alpha.mjs';
-import betaPrompt from './prompts/beta.mjs';
 
 import { CORE_PERSONA } from './prompts/core_persona.mjs';
 import { BEHAVIORAL_CONSTRAINTS } from './prompts/behavior.mjs';
@@ -103,8 +101,6 @@ const SYSTEM_PROMPTS = {
   discrete: discretePrompt,
   parity: parityPrompt,
   tactical: tacticalPrompt,
-  alpha: alphaPrompt,
-  beta: betaPrompt,
 };
 
 const MODEL_CONFIG = {
