@@ -135,7 +135,7 @@ const RESEARCH_ITEMS = [
 const ABOUT_ITEM = {
   href: 'https://about.aigamma.com/',
   label: 'About This Page',
-  desc: 'Founder bio, platform notes, off-site exit',
+  desc: 'Created by Eric Allione',
 };
 
 // Disclaimer surface pinned to the bottom of both dropdowns — below the
