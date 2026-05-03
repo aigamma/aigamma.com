@@ -76,6 +76,15 @@ export default function App() {
             to be on, not as a directive about what to do next.
           </p>
           <p style={{ margin: '0 0 0.85rem' }}>
+            <strong style={{ color: 'var(--text-primary)' }}>Blogs and written content.</strong>{' '}
+            Any blog posts, essays, or commentary published on this site
+            are open journaling of the author's own findings while working
+            through the math — not financial advice, not recommendations,
+            and not representations of what anyone other than the author
+            thinks at the moment of writing. Read them as a notebook left
+            open, and interpret them entirely on your own terms.
+          </p>
+          <p style={{ margin: '0 0 0.85rem' }}>
             <strong style={{ color: 'var(--text-primary)' }}>Standard market disclaimers.</strong>{' '}
             Trading and investing involve substantial risk of loss,
             including the total loss of capital. Past performance is not
