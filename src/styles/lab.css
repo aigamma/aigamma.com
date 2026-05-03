@@ -342,6 +342,33 @@
   outline: none;
 }
 
+/* Bolded footer link to the site-wide /disclaimer page. Sits below
+   the lab-footer-about "Who made this?" attribution as the third and
+   final footer affordance, in the accent-coral red so the legal /
+   risk-disclosure link reads as visually distinct from the
+   accent-green Return-Home above it and the accent-blue About below
+   the Return-Home. The intended reading order is meta-line (muted) ->
+   Return Home (primary egress, green) -> Who made this? (attribution,
+   blue) -> Disclaimer (legal, coral). The mobile breakpoint scaling
+   below mirrors lab-footer-about so the three links read at the same
+   typographic weight on phones. */
+.lab-footer-disclaimer {
+  display: block;
+  margin-top: 0.75rem;
+  font-family: var(--font-base);
+  font-size: 0.9rem;
+  letter-spacing: 0.04em;
+  text-decoration: none;
+  color: var(--accent-coral);
+  font-weight: 700;
+}
+
+.lab-footer-disclaimer:hover,
+.lab-footer-disclaimer:focus-visible {
+  text-decoration: underline;
+  outline: none;
+}
+
 /* Desktop-only override that flips the lab-header from a left-anchored
    brand + right-anchored nav cluster (the mobile-first default above)
    into an evenly distributed row. justify-content: space-between on
@@ -570,6 +597,11 @@
     font-size: 0.82rem;
     margin-top: 0.6rem;
   }
+
+  .lab-footer-disclaimer {
+    font-size: 0.82rem;
+    margin-top: 0.6rem;
+  }
 }
 
 @media (max-width: 480px) {
@@ -671,6 +703,11 @@
   }
 
   .lab-footer-about {
+    font-size: 0.75rem;
+    letter-spacing: 0.03em;
+  }
+
+  .lab-footer-disclaimer {
     font-size: 0.75rem;
     letter-spacing: 0.03em;
   }

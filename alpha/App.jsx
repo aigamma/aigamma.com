@@ -73,6 +73,7 @@ export default function App() {
           AI Gamma · α lab · software-stage sense · v1.1.4
         </span>
         <a href="https://about.aigamma.com/" className="lab-footer-about">Who made this?</a>
+        <a href="/disclaimer/" className="lab-footer-disclaimer">Disclaimer</a>
       </footer>
     </div>
   );

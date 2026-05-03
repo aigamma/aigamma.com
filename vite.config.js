@@ -172,6 +172,7 @@ export default defineConfig({
         events: fileURLToPath(new URL('./events/index.html', import.meta.url)),
         'expiring-gamma': fileURLToPath(new URL('./expiring-gamma/index.html', import.meta.url)),
         vix: fileURLToPath(new URL('./vix/index.html', import.meta.url)),
+        disclaimer: fileURLToPath(new URL('./disclaimer/index.html', import.meta.url)),
       },
       output: {
         // Pin react / react-dom into a stable `vendor` chunk. Without this,
