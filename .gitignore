@@ -38,6 +38,7 @@ tmp/
 earnings/
 scripts/test-ingest.mjs
 scripts/backfill/.cache/
+reports/
 CLAUDE.md
 
 # ThetaData terminal credentials and binaries
