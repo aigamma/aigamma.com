@@ -7,6 +7,10 @@
   Co-authored-by: gemini <gemini@google.com>
 - After committing, always automatically run `git push` to push the changes to the remote repository.
 
+## Runtime Site Index
+
+`src/data/site-index.txt` is the authoritative runtime reference for what pages exist on aigamma.com, organized by methodological category. The Netlify chat function (`netlify/functions/chat.mjs`) loads it at module init via `readFileSync` and injects the contents into every chat agent's system prompt as a `[SITE INDEX]` block before the per-page template. Inclusion in the deployed function bundle is handled by the `[functions.chat] included_files = ["src/data/site-index.txt"]` entry in `netlify.toml`; the Netlify bundler cannot trace runtime fs reads automatically, so the explicit opt-in is required or the function will crash at cold start with ENOENT (same pattern used by `heatmap.mjs` and `scan.mjs` against the options-volume roster JSON). When a page is added, removed, or substantially reorganized, edit `src/data/site-index.txt` and the per-page prompt's `[SITE INDEX FAILSAFE]` summary in `netlify/functions/prompts/*.mjs` together so the runtime index and the in-prompt failsafe stay aligned. Do not move the file out of `src/data/` without updating the path in `chat.mjs`, the `included_files` entry in `netlify.toml`, and this paragraph.
+
 ## Architectural Reference Documents
 Topic-specific architectural references live in `docs/`. Read the relevant doc end to end before changing the data layer or proposing a new threshold/cutoff for the surfaces it covers. Do not propose changes that contradict a documented decision without first acknowledging the rationale recorded in the doc.
 

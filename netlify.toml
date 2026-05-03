@@ -31,6 +31,23 @@
 [functions.scan]
   included_files = ["src/data/options-volume-roster.json"]
 
+# /api/chat reads the runtime site index file at module init via
+# readFileSync and injects its contents into every chat agent's
+# system prompt as a [SITE INDEX] block before the per-page template.
+# The index is the authoritative reference for what pages exist on
+# aigamma.com, so site-level questions are answered against an
+# up-to-date page list rather than against the model's training
+# snapshot. Same readFileSync + ESM-import-trace gap as heatmap.mjs
+# and scan.mjs above — the explicit included_files entry is what
+# guarantees the file lands inside the deployed function bundle.
+# Failure to read the file is non-fatal at the function level (the
+# per-page prompts carry a SITE INDEX FAILSAFE summary block as the
+# contingency), but the entry must be in place for the integration to
+# work as designed in production. See netlify/functions/chat.mjs and
+# CLAUDE.md ("Runtime Site Index" subsection) for the full wiring.
+[functions.chat]
+  included_files = ["src/data/site-index.txt"]
+
 # Specific /api/snapshot.json redirect MUST come before the /api/* wildcard —
 # otherwise the wildcard expands :splat to `snapshot.json` and Netlify looks
 # for a function literally named `snapshot.json` (which doesn't exist). The

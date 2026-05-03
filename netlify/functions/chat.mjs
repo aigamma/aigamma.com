@@ -49,6 +49,8 @@
 // this project as of 2026-04-29 — see scripts/rag/ingest.mjs for the
 // matching local-development env-var contract used by the ingestion walker.
 
+import { readFileSync } from 'node:fs';
+
 import mainPrompt from './prompts/main.mjs';
 import garchPrompt from './prompts/garch.mjs';
 import regimePrompt from './prompts/regime.mjs';
@@ -66,6 +68,28 @@ import betaPrompt from './prompts/beta.mjs';
 import { CORE_PERSONA } from './prompts/core_persona.mjs';
 import { BEHAVIORAL_CONSTRAINTS } from './prompts/behavior.mjs';
 import { SITE_NAVIGATION_CONTEXT } from './prompts/site_nav.mjs';
+
+// Runtime site index, loaded once at module init. The file is the
+// authoritative reference for what pages exist on aigamma.com, organized by
+// methodological category, and is injected into every chat agent's system
+// prompt so site-level questions are answered against an up-to-date page
+// list rather than against the model's training-cut snapshot of the site.
+// The path is documented in CLAUDE.md ("Runtime Site Index" subsection of
+// the Chat Architecture section). Inclusion in the deployed function bundle
+// is handled by the [functions.chat] included_files entry in netlify.toml;
+// the Netlify bundler cannot trace runtime fs reads automatically so the
+// opt-in is required or the function would crash at cold start with ENOENT
+// (same pattern used by heatmap.mjs and scan.mjs against the options-volume
+// roster JSON). Failure to load is non-fatal — the per-page prompts carry
+// a SITE INDEX FAILSAFE summary as the contingency for this case.
+const SITE_INDEX_URL = new URL('../../src/data/site-index.txt', import.meta.url);
+let SITE_INDEX_CONTENT = null;
+let SITE_INDEX_LOAD_ERROR = null;
+try {
+  SITE_INDEX_CONTENT = readFileSync(SITE_INDEX_URL, 'utf8');
+} catch (e) {
+  SITE_INDEX_LOAD_ERROR = e?.message || String(e);
+}
 
 const SYSTEM_PROMPTS = {
   main: mainPrompt,
@@ -422,16 +446,39 @@ export default async (req) => {
   // shape is stable even if the RAG corpus is partially deindexed during a
   // re-ingestion cycle.
   const rawTemplate = SYSTEM_PROMPTS[surface] || SYSTEM_PROMPTS.main;
+  const siteIndexBlock = SITE_INDEX_CONTENT
+    ? '[SITE INDEX]\n\n' + SITE_INDEX_CONTENT.trim()
+    : null;
   const promptParts = [
     CORE_PERSONA,
     SITE_NAVIGATION_CONTEXT,
-    rawTemplate,
-    BEHAVIORAL_CONSTRAINTS,
   ];
+  if (siteIndexBlock) {
+    promptParts.push(siteIndexBlock);
+  }
+  promptParts.push(rawTemplate);
+  promptParts.push(BEHAVIORAL_CONSTRAINTS);
   if (retrievedContextBlock) {
     promptParts.push(retrievedContextBlock);
   }
   const systemPrompt = promptParts.join('\n\n').replace(/MODEL_PLACEHOLDER/g, config.displayName);
+
+  // ===== TEMPORARY VERIFICATION LOGGING — REMOVE AFTER DEPLOY VERIFICATION =====
+  // Two log lines per turn to confirm the site-index integration is wired
+  // correctly. Once the deployed Netlify function logs show:
+  //   (1) site_index_load: ok with a non-zero length, AND
+  //   (2) system_prompt for an agent contains the literal string "[SITE INDEX]"
+  // the integration is verified end-to-end and this block can be deleted
+  // without affecting any of the function's other behavior. Log lines are
+  // intentionally tagged with a unique prefix so a single grep against the
+  // Netlify function logs returns just the verification trace.
+  if (SITE_INDEX_CONTENT) {
+    console.log('[chat-verify] site_index_load: ok length=' + SITE_INDEX_CONTENT.length);
+  } else {
+    console.log('[chat-verify] site_index_load: failed error=' + SITE_INDEX_LOAD_ERROR);
+  }
+  console.log('[chat-verify] system_prompt surface=' + surface + ' length=' + systemPrompt.length + ' content=' + JSON.stringify(systemPrompt));
+  // ===== END TEMPORARY VERIFICATION LOGGING =====
 
   const initialMessages = [
     ...historyArray,
