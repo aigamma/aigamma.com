@@ -124,7 +124,7 @@
 
       <article class="card">
         <h1>AI Gamma SPX Regime Status and Metrics: Privacy Policy</h1>
-        <div class="updated">Last updated: 2026-04-17</div>
+        <div class="updated">Last updated: 2026-05-03</div>
 
         <p>
           The AI Gamma SPX Regime Status and Metrics browser extension
@@ -134,43 +134,69 @@
 
         <h2>What the extension does</h2>
         <p>
-          When the user clicks the extension icon, the popup issues a single
-          HTTPS request to
-          <code>https://aigamma.com/api/snapshot.json</code> and renders the
-          returned derived SPX market statistics.
+          When the user clicks the extension icon, the popup issues two HTTPS
+          requests in parallel and renders the returned SPX market data:
+        </p>
+        <p>
+          1. <code>https://aigamma.com/api/snapshot.json</code> &mdash; derived
+          SPX market statistics (gamma regime, key positioning levels,
+          volatility metrics, prior-day deltas).
+        </p>
+        <p>
+          2. <code>https://aigamma.com/api/events-calendar</code> &mdash;
+          a public macroeconomic event calendar, used to populate the
+          popup's high-impact alert ladder.
+        </p>
+        <p>
+          In the background, a service worker issues only the snapshot
+          request on a schedule during US equity market hours and updates
+          the toolbar icon to reflect the current gamma regime. No other
+          network activity occurs.
         </p>
 
         <h2>What the extension collects</h2>
         <p>
           The extension does not collect, store, or transmit any personal
           information, browsing history, cookies, form data, keystrokes,
-          clipboard contents, or information about other tabs, sites, or
-          accounts.
+          clipboard contents, account credentials, or information about
+          any tab, site, or account other than its own popup surface.
         </p>
         <p>
-          The extension uses no local storage, no sync storage, no analytics,
-          no advertising identifiers, and no third-party SDKs.
+          The extension has no content scripts and cannot read data from
+          any web page the user visits. The extension declares no
+          <code>host_permissions</code> and has no ability to observe or
+          modify traffic on any site other than its two outgoing fetches
+          to aigamma.com.
+        </p>
+        <p>
+          The extension uses no local storage, no sync storage, no usage
+          analytics or telemetry, no advertising identifiers, and no
+          third-party SDKs.
         </p>
 
         <h2>What aigamma.com receives</h2>
         <p>
-          The snapshot endpoint at
-          <code>aigamma.com/api/snapshot.json</code> is a public,
-          unauthenticated resource. Requests made by the extension are
-          standard HTTPS requests. The receiving server receives only
-          standard HTTP request metadata (IP address, user agent, timestamp)
-          for the purposes of rate limiting and operational logging. No
-          user-identifying data is associated with these requests.
+          Both endpoints (<code>api/snapshot.json</code> and
+          <code>api/events-calendar</code>) are public, unauthenticated
+          resources. Requests made by the extension are standard HTTPS
+          requests. The receiving server records only standard HTTP request
+          metadata (IP address, user agent, timestamp) as part of normal
+          operational logging. This metadata is not linked to any user
+          identity, is not retained beyond operational need, and is not
+          shared with third parties.
         </p>
 
         <h2>Permissions justification</h2>
         <p>
-          The extension declares no permissions. It does not use
-          <code>host_permissions</code>, content scripts, or any permission
-          APIs. The popup makes a single cross-origin fetch to
-          <code>https://aigamma.com/api/snapshot.json</code>, which is
-          permitted because the endpoint returns CORS headers allowing any
-          origin.
+          The extension declares only one permission: <code>alarms</code>,
+          used by the background service worker to schedule periodic
+          fetches of the snapshot endpoint during market hours. The
+          extension does not declare <code>host_permissions</code>,
+          <code>tabs</code>, <code>activeTab</code>, <code>storage</code>,
+          <code>cookies</code>, <code>scripting</code>,
+          <code>webRequest</code>, or any other permission. The cross-origin
+          fetches to aigamma.com are permitted because both endpoints
+          return CORS headers allowing any origin.
         </p>
 
         <h2>Data sharing</h2>
