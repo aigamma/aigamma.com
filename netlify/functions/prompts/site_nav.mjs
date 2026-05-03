@@ -1,8 +1,3 @@
-// Centralized site navigation and boundary context for all AI Gamma chatbots.
-// This block defines the exact topography of the site and strictly limits
-// the chatbot's navigational awareness to prevent hallucinations, jailbreaks,
-// or users attempting to trick the model into referencing non-existent features.
-
 export const SITE_NAVIGATION_CONTEXT = `[SITE STRUCTURE AND MENU NAVIGATION]
 The application is a multi-page React application. The page header carries different navigation chrome at desktop and mobile widths.
 
