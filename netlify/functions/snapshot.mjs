@@ -1,14 +1,20 @@
 // netlify/functions/snapshot.mjs
-// Chrome-extension-facing endpoint. Returns a scalar snapshot of SPX regime
-// status, key dealer-positioning levels, and front-month volatility metrics
-// for the AI Gamma browser extension (see aigamma-extension/). Contract is
-// fixed against popup.js — do not change field names or types without also
-// updating the extension client.
+// Browser-extension-facing endpoint. Returns a scalar snapshot of SPX
+// regime status, key dealer-positioning levels, volatility metrics, and
+// prior-trading-day deltas for the AI Gamma browser extension (see
+// aigamma-extension-1.1.2/, aigamma-extension-firefox-1.1.2/). Contract is
+// pinned against popup.js — do not change field names or types without
+// also updating both extension clients.
 //
-// Shape (schemaVersion: 1):
-//   asOf                ISO 8601 timestamp of the ingest run (UTC, Z-suffix)
+// Shape (schemaVersion: 2 — additive on top of v1; every v1 field
+// preserved so older extension installs in the wild keep working):
+//
+//   asOf                ISO 8601 timestamp of the ingest run (UTC, Z)
 //   gammaStatus         "POSITIVE" | "NEGATIVE" depending on spot vs volFlip
 //   spot                SPX cash price at the ingest capture instant
+//   prevClose           SPX cash price at the most recent prior trading
+//                       day's last intraday run; null when no prior run
+//   prevTradingDate     ISO date string of the prev close, or null
 //   putWall             strike of largest put-gamma concentration
 //   volFlip             gamma zero-crossing (price, not $GEX)
 //   callWall            strike of largest call-gamma concentration
@@ -18,43 +24,56 @@
 //   vrp                 IV − RV in percent from daily_volatility_stats (EOD)
 //   ivRank              trailing 252-trading-day IV rank in percent
 //   pcRatioVolume       today's put/call volume ratio
+//   pcRatioOi           today's put/call open-interest ratio
+//   gammaIndex          10 × (call_gex − put_gex) / (call_gex + put_gex)
+//                       from the latest daily_gex_stats row, bounded ±10;
+//                       held flat through the session because OI only
+//                       refreshes overnight
+//   gammaIndexDate      trading_date of the daily_gex_stats source row
+//   termStructure       { vix, vix3m, ratio, asOf } from vix_family_eod;
+//                       ratio = vix3m / vix (≥1 contango, <1 backwardation);
+//                       null when either symbol's latest close missing
 //   overnightAlignment  { score, dirs: { put_wall, volatility_flip, call_wall } }
-//                       today vs. the most recent run on a prior trading date:
-//                       each level contributes +1 if it rose, −1 if it fell,
-//                       0 if flat; score sums to a net in [−3, +3]. dirs[key]
-//                       is null when either side is missing. null at the top
-//                       level when no prior trading-date run can be resolved.
+//                       today vs the most recent prior-trading-date run
+//   deltas              { spot, volFlip, putWall, callWall, atmIv, ivRank,
+//                         vrp, pcRatioVolume, pcRatioOi, gammaIndex }
+//                       prior-day deltas in matching units; null when
+//                       either side missing. ATM IV / IV Rank / VRP report
+//                       in percentage points (the natural unit for an IV
+//                       delta), levels in dollars, ratios in raw absolute
+//                       change, gammaIndex in oscillator units.
 //
 // Sourcing rationale:
-//   — spot / walls / P-C ratio: latest intraday `ingest_runs` + `computed_levels`
-//   — atmIv / expectedMove: `expiration_metrics` row for the 30-DTE monthly
-//     selected by `pickDefaultExpiration` (same helper the dashboard uses)
-//   — volFlip: recomputed client-side-style via `computeGammaProfile` +
+//   — spot / walls / P-C ratios: latest intraday `ingest_runs` +
+//     `computed_levels`; computed_levels carries put_call_ratio_oi
+//     directly, no client-side reduction needed
+//   — atmIv / expectedMove: `expiration_metrics` row for the 30-DTE
+//     monthly selected by `pickDefaultExpiration` (same helper the
+//     dashboard uses)
+//   — volFlip: recomputed via `computeGammaProfile` +
 //     `findFlipFromProfile` over the run's `snapshots` rows. The stored
-//     `computed_levels.volatility_flip` column is stale because the deployed
-//     ingest can't persist the new profile (missing service-role key leaves
-//     the INSERT blocked by RLS — see src/App.jsx:224-242). Replicating the
+//     `computed_levels.volatility_flip` column is stale because the
+//     deployed ingest can't persist the new profile; replicating the
 //     recompute here keeps the extension in agreement with the dashboard's
-//     on-screen volFlip. Tracking the ingest bug as a follow-up ticket;
-//     until it's fixed, any downstream consumer of `computed_levels` is
-//     reading a number the dashboard itself overrides.
-//   — vrp / ivRank: latest + rolling 252 of `daily_volatility_stats`. These
-//     are EOD values that lag intraday spot by up to one trading day, which
-//     matches the dashboard's LevelsPanel behavior and is explicit in the
-//     extension's popup (no freshness annotation on the vol-stats side).
+//     on-screen volFlip.
+//   — vrp / ivRank / their deltas: latest 253 rows of
+//     `daily_volatility_stats`. 253 rather than 252 because yesterday's IV
+//     Rank window is rows[1..252], shifted one day from today's [0..251],
+//     and is needed for the deltas.ivRank calculation. EOD values lag
+//     intraday spot by up to one trading day, mirroring the dashboard's
+//     LevelsPanel behavior.
+//   — gammaIndex / its delta: top 2 rows of `daily_gex_stats`. The first
+//     row's call_gex and put_gex feed today's oscillator value; the second
+//     row feeds the prior-day comparison.
+//   — termStructure: top 4 rows of `vix_family_eod` filtered to symbol in
+//     (VIX, VIX3M); same query the dashboard's data.mjs runs.
 //
 // Cache policy: `public, max-age=60, s-maxage=60, stale-while-revalidate=300`.
-// The intraday ingest runs every 5 minutes during market hours, so a 60-second
-// edge fresh window paired with a 5-minute SWR tail keeps the popup snappy
-// (warm-edge TTFB ~650ms) without ever serving numbers more than ~6 minutes
-// behind the data-layer snapshot — and that worst case is fully bounded by
-// the next ingest tick. Earlier the values were 30 / 30 with no SWR; the
-// audit that produced this commit measured cold-edge probes at ~4s and
-// concluded that doubling s-maxage halves cold-edge frequency for free
-// (extension popups poll on user-open, not on a tight loop, so even a
-// 6-minute worst-case staleness is invisible to the user). Mirrored at
-// the platform level by netlify.toml's [[headers]] block for
-// /api/snapshot.json — keep both literals in sync.
+// The intraday ingest runs every 5 minutes during market hours, so a
+// 60-second edge fresh window paired with a 5-minute SWR tail keeps the
+// popup snappy without ever serving numbers more than ~6 minutes behind
+// the data layer. Mirrored at the platform level by netlify.toml's
+// [[headers]] block for /api/snapshot.json — keep both literals in sync.
 
 import { computeGammaProfile, findFlipFromProfile } from '../../src/lib/gammaProfile.js';
 import {
@@ -100,6 +119,59 @@ function round(n, d) {
   if (n == null || !Number.isFinite(n)) return null;
   const f = 10 ** d;
   return Math.round(n * f) / f;
+}
+
+function diffOrNull(today, prev, decimals) {
+  if (today == null || !Number.isFinite(today)) return null;
+  if (prev == null || !Number.isFinite(prev)) return null;
+  return round(today - prev, decimals);
+}
+
+// Compute the bounded gamma-index oscillator from a single daily_gex_stats
+// row. Mirrors data.mjs exactly: prefer the ATM-focused ratio when the
+// backfill has populated it (atm_contract_count >= 50), otherwise fall
+// back to the whole-chain version when contract_count >= 1000. Returns
+// null when the row is missing or the gating thresholds aren't met.
+function gammaIndexFromRow(row) {
+  if (!row) return null;
+  const cg = toNum(row.call_gex);
+  const pg = toNum(row.put_gex);
+  const acg = toNum(row.atm_call_gex);
+  const apg = toNum(row.atm_put_gex);
+  const acc = row.atm_contract_count != null ? Number(row.atm_contract_count) : 0;
+  const cc = row.contract_count != null ? Number(row.contract_count) : 0;
+  if (acg != null && apg != null && (acg + apg) > 0 && acc >= 50) {
+    return Math.round(((acg - apg) / (acg + apg)) * 10 * 1000) / 1000;
+  }
+  if (cg != null && pg != null && (cg + pg) > 0 && cc >= 1000) {
+    return Math.round(((cg - pg) / (cg + pg)) * 10 * 1000) / 1000;
+  }
+  return null;
+}
+
+// Compute IV Rank (in percent) for a single anchor IV against an array
+// of historical IVs that includes the anchor as ivValues[0]. The anchor
+// is interpreted as "where does ivValues[0] fall in the trailing window
+// ivValues.slice(0, windowSize)". Returns null when the window has
+// insufficient data; returns 50 when the window collapses to a single
+// distinct value (degenerate, but matches the rest of the platform's
+// behavior in that edge case).
+function ivRankAt(ivValues, anchorIndex, windowSize) {
+  if (!Array.isArray(ivValues)) return null;
+  const slice = [];
+  for (let i = anchorIndex; i < ivValues.length && slice.length < windowSize; i++) {
+    if (Number.isFinite(ivValues[i])) slice.push(ivValues[i]);
+  }
+  if (slice.length < 2) return null;
+  const anchor = slice[0];
+  let lo = slice[0];
+  let hi = slice[0];
+  for (let i = 1; i < slice.length; i++) {
+    if (slice[i] < lo) lo = slice[i];
+    if (slice[i] > hi) hi = slice[i];
+  }
+  const range = hi - lo;
+  return range > 0 ? ((anchor - lo) / range) * 100 : 50;
 }
 
 function jsonError(status, message) {
@@ -177,13 +249,11 @@ export default async function handler() {
     });
 
     // Prev-day run resolver: fired in parallel with today's queries so the
-    // overnight-alignment probe cost overlaps with today's snapshot paging
-    // instead of serializing behind it. Same probe pattern as above — walk
-    // up to 10 ingest_runs on prior trading dates and commit to the first
-    // one that has non-empty snapshots. Resolves to null if no prior run
-    // is available (first market day in the database, or every prior run
-    // had a failed insert); the alignment field is then omitted from the
-    // payload.
+    // probe cost overlaps with today's snapshot paging. Walks up to 10
+    // ingest_runs on prior trading dates and commits to the first one with
+    // non-empty snapshots. Resolves to null if no prior run is available
+    // (first market day in the database, or every prior run had a failed
+    // insert).
     const prevRunPromise = run.trading_date
       ? (async () => {
           const params = new URLSearchParams({
@@ -218,9 +288,9 @@ export default async function handler() {
         })()
       : Promise.resolve(null);
 
-    const [levelsRes, expMetricsRes, volStatsRes] = await Promise.all([
+    const [levelsRes, expMetricsRes, volStatsRes, dailyGexRes, vixTermRes] = await Promise.all([
       fetchWithTimeout(
-        `${supabaseUrl}/rest/v1/computed_levels?run_id=eq.${run.id}`,
+        `${supabaseUrl}/rest/v1/computed_levels?run_id=eq.${run.id}&select=call_wall_strike,put_wall_strike,volatility_flip,put_call_ratio_oi,put_call_ratio_volume`,
         { headers },
         'computed_levels'
       ),
@@ -229,10 +299,25 @@ export default async function handler() {
         { headers },
         'expiration_metrics'
       ),
+      // 253 rows so the IV Rank window for yesterday (rows[1..252]) is
+      // available for the deltas.ivRank computation. One extra row over
+      // IV_RANK_WINDOW.
       fetchWithTimeout(
-        `${supabaseUrl}/rest/v1/daily_volatility_stats?select=trading_date,iv_30d_cm,hv_20d_yz&order=trading_date.desc&limit=${IV_RANK_WINDOW}`,
+        `${supabaseUrl}/rest/v1/daily_volatility_stats?select=trading_date,iv_30d_cm,hv_20d_yz&order=trading_date.desc&limit=${IV_RANK_WINDOW + 1}`,
         { headers },
         'daily_volatility_stats'
+      ),
+      // Two rows so today's gamma index can be diffed against yesterday's
+      // for deltas.gammaIndex.
+      fetchWithTimeout(
+        `${supabaseUrl}/rest/v1/daily_gex_stats?select=trading_date,call_gex,put_gex,atm_call_gex,atm_put_gex,atm_contract_count,contract_count&order=trading_date.desc&limit=2`,
+        { headers },
+        'daily_gex_stats'
+      ),
+      fetchWithTimeout(
+        `${supabaseUrl}/rest/v1/vix_family_eod?symbol=in.(VIX,VIX3M)&select=symbol,trading_date,close&order=trading_date.desc&limit=4`,
+        { headers },
+        'vix_term_structure'
       ),
     ]);
 
@@ -261,21 +346,23 @@ export default async function handler() {
       if (page.length < PAGE_SIZE) break;
     }
 
-    const [levelsRows, expMetricsRows, volStatsRows] = await Promise.all([
+    const [levelsRows, expMetricsRows, volStatsRows, dailyGexRows, vixTermRows] = await Promise.all([
       levelsRes.json(),
       expMetricsRes.json(),
       volStatsRes.json(),
+      dailyGexRes.ok ? dailyGexRes.json() : Promise.resolve([]),
+      vixTermRes.ok ? vixTermRes.json() : Promise.resolve([]),
     ]);
 
     const levelsRow = Array.isArray(levelsRows) && levelsRows.length > 0 ? levelsRows[0] : null;
     const putWall = levelsRow ? toNum(levelsRow.put_wall_strike) : null;
     const callWall = levelsRow ? toNum(levelsRow.call_wall_strike) : null;
     const pcRatioVolume = levelsRow ? toNum(levelsRow.put_call_ratio_volume) : null;
+    const pcRatioOi = levelsRow ? toNum(levelsRow.put_call_ratio_oi) : null;
 
     // volFlip recompute via the gamma-profile zero crossing over the run's
-    // contracts. `computeGammaProfile` expects `strike_price` (client shape)
-    // or `strike` (backend shape) and handles both; we pass the raw backend
-    // field name and let strikeOf() inside the helper pick it up.
+    // contracts. `computeGammaProfile` expects `strike_price` (client
+    // shape) or `strike` (backend shape) and handles both.
     const contractsForProfile = contractRows.map((c) => ({
       expiration_date: c.expiration_date,
       strike: toNum(c.strike),
@@ -292,9 +379,6 @@ export default async function handler() {
         if (Number.isFinite(flip)) volFlip = flip;
       }
     }
-    // Fall back to the stored column only if the recompute produced nothing
-    // (no zero crossing in the profile). Shouldn't happen on a live SPX
-    // chain but guards against partially-ingested runs.
     if (volFlip == null && levelsRow) {
       volFlip = toNum(levelsRow.volatility_flip);
     }
@@ -307,11 +391,13 @@ export default async function handler() {
     const defaultExp = pickDefaultExpiration(pickerExpirations, capturedAt);
 
     let atmIv = null;
+    let atmIvFracToday = null;
     let expectedMove = null;
     if (defaultExp) {
       const match = expMetricsRows.find((m) => m.expiration_date === defaultExp);
       const atmIvFrac = match ? toNum(match.atm_iv) : null;
       if (atmIvFrac != null) {
+        atmIvFracToday = atmIvFrac;
         atmIv = atmIvFrac * 100;
         const dte = daysToExpiration(defaultExp, capturedAt);
         if (spot != null && dte != null && dte > 0) {
@@ -320,54 +406,96 @@ export default async function handler() {
       }
     }
 
-    // VRP + IV Rank over the rolling 252-day IV window from
-    // daily_volatility_stats (EOD). Rows come back DESC, so index 0 is the
-    // most recent backfill observation.
-    let vrp = null;
-    let ivRank = null;
-    if (Array.isArray(volStatsRows) && volStatsRows.length > 0) {
-      const latest = volStatsRows.find(
-        (r) => toNum(r.iv_30d_cm) != null && toNum(r.hv_20d_yz) != null
-      );
-      if (latest) {
-        vrp = (toNum(latest.iv_30d_cm) - toNum(latest.hv_20d_yz)) * 100;
-      }
+    // VRP + IV Rank over the rolling 252-day window from
+    // daily_volatility_stats. 253 rows fetched so yesterday's window
+    // [rows 1..252] is available for the deltas.ivRank computation.
+    const ivValues = (Array.isArray(volStatsRows) ? volStatsRows : [])
+      .map((r) => toNum(r.iv_30d_cm));
+    const hvValues = (Array.isArray(volStatsRows) ? volStatsRows : [])
+      .map((r) => toNum(r.hv_20d_yz));
 
-      const ivValues = volStatsRows
-        .map((r) => toNum(r.iv_30d_cm))
-        .filter((v) => v != null);
-      if (ivValues.length > 1) {
-        const currentIv = ivValues[0];
-        let lo = ivValues[0];
-        let hi = ivValues[0];
-        for (let i = 1; i < ivValues.length; i++) {
-          if (ivValues[i] < lo) lo = ivValues[i];
-          if (ivValues[i] > hi) hi = ivValues[i];
+    let vrp = null;
+    let prevVrp = null;
+    if (ivValues.length > 0 && hvValues.length > 0) {
+      // Today's VRP uses the most recent row that has both IV and HV.
+      for (let i = 0; i < ivValues.length; i++) {
+        if (ivValues[i] != null && hvValues[i] != null) {
+          vrp = (ivValues[i] - hvValues[i]) * 100;
+          break;
         }
-        const range = hi - lo;
-        ivRank = range > 0 ? ((currentIv - lo) / range) * 100 : 50;
+      }
+      // Yesterday's VRP — same logic but starting from index 1.
+      for (let i = 1; i < ivValues.length; i++) {
+        if (ivValues[i] != null && hvValues[i] != null) {
+          prevVrp = (ivValues[i] - hvValues[i]) * 100;
+          break;
+        }
+      }
+    }
+    const ivRank = ivRankAt(ivValues, 0, IV_RANK_WINDOW);
+    const prevIvRank = ivRankAt(ivValues, 1, IV_RANK_WINDOW);
+
+    // Gamma Index — top 2 daily_gex_stats rows. Today's value comes from
+    // row[0]; prev-day comes from row[1] (which may be null on the very
+    // first market day in the table).
+    const gammaIndex = gammaIndexFromRow(dailyGexRows[0]);
+    const gammaIndexDate = dailyGexRows[0]?.trading_date ?? null;
+    const prevGammaIndex = gammaIndexFromRow(dailyGexRows[1]);
+
+    // Term Structure — pick the latest VIX and latest VIX3M from the up-to-
+    // 4 rows the parallel query returned. asOf reports the older of the
+    // two dates so a stale-by-one-day reading is honestly labeled. Mirror
+    // of the dashboard's data.mjs termStructure block.
+    let termStructure = null;
+    if (Array.isArray(vixTermRows) && vixTermRows.length > 0) {
+      let vix = null;
+      let vix3m = null;
+      for (const r of vixTermRows) {
+        if (r.symbol === 'VIX' && !vix) vix = { close: toNum(r.close), date: r.trading_date };
+        if (r.symbol === 'VIX3M' && !vix3m) vix3m = { close: toNum(r.close), date: r.trading_date };
+        if (vix && vix3m) break;
+      }
+      if (vix?.close > 0 && vix3m?.close > 0) {
+        termStructure = {
+          vix: round(vix.close, 2),
+          vix3m: round(vix3m.close, 2),
+          ratio: round(vix3m.close / vix.close, 4),
+          asOf: vix.date < vix3m.date ? vix.date : vix3m.date,
+        };
       }
     }
 
-    // Overnight alignment: resolve the prev-day run (probe already in
-    // flight), fetch its computed_levels and snapshots, recompute its
-    // volFlip via the same gamma-profile zero crossing used for today, and
-    // diff the three regime levels (put_wall, volatility_flip, call_wall)
-    // against today's values. Each level contributes +1 / 0 / −1 to the
-    // score; dirs[key] = null whenever either side is missing. Mirrors the
-    // dashboard's overnightAlignment computation in src/App.jsx so the
-    // popup and the on-page header agree on the same three signs.
+    // Overnight alignment + prev-day ancillaries: resolve the prev-day run
+    // (probe already in flight), fetch its computed_levels (with
+    // pcRatioVolume/pcRatioOi added to the projection), its
+    // expiration_metrics (for prev atm_iv on today's selected expiration),
+    // and its snapshots, recompute its volFlip via the same gamma-profile
+    // zero crossing used for today, and diff every measured field against
+    // today's. The dirs block continues to ship the three-level
+    // overnightAlignment score the v1 schema expected; the deltas block is
+    // the new v2 surface that the v1.1.2 popup reads.
     const prevRun = await prevRunPromise;
-    let overnightAlignment = null;
-    if (prevRun) {
-      let prevPutWall = null;
-      let prevCallWall = null;
-      let prevVolFlip = null;
+    const prevClose = prevRun ? toNum(prevRun.spot_price) : null;
+    const prevTradingDate = prevRun ? prevRun.trading_date : null;
 
+    let prevPutWall = null;
+    let prevCallWall = null;
+    let prevVolFlip = null;
+    let prevPcVolume = null;
+    let prevPcOi = null;
+    let prevAtmIvFrac = null;
+    let overnightAlignment = null;
+
+    if (prevRun) {
       const prevLevelsPromise = fetchWithTimeout(
-        `${supabaseUrl}/rest/v1/computed_levels?run_id=eq.${prevRun.id}`,
+        `${supabaseUrl}/rest/v1/computed_levels?run_id=eq.${prevRun.id}&select=put_wall_strike,call_wall_strike,volatility_flip,put_call_ratio_volume,put_call_ratio_oi`,
         { headers },
         'prev_computed_levels'
+      );
+      const prevExpPromise = fetchWithTimeout(
+        `${supabaseUrl}/rest/v1/expiration_metrics?run_id=eq.${prevRun.id}&order=expiration_date.asc&select=expiration_date,atm_iv`,
+        { headers },
+        'prev_expiration_metrics'
       );
 
       const prevSnapParams = new URLSearchParams({
@@ -391,7 +519,7 @@ export default async function handler() {
         if (page.length < PAGE_SIZE) break;
       }
 
-      const prevLevelsRes = await prevLevelsPromise;
+      const [prevLevelsRes, prevExpRes] = await Promise.all([prevLevelsPromise, prevExpPromise]);
       if (prevLevelsRes.ok) {
         const prevLevelsRows = await prevLevelsRes.json();
         const prevLevelsRow =
@@ -399,6 +527,18 @@ export default async function handler() {
         if (prevLevelsRow) {
           prevPutWall = toNum(prevLevelsRow.put_wall_strike);
           prevCallWall = toNum(prevLevelsRow.call_wall_strike);
+          prevPcVolume = toNum(prevLevelsRow.put_call_ratio_volume);
+          prevPcOi = toNum(prevLevelsRow.put_call_ratio_oi);
+        }
+      }
+      if (prevExpRes.ok) {
+        const prevExpRows = await prevExpRes.json();
+        // Prefer the same expiration_date today selected; fall back to
+        // the prev run's nearest match if the selected expiration didn't
+        // exist in yesterday's chain (e.g., today's 0DTE expiry).
+        if (Array.isArray(prevExpRows) && prevExpRows.length > 0 && defaultExp) {
+          const exact = prevExpRows.find((m) => m.expiration_date === defaultExp);
+          if (exact) prevAtmIvFrac = toNum(exact.atm_iv);
         }
       }
 
@@ -418,16 +558,16 @@ export default async function handler() {
         }
       }
 
-      const diff = (today, prev) => {
+      const diffSign = (today, prev) => {
         if (today == null || prev == null) return null;
         const delta = today - prev;
         const sign = delta > 0 ? 1 : delta < 0 ? -1 : 0;
         return { delta: round(delta, 2), sign };
       };
       const dirs = {
-        put_wall: diff(putWall, prevPutWall),
-        volatility_flip: diff(volFlip, prevVolFlip),
-        call_wall: diff(callWall, prevCallWall),
+        put_wall: diffSign(putWall, prevPutWall),
+        volatility_flip: diffSign(volFlip, prevVolFlip),
+        call_wall: diffSign(callWall, prevCallWall),
       };
       let score = 0;
       let counted = 0;
@@ -442,20 +582,41 @@ export default async function handler() {
       }
     }
 
+    // deltas block — single object holding every prev-day delta the popup
+    // needs in matching units. Levels in dollars, IVs in pp (the natural
+    // read for an IV delta), ratios in raw absolute change, gammaIndex in
+    // oscillator units. Each field independently nullable when either
+    // side of the diff is missing.
+    const deltas = {
+      spot: diffOrNull(spot, prevClose, 2),
+      volFlip: diffOrNull(volFlip, prevVolFlip, 2),
+      putWall: diffOrNull(putWall, prevPutWall, 2),
+      callWall: diffOrNull(callWall, prevCallWall, 2),
+      atmIv: atmIvFracToday != null && prevAtmIvFrac != null
+        ? round((atmIvFracToday - prevAtmIvFrac) * 100, 2)
+        : null,
+      ivRank: diffOrNull(ivRank, prevIvRank, 1),
+      vrp: diffOrNull(vrp, prevVrp, 2),
+      pcRatioVolume: diffOrNull(pcRatioVolume, prevPcVolume, 2),
+      pcRatioOi: diffOrNull(pcRatioOi, prevPcOi, 2),
+      gammaIndex: diffOrNull(gammaIndex, prevGammaIndex, 2),
+    };
+
     // Core-field gate: if any of spot / walls / volFlip / atmIv are
     // missing, the popup renders an empty shell. Prefer an explicit 503 so
     // the extension shows its OFFLINE state rather than a card full of
-    // dashes. vrp / ivRank / pcRatioVolume stay optional (null ⇒ popup
-    // shows '-').
+    // dashes. Optional fields stay optional (null ⇒ popup shows '—').
     if (spot == null || putWall == null || callWall == null || volFlip == null || atmIv == null) {
       return jsonError(503, 'core fields missing');
     }
 
     const payload = {
-      schemaVersion: 1,
+      schemaVersion: 2,
       asOf: capturedAt,
       gammaStatus: spot > volFlip ? 'POSITIVE' : 'NEGATIVE',
       spot: round(spot, 2),
+      prevClose: round(prevClose, 2),
+      prevTradingDate,
       putWall: round(putWall, 2),
       volFlip: round(volFlip, 2),
       callWall: round(callWall, 2),
@@ -465,7 +626,12 @@ export default async function handler() {
       vrp: round(vrp, 2),
       ivRank: round(ivRank, 1),
       pcRatioVolume: round(pcRatioVolume, 2),
+      pcRatioOi: round(pcRatioOi, 2),
+      gammaIndex: gammaIndex != null ? round(gammaIndex, 2) : null,
+      gammaIndexDate,
+      termStructure,
       overnightAlignment,
+      deltas,
     };
 
     return new Response(JSON.stringify(payload), {

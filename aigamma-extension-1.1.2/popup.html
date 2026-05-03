@@ -1,0 +1,128 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>AI Gamma SPX Regime Status and Metrics</title>
+  <link rel="stylesheet" href="popup.css">
+</head>
+<body>
+  <header>
+    <span class="brand">AI GAMMA</span>
+    <span id="status" class="status">...</span>
+  </header>
+  <main>
+    <section id="alertsSection" class="alerts" hidden>
+      <div id="alertRowRed" class="alert-row alert-row--red" hidden>
+        <span class="alert-label">&lt; 24H</span>
+        <span id="alertItemsRed" class="alert-items"></span>
+      </div>
+      <div id="alertRowOrange" class="alert-row alert-row--orange" hidden>
+        <span class="alert-label">24-48H</span>
+        <span id="alertItemsOrange" class="alert-items"></span>
+      </div>
+      <div id="alertRowYellow" class="alert-row alert-row--yellow" hidden>
+        <span class="alert-label">48-72H</span>
+        <span id="alertItemsYellow" class="alert-items"></span>
+      </div>
+    </section>
+
+    <div class="row" title="SPX cash index reference price captured at the most recent intraday ingest instant. Market data on aigamma.com is delayed ~15 minutes from real-time.">
+      <span class="label">SPX Reference</span>
+      <span class="value">
+        <span id="spx" class="num">...</span><span id="spxDelta" class="delta"></span>
+      </span>
+    </div>
+
+    <div class="row" title="Overnight directional score. Today's Put Wall, Vol Flip, and Call Wall compared against yesterday's closing values. Each level contributes +1 if it rose overnight, -1 if it fell, 0 if flat. Net sum in [-3, +3]. Arrows read put wall · vol flip · call wall.">
+      <span class="label">Overnight Align</span>
+      <span class="value">
+        <span id="overnightScore" class="num">...</span>
+        <span id="overnightDirs" class="dirs">···</span>
+      </span>
+    </div>
+
+    <div class="row" title="Gamma Index. 10 × (call_gex − put_gex) / (call_gex + put_gex) over the ATM strike band, bounded ±10. Sourced from the most recent daily_gex_stats row and held fixed through the session because OI only refreshes overnight. Coloring is by sign of value: positive (dealers long gamma) gamma-green, negative (dealers short gamma) red.">
+      <span class="label">Gamma Index</span>
+      <span class="value">
+        <span id="gammaIndex" class="num">...</span><span id="gammaIndexDelta" class="delta"></span>
+      </span>
+    </div>
+
+    <div class="row" title="SPX Reference minus Vol Flip. Positive (above Vol Flip) = dealers long gamma (dampening), gamma-green; negative (below Vol Flip) = dealers short gamma (amplifying), red.">
+      <span class="label">Dist from Risk Off</span>
+      <span class="value">
+        <span id="distRiskOff" class="num">...</span>
+      </span>
+    </div>
+
+    <div class="row" title="Strike where the signed dealer gamma profile crosses zero. Above = positive-gamma regime; below = negative-gamma regime. Delta vs prior trading day in parentheses, colored bullish-green / yellow / red for moved-up / flat / moved-down.">
+      <span class="label">Vol Flip</span>
+      <span class="value">
+        <span id="volFlip" class="num">...</span><span id="volFlipDelta" class="delta"></span>
+      </span>
+    </div>
+
+    <div class="row" title="VIX3M / VIX EOD ratio. Above 1.0 = Contango (longer-tenor IV higher than 30-day, the calm-regime default, bullish-green). Below 1.0 = Backwardation (urgent near-term vol pricing past the 3-month tenor, red).">
+      <span class="label">Term Structure</span>
+      <span class="value">
+        <span id="contango" class="num">...</span>
+      </span>
+    </div>
+
+    <div class="row" title="Volatility Risk Premium. 30-day constant-maturity IV minus 20-day Yang-Zhang realized vol (EOD, lags intraday spot by up to one trading day). Positive (bullish-green) = options pricing more vol than has been realized; negative (red) = realized has exceeded implied.">
+      <span class="label">VRP</span>
+      <span class="value">
+        <span id="vrp" class="num">...</span><span id="vrpDelta" class="delta"></span>
+      </span>
+    </div>
+
+    <div class="row" title="IV Rank. Current 30-day constant-maturity IV's percentile position in its trailing 252-trading-day window. Below 50 (cheap vol) gamma-green; above 50 (rich vol) red.">
+      <span class="label">IV Rank</span>
+      <span class="value">
+        <span id="ivRank" class="num">...</span><span id="ivRankDelta" class="delta"></span>
+      </span>
+    </div>
+
+    <div class="row" title="Strike with the largest concentration of put-side open-interest gamma. Often acts as downside support. Delta vs prior trading day in parentheses, colored bullish-green / yellow / red for moved-up / flat / moved-down.">
+      <span class="label">Put Wall</span>
+      <span class="value">
+        <span id="putWall" class="num">...</span><span id="putWallDelta" class="delta"></span>
+      </span>
+    </div>
+
+    <div class="row" title="Strike with the largest concentration of call-side open-interest gamma. Often acts as upside resistance. Delta vs prior trading day in parentheses, colored bullish-green / yellow / red for moved-up / flat / moved-down.">
+      <span class="label">Call Wall</span>
+      <span class="value">
+        <span id="callWall" class="num">...</span><span id="callWallDelta" class="delta"></span>
+      </span>
+    </div>
+
+    <div class="row" title="At-the-money implied volatility on the nearest 30-DTE monthly SPX expiration, in annualized percent. Coloring follows direction vs prior day: lower-than-yesterday gamma-green (calmer), flat yellow, higher-than-yesterday red (richer).">
+      <span class="label">ATM IV%</span>
+      <span class="value">
+        <span id="atmIv" class="num">...</span><span id="atmIvDelta" class="delta"></span>
+      </span>
+    </div>
+
+    <div class="row" title="Today's total put volume divided by total call volume across all SPX expirations. Higher = more defensive flow.">
+      <span class="label">P/C (Volume)</span>
+      <span class="value">
+        <span id="pcVol" class="num">...</span><span id="pcVolDelta" class="delta"></span>
+      </span>
+    </div>
+
+    <div class="row" title="Total put open interest divided by total call open interest across all SPX expirations. Structural positioning rather than today's flow.">
+      <span class="label">P/C (OI)</span>
+      <span class="value">
+        <span id="pcOi" class="num">...</span><span id="pcOiDelta" class="delta"></span>
+      </span>
+    </div>
+  </main>
+  <footer>
+    <span id="asOf" class="timestamp">...</span>
+    <a href="https://aigamma.com" target="_blank" rel="noopener noreferrer">aigamma.com</a>
+  </footer>
+  <script src="popup.js"></script>
+</body>
+</html>

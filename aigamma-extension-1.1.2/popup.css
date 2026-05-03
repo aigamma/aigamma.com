@@ -1,0 +1,202 @@
+:root {
+  --bg: #0b0f1a;
+  --border: #1f2937;
+  --border-soft: #111827;
+  --label: #9ca3af;
+  --value: #f3f4f6;
+  --muted: #6b7280;
+  /* Gamma green = dashboard regime indicator (LevelsPanel Dist from Risk Off,
+     Term Slope, Gamma Index, Overnight Alignment), distinct from the bullish
+     green that the call-gamma corner label and VRP positive band use. The two
+     greens were intentionally diverged so the regime cell reads as a teal
+     against the generic equity-green elsewhere on the platform. */
+  --green-gamma: #02A29F;
+  --green-bull: #2ecc71;
+  --red: #e74c3c;
+  --yellow: #f1c40f;
+  --orange: #f0a030;
+}
+
+* { box-sizing: border-box; }
+
+body {
+  margin: 0;
+  padding: 12px;
+  width: 360px;
+  font-family: Calibri, 'Segoe UI', system-ui, sans-serif;
+  background: var(--bg);
+  color: var(--value);
+  font-size: 13px;
+}
+
+header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 10px;
+  padding-bottom: 8px;
+  border-bottom: 1px solid var(--border);
+}
+
+.brand {
+  font-weight: 600;
+  letter-spacing: 0.08em;
+  color: var(--label);
+  font-size: 11px;
+}
+
+.status {
+  padding: 2px 8px;
+  border: 1px solid var(--muted);
+  color: var(--muted);
+  border-radius: 3px;
+  font-size: 10px;
+  letter-spacing: 0.08em;
+}
+
+.status.pos { color: var(--green-gamma); border-color: var(--green-gamma); }
+.status.neg { color: var(--red); border-color: var(--red); }
+
+main { display: flex; flex-direction: column; }
+
+/* Alert rows mirror the time-bucketed pill ladder under LevelsPanel on the
+   landing page (CatalystBanner): red for catalysts in the next 24 hours,
+   orange for 24-48, yellow for 48-72. Restricted here to High-impact macro
+   events from /api/events-calendar; earnings tickers and Medium-impact
+   events that the landing-page banner also surfaces are excluded so the
+   popup ladder reads as a strict macroeconomic-alert filter rather than
+   the broader catalyst calendar. Each row hides via the [hidden] attribute
+   when its bucket is empty so a quiet 72-hour window collapses cleanly. */
+.alerts {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  margin-bottom: 10px;
+  padding-bottom: 10px;
+  border-bottom: 1px solid var(--border);
+}
+
+.alert-row {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 5px 9px;
+  border-radius: 999px;
+  border: 1px solid;
+  font-size: 11px;
+  line-height: 1.3;
+}
+
+.alert-row--red {
+  background: rgba(231, 76, 60, 0.10);
+  border-color: rgba(231, 76, 60, 0.55);
+}
+.alert-row--orange {
+  background: rgba(231, 138, 60, 0.10);
+  border-color: rgba(231, 138, 60, 0.55);
+}
+.alert-row--yellow {
+  background: rgba(241, 196, 15, 0.10);
+  border-color: rgba(241, 196, 15, 0.45);
+}
+
+.alert-label {
+  font-weight: 700;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  white-space: nowrap;
+  font-size: 10px;
+}
+
+.alert-row--red .alert-label { color: var(--red); }
+.alert-row--orange .alert-label { color: var(--orange); }
+.alert-row--yellow .alert-label { color: var(--yellow); }
+
+.alert-items {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px 8px;
+  flex: 1;
+  min-width: 0;
+  color: #cfd6e6;
+}
+
+.alert-item {
+  display: inline-flex;
+  align-items: baseline;
+  gap: 3px;
+}
+.alert-item-name { font-weight: 700; }
+.alert-row--red .alert-item-name { color: var(--red); }
+.alert-row--orange .alert-item-name { color: var(--orange); }
+.alert-row--yellow .alert-item-name { color: var(--yellow); }
+.alert-item-time { color: var(--label); font-size: 10px; }
+.alert-overflow { color: var(--label); font-style: italic; font-size: 10px; }
+
+.row {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 5px 0;
+  border-bottom: 1px solid var(--border-soft);
+}
+
+.row:last-child { border-bottom: none; }
+
+.label {
+  color: var(--label);
+  font-size: 11px;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+}
+
+.value {
+  color: var(--value);
+  font-variant-numeric: tabular-nums;
+}
+
+.num.gamma-green { color: var(--green-gamma); }
+.num.bull-green { color: var(--green-bull); }
+.num.red { color: var(--red); }
+.num.yellow { color: var(--yellow); }
+
+.delta {
+  margin-left: 5px;
+  font-size: 11px;
+}
+
+.delta:empty { margin-left: 0; }
+.delta.up { color: var(--green-bull); }
+.delta.dn { color: var(--red); }
+.delta.flat { color: var(--yellow); }
+.delta.muted { color: var(--muted); }
+
+.dirs {
+  display: inline-flex;
+  gap: 2px;
+  margin-left: 6px;
+  letter-spacing: 0.04em;
+}
+
+.dir { display: inline-block; min-width: 10px; text-align: center; }
+.dir.up { color: var(--green-bull); }
+.dir.dn { color: var(--red); }
+.dir.muted { color: var(--muted); }
+
+footer {
+  margin-top: 10px;
+  padding-top: 8px;
+  border-top: 1px solid var(--border);
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  font-size: 10px;
+  color: var(--muted);
+}
+
+footer a {
+  color: var(--muted);
+  text-decoration: none;
+}
+
+footer a:hover { color: var(--label); }

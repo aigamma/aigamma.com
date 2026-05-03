@@ -8,7 +8,6 @@ import {
   PLOTLY_FONTS,
   plotly2DChartLayout,
   plotlyAxis,
-  plotlyTitle,
 } from '../lib/plotlyTheme';
 import RangeBrush from './RangeBrush';
 import ResetButton from './ResetButton';
@@ -274,6 +273,21 @@ export default function VolatilityRiskPremium({ spotPrice, capturedAt }) {
 
   const vrpSegments = useMemo(() => buildVrpSegments(series), [series]);
 
+  // Latest VRP reading in pp. Walks backward through fullSeries until it
+  // finds a row with both iv and hv populated — protects against the very
+  // first backfill rows where one side may be null. Used to color the
+  // chart title and append the value to the title text so the model name
+  // and the current reading both read in green (positive VRP, options
+  // pricing more vol than realized — the calm-regime default) or red
+  // (negative VRP, realized has overrun implied — the spike regime).
+  const latestVrp = useMemo(() => {
+    for (let i = fullSeries.length - 1; i >= 0; i--) {
+      const r = fullSeries[i];
+      if (r.iv != null && r.hv != null) return (r.iv - r.hv) * 100;
+    }
+    return null;
+  }, [fullSeries]);
+
   useEffect(() => {
     if (!Plotly || !chartRef.current || series.length === 0 || spxSeries.length === 0) return;
 
@@ -456,10 +470,30 @@ export default function VolatilityRiskPremium({ spotPrice, capturedAt }) {
       color: PLOTLY_COLORS.titleText,
       size: 20,
     };
+    // Title text and color reflect the latest VRP reading. The title
+    // string appends a signed pp figure (e.g., "Volatility Risk Premium
+    // +1.23pp"), and the whole title font tints bullish-green when VRP
+    // is positive, red when negative, default off-white when no reading
+    // is available yet (very first backfill or failed history fetch).
+    // Both the model name and the value share the same color so the
+    // header reads as a single visually-coherent title rather than two
+    // independently-colored fragments.
+    const vrpTitleColor = latestVrp == null
+      ? PLOTLY_COLORS.titleText
+      : latestVrp > 0
+        ? PLOTLY_COLORS.positive
+        : latestVrp < 0
+          ? PLOTLY_COLORS.negative
+          : PLOTLY_COLORS.titleText;
+    const vrpTitleText = latestVrp == null
+      ? 'Volatility Risk Premium'
+      : `Volatility Risk Premium  ${latestVrp >= 0 ? '+' : '−'}${Math.abs(latestVrp).toFixed(2)}pp`;
+
     const layout = plotly2DChartLayout({
       margin: mobile ? { t: 45, r: 50, b: 40, l: 50 } : { t: 50, r: 115, b: 45, l: 80 },
       title: {
-        ...plotlyTitle('Volatility Risk Premium'),
+        text: vrpTitleText,
+        font: { ...PLOTLY_FONTS.chartTitle, color: vrpTitleColor },
         y: 0.97,
         yref: 'container',
         yanchor: 'top',
@@ -518,7 +552,7 @@ export default function VolatilityRiskPremium({ spotPrice, capturedAt }) {
       responsive: true,
       displayModeBar: false,
     });
-  }, [Plotly, series, vrpSegments, spxSeries, fullSpxSeries, mobile, timeRange, traceVisibility]);
+  }, [Plotly, series, vrpSegments, spxSeries, fullSpxSeries, mobile, timeRange, traceVisibility, latestVrp]);
 
   const handleBrushChange = useCallback((minMs, maxMs) => {
     setTimeRange([msToIso(minMs), msToIso(maxMs)]);

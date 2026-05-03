@@ -97,11 +97,19 @@ function flipDistAccent(dist) {
 // Term Slope (VIX3M / VIX) cell on the row-3 mobile-only slot. Above 1.0
 // is contango (longer-tenor implied vol higher than 30-day, the calm-
 // regime default), below 1.0 is backwardation (urgent near-term vol pricing
-// past the 3-month tenor). Same green/coral binary split as Dist from
-// Risk Off — the sign IS the regime.
+// past the 3-month tenor). Binary green/coral split by sign of (ratio − 1)
+// — the sign IS the regime. Uses the bullish-green token (#2ecc71, the
+// call-gamma color in the Gamma Map) rather than the gamma-green regime
+// teal (#02A29F) used for Dist from Risk Off / Gamma Index / Overnight
+// Alignment, because Term Slope is a vol-curve regime read distinct from
+// the dealer-positioning regime read those other cells carry — the
+// bullish-green visually separates "contango = calm vol curve" from
+// "positive gamma = dampening dealers" while keeping both green-coded so
+// a reader skimming the row reads "good things in green, bad things in
+// red" without conflating the two regime axes.
 function termSlopeAccent(ratio) {
   if (ratio == null) return undefined;
-  if (ratio >= 1) return '#02A29F';
+  if (ratio >= 1) return '#2ecc71';
   return 'var(--accent-coral)';
 }
 
