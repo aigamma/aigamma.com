@@ -78,8 +78,8 @@ const MENU_ITEMS = [
   { type: 'item', href: '/rough/',          label: '/rough/',          desc: 'Rough Bergomi and rough vol exploration' },
   { type: 'item', href: '/stochastic/',     label: '/stochastic/',     desc: 'Heston, SABR, LSV, rough Bergomi' },
   { type: 'header', label: 'About' },
-  { type: 'item', href: 'https://about.aigamma.com/', label: 'About This Page', desc: 'Created by Eric Allione' },
   { type: 'item', href: '/disclaimer/', label: '/disclaimer/', desc: 'As-is mathematics, MIT license, no commercial purpose, standard trading disclaimers' },
+  { type: 'item', href: 'https://about.aigamma.com/', label: 'About This Page', desc: 'Created by Eric Allione' },
 ];
 
 // Interactive subset for keyboard navigation. Pre-computed so the

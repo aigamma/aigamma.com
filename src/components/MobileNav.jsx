@@ -385,15 +385,6 @@ export default function MobileNav({ regimeIndicator } = {}) {
           ))}
           <div className="mobile-nav__divider" role="presentation" />
           <a
-            href={ABOUT_ITEM.href}
-            className="mobile-nav__item mobile-nav__item--about"
-            role="menuitem"
-            onClick={() => setOpenPanel(null)}
-          >
-            <span className="mobile-nav__item-path">{ABOUT_ITEM.label}</span>
-            <span className="mobile-nav__item-desc">{ABOUT_ITEM.desc}</span>
-          </a>
-          <a
             href={DISCLAIMER_ITEM.href}
             className="mobile-nav__item mobile-nav__item--disclaimer"
             role="menuitem"
@@ -401,6 +392,15 @@ export default function MobileNav({ regimeIndicator } = {}) {
           >
             <span className="mobile-nav__item-path">{DISCLAIMER_ITEM.label}</span>
             <span className="mobile-nav__item-desc">{DISCLAIMER_ITEM.desc}</span>
+          </a>
+          <a
+            href={ABOUT_ITEM.href}
+            className="mobile-nav__item mobile-nav__item--about"
+            role="menuitem"
+            onClick={() => setOpenPanel(null)}
+          >
+            <span className="mobile-nav__item-path">{ABOUT_ITEM.label}</span>
+            <span className="mobile-nav__item-desc">{ABOUT_ITEM.desc}</span>
           </a>
         </div>
       )}
@@ -425,15 +425,6 @@ export default function MobileNav({ regimeIndicator } = {}) {
           ))}
           <div className="mobile-nav__divider" role="presentation" />
           <a
-            href={ABOUT_ITEM.href}
-            className="mobile-nav__item mobile-nav__item--about"
-            role="menuitem"
-            onClick={() => setOpenPanel(null)}
-          >
-            <span className="mobile-nav__item-path">{ABOUT_ITEM.label}</span>
-            <span className="mobile-nav__item-desc">{ABOUT_ITEM.desc}</span>
-          </a>
-          <a
             href={DISCLAIMER_ITEM.href}
             className="mobile-nav__item mobile-nav__item--disclaimer"
             role="menuitem"
@@ -441,6 +432,15 @@ export default function MobileNav({ regimeIndicator } = {}) {
           >
             <span className="mobile-nav__item-path">{DISCLAIMER_ITEM.label}</span>
             <span className="mobile-nav__item-desc">{DISCLAIMER_ITEM.desc}</span>
+          </a>
+          <a
+            href={ABOUT_ITEM.href}
+            className="mobile-nav__item mobile-nav__item--about"
+            role="menuitem"
+            onClick={() => setOpenPanel(null)}
+          >
+            <span className="mobile-nav__item-path">{ABOUT_ITEM.label}</span>
+            <span className="mobile-nav__item-desc">{ABOUT_ITEM.desc}</span>
           </a>
         </div>
       )}
