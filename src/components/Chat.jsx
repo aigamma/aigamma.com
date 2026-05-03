@@ -428,7 +428,11 @@ export default function Chat({ context, welcome, glowRgb } = {}) {
 
       <div className="chat-body" ref={bodyRef}>
         {currentMessages.length === 0 && (
-          <div className="chat-welcome">{mergedWelcome[activeTab]}</div>
+          <div className="chat-welcome">
+            {mergedWelcome[activeTab]}
+            <br /><br />
+            Disclaimer: All information on this page is provided as-is in mathematical description. This site does not provide financial advice and it is not responsible for any perceived advice in these chat sessions.
+          </div>
         )}
 
         {currentMessages.map((m, i) => {
