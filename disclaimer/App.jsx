@@ -84,9 +84,10 @@ export default function App() {
             that exceed the initial premium. Nothing on this site is a
             solicitation, an offer, or a recommendation to buy, sell,
             hold, or hedge any security, derivative, or other financial
-            instrument. Information may be incomplete, delayed, or
-            inaccurate. Consult a qualified, licensed professional before
-            acting on anything you see here.
+            instrument. Market data displayed on the site is delayed
+            approximately 15 minutes from real-time. Information may be
+            otherwise incomplete or inaccurate. Consult a qualified,
+            licensed professional before acting on anything you see here.
           </p>
           <p style={{ margin: '0 0 0.85rem' }}>
             <strong style={{ color: 'var(--text-primary)' }}>Open source, no commercial purpose.</strong>{' '}
