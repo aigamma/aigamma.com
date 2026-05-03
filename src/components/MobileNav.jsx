@@ -47,16 +47,20 @@ import { useCallback, useEffect, useRef, useState } from 'react';
 // forward surface that lives under research on mobile because it documents
 // a no-arbitrage identity rather than carrying an operational dashboard
 // read like the other Tools entries. The dropdown then closes with an
-// "About This Page" off-site exit
-// pinned to the bottom — the same About entry that lives at the bottom
-// of the desktop Menu, just relocated under RESEARCH on mobile so it has
-// a natural home (the desktop Menu has its own "About" section header
-// that we don't reproduce on mobile to keep the dropdowns lean). The
-// TOOLS dropdown carries the same About entry pinned to its bottom so a
-// reader who taps TOOLS first (the more frequented dropdown for the
-// daily operational read) does not have to back out and tap RESEARCH
-// just to reach about.aigamma.com — both dropdowns terminate in the
-// same off-site exit. The desktop counterpart of these dropdown
+// "About This Page" off-site exit followed by the on-site /disclaimer/
+// link, both pinned to the bottom — the About entry mirrors the bottom-
+// of-Menu About entry on desktop, and the /disclaimer/ entry mirrors the
+// /disclaimer/ entry that lives directly under About in the desktop
+// Menu. The TOOLS dropdown carries the same About + Disclaimer pair
+// pinned to its bottom so a reader who taps TOOLS first (the more
+// frequented dropdown for the daily operational read) does not have to
+// back out and tap RESEARCH just to reach about.aigamma.com or the
+// disclaimer page — both dropdowns terminate in the same two egress
+// rows. The disclaimer entry is rendered in accent-coral via
+// .mobile-nav__item--disclaimer so it reads as the same red legal /
+// risk-disclosure affordance the .lab-footer-disclaimer link carries
+// in every lab footer and the inline coral block carries on the home
+// page under the Chat. The desktop counterpart of these dropdown
 // entries is the .lab-footer-about "Who made this?" link wired into
 // every lab footer (see src/styles/lab.css and the per-app footer
 // blocks); mobile users get the in-dropdown path because the footer
@@ -132,6 +136,21 @@ const ABOUT_ITEM = {
   href: 'https://about.aigamma.com/',
   label: 'About This Page',
   desc: 'Founder bio, platform notes, off-site exit',
+};
+
+// Disclaimer surface pinned to the bottom of both dropdowns — below the
+// About off-site exit — so a phone reader who taps either TOOLS or
+// RESEARCH sees the legal / risk-disclosure egress as the last entry in
+// the panel. Mirrors the desktop Menu's About-section pairing
+// (About This Page + /disclaimer/) and the lab-footer's reading order
+// (Disclaimer above Return Home above Who made this?). Rendered with the
+// mobile-nav__item--disclaimer modifier so its accent-coral tint matches
+// the .lab-footer-disclaimer link wired into every lab footer and the
+// inline coral block under the Chat on the home page.
+const DISCLAIMER_ITEM = {
+  href: '/disclaimer/',
+  label: '/disclaimer/',
+  desc: 'Site-wide disclaimer: as-is, MIT-licensed, no commercial purpose',
 };
 
 export default function MobileNav({ regimeIndicator } = {}) {
@@ -374,6 +393,15 @@ export default function MobileNav({ regimeIndicator } = {}) {
             <span className="mobile-nav__item-path">{ABOUT_ITEM.label}</span>
             <span className="mobile-nav__item-desc">{ABOUT_ITEM.desc}</span>
           </a>
+          <a
+            href={DISCLAIMER_ITEM.href}
+            className="mobile-nav__item mobile-nav__item--disclaimer"
+            role="menuitem"
+            onClick={() => setOpenPanel(null)}
+          >
+            <span className="mobile-nav__item-path">{DISCLAIMER_ITEM.label}</span>
+            <span className="mobile-nav__item-desc">{DISCLAIMER_ITEM.desc}</span>
+          </a>
         </div>
       )}
 
@@ -404,6 +432,15 @@ export default function MobileNav({ regimeIndicator } = {}) {
           >
             <span className="mobile-nav__item-path">{ABOUT_ITEM.label}</span>
             <span className="mobile-nav__item-desc">{ABOUT_ITEM.desc}</span>
+          </a>
+          <a
+            href={DISCLAIMER_ITEM.href}
+            className="mobile-nav__item mobile-nav__item--disclaimer"
+            role="menuitem"
+            onClick={() => setOpenPanel(null)}
+          >
+            <span className="mobile-nav__item-path">{DISCLAIMER_ITEM.label}</span>
+            <span className="mobile-nav__item-desc">{DISCLAIMER_ITEM.desc}</span>
           </a>
         </div>
       )}

@@ -119,9 +119,9 @@ export default function App() {
         <span className="lab-footer-line">
           AI Gamma · jump lab · four-model lineage · v0.1.0
         </span>
+        <a href="/disclaimer/" className="lab-footer-disclaimer">Disclaimer</a>
         <a href="/" className="lab-footer-home">Return Home</a>
         <a href="https://about.aigamma.com/" className="lab-footer-about">Who made this?</a>
-        <a href="/disclaimer/" className="lab-footer-disclaimer">Disclaimer</a>
       </footer>
     </div>
   );

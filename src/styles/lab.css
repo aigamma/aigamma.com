@@ -342,22 +342,26 @@
   outline: none;
 }
 
-/* Bolded footer link to the site-wide /disclaimer page. Sits below
-   the lab-footer-about "Who made this?" attribution as the third and
-   final footer affordance, in the accent-coral red so the legal /
-   risk-disclosure link reads as visually distinct from the
-   accent-green Return-Home above it and the accent-blue About below
-   the Return-Home. The intended reading order is meta-line (muted) ->
-   Return Home (primary egress, green) -> Who made this? (attribution,
-   blue) -> Disclaimer (legal, coral). The mobile breakpoint scaling
-   below mirrors lab-footer-about so the three links read at the same
-   typographic weight on phones. */
+/* Bolded footer link to the site-wide /disclaimer page. Sits at the
+   top of the footer affordance stack — directly below the Chat surface
+   above the meta-line — so a reader cannot reach the chatbot without
+   the legal / risk-disclosure egress being immediately visible. Coral +
+   uppercase + 0.1em tracking matches the visual weight of the green
+   Return-Home affordance below it (same all-caps typography pattern,
+   different accent color), so the eye reads them as a paired pair of
+   primary egress affordances rather than a primary + secondary split.
+   The intended reading order from chat down is Disclaimer (legal,
+   coral, top), Return Home (primary egress, green), Who made this?
+   (attribution, blue, bottom). The mobile breakpoint scaling below
+   mirrors lab-footer-home / lab-footer-about so the three links read
+   at the same typographic weight on phones. */
 .lab-footer-disclaimer {
   display: block;
   margin-top: 0.75rem;
   font-family: var(--font-base);
   font-size: 0.9rem;
-  letter-spacing: 0.04em;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
   text-decoration: none;
   color: var(--accent-coral);
   font-weight: 700;
@@ -601,6 +605,7 @@
   .lab-footer-disclaimer {
     font-size: 0.82rem;
     margin-top: 0.6rem;
+    letter-spacing: 0.08em;
   }
 }
 
@@ -709,7 +714,7 @@
 
   .lab-footer-disclaimer {
     font-size: 0.75rem;
-    letter-spacing: 0.03em;
+    letter-spacing: 0.06em;
   }
 }
 

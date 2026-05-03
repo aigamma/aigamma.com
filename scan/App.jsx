@@ -119,9 +119,9 @@ export default function App() {
         <span className="lab-footer-line">
           AI Gamma · Scan · top by options volume, 25Δ wings vs ATM · v0.3.0
         </span>
+        <a href="/disclaimer/" className="lab-footer-disclaimer">Disclaimer</a>
         <a href="/" className="lab-footer-home">Return Home</a>
         <a href="https://about.aigamma.com/" className="lab-footer-about">Who made this?</a>
-        <a href="/disclaimer/" className="lab-footer-disclaimer">Disclaimer</a>
       </footer>
     </div>
   );

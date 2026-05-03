@@ -6,8 +6,11 @@ import MobileNav from './MobileNav';
 // page without touching the URL bar. Items are organized into three
 // sections separated by inline section headers — Tools (operational
 // surfaces and diagnostics), Research (model-family zoos), About
-// (off-site exit to about.aigamma.com). Research stays alphabetized
-// by path so a reader who knows the URL can find it in linear time.
+// (off-site exit to about.aigamma.com plus the on-site /disclaimer
+// page that carries the as-is mathematics framing, the MIT-license
+// attribution, the no-commercial-purpose statement, and the standard
+// trading disclaimers). Research stays alphabetized by path so a
+// reader who knows the URL can find it in linear time.
 //
 // Renders TWO navigation surfaces side-by-side as a fragment so a
 // single <Menu /> mount in any page header carries both the desktop
@@ -76,6 +79,7 @@ const MENU_ITEMS = [
   { type: 'item', href: '/stochastic/',     label: '/stochastic/',     desc: 'Heston, SABR, LSV, rough Bergomi' },
   { type: 'header', label: 'About' },
   { type: 'item', href: 'https://about.aigamma.com/', label: 'About This Page' },
+  { type: 'item', href: '/disclaimer/', label: '/disclaimer/', desc: 'As-is mathematics, MIT license, no commercial purpose, standard trading disclaimers' },
 ];
 
 // Interactive subset for keyboard navigation. Pre-computed so the

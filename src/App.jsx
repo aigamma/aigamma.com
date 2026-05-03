@@ -717,6 +717,42 @@ export default function App() {
           within 400 px of the bottom of the page, which is long after all
           above-Chat cards have had a chance to hydrate and paint. */}
       <ErrorBoundary><LazyMount height="320px"><Chat /></LazyMount></ErrorBoundary>
+
+      {/* Bright-coral Disclaimer link pinned directly under the Chat
+          surface so a reader who has scrolled to the chatbot cannot
+          miss the legal / risk-disclosure egress on the way to or from
+          asking the model anything. The landing page is not a lab
+          surface (it does not import lab.css and does not render the
+          .lab-footer trio that every subpage carries below its Chat),
+          so the disclaimer affordance is reproduced inline here in the
+          same accent-coral + uppercase + 0.1em tracking the
+          .lab-footer-disclaimer class uses elsewhere on the site,
+          giving every page on aigamma.com — landing, lab, and the
+          /disclaimer page itself — a structurally identical
+          "Disclaimer above any other footer affordance, immediately
+          below the Chat" reading order. */}
+      <div style={{
+        marginTop: '2rem',
+        paddingTop: '1rem',
+        borderTop: '1px solid var(--bg-card-border)',
+        textAlign: 'center',
+      }}>
+        <a
+          href="/disclaimer/"
+          style={{
+            display: 'block',
+            fontFamily: 'var(--font-base)',
+            fontSize: '0.9rem',
+            letterSpacing: '0.1em',
+            textTransform: 'uppercase',
+            textDecoration: 'none',
+            color: 'var(--accent-coral)',
+            fontWeight: 700,
+          }}
+        >
+          Disclaimer
+        </a>
+      </div>
     </div>
   );
 }

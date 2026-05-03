@@ -150,8 +150,8 @@ export default function App() {
             Return Home
           </a>
         </span>
-        <a href="https://about.aigamma.com/" className="lab-footer-about">Who made this?</a>
         <a href="/disclaimer/" className="lab-footer-disclaimer">Disclaimer</a>
+        <a href="https://about.aigamma.com/" className="lab-footer-about">Who made this?</a>
       </footer>
     </div>
   );

@@ -493,6 +493,16 @@ body {
   border-left-color: var(--text-primary);
 }
 
+.mobile-nav__item--disclaimer {
+  color: var(--accent-coral);
+}
+
+.mobile-nav__item--disclaimer:hover,
+.mobile-nav__item--disclaimer:focus-visible {
+  background-color: rgba(231, 76, 60, 0.10);
+  border-left-color: var(--accent-coral);
+}
+
 .mobile-nav__item-path {
   font-size: 0.92rem;
   font-weight: 700;

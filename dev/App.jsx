@@ -58,8 +58,8 @@ export default function App() {
         <span className="lab-footer-line">
           AI Gamma · dev lab · peer of /alpha
         </span>
-        <a href="https://about.aigamma.com/" className="lab-footer-about">Who made this?</a>
         <a href="/disclaimer/" className="lab-footer-disclaimer">Disclaimer</a>
+        <a href="https://about.aigamma.com/" className="lab-footer-about">Who made this?</a>
       </footer>
     </div>
   );
