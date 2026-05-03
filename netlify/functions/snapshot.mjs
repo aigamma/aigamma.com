@@ -2,7 +2,7 @@
 // Browser-extension-facing endpoint. Returns a scalar snapshot of SPX
 // regime status, key dealer-positioning levels, volatility metrics, and
 // prior-trading-day deltas for the AI Gamma browser extension (see
-// aigamma-extension-1.1.2/, aigamma-extension-firefox-1.1.2/). Contract is
+// aigamma-extension-1.1.3/, aigamma-extension-firefox-1.1.3/). Contract is
 // pinned against popup.js — do not change field names or types without
 // also updating both extension clients.
 //
@@ -473,7 +473,7 @@ export default async function handler() {
     // zero crossing used for today, and diff every measured field against
     // today's. The dirs block continues to ship the three-level
     // overnightAlignment score the v1 schema expected; the deltas block is
-    // the new v2 surface that the v1.1.2 popup reads.
+    // the new v2 surface that the v1.1.3 popup reads.
     const prevRun = await prevRunPromise;
     const prevClose = prevRun ? toNum(prevRun.spot_price) : null;
     const prevTradingDate = prevRun ? prevRun.trading_date : null;

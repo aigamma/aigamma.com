@@ -293,9 +293,18 @@ function applyDeltas(d) {
   const putWallDelta = deltas.putWall ?? (ov && ov.put_wall && ov.put_wall.delta) ?? null;
   const callWallDelta = deltas.callWall ?? (ov && ov.call_wall && ov.call_wall.delta) ?? null;
 
+  // Vol Flip is a profile zero-crossing computed by interpolation between
+  // signed-gamma sample points, so it carries genuine sub-dollar precision
+  // and renders to 2 decimals like SPX. Put Wall and Call Wall are picked
+  // out of the discrete strike grid at $5 increments, so both the strike
+  // value and the strike-to-strike prev-day delta are integers — rendering
+  // them with two decimals (5500.00 (+5.00)) is misleading because no
+  // fractional cents ever exist on those rows. Format both with 0
+  // fraction digits so the wall rows read cleanly as "5500 (+5)" while
+  // Vol Flip stays at "5512.34 (+33.04)".
   setValueDelta('volFlip', 'volFlipDelta', fmt(d.volFlip, 2), signed(volFlipDelta, 2), null, deltaToneStandard(volFlipDelta));
-  setValueDelta('putWall', 'putWallDelta', fmt(d.putWall, 2), signed(putWallDelta, 2), null, deltaToneStandard(putWallDelta));
-  setValueDelta('callWall', 'callWallDelta', fmt(d.callWall, 2), signed(callWallDelta, 2), null, deltaToneStandard(callWallDelta));
+  setValueDelta('putWall', 'putWallDelta', fmt(d.putWall, 0), signed(putWallDelta, 0), null, deltaToneStandard(putWallDelta));
+  setValueDelta('callWall', 'callWallDelta', fmt(d.callWall, 0), signed(callWallDelta, 0), null, deltaToneStandard(callWallDelta));
 
   // Term Structure — VIX3M / VIX EOD ratio. Above 1.0 = Contango,
   // bullish-green; below 1.0 = Backwardation, red. The (delta) parens

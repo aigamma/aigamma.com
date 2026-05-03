@@ -19,6 +19,23 @@
 
 * { box-sizing: border-box; }
 
+/* The HTML5 `hidden` attribute defaults to `display: none`, but any
+   explicit `display:` declaration (e.g., `.alerts { display: flex }`,
+   `.alert-row { display: flex }` further down in this file) wins
+   specificity over the user-agent default. Without this rule, setting
+   `row.hidden = true` from popup.js leaves the row visible because the
+   cascade keeps the flex display active. The `!important` is required
+   because the matching `display: flex` rules below have equal selector
+   specificity (single class selector vs single attribute selector) and
+   the cascade order would otherwise pick whichever rule appears later
+   in the stylesheet. Scoped to the alert ladder selectors keeps the
+   override narrow rather than blanket-applying to every `[hidden]`
+   element on the page. */
+.alert-row[hidden],
+.alerts[hidden] {
+  display: none !important;
+}
+
 body {
   margin: 0;
   padding: 12px;

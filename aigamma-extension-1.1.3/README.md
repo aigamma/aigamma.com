@@ -9,7 +9,7 @@ no third-party runtime dependencies.
 
 ## Layout
 
-    aigamma-extension-1.1.2/
+    aigamma-extension-1.1.3/
       manifest.json
       background.js        service worker: polls snapshot, swaps icon
       popup.html
@@ -30,7 +30,7 @@ no third-party runtime dependencies.
           icon16.png
           icon32.png
 
-The Firefox build at `../aigamma-extension-firefox-1.1.2/` is byte-identical
+The Firefox build at `../aigamma-extension-firefox-1.1.3/` is byte-identical
 to this folder except for the `browser_specific_settings.gecko` block in
 the manifest (extension id `aigamma@aigamma.com`, `strict_min_version`
 `115.0`, `data_collection_permissions: { required: ["none"] }`).
@@ -106,7 +106,7 @@ neutral.
 
 1. Open `chrome://extensions`.
 2. Toggle Developer mode on (top right).
-3. Click Load unpacked and select the `aigamma-extension-1.1.2` folder.
+3. Click Load unpacked and select the `aigamma-extension-1.1.3` folder.
 4. Pin the extension from the toolbar puzzle icon.
 5. Click the icon. The popup opens and fetches from
    `aigamma.com/api/snapshot.json` and `aigamma.com/api/events-calendar`.
@@ -155,9 +155,9 @@ The response should be `200 OK` with `Access-Control-Allow-Origin: *`,
 3. Host the privacy policy at https://aigamma.com/extension-privacy.
    Source content lives in `PRIVACY.md`.
 4. Zip the *contents* of this folder (not the folder itself). On Windows
-   PowerShell, from inside `aigamma-extension-1.1.2/`:
+   PowerShell, from inside `aigamma-extension-1.1.3/`:
 
-        Compress-Archive -Path * -DestinationPath ..\aigamma-extension-1.1.2.zip
+        Compress-Archive -Path * -DestinationPath ..\aigamma-extension-1.1.3.zip
 
 5. In the developer console, click New Version and upload the zip.
 6. Submit. Review is typically one to three business days for low-permission
@@ -166,7 +166,7 @@ The response should be `200 OK` with `Access-Control-Allow-Origin: *`,
 
 ### Firefox (addons.mozilla.org)
 
-The Firefox build at `../aigamma-extension-firefox-1.1.2/` is the same code
+The Firefox build at `../aigamma-extension-firefox-1.1.3/` is the same code
 with a `browser_specific_settings.gecko` block added to the manifest. Submit
 its zip to addons.mozilla.org. AMO review typically takes three to ten
 business days.
