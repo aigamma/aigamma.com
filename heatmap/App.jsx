@@ -80,47 +80,57 @@ export default function App() {
         </div>
         <div style={{ color: 'var(--text-secondary)', lineHeight: 1.65, fontSize: '0.95rem' }}>
           <p style={{ margin: '0 0 0.7rem' }}>
-            The top ~250 single-name stocks by US options volume,
-            rendered as equal-size tiles arranged into eleven GICS
-            sector bands. Each tile is colored by the most-recent
-            session's percent change from the previous close: strong
-            red below -2%, neutral within ±0.25%, strong green above
-            +2%, with linear ramps between. Hover any tile for the
-            full company name, last price, previous close, and
-            options volume rank.
+            <strong style={{ color: 'var(--text-primary)' }}>The Grid.</strong>{' '}
+            The <strong style={{ color: 'var(--text-primary)' }}>top ~250 single-name stocks by
+            US options volume</strong>, rendered as{' '}
+            <strong style={{ color: 'var(--text-primary)' }}>equal-size tiles</strong> arranged
+            into eleven GICS sector bands. Each tile is colored by the most-recent session's
+            percent change from previous close:{' '}
+            <strong style={{ color: 'var(--accent-coral)' }}>strong red below -2%</strong>,
+            neutral within ±0.25%,{' '}
+            <strong style={{ color: 'var(--accent-green)' }}>strong green above +2%</strong>, with
+            linear ramps between. Hover any tile for company name, last price, previous close, and
+            options-volume rank.
           </p>
           <p style={{ margin: '0 0 0.7rem' }}>
-            Equal-size tiles are a deliberate departure from the
-            conventional finviz / TradingView market-cap-weighted
-            treemap. When MAG7 + a handful of mega-caps command a
-            third of the visual (NVDA + AAPL + MSFT + AMZN + AVGO +
-            GOOGL/GOOG + META account for ~32% of SP500 weight), the
-            other ~480 names compete for the remaining two-thirds and
-            most of them are illegible. Equal-size tiles give every
-            name in the universe equal visual attention. The right
-            call for an audience that cares about the names they
-            actually trade, not the names that happen to be the
-            largest by float-adjusted market cap. The universe
-            shrinks from ~503 SP500 members to the top ~250 single
-            names by options volume in exchange.
+            <strong style={{ color: 'var(--text-primary)' }}>Why equal-size?</strong>{' '}
+            A deliberate departure from the conventional finviz / TradingView{' '}
+            <strong style={{ color: 'var(--text-primary)' }}>market-cap-weighted treemap</strong>.
+            When <strong style={{ color: 'var(--text-primary)' }}>MAG7 + a handful of mega-caps
+            command a third of the visual</strong> (NVDA + AAPL + MSFT + AMZN + AVGO + GOOGL/GOOG
+            + META ≈ 32% of SP500 weight), the other ~480 names compete for the remaining
+            two-thirds and most are illegible.
+          </p>
+          <p style={{ margin: '0 0 0.7rem' }}>
+            Equal-size tiles give <strong style={{ color: 'var(--text-primary)' }}>every name
+            equal visual attention</strong> — the right call for an audience that cares about the
+            names they actually trade, not the names that happen to be the largest by
+            float-adjusted market cap. The universe shrinks from ~503 SP500 members to the{' '}
+            <strong style={{ color: 'var(--text-primary)' }}>top ~250 single names by options
+            volume</strong> in exchange.
+          </p>
+          <p style={{ margin: '0 0 0.7rem' }}>
+            <strong style={{ color: 'var(--text-primary)' }}>Constituent list.</strong>{' '}
+            A <strong style={{ color: 'var(--text-primary)' }}>Barchart "stocks screener" CSV</strong>{' '}
+            pulled manually and dropped at <strong style={{ color: 'var(--text-primary)' }}>C:\sheets\</strong>;
+            the roster generator at{' '}
+            <strong style={{ color: 'var(--text-primary)' }}>scripts/backfill/options-volume-roster.mjs</strong>{' '}
+            joins it with GICS sector classifications (the GitHub
+            datasets/s-and-p-500-companies CSV for SP500 names; a manually-maintained override map
+            for the ~90 non-SP500 names — recent IPOs, ADRs, BTC miners, space / quantum / AI
+            single names — that surface beyond the SP500).
           </p>
           <p style={{ margin: 0 }}>
-            The constituent list comes from a Barchart "stocks
-            screener" CSV pulled manually and dropped at C:\sheets\;
-            the roster generator at
-            scripts/backfill/options-volume-roster.mjs joins the
-            list with GICS sector classifications (the GitHub
-            datasets/s-and-p-500-companies CSV for SP500 names; a
-            manually-maintained override map for the ~90 non-SP500
-            names (recent IPOs, ADRs, BTC miners, space / quantum /
-            AI single names) that the options-active board surfaces
-            beyond the SP500). Live prices come from Massive's
-            grouped daily bars endpoint, two HTTP calls per page
-            load (most-recent trading day + the day before), edge-
-            cached for 60 s during market hours and 15 minutes off-
-            hours. When Massive returns an auth or 5xx error the
-            page falls back to the eleven SPDR sector ETFs in
-            ThetaData EOD as a degraded view.
+            <strong style={{ color: 'var(--text-primary)' }}>Live prices</strong> come from{' '}
+            <strong style={{ color: 'var(--text-primary)' }}>Massive's grouped daily bars
+            endpoint</strong>, two HTTP calls per page load (most-recent trading day + the day
+            before),{' '}
+            <strong style={{ color: 'var(--text-primary)' }}>edge-cached for 60 s</strong> during
+            market hours and{' '}
+            <strong style={{ color: 'var(--text-primary)' }}>15 minutes off-hours</strong>. When
+            Massive returns an auth or 5xx error the page{' '}
+            <strong style={{ color: 'var(--accent-amber)' }}>falls back to the eleven SPDR sector
+            ETFs in ThetaData EOD</strong> as a degraded view.
           </p>
         </div>
       </div>

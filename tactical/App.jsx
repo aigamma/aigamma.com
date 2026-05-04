@@ -262,54 +262,61 @@ export default function App() {
         <div style={{ color: 'var(--text-secondary)', lineHeight: 1.65, fontSize: '0.95rem' }}>
           <p style={{ margin: '0 0 0.7rem' }}>
             <strong style={{ color: 'var(--text-primary)' }}>Volatility Risk Premium.</strong>{' '}
-            The 30-day constant-maturity implied vol minus the 20-day Yang-Zhang
-            realized vol, plotted against SPX as context. Positive spread is
-            the empirically-typical state where index options price more
-            variance than the underlying delivers; negative spread is the rare
-            stress regime where realized has overshot the option market's
-            expectation. The persistently positive mean spread on SPX is the
-            phenomenon that funds the entire short-volatility trade structure
-            in the equity-index options market.
+            <strong style={{ color: 'var(--text-primary)' }}>30-day constant-maturity IV</strong> minus{' '}
+            <strong style={{ color: 'var(--text-primary)' }}>20-day Yang-Zhang realized vol</strong>,
+            plotted against SPX as context.{' '}
+            <strong style={{ color: 'var(--accent-green)' }}>Positive spread</strong> is the
+            empirically-typical state where index options price more variance than the underlying
+            delivers; <strong style={{ color: 'var(--accent-coral)' }}>negative spread</strong>{' '}
+            is the rare stress regime where realized has overshot the option market's expectation.
+            The persistently <strong style={{ color: 'var(--accent-green)' }}>positive mean spread</strong>{' '}
+            on SPX is what funds the entire short-volatility trade structure in equity-index options.
           </p>
           <p style={{ margin: '0 0 0.7rem' }}>
             <strong style={{ color: 'var(--text-primary)' }}>Term Structure.</strong>{' '}
-            ATM IV plotted against days-to-expiration across the listed
-            expirations, with cloud bands around each tenor representing the
-            historical distribution of that point. An upward slope is contango
-            and is the normal state of an index options market without imminent
-            event risk; a downward slope is backwardation and signals that
-            short-dated options are pricing more urgent vol than long-dated.
+            <strong style={{ color: 'var(--text-primary)' }}>ATM IV vs days-to-expiration</strong>{' '}
+            across the listed expirations, with{' '}
+            <strong style={{ color: 'var(--text-primary)' }}>cloud bands</strong>{' '}
+            around each tenor representing the historical distribution of that point. An upward
+            slope is <strong style={{ color: 'var(--accent-green)' }}>contango</strong> — the
+            normal state of an index market without imminent event risk. A downward slope is{' '}
+            <strong style={{ color: 'var(--accent-coral)' }}>backwardation</strong> — short-dated
+            options pricing more urgent vol than long-dated.
           </p>
           <p style={{ margin: '0 0 0.7rem' }}>
             <strong style={{ color: 'var(--text-primary)' }}>Volatility Smile.</strong>{' '}
-            One expiration slice fit by three concurrent models (Heston
-            stochastic variance, Merton diffusion-plus-jumps, and the SVI raw
-            parameterization) overlaid on the observed OTM-preferred IV
-            points. Disagreement between the three fits at the wings is the
-            interesting reading: where they agree, the smile is well-described
-            by any of them; where they diverge, the choice of model carries
-            information that a single-parameterization view would hide.
+            One expiration slice fit by three concurrent models —{' '}
+            <strong style={{ color: 'var(--text-primary)' }}>Heston</strong> stochastic variance,{' '}
+            <strong style={{ color: 'var(--text-primary)' }}>Merton</strong> diffusion-plus-jumps,
+            and the <strong style={{ color: 'var(--text-primary)' }}>SVI raw parameterization</strong>{' '}
+            — overlaid on the observed OTM-preferred IV points.{' '}
+            <strong style={{ color: 'var(--accent-amber)' }}>Disagreement at the wings</strong>{' '}
+            is the interesting reading: where the three fits agree, the smile is well-described by
+            any of them; where they diverge, the choice of model carries information.
           </p>
           <p style={{ margin: '0 0 0.7rem' }}>
             <strong style={{ color: 'var(--text-primary)' }}>Risk-Neutral Density.</strong>{' '}
-            The Breeden-Litzenberger construction: the second partial
-            derivative of European call price with respect to strike equals
-            the risk-neutral probability density of terminal spot, discounted
-            by the risk-free rate (Breeden and Litzenberger 1978). The page
-            fits Gatheral's SVI parameterization to each expiration's smile
-            and analytically differentiates the resulting call-price function,
-            sidestepping the numerical instability of differentiating observed
-            market prices twice.
+            The <strong style={{ color: 'var(--text-primary)' }}>Breeden-Litzenberger construction</strong>:
+            the <strong style={{ color: 'var(--text-primary)' }}>second partial derivative of European
+            call price with respect to strike</strong> equals the risk-neutral probability density of
+            terminal spot, discounted by the risk-free rate (Breeden and Litzenberger 1978).
+          </p>
+          <p style={{ margin: '0 0 0.7rem' }}>
+            The page fits <strong style={{ color: 'var(--text-primary)' }}>Gatheral's SVI</strong>{' '}
+            to each expiration's smile and analytically differentiates the resulting call-price
+            function, sidestepping the numerical instability of differentiating observed market
+            prices twice.
           </p>
           <p style={{ margin: 0 }}>
             <strong style={{ color: 'var(--text-primary)' }}>Fixed-Strike IV Matrix.</strong>{' '}
-            A strike-by-expiration grid of implied vols. Day-over-day IV
-            changes are exposed cell by cell when the prior-day chain is
-            available, which is how smile steepening, term-structure
-            re-pricing, and strike-level re-pricing events become visible
-            without squinting at chart overlays. The prev-day overlay is
-            fetched on idle after first paint; the matrix renders without it
-            until that fetch resolves.
+            A <strong style={{ color: 'var(--text-primary)' }}>strike × expiration grid</strong>{' '}
+            of implied vols. Day-over-day IV changes are exposed cell by cell when the prior-day
+            chain is available — how{' '}
+            <strong style={{ color: 'var(--accent-amber)' }}>smile steepening</strong>,{' '}
+            <strong style={{ color: 'var(--accent-amber)' }}>term-structure re-pricing</strong>,
+            and <strong style={{ color: 'var(--accent-amber)' }}>strike-level re-pricing</strong>{' '}
+            events become visible without squinting at chart overlays. The prev-day overlay is
+            fetched on idle; the matrix renders without it until that fetch resolves.
           </p>
         </div>
       </div>

@@ -80,37 +80,52 @@ export default function App() {
         </div>
         <div style={{ color: 'var(--text-secondary)', lineHeight: 1.65, fontSize: '0.95rem' }}>
           <p style={{ margin: '0 0 0.7rem' }}>
-            Each ticker in the top-40 options-active universe is plotted
-            in a 2x2 quadrant by 30-day ATM IV (vertical) and either
-            25-delta call skew or 25-delta put skew (horizontal). Skew is
-            measured as the wing IV minus the at-the-money IV in
-            percentage points: call_skew = call_25Δ_iv − atm_iv,
-            put_skew = put_25Δ_iv − atm_iv. Both axes are rendered as
-            percentile ranks across the universe so the median split
-            sits at the center cross-hairs regardless of the regime.
+            <strong style={{ color: 'var(--text-primary)' }}>The Quadrant.</strong>{' '}
+            Each ticker in the <strong style={{ color: 'var(--text-primary)' }}>top-40
+            options-active universe</strong> is plotted in a 2x2 quadrant by{' '}
+            <strong style={{ color: 'var(--text-primary)' }}>30-day ATM IV</strong> (vertical) and
+            either <strong style={{ color: 'var(--accent-green)' }}>25-delta call skew</strong> or{' '}
+            <strong style={{ color: 'var(--accent-coral)' }}>25-delta put skew</strong>{' '}
+            (horizontal).
           </p>
           <p style={{ margin: '0 0 0.7rem' }}>
-            For equity options the typical resting state is positive
-            put skew (left wing richer than ATM, since downside protection
-            commands a vol premium) and roughly flat or slightly negative
-            call skew. Names that drift above the median on the call-skew
-            tab are exhibiting unusual right-wing demand, frequently a
-            signal of buyout speculation, earnings call positioning, or
-            covered-call selling pressure pulling ATM down rather than
-            wings up. Names that drift above the median on the put-skew
-            tab are pricing tail-risk more aggressively than peers, which
-            often clusters by sector during earnings or macro events.
+            <strong style={{ color: 'var(--text-primary)' }}>Skew = wing IV − ATM IV</strong> in
+            percentage points:{' '}
+            <strong style={{ color: 'var(--accent-green)' }}>call_skew = call_25Δ_iv − atm_iv</strong>,{' '}
+            <strong style={{ color: 'var(--accent-coral)' }}>put_skew = put_25Δ_iv − atm_iv</strong>.
+            Both axes render as <strong style={{ color: 'var(--text-primary)' }}>percentile ranks
+            across the universe</strong> so the median split sits at the center cross-hairs
+            regardless of the regime.
+          </p>
+          <p style={{ margin: '0 0 0.7rem' }}>
+            <strong style={{ color: 'var(--text-primary)' }}>Resting state.</strong>{' '}
+            For equity options, the typical baseline is{' '}
+            <strong style={{ color: 'var(--accent-coral)' }}>positive put skew</strong> (left wing
+            richer than ATM — downside protection commands a vol premium) and roughly{' '}
+            <strong style={{ color: 'var(--accent-green)' }}>flat-or-slightly-negative call skew</strong>.
+          </p>
+          <p style={{ margin: '0 0 0.7rem' }}>
+            <strong style={{ color: 'var(--accent-green)' }}>Above the median on the call-skew
+            tab</strong>: unusual right-wing demand. Frequently a signal of{' '}
+            <strong style={{ color: 'var(--text-primary)' }}>buyout speculation</strong>,{' '}
+            <strong style={{ color: 'var(--text-primary)' }}>earnings call positioning</strong>,
+            or covered-call selling pressure pulling ATM down rather than wings up.{' '}
+            <strong style={{ color: 'var(--accent-coral)' }}>Above the median on the put-skew
+            tab</strong>: pricing tail-risk more aggressively than peers — often clusters by
+            sector during earnings or macro events.
           </p>
           <p style={{ margin: 0 }}>
-            Data comes from Massive's options snapshot endpoint, one call
-            per ticker in parallel at request time (no Supabase write
-            path). The expiration target is 30 days; the function picks
-            the listed expiration in the 21–45 DTE window that sits
-            closest to that target. Edge-cached for 60 s during market
-            hours and 15 minutes off-hours. If Massive returns auth
-            errors or thin coverage the page falls back to a deterministic
-            seed dataset and renders an amber banner so the placeholder
-            is never confused with live data.
+            <strong style={{ color: 'var(--text-primary)' }}>Data.</strong>{' '}
+            <strong style={{ color: 'var(--text-primary)' }}>Massive's options snapshot
+            endpoint</strong>, one call per ticker in parallel at request time (no Supabase write
+            path). Expiration target is{' '}
+            <strong style={{ color: 'var(--text-primary)' }}>30 days</strong>; the function picks
+            the listed expiration in the 21–45 DTE window closest to that target.{' '}
+            <strong style={{ color: 'var(--text-primary)' }}>Edge-cached 60 s</strong> during
+            market hours, 15 min off-hours. If Massive returns auth errors or thin coverage the
+            page falls back to a deterministic seed dataset and renders an{' '}
+            <strong style={{ color: 'var(--accent-amber)' }}>amber banner</strong> so the
+            placeholder is never confused with live data.
           </p>
         </div>
       </div>

@@ -132,31 +132,35 @@ export default function App() {
         </div>
         <div style={{ color: 'var(--text-secondary)', lineHeight: 1.65, fontSize: '0.95rem' }}>
           <p style={{ margin: '0 0 0.7rem' }}>
-            Every implied-vol number on the dashboard is the output of a{' '}
-            <strong style={{ color: 'var(--text-primary)' }}>model fit</strong>.
-            The site does not display raw bid / ask quotes. It displays IVs
-            that have already been through a pricing engine or a surface
-            smoother. The choice of engine and smoother is part of the
-            number.
+            <strong style={{ color: 'var(--text-primary)' }}>Every IV is a model fit.</strong>{' '}
+            The site does not display{' '}
+            <strong style={{ color: 'var(--text-primary)' }}>raw bid / ask quotes</strong>. It
+            displays IVs that have already been through a pricing engine or a surface smoother.
+            The choice of engine and smoother is part of the number.
           </p>
           <p style={{ margin: '0 0 0.7rem' }}>
-            Two schools dominate production use. Discrete pricing engines
-            rebuild the option price on a finite state space (a lattice or
-            a PDE grid) and read the IV back by Black-Scholes inversion.
-            Parametric surfaces pick a smooth functional form, fit it to
-            observed IVs, and evaluate the form everywhere else. The first
-            is what brokers run to price American-style and exotic
-            structures. The second is what risk desks run to report a
-            consistent IV surface to the rest of the firm.
+            <strong style={{ color: 'var(--text-primary)' }}>Two schools.</strong>{' '}
+            <strong style={{ color: 'var(--accent-blue)' }}>Discrete pricing engines</strong>{' '}
+            rebuild the option price on a finite state space (a lattice or a PDE grid) and read
+            the IV back by Black-Scholes inversion.{' '}
+            <strong style={{ color: 'var(--accent-purple)' }}>Parametric surfaces</strong> pick a
+            smooth functional form, fit it to observed IVs, and evaluate the form everywhere else.
+          </p>
+          <p style={{ margin: '0 0 0.7rem' }}>
+            The first is what brokers run to price{' '}
+            <strong style={{ color: 'var(--text-primary)' }}>American-style and exotic
+            structures</strong>. The second is what risk desks run to report a{' '}
+            <strong style={{ color: 'var(--text-primary)' }}>consistent IV surface</strong> to the
+            rest of the firm.
           </p>
           <p style={{ margin: 0 }}>
-            This lab runs both schools against the same live SPX chain so
-            the outputs are directly comparable. For cash-settled European
-            SPX, the tree engines collapse onto Black-Scholes by
-            construction, which makes them a clean reference against which
-            the parametric surface fits can be stress-tested. The six
-            slots are not competing for the same answer. They are each
-            showing a different piece of the fitting stack.
+            <strong style={{ color: 'var(--text-primary)' }}>Why both, side by side.</strong>{' '}
+            This lab runs both schools against the same live SPX chain so outputs are directly
+            comparable. For cash-settled European SPX, the tree engines{' '}
+            <strong style={{ color: 'var(--text-primary)' }}>collapse onto Black-Scholes by
+            construction</strong> — a clean reference against which the parametric surface fits
+            can be stress-tested. The six slots are not competing for the same answer; they each
+            show a different piece of the fitting stack.
           </p>
         </div>
       </div>

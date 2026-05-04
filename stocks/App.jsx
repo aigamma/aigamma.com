@@ -125,73 +125,80 @@ export default function App() {
         <div style={{ color: 'var(--text-secondary)', lineHeight: 1.65, fontSize: '0.95rem' }}>
           <p style={{ margin: '0 0 0.7rem' }}>
             <strong style={{ color: 'var(--text-primary)' }}>Top: Stock Performance.</strong>{' '}
-            Three horizontal bar charts ranking eleven hand-curated top
-            option-volume single-name stocks by total return over 1
-            trading day, 5 trading days (one week), and 21 trading days
-            (one month). Bars are sorted descending within each panel;
-            the top bar is the day's leader, the bottom is the day's
-            laggard. Green for positive, red for negative. The same
-            stock can lead one panel and lag another; that divergence
-            between short and long horizons is the same regime-shift
-            signal the sister Sector Performance trio on /rotations
-            surfaces, just narrowed to the eleven names a vol trader
-            actually transacts in: NVDA, TSLA, INTC, AMD, AMZN, AAPL,
-            MU, MSFT, MSTR, META, PLTR.
+            Three horizontal bar charts ranking{' '}
+            <strong style={{ color: 'var(--text-primary)' }}>eleven hand-curated top
+            option-volume single names</strong> by total return over{' '}
+            <strong style={{ color: 'var(--text-primary)' }}>1 day</strong>,{' '}
+            <strong style={{ color: 'var(--text-primary)' }}>5 days</strong>, and{' '}
+            <strong style={{ color: 'var(--text-primary)' }}>21 days</strong>. Bars sort
+            descending within each panel — top is leader, bottom is laggard.{' '}
+            <strong style={{ color: 'var(--accent-green)' }}>Green for positive</strong>,{' '}
+            <strong style={{ color: 'var(--accent-coral)' }}>red for negative</strong>. The
+            divergence between short and long horizons is the regime-shift signal.
+          </p>
+          <p style={{ margin: '0 0 0.7rem' }}>
+            The eleven names a vol trader actually transacts in:{' '}
+            <strong style={{ color: 'var(--text-primary)' }}>NVDA</strong>,{' '}
+            <strong style={{ color: 'var(--text-primary)' }}>TSLA</strong>,{' '}
+            <strong style={{ color: 'var(--text-primary)' }}>INTC</strong>,{' '}
+            <strong style={{ color: 'var(--text-primary)' }}>AMD</strong>,{' '}
+            <strong style={{ color: 'var(--text-primary)' }}>AMZN</strong>,{' '}
+            <strong style={{ color: 'var(--text-primary)' }}>AAPL</strong>,{' '}
+            <strong style={{ color: 'var(--text-primary)' }}>MU</strong>,{' '}
+            <strong style={{ color: 'var(--text-primary)' }}>MSFT</strong>,{' '}
+            <strong style={{ color: 'var(--text-primary)' }}>MSTR</strong>,{' '}
+            <strong style={{ color: 'var(--text-primary)' }}>META</strong>,{' '}
+            <strong style={{ color: 'var(--text-primary)' }}>PLTR</strong>.
           </p>
           <p style={{ margin: '0 0 0.7rem' }}>
             <strong style={{ color: 'var(--text-primary)' }}>Bottom: Relative Stock Rotations.</strong>{' '}
-            The same four-quadrant rotation plane as /rotations, mounted
-            against twenty single-name stocks (the eleven bar names plus
-            GOOGL, ORCL, NFLX, AVGO, TSM, QCOM, MRVL, HOOD, COIN). Each
-            stock lands at coordinates (rotation ratio, rotation
-            momentum), where the ratio is its relative-strength price
-            ratio expressed as a percentage of its own slow EMA (Roy
-            Mansfield's 1979 normalization) and momentum is the same
-            percentage operation applied to the ratio with a faster
-            smoother. The asymmetric slow/fast pair is what produces
-            the clockwise spiral motion that characterises a rotation
-            chart. Values above 100 on the x-axis mean the stock is
-            leading SPY on price relative to its slow average; above
-            100 on the y-axis means it's gaining on that lead relative
-            to its fast average. The 1H · 1D · 1W toggle in the meta
-            band chooses the lookback granularity (Day pairs a 5-day
-            input smoother with a 63-day slow EMA and a 13-day fast
-            EMA, Week resamples to ISO-week-end closes and uses a
-            3-week smoother + 26-week slow + 5-week fast); the 5 · 10
-            toggle chooses the trail length. Twenty was picked as the
-            density ceiling for this plane; past that the crisscrossing
-            trails get hard to read; the per-symbol toggle row above
-            the chart lets you hide individual tickers on demand to
-            declutter further.
+            The same four-quadrant rotation plane as /rotations, mounted against{' '}
+            <strong style={{ color: 'var(--text-primary)' }}>twenty single-name stocks</strong>{' '}
+            (the eleven bar names plus GOOGL, ORCL, NFLX, AVGO, TSM, QCOM, MRVL, HOOD, COIN).
+            Each stock lands at <strong style={{ color: 'var(--text-primary)' }}>(rotation ratio,
+            rotation momentum)</strong>: ratio is the stock's relative-strength price ratio as a
+            percent of its own slow EMA (<strong style={{ color: 'var(--text-primary)' }}>Roy
+            Mansfield's 1979 normalization</strong>); momentum is the same percentage operation
+            applied to the ratio with a faster smoother.
+          </p>
+          <p style={{ margin: '0 0 0.7rem' }}>
+            The asymmetric slow/fast pair produces the clockwise spiral motion. Values above 100
+            on the x-axis mean the stock is{' '}
+            <strong style={{ color: 'var(--text-primary)' }}>leading SPY on price</strong>{' '}
+            relative to its slow average; above 100 on the y-axis means it is{' '}
+            <strong style={{ color: 'var(--text-primary)' }}>gaining on that lead</strong>{' '}
+            relative to its fast average.
+          </p>
+          <p style={{ margin: '0 0 0.7rem' }}>
+            The <strong style={{ color: 'var(--text-primary)' }}>1H · 1D · 1W</strong> toggle
+            chooses lookback granularity (<strong style={{ color: 'var(--text-primary)' }}>Day</strong>{' '}
+            pairs a 5-day input smoother with a 63-day slow EMA + 13-day fast EMA;{' '}
+            <strong style={{ color: 'var(--text-primary)' }}>Week</strong> resamples to ISO-week
+            closes with a 3-week smoother + 26-week slow + 5-week fast). The{' '}
+            <strong style={{ color: 'var(--text-primary)' }}>5 · 10</strong> toggle picks trail
+            length. <strong style={{ color: 'var(--text-primary)' }}>Twenty</strong> is the
+            density ceiling — past that, crisscrossing trails get hard to read; the per-symbol
+            toggle row lets you hide individual tickers.
           </p>
           <p style={{ margin: '0 0 0.7rem' }}>
             Quadrants describe a typical clockwise rotation:{' '}
-            <strong style={{ color: '#4a9eff' }}>Improving</strong>{' '}
-            (top-left) → <strong style={{ color: '#2ecc71' }}>Leading</strong>{' '}
-            (top-right) →{' '}
-            <strong style={{ color: '#f0a030' }}>Weakening</strong>{' '}
-            (bottom-right) →{' '}
-            <strong style={{ color: '#e74c3c' }}>Lagging</strong>{' '}
-            (bottom-left) → back to Improving. Each component carries a
-            trail of dots showing where it was on each of the previous
-            sessions; the larger labeled circle marks the latest
-            position. Same color language and same math as the sector
-            rotation chart on /rotations, so reading skills transfer
-            one-to-one between the two pages.
+            <strong style={{ color: 'var(--accent-blue)' }}>Improving</strong> (top-left) →{' '}
+            <strong style={{ color: 'var(--accent-green)' }}>Leading</strong> (top-right) →{' '}
+            <strong style={{ color: '#f0a030' }}>Weakening</strong> (bottom-right) →{' '}
+            <strong style={{ color: 'var(--accent-coral)' }}>Lagging</strong> (bottom-left) → back
+            to Improving. Each stock carries a trail of dots showing where it was on each previous
+            session; the larger labeled circle marks the latest position. Same color language and
+            same math as the sector rotation chart on /rotations.
           </p>
           <p style={{ margin: 0 }}>
-            Source is ThetaData Stock Value EOD prices in
-            public.daily_eod, the same table that feeds the sector
-            rotation page. The eleven bar names and twenty rotation
-            names were curated from the 2026-04-26 Barchart options-
-            volume roster, taking the highest-OV single-name stocks
-            that also pass the "structurally always near the top" test
-            (see docs/options-volume-roster.md for the editorial
-            criteria). SPY remains the benchmark all relative-strength
-            math is computed against. For single-name stocks SPY is
-            still the right basis, the same reference point a vol
-            trader uses to read whether a name is leading or lagging
-            the broad market.
+            Source is <strong style={{ color: 'var(--text-primary)' }}>ThetaData Stock Value EOD</strong>{' '}
+            prices in <strong style={{ color: 'var(--text-primary)' }}>public.daily_eod</strong>,
+            the same table that feeds /rotations. The eleven bar names and twenty rotation names
+            were curated from the <strong style={{ color: 'var(--text-primary)' }}>2026-04-26
+            Barchart options-volume roster</strong> against the "structurally always near the top"
+            test (see docs/options-volume-roster.md).{' '}
+            <strong style={{ color: 'var(--text-primary)' }}>SPY</strong> remains the benchmark
+            all relative-strength math is computed against.
           </p>
         </div>
       </div>

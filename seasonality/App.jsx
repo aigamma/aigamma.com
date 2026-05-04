@@ -69,30 +69,39 @@ export default function App() {
         </div>
         <div style={{ color: 'var(--text-secondary)', lineHeight: 1.65, fontSize: '0.95rem' }}>
           <p style={{ margin: '0 0 0.7rem' }}>
-            Each cell is SPX's cumulative move from the prior session's
-            4:00 PM close through the end of that 30-minute window.
-            The 10:00 column reflects the first half-hour after the
-            open; the 4:00 column is the full session's close-to-close
-            change. Green cells gained since yesterday; red cells
-            lost. Color intensity scales with magnitude so a +0.60%
-            cell reaches full saturation and smaller moves read as a
-            wash.
+            <strong style={{ color: 'var(--text-primary)' }}>The Cells.</strong>{' '}
+            Each cell is SPX's <strong style={{ color: 'var(--text-primary)' }}>cumulative move
+            from the prior session's 4:00 PM close</strong> through the end of that 30-minute
+            window. The <strong style={{ color: 'var(--text-primary)' }}>10:00 column</strong>{' '}
+            reflects the first half-hour after the open; the{' '}
+            <strong style={{ color: 'var(--text-primary)' }}>4:00 column</strong> is the full
+            session's close-to-close change.{' '}
+            <strong style={{ color: 'var(--accent-green)' }}>Green cells gained</strong> since
+            yesterday; <strong style={{ color: 'var(--accent-coral)' }}>red cells lost</strong>.
+            Color intensity scales with magnitude so a{' '}
+            <strong style={{ color: 'var(--text-primary)' }}>+0.60% cell</strong> reaches full
+            saturation and smaller moves read as a wash.
           </p>
           <p style={{ margin: '0 0 0.7rem' }}>
-            The top rows aggregate across trading days rather than
-            showing a single day. A <strong style={{ color: 'var(--text-primary)' }}>40 Day Avg</strong>{' '}
-            cell at 11:30, for example, is the arithmetic mean of the
-            last 40 sessions' cumulative change at 11:30. Read
-            column-by-column, it traces the average intraday
-            trajectory. Shorter windows (5, 10, 20, 30) show whether
-            the recent regime has diverged from the longer baseline.
+            <strong style={{ color: 'var(--text-primary)' }}>Top rows aggregate</strong> across
+            trading days rather than showing a single day. A{' '}
+            <strong style={{ color: 'var(--text-primary)' }}>40 Day Avg</strong> cell at 11:30 is
+            the arithmetic mean of the last 40 sessions' cumulative change at 11:30. Read
+            column-by-column, it traces the{' '}
+            <strong style={{ color: 'var(--text-primary)' }}>average intraday trajectory</strong>.
+            Shorter windows (<strong style={{ color: 'var(--text-primary)' }}>5</strong>,{' '}
+            <strong style={{ color: 'var(--text-primary)' }}>10</strong>,{' '}
+            <strong style={{ color: 'var(--text-primary)' }}>20</strong>,{' '}
+            <strong style={{ color: 'var(--text-primary)' }}>30</strong>) show whether the recent
+            regime has diverged from the longer baseline.
           </p>
           <p style={{ margin: 0 }}>
-            Source is ThetaData Index Standard (30-minute SPX bars)
-            joined against the same provider's EOD close table. No
-            secondary feeds are blended in to extend history; any
-            tier-walled gap stays null rather than getting filled
-            from a non-normalized source.
+            <strong style={{ color: 'var(--text-primary)' }}>Source.</strong>{' '}
+            <strong style={{ color: 'var(--text-primary)' }}>ThetaData Index Standard</strong>{' '}
+            (30-minute SPX bars) joined against the same provider's EOD close table.{' '}
+            <strong style={{ color: 'var(--accent-amber)' }}>No secondary feeds</strong> are
+            blended in to extend history; any tier-walled gap stays null rather than getting
+            filled from a non-normalized source.
           </p>
         </div>
       </div>

@@ -59,35 +59,38 @@ export default function App() {
         <h2 className="expiring-gamma-explainer__title">What this page measures</h2>
         <div className="expiring-gamma-explainer__body">
           <p>
-            Each bar is one listed SPX expiration. The height above the
-            zero line is the total dollar gamma carried by every call
-            at that expiration; the depth below the zero line is the
-            same sum across puts, rendered downward so calls and puts
-            on the same date read as a mirrored pair. Both are quoted
-            in dollars per 1% move at the current spot price, the
-            standard dealer-hedging unit.
+            <strong style={{ color: 'var(--text-primary)' }}>The Bars.</strong>{' '}
+            Each bar is one listed SPX expiration. The{' '}
+            <strong style={{ color: 'var(--accent-coral)' }}>height above the zero line</strong>{' '}
+            is the total dollar gamma carried by every call at that expiration; the{' '}
+            <strong style={{ color: 'var(--accent-blue)' }}>depth below the zero line</strong>{' '}
+            is the same sum across puts, rendered downward so calls and puts on the same date read
+            as a mirrored pair. Both are quoted in{' '}
+            <strong style={{ color: 'var(--text-primary)' }}>dollars per 1% move at the current
+            spot price</strong> — the standard dealer-hedging unit.
           </p>
           <p>
-            "If spot remains where it is" is the implicit framing.
-            Every per-contract gamma value used in the sum was
-            computed at the run's spot price by the ingest, so the
-            bar at any expiration is exactly the gamma that would
-            roll off on that date assuming the index stays flat
-            between now and then. This is a frozen-book measure: it
-            ignores subsequent dealer rebalancing, OI changes, and
-            spot drift, so the right reading is "potential unwind
-            magnitude", not "forecast hedging flow".
+            <strong style={{ color: 'var(--text-primary)' }}>Frozen-book framing.</strong>{' '}
+            "If spot remains where it is" is implicit. Every per-contract gamma value used in the
+            sum was computed at the run's spot price by the ingest, so the bar at any expiration
+            is exactly the gamma that would roll off on that date assuming the index stays flat
+            between now and then. The right reading is{' '}
+            <strong style={{ color: 'var(--text-primary)' }}>potential unwind magnitude</strong>,
+            not <strong style={{ color: 'var(--text-primary)' }}>forecast hedging flow</strong> —
+            it ignores subsequent dealer rebalancing, OI changes, and spot drift.
           </p>
           <p>
-            The data scope follows the live ingest pipeline: the
-            next nine monthly OPEX dates plus every weekly within
-            thirty calendar days of today. Far-dated LEAPS contracts
-            are not in the pipeline and therefore not in the chart;
-            the bars stop at roughly nine months out. The most
-            visually prominent bars are typically the next quarterly
-            OPEX, the next monthly OPEX, and the front-week 0DTE
-            stack, which together represent the bulk of dealer gamma
-            that is structurally certain to unwind in the near term.
+            <strong style={{ color: 'var(--text-primary)' }}>Data scope.</strong>{' '}
+            The live ingest pipeline covers the{' '}
+            <strong style={{ color: 'var(--text-primary)' }}>next nine monthly OPEX dates</strong>{' '}
+            plus every weekly within{' '}
+            <strong style={{ color: 'var(--text-primary)' }}>thirty calendar days</strong>. Far-dated
+            LEAPS contracts are not in the pipeline; the bars stop at roughly nine months out. The
+            most visually prominent bars are typically the next{' '}
+            <strong style={{ color: 'var(--accent-purple)' }}>quarterly OPEX</strong>, the next{' '}
+            <strong style={{ color: 'var(--accent-amber)' }}>monthly OPEX</strong>, and the
+            front-week <strong style={{ color: 'var(--accent-green)' }}>0DTE</strong> stack — the
+            bulk of dealer gamma structurally certain to unwind in the near term.
           </p>
         </div>
       </section>

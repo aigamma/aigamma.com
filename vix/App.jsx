@@ -121,114 +121,132 @@ export default function App() {
           <p style={{ margin: '0 0 0.7rem' }}>
             <strong style={{ color: 'var(--text-primary)' }}>Snapshot.</strong>{' '}
             Friday-close levels for the six-point Cboe vol term structure
-            (VIX1D / VIX9D / VIX / VIX3M / VIX6M / VIX1Y), VVIX (the
-            option-implied vol of VIX itself), the two skew constructions
-            (Cboe SKEW and Nations SkewDex), and a derived term-structure
-            scalar (contango ratio = VIX3M ÷ VIX, rendered as a binary
-            regime label plus percent spread). Each cell carries a 1-year
-            percentile rank
-            against its own trailing 252-day distribution as the color cue,
-            so the eye reads "where in the distribution is this number"
-            without parsing the value.
+            (<strong style={{ color: 'var(--text-primary)' }}>VIX1D</strong> /{' '}
+            <strong style={{ color: 'var(--text-primary)' }}>VIX9D</strong> /{' '}
+            <strong style={{ color: 'var(--text-primary)' }}>VIX</strong> /{' '}
+            <strong style={{ color: 'var(--text-primary)' }}>VIX3M</strong> /{' '}
+            <strong style={{ color: 'var(--text-primary)' }}>VIX6M</strong> /{' '}
+            <strong style={{ color: 'var(--text-primary)' }}>VIX1Y</strong>),{' '}
+            <strong style={{ color: 'var(--text-primary)' }}>VVIX</strong> (option-implied vol of
+            VIX), the two skew constructions (<strong style={{ color: 'var(--text-primary)' }}>Cboe SKEW</strong>{' '}
+            and <strong style={{ color: 'var(--text-primary)' }}>Nations SkewDex</strong>), and a
+            derived term-structure scalar (<strong style={{ color: 'var(--text-primary)' }}>contango
+            ratio = VIX3M ÷ VIX</strong>). Each cell carries a{' '}
+            <strong style={{ color: 'var(--text-primary)' }}>1-year percentile rank</strong>{' '}
+            against its own trailing 252-day distribution as the color cue.
           </p>
           <p style={{ margin: '0 0 0.7rem' }}>
             <strong style={{ color: 'var(--text-primary)' }}>Term Structure.</strong>{' '}
-            Six points plotted in days-to-expiration on a log scale so the
-            front of the curve (1D, 9D, 30D) spaces out. Cboe doesn't
-            publish a 9-month constant-maturity index, so the 9-month
-            region of the curve is read by interpolation between VIX6M
-            (182d) and VIX1Y (365d). The long-end VIX1Y point pulls the
-            visualizable horizon out to a full year so the 6M-to-1Y leg
-            is visible rather than implicit. Three overlays (today, one
-            week ago, one month ago) read together as a flow sequence;
-            the dotted line is the per-tenor median across the full 3-year
-            backfill, providing a static baseline against which the live
-            shape is interpreted. An upward-sloping curve is contango (the
-            empirically-typical state in calm regimes), a downward slope is
-            backwardation (urgent near-term vol that historically precedes
-            the bulk of meaningful drawdowns).
+            Six points plotted in <strong style={{ color: 'var(--text-primary)' }}>days-to-expiration
+            on a log scale</strong> so the front of the curve (1D, 9D, 30D) spaces out. Three
+            overlays — <strong style={{ color: 'var(--text-primary)' }}>today</strong>,{' '}
+            <strong style={{ color: 'var(--text-primary)' }}>one week ago</strong>,{' '}
+            <strong style={{ color: 'var(--text-primary)' }}>one month ago</strong> — read
+            together as a flow sequence; the dotted line is the per-tenor median across the full
+            3-year backfill.
+          </p>
+          <p style={{ margin: '0 0 0.7rem' }}>
+            An <strong style={{ color: 'var(--accent-green)' }}>upward-sloping curve</strong> is{' '}
+            <strong style={{ color: 'var(--accent-green)' }}>contango</strong> — the empirically
+            typical state in calm regimes. A{' '}
+            <strong style={{ color: 'var(--accent-coral)' }}>downward slope</strong> is{' '}
+            <strong style={{ color: 'var(--accent-coral)' }}>backwardation</strong> — urgent
+            near-term vol that historically precedes the bulk of meaningful drawdowns.
           </p>
           <p style={{ margin: '0 0 0.7rem' }}>
             <strong style={{ color: 'var(--text-primary)' }}>Contango History.</strong>{' '}
-            VIX3M ÷ VIX over the full backfill window, with conditional fills
-            anchoring on the 1.0 line. Green band is contango (curve sloping
-            up, calm); coral band is backwardation (curve sloping down,
-            warning). The chart makes durable regime episodes visible at a
-            glance without parsing the underlying VIX level itself.
+            <strong style={{ color: 'var(--text-primary)' }}>VIX3M ÷ VIX</strong> over the full
+            backfill, with conditional fills anchoring on the{' '}
+            <strong style={{ color: 'var(--text-primary)' }}>1.0 line</strong>.{' '}
+            <strong style={{ color: 'var(--accent-green)' }}>Green band</strong> is contango (curve
+            up, calm); <strong style={{ color: 'var(--accent-coral)' }}>coral band</strong> is
+            backwardation (curve down, warning). Durable regime episodes visible at a glance
+            without parsing the underlying VIX level.
           </p>
           <p style={{ margin: '0 0 0.7rem' }}>
             <strong style={{ color: 'var(--text-primary)' }}>VRP for VIX.</strong>{' '}
-            VIX is itself an implied vol; the canonical comparison is to SPX
-            realized vol over the same horizon. This card overlays VIX
-            against the 20-day Yang-Zhang realized vol of SPX, on a shared
-            volatility axis, with SPX itself as a soft area-fill background
-            for context. The gap between the two lines is the VIX-style VRP;
-            green where VIX exceeds RV (the typical state where options
-            price more vol than the underlying delivers), coral where RV
-            exceeds VIX (rare stress regime where realized has overshot
-            option-market expectations).
+            VIX overlaid against the <strong style={{ color: 'var(--text-primary)' }}>20-day
+            Yang-Zhang realized vol of SPX</strong> on a shared axis. The gap between the two
+            lines is the VIX-style VRP:{' '}
+            <strong style={{ color: 'var(--accent-green)' }}>green where VIX exceeds RV</strong>{' '}
+            (typical), <strong style={{ color: 'var(--accent-coral)' }}>coral where RV exceeds
+            VIX</strong> (rare stress regime where realized has overshot option-market
+            expectations).
           </p>
           <p style={{ margin: '0 0 0.7rem' }}>
             <strong style={{ color: 'var(--text-primary)' }}>Mean Reversion.</strong>{' '}
-            Log-VIX has empirically well-behaved Ornstein-Uhlenbeck dynamics:
-            d log(VIX) = κ(θ − log(VIX)) dt + σ dW. The card shows the OLS
-            calibration of κ (mean-reversion speed), θ (long-term mean in VIX
-            level units), σ (vol of log-VIX), and the implied half-life
-            ln(2)/κ. The dashed forward line projects the OU expectation 60
-            trading days ahead of the latest spot. E[log VIX_T | log VIX_0]
-            = θ + (log VIX_0 − θ) · exp(−κ T). Readers can see how quickly
-            current levels are expected to drift back to θ under the model.
+            Log-VIX has empirically well-behaved Ornstein-Uhlenbeck dynamics:{' '}
+            <strong style={{ color: 'var(--text-primary)' }}>d log(VIX) = κ(θ − log(VIX)) dt + σ dW</strong>.
+            The card shows the OLS calibration of{' '}
+            <strong style={{ color: 'var(--text-primary)' }}>κ</strong> (mean-reversion speed),{' '}
+            <strong style={{ color: 'var(--text-primary)' }}>θ</strong> (long-term mean),{' '}
+            <strong style={{ color: 'var(--text-primary)' }}>σ</strong> (vol of log-VIX), and the
+            implied <strong style={{ color: 'var(--text-primary)' }}>half-life ln(2)/κ</strong>.
+          </p>
+          <p style={{ margin: '0 0 0.7rem' }}>
+            The dashed forward line projects the OU expectation{' '}
+            <strong style={{ color: 'var(--text-primary)' }}>60 trading days ahead</strong>:{' '}
+            <strong style={{ color: 'var(--text-primary)' }}>E[log VIX_T | log VIX_0] = θ + (log
+            VIX_0 − θ) · exp(−κ T)</strong>. Read it as how quickly current levels are expected to
+            drift back to θ under the model.
           </p>
           <p style={{ margin: '0 0 0.7rem' }}>
             <strong style={{ color: 'var(--text-primary)' }}>Vol of Vol.</strong>{' '}
-            VVIX is the option-implied 30-day vol on VIX itself; realized
-            vol-of-VIX is the 30-day annualized standard deviation of log
-            changes in the VIX level. Plotted on the same scale they form a
-            second-order VRP: when VVIX persistently exceeds realized
-            vol-of-VIX the option market is over-pricing future VIX
-            fluctuation. The bottom strip shows the implied-minus-realized
-            gap as a bar series so the sign and magnitude are read at a
-            glance.
+            <strong style={{ color: 'var(--text-primary)' }}>VVIX</strong> is the option-implied
+            30-day vol on VIX itself; <strong style={{ color: 'var(--text-primary)' }}>realized
+            vol-of-VIX</strong> is the 30-day annualized standard deviation of log changes in the
+            VIX level. Plotted on the same scale they form a{' '}
+            <strong style={{ color: 'var(--text-primary)' }}>second-order VRP</strong>: when VVIX
+            persistently exceeds realized vol-of-VIX the option market is over-pricing future VIX
+            fluctuation. The bottom strip shows the implied-minus-realized gap as a bar series.
           </p>
           <p style={{ margin: '0 0 0.7rem' }}>
             <strong style={{ color: 'var(--text-primary)' }}>Cross-Asset Vol.</strong>{' '}
-            Five Cboe-published implied vol indices on shared axes, indexed
-            to 100 at the start of the backfill so the reader sees relative
-            regime motion rather than absolute level. The 1-year percentile
-            rank table below surfaces divergences: equity vol low while
-            crude vol elevated would imply a single-asset stress, not a
-            broad risk-on / risk-off shift.
+            Five Cboe-published implied vol indices on shared axes,{' '}
+            <strong style={{ color: 'var(--text-primary)' }}>indexed to 100</strong> at the start
+            of the backfill so the reader sees relative regime motion rather than absolute level.
+            The 1-year percentile rank table surfaces divergences — equity vol low while crude vol
+            elevated implies single-asset stress, not a broad risk-on / risk-off shift.
           </p>
           <p style={{ margin: '0 0 0.7rem' }}>
             <strong style={{ color: 'var(--text-primary)' }}>Skew Indices.</strong>{' '}
-            Two distinct constructions of the same underlying tail-pricing
-            asymmetry: Cboe SKEW from the cumulants of the SPX option-
-            implied risk-neutral density, Nations SkewDex from a different
-            cumulant decomposition. Plotted on dual axes, divergence between
-            the two methodologies is informative about which estimator is
-            being driven by tail vs near-money asymmetry on a given day.
+            Two distinct constructions of the same tail-pricing asymmetry:{' '}
+            <strong style={{ color: 'var(--text-primary)' }}>Cboe SKEW</strong> from the cumulants
+            of the SPX option-implied risk-neutral density,{' '}
+            <strong style={{ color: 'var(--text-primary)' }}>Nations SkewDex</strong> from a
+            different cumulant decomposition. Plotted on dual axes; divergence between the two
+            methodologies is informative about which estimator is being driven by tail vs
+            near-money asymmetry on a given day.
           </p>
           <p style={{ margin: '0 0 0.7rem' }}>
             <strong style={{ color: 'var(--text-primary)' }}>Regime Matrix.</strong>{' '}
-            Discrete VIX regime classifier with thresholds at 12 / 18 / 30,
-            roughly the 30 / 60 / 90th percentiles of the 1990-onward daily
-            VIX distribution and the convention used in Cboe's own regime
-            research. Four states (calm / normal / elevated / stressed); the
-            card shows the current state, time spent in each over the
-            backfill, and the empirical 1-day / 5-day / 21-day-ahead
-            transition matrices. The diagonal is regime persistence;
+            Discrete VIX regime classifier with thresholds at{' '}
+            <strong style={{ color: 'var(--accent-green)' }}>12</strong> /{' '}
+            <strong style={{ color: 'var(--accent-amber)' }}>18</strong> /{' '}
+            <strong style={{ color: 'var(--accent-coral)' }}>30</strong> — roughly the 30 / 60 /
+            90th percentiles of the 1990-onward distribution. Four states:{' '}
+            <strong style={{ color: 'var(--accent-green)' }}>calm</strong> /{' '}
+            <strong style={{ color: 'var(--accent-blue)' }}>normal</strong> /{' '}
+            <strong style={{ color: 'var(--accent-amber)' }}>elevated</strong> /{' '}
+            <strong style={{ color: 'var(--accent-coral)' }}>stressed</strong>.
+          </p>
+          <p style={{ margin: '0 0 0.7rem' }}>
+            The card shows the current state, time spent in each over the backfill, and the
+            empirical <strong style={{ color: 'var(--text-primary)' }}>1-day / 5-day /
+            21-day-ahead transition matrices</strong>. The diagonal is regime persistence;
             off-diagonal cells visualize how regimes flow into each other.
           </p>
           <p style={{ margin: 0 }}>
             <strong style={{ color: 'var(--text-primary)' }}>Strategy Benchmarks.</strong>{' '}
-            Four Cboe option-strategy benchmark indices that monetize vol
-            exposure in distinct ways: BXM (buy-write at-the-money calls),
-            BXMD (buy-write 30-delta calls), BFLY (iron butterfly), CNDR
-            (iron condor). Plotted as growth-of-1 cumulative returns
-            indexed at backfill start so the reader sees realized payoff
-            across the full 3-year regime cycle. SPX cash is overlaid as
-            the buy-and-hold benchmark. Annualized return, vol, Sharpe, and
-            maximum drawdown for each strategy in the table below the chart.
+            Four Cboe option-strategy benchmark indices that monetize vol exposure in distinct
+            ways: <strong style={{ color: 'var(--text-primary)' }}>BXM</strong> (buy-write
+            at-the-money calls), <strong style={{ color: 'var(--text-primary)' }}>BXMD</strong>{' '}
+            (buy-write 30-delta calls), <strong style={{ color: 'var(--text-primary)' }}>BFLY</strong>{' '}
+            (iron butterfly), <strong style={{ color: 'var(--text-primary)' }}>CNDR</strong> (iron
+            condor). Plotted as <strong style={{ color: 'var(--text-primary)' }}>growth-of-1
+            cumulative returns</strong> indexed at backfill start; SPX cash overlaid as the
+            buy-and-hold benchmark. Annualized return, vol, Sharpe, and maximum drawdown for each
+            strategy in the table below.
           </p>
         </div>
       </div>

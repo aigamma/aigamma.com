@@ -97,67 +97,71 @@ export default function App() {
         </div>
         <div style={{ color: 'var(--text-secondary)', lineHeight: 1.7, fontSize: '1.1rem' }}>
           <p style={{ margin: '0 0 0.7rem' }}>
-            Upcoming earnings releases on the next five trading days
-            are plotted as single dots, filtered by default to the
-            top 100 names by US options volume so the scatter opens
-            on the same anchor universe the rest of the dashboard is
-            pricing off of and drops the long tail of low-options-
-            volume mid-caps where the chart signal is too thin to be
-            useful. The toggle pills above the chart let a reader
-            relax to a wider revenue-floor universe (Rev ≥ $5B,
-            Rev ≥ $2B, Rev ≥ $1B, Rev ≥ $500M) for slower earnings
-            periods when the Top 100 OV slice is too narrow to fill
-            the page, or widen to Top 250 OV when the default 100 is
-            still leaving market-moving names out. The same toggle
-            drives the calendar grid below the chart so both views
-            always show the same universe.
-            The horizontal axis is the calendar date the company
-            reports; the vertical axis is the options-market expected
-            move as a percent of spot. The expected move is the
-            0.85-scaled at-the-money straddle midprice on the soonest
-            expiration that captures the earnings event: same-day or
-            later for <span style={BMO_INK}>Before-Open reporters</span>,
-            next-day or later for <span style={AMC_INK}>After-Close reporters</span>,
-            since same-day options settle at 4 PM ET before an{' '}
-            <span style={AMC_INK}>after-close release</span>. The 0.85
-            factor scales the raw straddle premium down to the
-            empirically-realized post-event one-standard-deviation range,
-            correcting for the at-the-money straddle's slight overshoot
-            of a true ±1σ payoff and for the residual non-event vol baked
-            into any DTE &gt; 0 expiration. Color encodes the reporting
-            session: <span style={BMO_INK}>blue</span> for{' '}
-            <span style={BMO_INK}>Before Market Open</span>,{' '}
-            <span style={AMC_INK}>coral</span> for{' '}
-            <span style={AMC_INK}>After Market Close</span>,{' '}
-            <span style={UNK_INK}>gray</span> for{' '}
-            <span style={UNK_INK}>unconfirmed</span>. Hover any dot for
-            the full per-ticker profile, including the dollar expected
-            move, the ATM strike, and the straddle expiration.
+            <strong style={{ color: 'var(--text-primary)' }}>The Scatter.</strong>{' '}
+            Upcoming earnings releases on the{' '}
+            <strong style={{ color: 'var(--text-primary)' }}>next five trading days</strong>{' '}
+            plotted as single dots. Default scope is the{' '}
+            <strong style={{ color: 'var(--text-primary)' }}>top 100 names by US options
+            volume</strong> — the same anchor universe the rest of the dashboard prices off of —
+            dropping the long tail of low-OV mid-caps where the chart signal is too thin.
           </p>
           <p style={{ margin: '0 0 0.7rem' }}>
-            Expected move is computed server-side from the Massive
-            options snapshot. For each ticker we identify the soonest
-            listed expiration that captures the earnings event (gated
-            by reporting session as above), then pick the single strike
-            nearest spot that has both a call and a put listed at that
-            expiration, and compute 0.85 × (call mid + put mid). When
-            the ATM strike has no usable bid/ask or last-trade price on
-            either leg, the ticker drops off the chart. Earnings
-            concentrate options liquidity, so a missing ATM mid is a
-            strong signal that the data is unreliable for that ticker
-            on this snapshot rather than a sign that we should fall
-            back to a less direct estimate.
+            <strong style={{ color: 'var(--text-primary)' }}>Toggle pills</strong> above the chart
+            relax to wider revenue-floor universes (<strong style={{ color: 'var(--text-primary)' }}>Rev
+            ≥ $5B</strong>, <strong style={{ color: 'var(--text-primary)' }}>$2B</strong>,{' '}
+            <strong style={{ color: 'var(--text-primary)' }}>$1B</strong>,{' '}
+            <strong style={{ color: 'var(--text-primary)' }}>$500M</strong>) for slower earnings
+            periods, or widen to <strong style={{ color: 'var(--text-primary)' }}>Top 250 OV</strong>{' '}
+            when the default is still leaving market-moving names out. The same toggle drives the
+            calendar grid below.
+          </p>
+          <p style={{ margin: '0 0 0.7rem' }}>
+            <strong style={{ color: 'var(--text-primary)' }}>Axes.</strong>{' '}
+            Horizontal is the <strong style={{ color: 'var(--text-primary)' }}>calendar date the
+            company reports</strong>; vertical is the{' '}
+            <strong style={{ color: 'var(--text-primary)' }}>options-market expected move as a
+            percent of spot</strong>. Color encodes the reporting session:{' '}
+            <span style={BMO_INK}>blue for Before Market Open</span>,{' '}
+            <span style={AMC_INK}>coral for After Market Close</span>,{' '}
+            <span style={UNK_INK}>gray for unconfirmed</span>. Hover any dot for the full
+            per-ticker profile.
+          </p>
+          <p style={{ margin: '0 0 0.7rem' }}>
+            <strong style={{ color: 'var(--text-primary)' }}>Expected move</strong> is the{' '}
+            <strong style={{ color: 'var(--text-primary)' }}>0.85-scaled at-the-money straddle
+            midprice</strong> on the soonest expiration that captures the earnings event: same-day
+            or later for <span style={BMO_INK}>Before-Open reporters</span>, next-day or later for{' '}
+            <span style={AMC_INK}>After-Close reporters</span> (same-day options settle at 4 PM ET
+            before an <span style={AMC_INK}>after-close release</span>).
+          </p>
+          <p style={{ margin: '0 0 0.7rem' }}>
+            The <strong style={{ color: 'var(--text-primary)' }}>0.85 factor</strong> scales raw
+            straddle premium down to the empirically-realized post-event one-standard-deviation
+            range, correcting for the ATM straddle's slight overshoot of a true ±1σ payoff and
+            for residual non-event vol baked into any DTE &gt; 0 expiration.
+          </p>
+          <p style={{ margin: '0 0 0.7rem' }}>
+            <strong style={{ color: 'var(--text-primary)' }}>How it's computed.</strong>{' '}
+            Server-side from the <strong style={{ color: 'var(--text-primary)' }}>Massive options
+            snapshot</strong>. For each ticker we identify the soonest listed expiration that
+            captures the event, pick the single strike nearest spot that has both a call and a put
+            listed, and compute{' '}
+            <strong style={{ color: 'var(--text-primary)' }}>0.85 × (call mid + put mid)</strong>.
+            When the ATM strike has no usable bid/ask or last-trade price on either leg, the
+            ticker drops off the chart — earnings concentrate options liquidity, so a missing ATM
+            mid is a strong signal the data is unreliable rather than a sign to fall back to a
+            less direct estimate.
           </p>
           <p style={{ margin: 0 }}>
-            The four-week upcoming grid below the chart shares the
-            chart's filter, so by default it lists every release on
-            the Top 100 OV roster, sorted within each{' '}
+            <strong style={{ color: 'var(--text-primary)' }}>The Grid.</strong>{' '}
+            The four-week upcoming grid shares the chart's filter, so by default it lists every
+            release on the Top 100 OV roster, sorted within each{' '}
             <span style={BMO_INK}>Before-Open</span> /{' '}
-            <span style={AMC_INK}>After-Close</span> cell by revenue
-            estimate descending. Sorting by revenue surfaces the
-            day's most market-moving reporters first. The revenue
-            estimate is q1RevEst from EW, with prior-quarter actual
-            sales as a fallback when the estimate is null.
+            <span style={AMC_INK}>After-Close</span> cell by{' '}
+            <strong style={{ color: 'var(--text-primary)' }}>revenue estimate descending</strong>{' '}
+            so the day's most market-moving reporters land at the top. Revenue estimate is{' '}
+            <strong style={{ color: 'var(--text-primary)' }}>q1RevEst from EW</strong>, with
+            prior-quarter actual sales as a fallback when the estimate is null.
           </p>
         </div>
       </div>

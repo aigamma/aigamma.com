@@ -99,141 +99,141 @@ export default function App() {
         <div style={{ color: 'var(--text-secondary)', lineHeight: 1.65, fontSize: '0.95rem' }}>
           <p style={{ margin: '0 0 0.7rem' }}>
             <strong style={{ color: 'var(--text-primary)' }}>Universe.</strong>{' '}
-            US-only macro events for the next four weeks. The
-            /api/events-calendar Netlify Function filters
-            non-USD rows out at the server, so the wire payload is the
-            ~80–100 USD events in scope. Each row carries a title, a
-            High / Medium / Low / Holiday impact tier, the FF forecast
-            and previous values, and an event timestamp resolved to the
-            reader's local timezone.
+            <strong style={{ color: 'var(--text-primary)' }}>US-only macro events</strong> for the
+            next four weeks (~80–100 USD events). Each row carries a title, a{' '}
+            <strong style={{ color: 'var(--accent-coral)' }}>High</strong> /{' '}
+            <strong style={{ color: 'var(--accent-amber)' }}>Medium</strong> /{' '}
+            <strong style={{ color: 'var(--text-primary)' }}>Low</strong> /{' '}
+            <strong style={{ color: 'var(--accent-cyan)' }}>Holiday</strong> impact tier, the FF
+            forecast and previous values, and an event timestamp resolved to the reader's local
+            timezone.
           </p>
           <p style={{ margin: '0 0 0.7rem' }}>
             <strong style={{ color: 'var(--text-primary)' }}>Implied Move.</strong>{' '}
-            Every event is decorated with the IV-implied 1-σ SPX move
-            between now and the next listed expiration AT-OR-AFTER the
-            event date: move = spot × ATM IV × √(DTE/365). Spot price
-            and per-expiration ATM IV are pulled in parallel from
-            /api/data?skip_contracts=1, the same intraday snapshot the
-            main dashboard reads, with the contracts column projection
-            skipped so the wire is small. The framing is "what would
-            you be hedging if you bought a straddle today, conditional
-            on the event being the next material catalyst"; it is the
-            to-expiration σ move, not an isolated event-only premium.
+            Every event is decorated with the IV-implied 1-σ SPX move between now and the next
+            listed expiration AT-OR-AFTER the event date:{' '}
+            <strong style={{ color: 'var(--text-primary)' }}>move = spot × ATM IV × √(DTE/365)</strong>.
+            Spot and per-expiration ATM IV are pulled from{' '}
+            <strong style={{ color: 'var(--text-primary)' }}>/api/data?skip_contracts=1</strong>{' '}
+            in parallel — the framing is "what would you be hedging if you bought a straddle today,
+            conditional on the event being the next material catalyst", not an isolated event-only
+            premium.
           </p>
           <p style={{ margin: '0 0 0.7rem' }}>
             <strong style={{ color: 'var(--text-primary)' }}>Hero &amp; Countdown.</strong>{' '}
-            The hero card features the next upcoming event (or, when the
-            next item is part of a same-day same-family cluster, the
-            full cluster). It runs a 1-second-tick HH:MM:SS countdown
-            that pauses on hidden tabs, the macro-family badge, the
-            forecast / previous values, and the implied SPX move at the
-            next expiration in both ±$ and percent. The pre-event
-            urgency tier of the countdown timer changes color as the
-            event approaches; an opt-in browser-Notification 5-minute
-            lead alert fires before the next high-impact print.
+            The next upcoming event (or its same-day same-family cluster) with a{' '}
+            <strong style={{ color: 'var(--text-primary)' }}>1-second-tick HH:MM:SS countdown</strong>{' '}
+            that pauses on hidden tabs, the macro-family badge, forecast / previous values, and
+            the implied SPX move in both ±$ and percent. The countdown's urgency tier{' '}
+            <strong style={{ color: 'var(--accent-amber)' }}>changes color as the event
+            approaches</strong>; an opt-in browser-Notification fires{' '}
+            <strong style={{ color: 'var(--text-primary)' }}>5 minutes ahead</strong> of the next
+            high-impact print.
           </p>
           <p style={{ margin: '0 0 0.7rem' }}>
             <strong style={{ color: 'var(--text-primary)' }}>Sticky Pin.</strong>{' '}
-            An IntersectionObserver-driven slim bar pins the next-event
-            countdown to the top of the viewport when the hero card
-            scrolls out of view, so the time-to-event signal is always
-            on screen while the reader works through the schedule
-            below. Threshold trips at 20% intersection ratio so the
-            sticky bar does not flicker on small scroll deltas.
+            An IntersectionObserver-driven slim bar pins the next-event countdown to the top of
+            the viewport when the hero scrolls out of view. Threshold trips at{' '}
+            <strong style={{ color: 'var(--text-primary)' }}>20% intersection ratio</strong> so
+            the sticky bar does not flicker on small scroll deltas.
           </p>
           <p style={{ margin: '0 0 0.7rem' }}>
             <strong style={{ color: 'var(--text-primary)' }}>Totals.</strong>{' '}
-            Per-impact event counts in scope (High / Medium / Low) plus
-            an Upcoming tally, the subset of scoped events whose
-            timestamp is still in the future. Holiday rows are folded
-            into the Low total since they affect session timing rather
-            than carrying their own forecast / previous numerics.
+            Per-impact event counts in scope (<strong style={{ color: 'var(--accent-coral)' }}>High</strong>{' '}
+            / <strong style={{ color: 'var(--accent-amber)' }}>Medium</strong> /{' '}
+            <strong style={{ color: 'var(--text-primary)' }}>Low</strong>) plus an{' '}
+            <strong style={{ color: 'var(--text-primary)' }}>Upcoming</strong> tally — the subset
+            whose timestamp is still in the future.{' '}
+            <strong style={{ color: 'var(--accent-cyan)' }}>Holiday</strong> rows fold into the
+            Low total since they affect session timing rather than carrying forecast numerics.
           </p>
           <p style={{ margin: '0 0 0.7rem' }}>
             <strong style={{ color: 'var(--text-primary)' }}>Chart Filters.</strong>{' '}
-            Toggleable High / Medium / Low / Holiday pills control which
-            macro events render on both the Timeline Strip and the Day
-            Schedule. The default scope is High-only because high-impact
-            rows are the catalysts the SPX vol surface actually reprices
-            around; broader scopes are available for readers who want
-            full context. A separate Earnings toggle layers the Top-100
-            options-volume earnings calendar on the timeline as its own
-            family.
+            Toggleable <strong style={{ color: 'var(--accent-coral)' }}>High</strong> /{' '}
+            <strong style={{ color: 'var(--accent-amber)' }}>Medium</strong> /{' '}
+            <strong style={{ color: 'var(--text-primary)' }}>Low</strong> /{' '}
+            <strong style={{ color: 'var(--accent-cyan)' }}>Holiday</strong> pills control both
+            the Timeline Strip and the Day Schedule. Default scope is{' '}
+            <strong style={{ color: 'var(--accent-coral)' }}>High-only</strong> — these are the
+            catalysts SPX vol actually reprices around. A separate Earnings toggle layers the
+            Top-100 options-volume earnings calendar as its own family.
           </p>
           <p style={{ margin: '0 0 0.7rem' }}>
             <strong style={{ color: 'var(--text-primary)' }}>Timeline Strip.</strong>{' '}
-            Seven-day forward horizontal visualization: one row per
-            calendar day, dots positioned by their hour-of-day inside a
-            6 AM – 8 PM window. Marker radius keys impact (High = 6.5 px,
-            Medium = 4.5 px, Low = 3 px); marker color keys macro
-            family per the spotlight palette (FOMC amber, CPI coral, NFP
-            green, GDP blue, PCE purple, PPI amber, ISM cyan, JOBS
-            green). Today's row carries an accent-amber dashed NOW
-            vertical line; past dots fade. Hover any marker for the
-            forecast / previous / implied-move detail; same-minute
-            collisions cluster into a single hover-target with a list
-            tooltip rather than rendering coincident dots.
+            Seven-day forward visualization: one row per calendar day, dots positioned by
+            hour-of-day inside a <strong style={{ color: 'var(--text-primary)' }}>6 AM – 8 PM</strong>{' '}
+            window. Marker radius keys impact (<strong style={{ color: 'var(--accent-coral)' }}>High
+            = 6.5 px</strong>, <strong style={{ color: 'var(--accent-amber)' }}>Medium = 4.5 px</strong>,{' '}
+            <strong style={{ color: 'var(--text-primary)' }}>Low = 3 px</strong>); marker color
+            keys family per the spotlight palette below.
+          </p>
+          <p style={{ margin: '0 0 0.7rem' }}>
+            Today's row carries an <strong style={{ color: 'var(--accent-amber)' }}>amber dashed
+            NOW vertical line</strong>; past dots fade. Hover any marker for forecast / previous /
+            implied-move detail; same-minute collisions cluster into a single hover-target with a
+            list tooltip rather than rendering coincident dots.
           </p>
           <p style={{ margin: '0 0 0.7rem' }}>
             <strong style={{ color: 'var(--text-primary)' }}>Spotlight Strip.</strong>{' '}
-            One card per macro family with at least one event in scope
-            this week. Family classification is regex-based against the
-            event title (\bFOMC\b / Federal Funds Rate, \bCPI\b /
-            Consumer Price, Non-Farm Employment Change, \bGDP\b,
-            \bPCE\b, \bPPI\b, \bISM\b, Unemployment Claims / Job
-            Openings), eight families in total, each with its own
-            color identity that is shared with the Timeline Strip dots.
-            The strip surfaces the next chronological release in each
-            family with its countdown and implied move, so a desk
-            reader can ask "when's the next CPI" without scanning the
-            full schedule.
+            One card per macro family with at least one event in scope this week. Eight families,
+            each with its own color identity shared with the Timeline Strip dots:{' '}
+            <strong style={{ color: 'var(--accent-amber)' }}>FOMC amber</strong>,{' '}
+            <strong style={{ color: 'var(--accent-coral)' }}>CPI coral</strong>,{' '}
+            <strong style={{ color: 'var(--accent-green)' }}>NFP green</strong>,{' '}
+            <strong style={{ color: 'var(--accent-blue)' }}>GDP blue</strong>,{' '}
+            <strong style={{ color: 'var(--accent-purple)' }}>PCE purple</strong>,{' '}
+            <strong style={{ color: 'var(--accent-amber)' }}>PPI amber</strong>,{' '}
+            <strong style={{ color: 'var(--accent-cyan)' }}>ISM cyan</strong>,{' '}
+            <strong style={{ color: 'var(--accent-green)' }}>JOBS green</strong>. The strip
+            surfaces the next chronological release in each family with its countdown and implied
+            move.
           </p>
           <p style={{ margin: '0 0 0.7rem' }}>
             <strong style={{ color: 'var(--text-primary)' }}>Day Schedule.</strong>{' '}
-            Chronological timeline of the full scoped feed grouped by
-            date. Each day header carries impact-count chips (High /
-            Medium / Low) so the day's intensity reads at a glance.
-            Click any row to expand a detail panel exposing the FF
-            source link, an .ics calendar download plus one-click
-            Google Calendar and Outlook add-event deep links, the
-            per-event implied-move detail line, a forecast-vs-previous
-            interpretation, and a contextual news-search link
-            constructed from the event title. Past-event rows fade and
-            can be hidden via the Hide-past toggle.
+            Chronological timeline of the full scoped feed grouped by date. Each day header
+            carries impact-count chips so the day's intensity reads at a glance. Click any row to
+            expand a detail panel exposing the FF source link, an{' '}
+            <strong style={{ color: 'var(--text-primary)' }}>.ics calendar download</strong> plus
+            one-click <strong style={{ color: 'var(--text-primary)' }}>Google Calendar</strong> /{' '}
+            <strong style={{ color: 'var(--text-primary)' }}>Outlook</strong> add-event deep
+            links, the per-event implied-move detail line, a forecast-vs-previous interpretation,
+            and a contextual news-search link.
           </p>
           <p style={{ margin: '0 0 0.7rem' }}>
             <strong style={{ color: 'var(--text-primary)' }}>Forecast Interpretation.</strong>{' '}
-            The expanded row carries a one-line plain-English read of
-            the forecast versus the previous print, color-coded by
-            economic direction rather than sign. CPI, PPI, PCE, and
-            other inflation rows tint coral when the forecast prints
-            hotter than previous (a hawkish-leaning surprise from the
-            options market's point of view) and green when softer; NFP,
-            GDP, ISM, and other activity rows tint green when the
-            forecast prints stronger and coral when weaker. The numeric
-            delta and percent change render alongside, so the reader
-            sees both the direction and the magnitude.
+            One-line plain-English read of forecast vs previous, color-coded by{' '}
+            <strong style={{ color: 'var(--text-primary)' }}>economic direction</strong> rather
+            than sign. <strong style={{ color: 'var(--accent-coral)' }}>CPI</strong>,{' '}
+            <strong style={{ color: 'var(--accent-amber)' }}>PPI</strong>,{' '}
+            <strong style={{ color: 'var(--accent-purple)' }}>PCE</strong>, and other inflation
+            rows tint <strong style={{ color: 'var(--accent-coral)' }}>coral when hotter</strong>{' '}
+            (hawkish-leaning surprise) and{' '}
+            <strong style={{ color: 'var(--accent-green)' }}>green when softer</strong>;{' '}
+            <strong style={{ color: 'var(--accent-green)' }}>NFP</strong>,{' '}
+            <strong style={{ color: 'var(--accent-blue)' }}>GDP</strong>,{' '}
+            <strong style={{ color: 'var(--accent-cyan)' }}>ISM</strong>, and other activity rows
+            tint <strong style={{ color: 'var(--accent-green)' }}>green when stronger</strong> and{' '}
+            <strong style={{ color: 'var(--accent-coral)' }}>coral when weaker</strong>.
           </p>
           <p style={{ margin: '0 0 0.7rem' }}>
             <strong style={{ color: 'var(--text-primary)' }}>Earnings Layer.</strong>{' '}
-            When the Earnings toggle is on, the Timeline Strip also
-            plots upcoming Top-100 options-volume earnings releases as
-            their own purple-dot family, sourced from /api/earnings's
-            calendarDays projection. Each ticker is positioned at its
-            session-derived hour-of-day (BMO at 07:00, AMC at 16:30,
-            unknown sessions at 12:00 noon), so the dots sit on the
-            same per-day track as the macro events and the reader can
-            see "FOMC at 14:00 with three large earnings stacked
-            against it 30 minutes later" without flipping pages.
+            When the Earnings toggle is on, the Timeline Strip also plots upcoming Top-100
+            options-volume earnings releases as their own{' '}
+            <strong style={{ color: 'var(--accent-purple)' }}>purple-dot family</strong>. Each
+            ticker is positioned at its session hour-of-day (<strong style={{ color: 'var(--text-primary)' }}>BMO
+            07:00</strong>, <strong style={{ color: 'var(--text-primary)' }}>AMC 16:30</strong>,
+            unknown 12:00 noon), so the dots sit on the same per-day track as the macro events.
           </p>
           <p style={{ margin: 0 }}>
             <strong style={{ color: 'var(--text-primary)' }}>Data Layer.</strong>{' '}
-            Three parallel fetches drive the page: /api/events-calendar
-            (the FF aggregator), /api/data?skip_contracts=1 (the SPX
-            intraday snapshot for spot + per-expiration ATM IV), and
-            /api/earnings (the Top-100-OV earnings calendar). All three
-            poll on a 10-minute cadence with a Page Visibility refresh
-            on tab return. Times render in the reader's local timezone.
+            Three parallel fetches:{' '}
+            <strong style={{ color: 'var(--text-primary)' }}>/api/events-calendar</strong> (FF
+            aggregator), <strong style={{ color: 'var(--text-primary)' }}>/api/data?skip_contracts=1</strong>{' '}
+            (SPX snapshot for spot + ATM IV), and{' '}
+            <strong style={{ color: 'var(--text-primary)' }}>/api/earnings</strong> (Top-100-OV
+            earnings). All three poll on a{' '}
+            <strong style={{ color: 'var(--text-primary)' }}>10-minute cadence</strong> with a
+            Page Visibility refresh on tab return.
           </p>
         </div>
       </div>

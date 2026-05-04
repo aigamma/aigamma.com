@@ -104,71 +104,64 @@ export default function App() {
         <div style={{ color: 'var(--text-secondary)', lineHeight: 1.65, fontSize: '0.95rem' }}>
           <p style={{ margin: '0 0 0.7rem' }}>
             <strong style={{ color: 'var(--text-primary)' }}>Top: Sector Performance.</strong>{' '}
-            Three horizontal bar charts ranking the eleven GICS sectors
-            by total return over 1 trading day, 5 trading days (one week),
-            and 21 trading days (one month). Bars are sorted descending
-            within each panel; the top bar is the day's leader, the
-            bottom is the day's laggard. Green for positive, red for
-            negative. The same sector can lead one panel and lag another;
-            that divergence between short and long horizons is the
-            primary regime-shift signal these bars are designed to
-            surface.
+            Three horizontal bar charts ranking the{' '}
+            <strong style={{ color: 'var(--text-primary)' }}>eleven GICS sectors</strong> by total
+            return over <strong style={{ color: 'var(--text-primary)' }}>1 day</strong>,{' '}
+            <strong style={{ color: 'var(--text-primary)' }}>5 days</strong>, and{' '}
+            <strong style={{ color: 'var(--text-primary)' }}>21 days</strong>. Bars sort
+            descending — top is leader, bottom is laggard.{' '}
+            <strong style={{ color: 'var(--accent-green)' }}>Green for positive</strong>,{' '}
+            <strong style={{ color: 'var(--accent-coral)' }}>red for negative</strong>. The
+            divergence between short and long horizons is the primary regime-shift signal.
           </p>
           <p style={{ margin: '0 0 0.7rem' }}>
             <strong style={{ color: 'var(--text-primary)' }}>Bottom: Relative Sector Rotations.</strong>{' '}
-            Each component lands on the plane at coordinates (rotation
-            ratio, rotation momentum). The ratio is the component's
-            relative-strength price ratio expressed as a percentage of
-            its own slow exponential moving average. This is Roy
-            Mansfield's 1979 "Mansfield Relative Performance"
-            normalization, with an EMA in place of his original 52-week
-            SMA so old samples decay smoothly rather than dropping off
-            a fixed window edge. A short input EMA pre-smooths the raw
-            relative-strength series before the percentage-of-moving-
-            average operation runs, dampening the period-to-period
-            noise that would otherwise zigzag the ratio output on
-            sideways-moving components. The momentum is the same
-            percentage-of-moving-average operation applied to the
-            ratio with a faster smoother; because the fast EMA
-            responds to recent changes in ratio ahead of the slow EMA,
-            momentum naturally leads ratio in time and traces the
-            clockwise spiral pattern that characterises a rotation
-            chart. Two toggles in the card's meta band drive the view.
-            The 1H · 1D · 1W toggle chooses the lookback granularity
-            (Day pairs a 5-day input smoother with a 63-day slow EMA
-            and a 13-day fast EMA, Week resamples to ISO-week-end
-            closes and uses a 3-week input smoother, a 26-week slow
-            EMA, and a 5-week fast EMA, Hour requires intraday ETF
-            bars that are not yet ingested into Supabase). The 5 · 10
-            toggle chooses the trail length: 5 for a tight recent
-            snapshot, 10 for a longer window of historical motion.
-            Values above 100 on the x-axis mean the component is
-            leading SPY on price relative to its slow average; above
-            100 on the y-axis means it's gaining on that lead relative
-            to its fast average.
+            Each component lands at <strong style={{ color: 'var(--text-primary)' }}>(rotation
+            ratio, rotation momentum)</strong>. Ratio is the relative-strength price ratio as a
+            percentage of its own slow EMA — the{' '}
+            <strong style={{ color: 'var(--text-primary)' }}>Mansfield Relative Performance</strong>{' '}
+            (Roy Mansfield 1979) normalization, with an EMA in place of his 52-week SMA so old
+            samples decay smoothly. A short input EMA pre-smooths the raw series to dampen
+            zigzag.
+          </p>
+          <p style={{ margin: '0 0 0.7rem' }}>
+            <strong style={{ color: 'var(--text-primary)' }}>Momentum</strong> is the same
+            percentage-of-moving-average applied to the ratio with a faster smoother; the fast EMA
+            responds to recent changes ahead of the slow EMA, so momentum naturally{' '}
+            <strong style={{ color: 'var(--text-primary)' }}>leads ratio in time</strong> and
+            traces the clockwise spiral pattern that characterises a rotation chart.
+          </p>
+          <p style={{ margin: '0 0 0.7rem' }}>
+            The <strong style={{ color: 'var(--text-primary)' }}>1H · 1D · 1W</strong> toggle
+            chooses lookback granularity (<strong style={{ color: 'var(--text-primary)' }}>Day</strong>{' '}
+            pairs a 5-day input smoother with a 63-day slow EMA + 13-day fast EMA;{' '}
+            <strong style={{ color: 'var(--text-primary)' }}>Week</strong> resamples to ISO-week
+            closes with a 3-week smoother + 26-week slow + 5-week fast;{' '}
+            <strong style={{ color: 'var(--text-primary)' }}>Hour</strong> requires intraday ETF
+            bars not yet ingested). The{' '}
+            <strong style={{ color: 'var(--text-primary)' }}>5 · 10</strong> toggle picks trail
+            length. Values above 100 on the x-axis mean leading SPY on price relative to slow
+            average; above 100 on the y-axis means gaining on that lead relative to fast average.
           </p>
           <p style={{ margin: '0 0 0.7rem' }}>
             Quadrants describe a typical clockwise rotation:{' '}
-            <strong style={{ color: '#4a9eff' }}>Improving</strong>{' '}
-            (top-left) → <strong style={{ color: '#2ecc71' }}>Leading</strong>{' '}
-            (top-right) →{' '}
-            <strong style={{ color: '#f0a030' }}>Weakening</strong>{' '}
-            (bottom-right) →{' '}
-            <strong style={{ color: '#e74c3c' }}>Lagging</strong>{' '}
-            (bottom-left) → back to Improving. Each component carries a
-            trail of dots showing where it was on each of the previous
-            sessions; the larger labeled circle marks the latest
-            position.
+            <strong style={{ color: 'var(--accent-blue)' }}>Improving</strong> (top-left) →{' '}
+            <strong style={{ color: 'var(--accent-green)' }}>Leading</strong> (top-right) →{' '}
+            <strong style={{ color: '#f0a030' }}>Weakening</strong> (bottom-right) →{' '}
+            <strong style={{ color: 'var(--accent-coral)' }}>Lagging</strong> (bottom-left) → back
+            to Improving. Each component carries a trail of dots showing where it was on each
+            previous session; the larger labeled circle marks the latest position.
           </p>
           <p style={{ margin: 0 }}>
-            Source is ThetaData Stock Value EOD prices in
-            public.daily_eod. The sector bars at the top of the page
-            restrict themselves to the eleven SPDR sectors (XLB, XLC,
-            XLE, XLF, XLI, XLK, XLP, XLRE, XLU, XLV, XLY) so the chart
-            matches the conventional GICS-sector framing; the rotation
-            scatter underneath adds three theme ETFs to that list (XBI
-            biotech, XME metals &amp; mining, KWEB China internet) so
-            its universe matches the reference rotation chart.
+            Source is <strong style={{ color: 'var(--text-primary)' }}>ThetaData Stock Value EOD</strong>{' '}
+            prices in <strong style={{ color: 'var(--text-primary)' }}>public.daily_eod</strong>.
+            The sector bars restrict themselves to the eleven SPDR sectors (XLB, XLC, XLE, XLF,
+            XLI, XLK, XLP, XLRE, XLU, XLV, XLY) so the chart matches conventional{' '}
+            <strong style={{ color: 'var(--text-primary)' }}>GICS-sector framing</strong>; the
+            rotation scatter adds three theme ETFs (<strong style={{ color: 'var(--text-primary)' }}>XBI</strong>{' '}
+            biotech, <strong style={{ color: 'var(--text-primary)' }}>XME</strong> metals &amp;
+            mining, <strong style={{ color: 'var(--text-primary)' }}>KWEB</strong> China internet)
+            so its universe matches the reference rotation chart.
           </p>
         </div>
       </div>
