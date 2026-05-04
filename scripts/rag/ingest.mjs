@@ -78,12 +78,6 @@ const SOURCES = [
   { rel: 'netlify/functions/prompts/core_persona.mjs', surface: 'all', kind: 'system_prompt_global', extract: extractTemplateLiteral, title: 'Core persona' },
   { rel: 'netlify/functions/prompts/behavior.mjs',     surface: 'all', kind: 'system_prompt_global', extract: extractTemplateLiteral, title: 'Behavioral constraints' },
   { rel: 'netlify/functions/prompts/site_nav.mjs',     surface: 'all', kind: 'system_prompt_global', extract: extractTemplateLiteral, title: 'Site navigation context' },
-
-  // Reference / knowledge rows (pulled by similarity match)
-  { rel: 'CLAUDE.md',  surface: 'all', kind: 'reference', extract: readAsIs, title: 'Project architecture and conventions' },
-  { rel: 'AGENTS.md',  surface: 'all', kind: 'reference', extract: readAsIs, title: 'Agent operational notes' },
-  { rel: 'docs/options-volume-roster.md',  surface: 'heatmap', kind: 'reference', extract: readAsIs, title: 'Options-volume roster reference' },
-  { rel: 'docs/earnings-data-roadmap.md',  surface: 'earnings', kind: 'reference', extract: readAsIs, title: 'Earnings data roadmap' },
 ];
 
 // Extract the contents of the first export-default-ed or named-export
