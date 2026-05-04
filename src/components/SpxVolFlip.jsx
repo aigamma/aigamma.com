@@ -218,6 +218,14 @@ function computeYRange(series, xStart, xEnd, includeCallWall, includePutWall) {
 // which is the whole reason these exist in place of the prior
 // "legendonly" grayed-out legend entries.
 function ToggleButton({ active, onClick, label, activeBg, activeBorder, mobile }) {
+  // Mobile draws a thicker (2 px) border and a less-faded inactive
+  // outline so the toggle reads as a button at a glance even when off,
+  // sitting in the same horizontal row as the right-aligned mobile
+  // title and matching its ~20-22 px line height. Desktop keeps the
+  // original 1 px outline since the toggle has more horizontal real
+  // estate next to the centered Plotly title there.
+  const borderWidth = mobile ? 2 : 1;
+  const inactiveBorder = mobile ? 'rgba(138,143,156,0.55)' : 'rgba(138,143,156,0.35)';
   return (
     <button
       type="button"
@@ -225,11 +233,11 @@ function ToggleButton({ active, onClick, label, activeBg, activeBorder, mobile }
       aria-pressed={active}
       style={{
         background: active ? activeBg : 'transparent',
-        border: `1px solid ${active ? activeBorder : 'rgba(138,143,156,0.35)'}`,
+        border: `${borderWidth}px solid ${active ? activeBorder : inactiveBorder}`,
         borderRadius: '3px',
-        padding: mobile ? '0.1rem 0.4rem' : '0.2rem 0.55rem',
+        padding: '0.2rem 0.55rem',
         fontFamily: PLOTLY_FONT_FAMILY,
-        fontSize: mobile ? '0.7rem' : '0.75rem',
+        fontSize: '0.75rem',
         letterSpacing: '0.08em',
         textTransform: 'uppercase',
         cursor: 'pointer',
@@ -460,13 +468,22 @@ export default function SpxVolFlip() {
       size: mobile ? 12 : 16,
     };
     const layout = plotly2DChartLayout({
-      margin: mobile ? { t: 70, r: 20, b: 40, l: 60 } : { t: 95, r: 30, b: 45, l: 80 },
-      title: {
-        ...plotlyTitle('SPX vs Vol Flip'),
-        y: 0.97,
-        yref: 'container',
-        yanchor: 'top',
-      },
+      // On mobile the title is rendered as an HTML span overlay
+      // anchored to the top-right of the card (so it sits in line with
+      // the Put Wall / Call Wall toggle row on the left), so the Plotly
+      // title slot is empty and the top margin can shrink to ~40 px,
+      // freeing vertical space for the chart at narrow viewport
+      // heights. Desktop still uses the centered Plotly title at
+      // y: 0.97 of the container as before.
+      margin: mobile ? { t: 40, r: 20, b: 40, l: 60 } : { t: 95, r: 30, b: 45, l: 80 },
+      title: mobile
+        ? plotlyTitle('')
+        : {
+            ...plotlyTitle('SPX vs Vol Flip'),
+            y: 0.97,
+            yref: 'container',
+            yanchor: 'top',
+          },
       xaxis: plotlyAxis('', {
         type: 'date',
         range: [windowStart, windowEnd],
@@ -556,6 +573,44 @@ export default function SpxVolFlip() {
         />
         <ResetButton visible={timeRange != null} onClick={() => setTimeRange(null)} inline />
       </div>
+      {/* Mobile title overlay: right-aligned to the card's right edge
+          and anchored at the same top offset as the Put Wall / Call
+          Wall toggle cluster on the left, so the title and the toggles
+          read as a single horizontal row across the top of the card.
+          A flex wrapper with a fixed pixel height vertically centers
+          the 20 px title text against the toggle buttons (which sit at
+          ~22 px tall thanks to their 0.2 rem vertical padding plus the
+          mobile 2 px border), and pointerEvents: none keeps the
+          overlay from intercepting Plotly hover events. The Plotly
+          title slot above is set to empty on mobile so the chart does
+          not render two stacked titles. Desktop still uses the
+          centered Plotly title and skips this overlay entirely. */}
+      {mobile && (
+        <div
+          style={{
+            position: 'absolute',
+            top: '0.3rem',
+            right: '0.5rem',
+            height: '24px',
+            zIndex: 5,
+            display: 'flex',
+            alignItems: 'center',
+            pointerEvents: 'none',
+          }}
+        >
+          <span
+            style={{
+              color: PLOTLY_COLORS.titleText,
+              fontFamily: PLOTLY_FONT_FAMILY,
+              fontSize: '20px',
+              lineHeight: 1,
+              whiteSpace: 'nowrap',
+            }}
+          >
+            SPX vs Vol Flip
+          </span>
+        </div>
+      )}
       <div
         ref={chartRef}
         style={{ width: '100%', height: '560px', backgroundColor: 'var(--bg-card)' }}
