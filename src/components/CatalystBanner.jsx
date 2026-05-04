@@ -247,13 +247,13 @@ export default function CatalystBanner() {
         accent={{ bg: 'rgba(231, 76, 60, 0.10)', border: 'rgba(231, 76, 60, 0.55)', fg: '#e74c3c' }}
       />
       <CatalystPill
-        label="24-48h"
+        label="25-48h"
         title="Approaching — 24 to 48 hours"
         items={buckets.orange}
         accent={{ bg: 'rgba(231, 138, 60, 0.10)', border: 'rgba(231, 138, 60, 0.55)', fg: '#f0a030' }}
       />
       <CatalystPill
-        label="48-72h"
+        label="49-72h"
         title="Upcoming — 48 to 72 hours"
         items={buckets.yellow}
         accent={{ bg: 'rgba(241, 196, 15, 0.10)', border: 'rgba(241, 196, 15, 0.45)', fg: '#f1c40f' }}
