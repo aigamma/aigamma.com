@@ -1150,7 +1150,23 @@ body {
     letter-spacing: 0.06em;
   }
 
-  .chat-body { max-height: 60vh; }
+  /* On mobile the welcome state was clamped at max-height: 60vh, which on
+     a 360 px-wide viewport could not fit the per-page welcome string plus
+     the ~210-char disclaimer blurb (1.15 rem Courier monospace at line-
+     height 1.6 wraps the combination to 14-18 lines = roughly 420-540 px
+     of content), forcing the disclaimer underneath an inner scroll bar
+     that most readers never hit. The default state now occupies the same
+     calc(100vh - 180px) the active state uses — large enough that the
+     welcome + disclaimer renders in full on every common modern phone,
+     and consistent with the active size so the body does not jump in
+     height when the first prompt is sent. The 180 px figure mirrors the
+     active rule: tabs (~44 px) + input row (~76 px) + breathing room +
+     mobile-chrome slack. */
+  .chat-body {
+    height: calc(100vh - 180px);
+    min-height: calc(100vh - 180px);
+    max-height: calc(100vh - 180px);
+  }
   .chat-tab { padding: 0.75rem 0.75rem; font-size: 0.62rem; }
   .chat-input-row { padding: 0.75rem 1rem; }
 
