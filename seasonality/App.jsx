@@ -96,12 +96,11 @@ export default function App() {
             regime has diverged from the longer baseline.
           </p>
           <p style={{ margin: 0 }}>
-            <strong style={{ color: 'var(--text-primary)' }}>Source.</strong>{' '}
-            <strong style={{ color: 'var(--text-primary)' }}>ThetaData Index Standard</strong>{' '}
-            (30-minute SPX bars) joined against the same provider's EOD close table.{' '}
-            <strong style={{ color: 'var(--accent-amber)' }}>No secondary feeds</strong> are
-            blended in to extend history; any tier-walled gap stays null rather than getting
-            filled from a non-normalized source.
+            <strong style={{ color: 'var(--text-primary)' }}>Reading the recent rows.</strong>{' '}
+            The lower section lists the eight most recent trading sessions as individual rows so
+            today's intraday shape can be compared against the rolling-average pattern at a
+            glance. Days that diverge from the multi-window averages above are the ones to read
+            closely.
           </p>
         </div>
       </div>

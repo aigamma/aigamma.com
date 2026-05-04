@@ -411,7 +411,7 @@ export default function SlotB() {
     return (
       <section className="econ-events econ-events--bare">
         <div className="econ-events__status econ-events__status--error">
-          Could not reach /api/events-calendar: {feed.error}
+          Could not load the events calendar: {feed.error}
         </div>
       </section>
     );

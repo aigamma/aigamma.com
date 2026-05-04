@@ -131,7 +131,7 @@ export default function App() {
             <strong style={{ color: 'var(--text-primary)' }}>1 day</strong>,{' '}
             <strong style={{ color: 'var(--text-primary)' }}>5 days</strong>, and{' '}
             <strong style={{ color: 'var(--text-primary)' }}>21 days</strong>. Bars sort
-            descending within each panel — top is leader, bottom is laggard.{' '}
+            descending within each panel: top is leader, bottom is laggard.{' '}
             <strong style={{ color: 'var(--accent-green)' }}>Green for positive</strong>,{' '}
             <strong style={{ color: 'var(--accent-coral)' }}>red for negative</strong>. The
             divergence between short and long horizons is the regime-shift signal.
@@ -177,28 +177,19 @@ export default function App() {
             closes with a 3-week smoother + 26-week slow + 5-week fast). The{' '}
             <strong style={{ color: 'var(--text-primary)' }}>5 · 10</strong> toggle picks trail
             length. <strong style={{ color: 'var(--text-primary)' }}>Twenty</strong> is the
-            density ceiling — past that, crisscrossing trails get hard to read; the per-symbol
+            density ceiling: past that, crisscrossing trails get hard to read; the per-symbol
             toggle row lets you hide individual tickers.
           </p>
-          <p style={{ margin: '0 0 0.7rem' }}>
-            Quadrants describe a typical clockwise rotation:{' '}
-            <strong style={{ color: 'var(--accent-blue)' }}>Improving</strong> (top-left) →{' '}
-            <strong style={{ color: 'var(--accent-green)' }}>Leading</strong> (top-right) →{' '}
-            <strong style={{ color: '#f0a030' }}>Weakening</strong> (bottom-right) →{' '}
-            <strong style={{ color: 'var(--accent-coral)' }}>Lagging</strong> (bottom-left) → back
-            to Improving. Each stock carries a trail of dots showing where it was on each previous
-            session; the larger labeled circle marks the latest position. Same color language and
-            same math as the sector rotation chart on /rotations.
-          </p>
           <p style={{ margin: 0 }}>
-            Source is <strong style={{ color: 'var(--text-primary)' }}>ThetaData Stock Value EOD</strong>{' '}
-            prices in <strong style={{ color: 'var(--text-primary)' }}>public.daily_eod</strong>,
-            the same table that feeds /rotations. The eleven bar names and twenty rotation names
-            were curated from the <strong style={{ color: 'var(--text-primary)' }}>2026-04-26
-            Barchart options-volume roster</strong> against the "structurally always near the top"
-            test (see docs/options-volume-roster.md).{' '}
-            <strong style={{ color: 'var(--text-primary)' }}>SPY</strong> remains the benchmark
-            all relative-strength math is computed against.
+            Quadrants describe a typical clockwise rotation:{' '}
+            <strong style={{ color: 'var(--accent-blue)' }}>Improving</strong> (top-left),{' '}
+            <strong style={{ color: 'var(--accent-green)' }}>Leading</strong> (top-right),{' '}
+            <strong style={{ color: '#f0a030' }}>Weakening</strong> (bottom-right),{' '}
+            <strong style={{ color: 'var(--accent-coral)' }}>Lagging</strong> (bottom-left), and
+            back to Improving. Each stock carries a trail of dots showing where it was on each previous
+            session; the larger labeled circle marks the latest position.{' '}
+            <strong style={{ color: 'var(--text-primary)' }}>SPY</strong> is the benchmark all
+            relative-strength math is computed against.
           </p>
         </div>
       </div>

@@ -621,7 +621,7 @@ export default function App() {
             <strong style={{ color: 'var(--accent-coral)' }}>dealers amplify them</strong>); and the{' '}
             <strong style={{ color: 'var(--accent-coral)' }}>put wall</strong>,{' '}
             <strong style={{ color: 'var(--accent-amber)' }}>vol flip</strong>, and{' '}
-            <strong style={{ color: 'var(--accent-green)' }}>call wall</strong> scalars — the per-strike net-GEX extremes
+            <strong style={{ color: 'var(--accent-green)' }}>call wall</strong> scalars. These are the per-strike net-GEX extremes
             within{' '}
             <strong style={{ color: 'var(--text-primary)' }}>±15% of spot</strong> plus the zero-crossing of the gamma
             profile. Auxiliary tiles carry{' '}
@@ -635,11 +635,11 @@ export default function App() {
           </p>
           <p style={{ margin: '0 0 0.7rem' }}>
             <strong style={{ color: 'var(--text-primary)' }}>Catalyst Banner.</strong>{' '}
-            Three time-bucketed pills —{' '}
-            <strong style={{ color: 'var(--accent-coral)' }}>red 0–24 h</strong>,{' '}
+            Three time-bucketed pills.{' '}
+            <strong style={{ color: 'var(--accent-coral)' }}>Red 0–24 h</strong>,{' '}
             <strong style={{ color: '#f0a030' }}>orange 25–48 h</strong>,{' '}
-            <strong style={{ color: 'var(--accent-amber)' }}>yellow 49–72 h</strong> — aggregating{' '}
-            <strong style={{ color: 'var(--text-primary)' }}>Top-100 options-volume earnings</strong> (anchored to{' '}
+            <strong style={{ color: 'var(--accent-amber)' }}>yellow 49–72 h</strong>, aggregating{' '}
+            <strong style={{ color: 'var(--text-primary)' }}>top options-volume earnings</strong> (anchored to{' '}
             <strong style={{ color: 'var(--text-primary)' }}>BMO 7:00</strong> /{' '}
             <strong style={{ color: 'var(--text-primary)' }}>AMC 16:30 ET</strong> session midpoints) and{' '}
             <strong style={{ color: 'var(--text-primary)' }}>High-or-Medium-impact USD macro events</strong> ({' '}
@@ -660,17 +660,17 @@ export default function App() {
             <strong style={{ color: 'var(--accent-amber)' }}>amber dashed line marks the flip</strong>. Standing on the{' '}
             <strong style={{ color: 'var(--accent-green)' }}>green side</strong> of the flip means dealers{' '}
             <strong style={{ color: 'var(--accent-green)' }}>buy dips and sell rips</strong>; standing on the{' '}
-            <strong style={{ color: 'var(--accent-coral)' }}>coral side</strong> means the opposite — small moves get{' '}
+            <strong style={{ color: 'var(--accent-coral)' }}>coral side</strong> means the opposite. Small moves get{' '}
             <strong style={{ color: 'var(--accent-coral)' }}>magnified into larger ones</strong>.
           </p>
           <p style={{ margin: '0 0 0.7rem' }}>
             <strong style={{ color: 'var(--text-primary)' }}>GEX Profile.</strong>{' '}
             Per-strike <strong style={{ color: 'var(--accent-green)' }}>call (green)</strong> and{' '}
             <strong style={{ color: 'var(--accent-coral)' }}>put (coral)</strong> gamma exposure as bars, with the
-            previous session's bars rendered behind today's at low opacity so re-pricings — a{' '}
+            previous session's bars rendered behind today's at low opacity so re-pricings (a{' '}
             <strong style={{ color: 'var(--accent-coral)' }}>put wall</strong> migrating, a{' '}
             <strong style={{ color: 'var(--accent-green)' }}>call wall</strong> flattening,{' '}
-            <strong style={{ color: 'var(--text-primary)' }}>ATM gamma stacking up into a pin</strong> — are visible at
+            <strong style={{ color: 'var(--text-primary)' }}>ATM gamma stacking up into a pin</strong>) are visible at
             a glance. The vertical axis uses{' '}
             <strong style={{ color: 'var(--text-primary)' }}>symlog compression</strong> so the deep-OTM tail stays
             readable without crushing the ATM bars. Use the expiration picker in the strip above to isolate a single
@@ -685,18 +685,18 @@ export default function App() {
             <strong style={{ color: 'var(--accent-coral)' }}>put-wall</strong> and{' '}
             <strong style={{ color: 'var(--accent-green)' }}>call-wall</strong> step lines toggle on; the y-axis
             tightens when those walls are hidden so the spot/flip band fills the frame. Reading regime durations off
-            this chart is the empirical answer to "how long do we typically stay on one side of the flip" — much of the
+            this chart is the empirical answer to "how long do we typically stay on one side of the flip". Much of the
             time-series sits on one side for{' '}
             <strong style={{ color: 'var(--text-primary)' }}>weeks before crossing</strong>.
           </p>
           <p style={{ margin: '0 0 0.7rem' }}>
             <strong style={{ color: 'var(--text-primary)' }}>Dealer Gamma Regime.</strong>{' '}
-            SPX close drawn as a thin connector with one dot per session —{' '}
-            <strong style={{ color: 'var(--accent-green)' }}>green on positive-gamma days</strong>,{' '}
-            <strong style={{ color: 'var(--accent-coral)' }}>coral on negative</strong> — sourced from the
-            postmarket-stamped daily regime column. Reading top-down, this is the historical companion to the live
-            regime pill in the Levels strip: same classification, same colors, but stretched out across the full{' '}
-            <strong style={{ color: 'var(--text-primary)' }}>ThetaData Options Standard backfill</strong> so persistent
+            SPX close drawn as a thin connector with one dot per session.{' '}
+            <strong style={{ color: 'var(--accent-green)' }}>Green on positive-gamma days</strong>,{' '}
+            <strong style={{ color: 'var(--accent-coral)' }}>coral on negative</strong>, classified by the postmarket
+            regime read. Reading top-down, this is the historical companion to the live
+            regime pill in the Levels strip: same classification, same colors, but stretched out across years of
+            history so persistent
             regime episodes (the long stretches of{' '}
             <strong style={{ color: 'var(--accent-coral)' }}>negative gamma in 2018, 2020, 2022</strong>) read as{' '}
             <strong style={{ color: 'var(--accent-coral)' }}>continuous coral bands</strong> rather than as isolated
@@ -724,8 +724,8 @@ export default function App() {
             <strong style={{ color: 'var(--text-primary)' }}>RV vs Flip.</strong>{' '}
             Each session is a dot at{' '}
             <strong style={{ color: 'var(--text-primary)' }}>(gamma index, 10-day realized vol)</strong>, colored on a{' '}
-            <strong style={{ color: 'var(--accent-coral)' }}>red</strong> →{' '}
-            <strong style={{ color: 'var(--accent-amber)' }}>amber</strong> →{' '}
+            <strong style={{ color: 'var(--accent-coral)' }}>red</strong> to{' '}
+            <strong style={{ color: 'var(--accent-amber)' }}>amber</strong> to{' '}
             <strong style={{ color: 'var(--accent-blue)' }}>blue</strong> ramp by the index sign. The dashed
             exponential fit{' '}
             <strong style={{ color: 'var(--text-primary)' }}>y = a · exp(b · x)</strong> traces the{' '}

@@ -71,7 +71,7 @@ export default function App() {
             recommending trades or expressing personal opinions on the
             direction of any market, and Anthropic's own usage policies
             and model training apply additional safety layers on top of
-            that — but neither layer is a guarantee. Treat any chatbot
+            that. Neither layer is a guarantee. Treat any chatbot
             response as a description of the math on the page you happen
             to be on, not as a directive about what to do next.
           </p>
@@ -79,7 +79,7 @@ export default function App() {
             <strong style={{ color: 'var(--text-primary)' }}>Blogs and written content.</strong>{' '}
             Any blog posts, essays, or commentary published on this site
             are open journaling of the author's own findings while working
-            through the math — not financial advice, not recommendations,
+            through the math. They are not financial advice, not recommendations,
             and not representations of what anyone other than the author
             thinks at the moment of writing. Read them as a notebook left
             open, and interpret them entirely on your own terms.
@@ -116,7 +116,7 @@ export default function App() {
             tooling to analyze markets for the author's own purposes and
             shares the tooling publicly{' '}
             <em>as-is, without warranty of any kind</em>, in the spirit
-            of the MIT license itself — and not as a recommendation that
+            of the MIT license itself, and not as a recommendation that
             anyone else use it for the same purpose.
           </p>
           <p style={{ margin: 0 }}>

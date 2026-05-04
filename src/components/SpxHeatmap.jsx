@@ -290,9 +290,9 @@ export default function SpxHeatmap() {
             borderRadius: '3px',
           }}
         >
-          Live single-name prices unavailable from Massive (
+          Live single-name prices unavailable (
           {data.massiveFailure || 'no detail'}). Showing eleven sector ETFs
-          from ThetaData EOD as a fallback view.
+          on EOD prices as a fallback view.
         </div>
       )}
 

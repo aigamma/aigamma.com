@@ -139,24 +139,24 @@ export default function App() {
             <strong style={{ color: 'var(--text-primary)' }}>Term Structure.</strong>{' '}
             Six points plotted in <strong style={{ color: 'var(--text-primary)' }}>days-to-expiration
             on a log scale</strong> so the front of the curve (1D, 9D, 30D) spaces out. Three
-            overlays — <strong style={{ color: 'var(--text-primary)' }}>today</strong>,{' '}
-            <strong style={{ color: 'var(--text-primary)' }}>one week ago</strong>,{' '}
-            <strong style={{ color: 'var(--text-primary)' }}>one month ago</strong> — read
-            together as a flow sequence; the dotted line is the per-tenor median across the full
-            3-year backfill.
+            overlays read together as a flow sequence:{' '}
+            <strong style={{ color: 'var(--text-primary)' }}>today</strong>,{' '}
+            <strong style={{ color: 'var(--text-primary)' }}>one week ago</strong>, and{' '}
+            <strong style={{ color: 'var(--text-primary)' }}>one month ago</strong>. The dotted
+            line is the per-tenor long-run median.
           </p>
           <p style={{ margin: '0 0 0.7rem' }}>
             An <strong style={{ color: 'var(--accent-green)' }}>upward-sloping curve</strong> is{' '}
-            <strong style={{ color: 'var(--accent-green)' }}>contango</strong> — the empirically
+            <strong style={{ color: 'var(--accent-green)' }}>contango</strong>, the empirically
             typical state in calm regimes. A{' '}
             <strong style={{ color: 'var(--accent-coral)' }}>downward slope</strong> is{' '}
-            <strong style={{ color: 'var(--accent-coral)' }}>backwardation</strong> — urgent
+            <strong style={{ color: 'var(--accent-coral)' }}>backwardation</strong>: urgent
             near-term vol that historically precedes the bulk of meaningful drawdowns.
           </p>
           <p style={{ margin: '0 0 0.7rem' }}>
             <strong style={{ color: 'var(--text-primary)' }}>Contango History.</strong>{' '}
             <strong style={{ color: 'var(--text-primary)' }}>VIX3M ÷ VIX</strong> over the full
-            backfill, with conditional fills anchoring on the{' '}
+            history, with conditional fills anchoring on the{' '}
             <strong style={{ color: 'var(--text-primary)' }}>1.0 line</strong>.{' '}
             <strong style={{ color: 'var(--accent-green)' }}>Green band</strong> is contango (curve
             up, calm); <strong style={{ color: 'var(--accent-coral)' }}>coral band</strong> is
@@ -204,8 +204,8 @@ export default function App() {
             <strong style={{ color: 'var(--text-primary)' }}>Cross-Asset Vol.</strong>{' '}
             Five Cboe-published implied vol indices on shared axes,{' '}
             <strong style={{ color: 'var(--text-primary)' }}>indexed to 100</strong> at the start
-            of the backfill so the reader sees relative regime motion rather than absolute level.
-            The 1-year percentile rank table surfaces divergences — equity vol low while crude vol
+            of the window so the reader sees relative regime motion rather than absolute level.
+            The 1-year percentile rank table surfaces divergences. Equity vol low while crude vol
             elevated implies single-asset stress, not a broad risk-on / risk-off shift.
           </p>
           <p style={{ margin: '0 0 0.7rem' }}>
@@ -223,7 +223,7 @@ export default function App() {
             Discrete VIX regime classifier with thresholds at{' '}
             <strong style={{ color: 'var(--accent-green)' }}>12</strong> /{' '}
             <strong style={{ color: 'var(--accent-amber)' }}>18</strong> /{' '}
-            <strong style={{ color: 'var(--accent-coral)' }}>30</strong> — roughly the 30 / 60 /
+            <strong style={{ color: 'var(--accent-coral)' }}>30</strong>, roughly the 30 / 60 /
             90th percentiles of the 1990-onward distribution. Four states:{' '}
             <strong style={{ color: 'var(--accent-green)' }}>calm</strong> /{' '}
             <strong style={{ color: 'var(--accent-blue)' }}>normal</strong> /{' '}
@@ -231,7 +231,7 @@ export default function App() {
             <strong style={{ color: 'var(--accent-coral)' }}>stressed</strong>.
           </p>
           <p style={{ margin: '0 0 0.7rem' }}>
-            The card shows the current state, time spent in each over the backfill, and the
+            The card shows the current state, time spent in each over the full history, and the
             empirical <strong style={{ color: 'var(--text-primary)' }}>1-day / 5-day /
             21-day-ahead transition matrices</strong>. The diagonal is regime persistence;
             off-diagonal cells visualize how regimes flow into each other.
@@ -244,7 +244,7 @@ export default function App() {
             (buy-write 30-delta calls), <strong style={{ color: 'var(--text-primary)' }}>BFLY</strong>{' '}
             (iron butterfly), <strong style={{ color: 'var(--text-primary)' }}>CNDR</strong> (iron
             condor). Plotted as <strong style={{ color: 'var(--text-primary)' }}>growth-of-1
-            cumulative returns</strong> indexed at backfill start; SPX cash overlaid as the
+            cumulative returns</strong> indexed to the start of the window; SPX cash overlaid as the
             buy-and-hold benchmark. Annualized return, vol, Sharpe, and maximum drawdown for each
             strategy in the table below.
           </p>

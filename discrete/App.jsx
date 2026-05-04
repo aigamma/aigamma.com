@@ -158,7 +158,7 @@ export default function App() {
             This lab runs both schools against the same live SPX chain so outputs are directly
             comparable. For cash-settled European SPX, the tree engines{' '}
             <strong style={{ color: 'var(--text-primary)' }}>collapse onto Black-Scholes by
-            construction</strong> — a clean reference against which the parametric surface fits
+            construction</strong>: a clean reference against which the parametric surface fits
             can be stress-tested. The six slots are not competing for the same answer; they each
             show a different piece of the fitting stack.
           </p>

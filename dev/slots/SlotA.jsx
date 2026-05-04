@@ -307,7 +307,7 @@ export default function SlotA() {
       <div className="lab-placeholder">
         <div className="lab-placeholder-title">Loading SPX history…</div>
         <div className="lab-placeholder-hint">
-          Fetching the daily close series from <code>/api/gex-history</code>.
+          Loading the daily close series.
         </div>
       </div>
     );

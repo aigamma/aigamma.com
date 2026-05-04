@@ -238,7 +238,7 @@ export default function EarningsCalendar() {
           padding: '0.5rem 0.75rem',
           borderRadius: '3px',
         }}>
-          EarningsWhispers reachability degraded ({data.ewDegrade}). Some days may
+          Earnings calendar reachability degraded ({data.ewDegrade}). Some days may
           render empty or partial.
         </div>
       )}

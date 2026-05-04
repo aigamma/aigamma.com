@@ -278,18 +278,18 @@ export default function App() {
             across the listed expirations, with{' '}
             <strong style={{ color: 'var(--text-primary)' }}>cloud bands</strong>{' '}
             around each tenor representing the historical distribution of that point. An upward
-            slope is <strong style={{ color: 'var(--accent-green)' }}>contango</strong> — the
+            slope is <strong style={{ color: 'var(--accent-green)' }}>contango</strong>, the
             normal state of an index market without imminent event risk. A downward slope is{' '}
-            <strong style={{ color: 'var(--accent-coral)' }}>backwardation</strong> — short-dated
+            <strong style={{ color: 'var(--accent-coral)' }}>backwardation</strong>: short-dated
             options pricing more urgent vol than long-dated.
           </p>
           <p style={{ margin: '0 0 0.7rem' }}>
             <strong style={{ color: 'var(--text-primary)' }}>Volatility Smile.</strong>{' '}
-            One expiration slice fit by three concurrent models —{' '}
+            One expiration slice fit by three concurrent models:{' '}
             <strong style={{ color: 'var(--text-primary)' }}>Heston</strong> stochastic variance,{' '}
             <strong style={{ color: 'var(--text-primary)' }}>Merton</strong> diffusion-plus-jumps,
-            and the <strong style={{ color: 'var(--text-primary)' }}>SVI raw parameterization</strong>{' '}
-            — overlaid on the observed OTM-preferred IV points.{' '}
+            and the <strong style={{ color: 'var(--text-primary)' }}>SVI raw parameterization</strong>,
+            overlaid on the observed OTM-preferred IV points.{' '}
             <strong style={{ color: 'var(--accent-amber)' }}>Disagreement at the wings</strong>{' '}
             is the interesting reading: where the three fits agree, the smile is well-described by
             any of them; where they diverge, the choice of model carries information.
@@ -311,12 +311,11 @@ export default function App() {
             <strong style={{ color: 'var(--text-primary)' }}>Fixed-Strike IV Matrix.</strong>{' '}
             A <strong style={{ color: 'var(--text-primary)' }}>strike × expiration grid</strong>{' '}
             of implied vols. Day-over-day IV changes are exposed cell by cell when the prior-day
-            chain is available — how{' '}
+            chain is available, so{' '}
             <strong style={{ color: 'var(--accent-amber)' }}>smile steepening</strong>,{' '}
             <strong style={{ color: 'var(--accent-amber)' }}>term-structure re-pricing</strong>,
             and <strong style={{ color: 'var(--accent-amber)' }}>strike-level re-pricing</strong>{' '}
-            events become visible without squinting at chart overlays. The prev-day overlay is
-            fetched on idle; the matrix renders without it until that fetch resolves.
+            events become visible without squinting at chart overlays.
           </p>
         </div>
       </div>

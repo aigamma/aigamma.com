@@ -104,7 +104,7 @@ export default function App() {
             <strong style={{ color: 'var(--accent-coral)' }}>High</strong> /{' '}
             <strong style={{ color: 'var(--accent-amber)' }}>Medium</strong> /{' '}
             <strong style={{ color: 'var(--text-primary)' }}>Low</strong> /{' '}
-            <strong style={{ color: 'var(--accent-cyan)' }}>Holiday</strong> impact tier, the FF
+            <strong style={{ color: 'var(--accent-cyan)' }}>Holiday</strong> impact tier, the
             forecast and previous values, and an event timestamp resolved to the reader's local
             timezone.
           </p>
@@ -113,9 +113,7 @@ export default function App() {
             Every event is decorated with the IV-implied 1-σ SPX move between now and the next
             listed expiration AT-OR-AFTER the event date:{' '}
             <strong style={{ color: 'var(--text-primary)' }}>move = spot × ATM IV × √(DTE/365)</strong>.
-            Spot and per-expiration ATM IV are pulled from{' '}
-            <strong style={{ color: 'var(--text-primary)' }}>/api/data?skip_contracts=1</strong>{' '}
-            in parallel — the framing is "what would you be hedging if you bought a straddle today,
+            The framing is "what would you be hedging if you bought a straddle today,
             conditional on the event being the next material catalyst", not an isolated event-only
             premium.
           </p>
@@ -142,8 +140,8 @@ export default function App() {
             Per-impact event counts in scope (<strong style={{ color: 'var(--accent-coral)' }}>High</strong>{' '}
             / <strong style={{ color: 'var(--accent-amber)' }}>Medium</strong> /{' '}
             <strong style={{ color: 'var(--text-primary)' }}>Low</strong>) plus an{' '}
-            <strong style={{ color: 'var(--text-primary)' }}>Upcoming</strong> tally — the subset
-            whose timestamp is still in the future.{' '}
+            <strong style={{ color: 'var(--text-primary)' }}>Upcoming</strong> tally that counts
+            only events whose timestamp is still in the future.{' '}
             <strong style={{ color: 'var(--accent-cyan)' }}>Holiday</strong> rows fold into the
             Low total since they affect session timing rather than carrying forecast numerics.
           </p>
@@ -154,9 +152,9 @@ export default function App() {
             <strong style={{ color: 'var(--text-primary)' }}>Low</strong> /{' '}
             <strong style={{ color: 'var(--accent-cyan)' }}>Holiday</strong> pills control both
             the Timeline Strip and the Day Schedule. Default scope is{' '}
-            <strong style={{ color: 'var(--accent-coral)' }}>High-only</strong> — these are the
+            <strong style={{ color: 'var(--accent-coral)' }}>High-only</strong>: these are the
             catalysts SPX vol actually reprices around. A separate Earnings toggle layers the
-            Top-100 options-volume earnings calendar as its own family.
+            top options-volume earnings calendar as its own family.
           </p>
           <p style={{ margin: '0 0 0.7rem' }}>
             <strong style={{ color: 'var(--text-primary)' }}>Timeline Strip.</strong>{' '}
@@ -192,7 +190,7 @@ export default function App() {
             <strong style={{ color: 'var(--text-primary)' }}>Day Schedule.</strong>{' '}
             Chronological timeline of the full scoped feed grouped by date. Each day header
             carries impact-count chips so the day's intensity reads at a glance. Click any row to
-            expand a detail panel exposing the FF source link, an{' '}
+            expand a detail panel with an{' '}
             <strong style={{ color: 'var(--text-primary)' }}>.ics calendar download</strong> plus
             one-click <strong style={{ color: 'var(--text-primary)' }}>Google Calendar</strong> /{' '}
             <strong style={{ color: 'var(--text-primary)' }}>Outlook</strong> add-event deep
@@ -215,25 +213,14 @@ export default function App() {
             tint <strong style={{ color: 'var(--accent-green)' }}>green when stronger</strong> and{' '}
             <strong style={{ color: 'var(--accent-coral)' }}>coral when weaker</strong>.
           </p>
-          <p style={{ margin: '0 0 0.7rem' }}>
+          <p style={{ margin: 0 }}>
             <strong style={{ color: 'var(--text-primary)' }}>Earnings Layer.</strong>{' '}
-            When the Earnings toggle is on, the Timeline Strip also plots upcoming Top-100
+            When the Earnings toggle is on, the Timeline Strip also plots upcoming top
             options-volume earnings releases as their own{' '}
             <strong style={{ color: 'var(--accent-purple)' }}>purple-dot family</strong>. Each
             ticker is positioned at its session hour-of-day (<strong style={{ color: 'var(--text-primary)' }}>BMO
             07:00</strong>, <strong style={{ color: 'var(--text-primary)' }}>AMC 16:30</strong>,
             unknown 12:00 noon), so the dots sit on the same per-day track as the macro events.
-          </p>
-          <p style={{ margin: 0 }}>
-            <strong style={{ color: 'var(--text-primary)' }}>Data Layer.</strong>{' '}
-            Three parallel fetches:{' '}
-            <strong style={{ color: 'var(--text-primary)' }}>/api/events-calendar</strong> (FF
-            aggregator), <strong style={{ color: 'var(--text-primary)' }}>/api/data?skip_contracts=1</strong>{' '}
-            (SPX snapshot for spot + ATM IV), and{' '}
-            <strong style={{ color: 'var(--text-primary)' }}>/api/earnings</strong> (Top-100-OV
-            earnings). All three poll on a{' '}
-            <strong style={{ color: 'var(--text-primary)' }}>10-minute cadence</strong> with a
-            Page Visibility refresh on tab return.
           </p>
         </div>
       </div>

@@ -370,7 +370,7 @@ export default function SlotA() {
       <div className="lab-placeholder">
         <div className="lab-placeholder-title">Loading history…</div>
         <div className="lab-placeholder-hint">
-          Fetching daily SPX closes from <code>/api/gex-history</code>.
+          Loading the daily SPX close history.
         </div>
       </div>
     );

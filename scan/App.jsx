@@ -101,31 +101,18 @@ export default function App() {
             <strong style={{ color: 'var(--text-primary)' }}>Resting state.</strong>{' '}
             For equity options, the typical baseline is{' '}
             <strong style={{ color: 'var(--accent-coral)' }}>positive put skew</strong> (left wing
-            richer than ATM — downside protection commands a vol premium) and roughly{' '}
+            richer than ATM, since downside protection commands a vol premium) and roughly{' '}
             <strong style={{ color: 'var(--accent-green)' }}>flat-or-slightly-negative call skew</strong>.
           </p>
-          <p style={{ margin: '0 0 0.7rem' }}>
+          <p style={{ margin: 0 }}>
             <strong style={{ color: 'var(--accent-green)' }}>Above the median on the call-skew
             tab</strong>: unusual right-wing demand. Frequently a signal of{' '}
             <strong style={{ color: 'var(--text-primary)' }}>buyout speculation</strong>,{' '}
             <strong style={{ color: 'var(--text-primary)' }}>earnings call positioning</strong>,
             or covered-call selling pressure pulling ATM down rather than wings up.{' '}
             <strong style={{ color: 'var(--accent-coral)' }}>Above the median on the put-skew
-            tab</strong>: pricing tail-risk more aggressively than peers — often clusters by
+            tab</strong>: pricing tail-risk more aggressively than peers, often clustering by
             sector during earnings or macro events.
-          </p>
-          <p style={{ margin: 0 }}>
-            <strong style={{ color: 'var(--text-primary)' }}>Data.</strong>{' '}
-            <strong style={{ color: 'var(--text-primary)' }}>Massive's options snapshot
-            endpoint</strong>, one call per ticker in parallel at request time (no Supabase write
-            path). Expiration target is{' '}
-            <strong style={{ color: 'var(--text-primary)' }}>30 days</strong>; the function picks
-            the listed expiration in the 21–45 DTE window closest to that target.{' '}
-            <strong style={{ color: 'var(--text-primary)' }}>Edge-cached 60 s</strong> during
-            market hours, 15 min off-hours. If Massive returns auth errors or thin coverage the
-            page falls back to a deterministic seed dataset and renders an{' '}
-            <strong style={{ color: 'var(--accent-amber)' }}>amber banner</strong> so the
-            placeholder is never confused with live data.
           </p>
         </div>
       </div>

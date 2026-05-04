@@ -67,29 +67,29 @@ export default function App() {
             is the same sum across puts, rendered downward so calls and puts on the same date read
             as a mirrored pair. Both are quoted in{' '}
             <strong style={{ color: 'var(--text-primary)' }}>dollars per 1% move at the current
-            spot price</strong> — the standard dealer-hedging unit.
+            spot price</strong>, the standard dealer-hedging unit.
           </p>
           <p>
             <strong style={{ color: 'var(--text-primary)' }}>Frozen-book framing.</strong>{' '}
-            "If spot remains where it is" is implicit. Every per-contract gamma value used in the
-            sum was computed at the run's spot price by the ingest, so the bar at any expiration
+            "If spot remains where it is" is implicit. Every per-contract gamma value in the
+            sum is computed at the current spot price, so the bar at any expiration
             is exactly the gamma that would roll off on that date assuming the index stays flat
             between now and then. The right reading is{' '}
             <strong style={{ color: 'var(--text-primary)' }}>potential unwind magnitude</strong>,
-            not <strong style={{ color: 'var(--text-primary)' }}>forecast hedging flow</strong> —
+            not <strong style={{ color: 'var(--text-primary)' }}>forecast hedging flow</strong>:
             it ignores subsequent dealer rebalancing, OI changes, and spot drift.
           </p>
           <p>
-            <strong style={{ color: 'var(--text-primary)' }}>Data scope.</strong>{' '}
-            The live ingest pipeline covers the{' '}
+            <strong style={{ color: 'var(--text-primary)' }}>Coverage.</strong>{' '}
+            The chart covers the{' '}
             <strong style={{ color: 'var(--text-primary)' }}>next nine monthly OPEX dates</strong>{' '}
             plus every weekly within{' '}
-            <strong style={{ color: 'var(--text-primary)' }}>thirty calendar days</strong>. Far-dated
-            LEAPS contracts are not in the pipeline; the bars stop at roughly nine months out. The
-            most visually prominent bars are typically the next{' '}
+            <strong style={{ color: 'var(--text-primary)' }}>thirty calendar days</strong>.
+            Far-dated LEAPS contracts are not included; the bars stop at roughly nine months out.
+            The most visually prominent bars are typically the next{' '}
             <strong style={{ color: 'var(--accent-purple)' }}>quarterly OPEX</strong>, the next{' '}
             <strong style={{ color: 'var(--accent-amber)' }}>monthly OPEX</strong>, and the
-            front-week <strong style={{ color: 'var(--accent-green)' }}>0DTE</strong> stack — the
+            front-week <strong style={{ color: 'var(--accent-green)' }}>0DTE</strong> stack: the
             bulk of dealer gamma structurally certain to unwind in the near term.
           </p>
         </div>

@@ -351,7 +351,7 @@ export default function SlotB() {
       <div className="lab-placeholder">
         <div className="lab-placeholder-title">Loading chain…</div>
         <div className="lab-placeholder-hint">
-          Fetching the current SPX snapshot from <code>/api/data</code>.
+          Loading the live SPX snapshot.
         </div>
       </div>
     );

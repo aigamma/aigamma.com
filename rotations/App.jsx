@@ -109,7 +109,7 @@ export default function App() {
             return over <strong style={{ color: 'var(--text-primary)' }}>1 day</strong>,{' '}
             <strong style={{ color: 'var(--text-primary)' }}>5 days</strong>, and{' '}
             <strong style={{ color: 'var(--text-primary)' }}>21 days</strong>. Bars sort
-            descending — top is leader, bottom is laggard.{' '}
+            descending: top is leader, bottom is laggard.{' '}
             <strong style={{ color: 'var(--accent-green)' }}>Green for positive</strong>,{' '}
             <strong style={{ color: 'var(--accent-coral)' }}>red for negative</strong>. The
             divergence between short and long horizons is the primary regime-shift signal.
@@ -118,7 +118,7 @@ export default function App() {
             <strong style={{ color: 'var(--text-primary)' }}>Bottom: Relative Sector Rotations.</strong>{' '}
             Each component lands at <strong style={{ color: 'var(--text-primary)' }}>(rotation
             ratio, rotation momentum)</strong>. Ratio is the relative-strength price ratio as a
-            percentage of its own slow EMA — the{' '}
+            percentage of its own slow EMA, the{' '}
             <strong style={{ color: 'var(--text-primary)' }}>Mansfield Relative Performance</strong>{' '}
             (Roy Mansfield 1979) normalization, with an EMA in place of his 52-week SMA so old
             samples decay smoothly. A short input EMA pre-smooths the raw series to dampen
@@ -145,16 +145,14 @@ export default function App() {
           </p>
           <p style={{ margin: '0 0 0.7rem' }}>
             Quadrants describe a typical clockwise rotation:{' '}
-            <strong style={{ color: 'var(--accent-blue)' }}>Improving</strong> (top-left) →{' '}
-            <strong style={{ color: 'var(--accent-green)' }}>Leading</strong> (top-right) →{' '}
-            <strong style={{ color: '#f0a030' }}>Weakening</strong> (bottom-right) →{' '}
-            <strong style={{ color: 'var(--accent-coral)' }}>Lagging</strong> (bottom-left) → back
-            to Improving. Each component carries a trail of dots showing where it was on each
+            <strong style={{ color: 'var(--accent-blue)' }}>Improving</strong> (top-left),{' '}
+            <strong style={{ color: 'var(--accent-green)' }}>Leading</strong> (top-right),{' '}
+            <strong style={{ color: '#f0a030' }}>Weakening</strong> (bottom-right),{' '}
+            <strong style={{ color: 'var(--accent-coral)' }}>Lagging</strong> (bottom-left), and
+            back to Improving. Each component carries a trail of dots showing where it was on each
             previous session; the larger labeled circle marks the latest position.
           </p>
           <p style={{ margin: 0 }}>
-            Source is <strong style={{ color: 'var(--text-primary)' }}>ThetaData Stock Value EOD</strong>{' '}
-            prices in <strong style={{ color: 'var(--text-primary)' }}>public.daily_eod</strong>.
             The sector bars restrict themselves to the eleven SPDR sectors (XLB, XLC, XLE, XLF,
             XLI, XLK, XLP, XLRE, XLU, XLV, XLY) so the chart matches conventional{' '}
             <strong style={{ color: 'var(--text-primary)' }}>GICS-sector framing</strong>; the

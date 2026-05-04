@@ -60,7 +60,7 @@ export default function App() {
         <div className="lab-brand">
           <span
             className="lab-badge"
-            title="Earnings · upcoming releases by expected move and date, scraped from EarningsWhispers"
+            title="Earnings · upcoming releases by expected move and date"
           >
             <span className="lab-badge__desktop-text">Earnings</span>
             <span className="lab-badge__mobile-text">Earnings</span>
@@ -102,7 +102,7 @@ export default function App() {
             <strong style={{ color: 'var(--text-primary)' }}>next five trading days</strong>{' '}
             plotted as single dots. Default scope is the{' '}
             <strong style={{ color: 'var(--text-primary)' }}>top 100 names by US options
-            volume</strong> — the same anchor universe the rest of the dashboard prices off of —
+            volume</strong>, the same anchor universe the rest of the dashboard prices off of,
             dropping the long tail of low-OV mid-caps where the chart signal is too thin.
           </p>
           <p style={{ margin: '0 0 0.7rem' }}>
@@ -142,13 +142,12 @@ export default function App() {
           </p>
           <p style={{ margin: '0 0 0.7rem' }}>
             <strong style={{ color: 'var(--text-primary)' }}>How it's computed.</strong>{' '}
-            Server-side from the <strong style={{ color: 'var(--text-primary)' }}>Massive options
-            snapshot</strong>. For each ticker we identify the soonest listed expiration that
+            For each ticker we identify the soonest listed expiration that
             captures the event, pick the single strike nearest spot that has both a call and a put
             listed, and compute{' '}
             <strong style={{ color: 'var(--text-primary)' }}>0.85 × (call mid + put mid)</strong>.
             When the ATM strike has no usable bid/ask or last-trade price on either leg, the
-            ticker drops off the chart — earnings concentrate options liquidity, so a missing ATM
+            ticker drops off the chart: earnings concentrate options liquidity, so a missing ATM
             mid is a strong signal the data is unreliable rather than a sign to fall back to a
             less direct estimate.
           </p>
@@ -159,9 +158,8 @@ export default function App() {
             <span style={BMO_INK}>Before-Open</span> /{' '}
             <span style={AMC_INK}>After-Close</span> cell by{' '}
             <strong style={{ color: 'var(--text-primary)' }}>revenue estimate descending</strong>{' '}
-            so the day's most market-moving reporters land at the top. Revenue estimate is{' '}
-            <strong style={{ color: 'var(--text-primary)' }}>q1RevEst from EW</strong>, with
-            prior-quarter actual sales as a fallback when the estimate is null.
+            so the day's most market-moving reporters land at the top, with prior-quarter actual
+            sales used as a fallback when the estimate is null.
           </p>
         </div>
       </div>
