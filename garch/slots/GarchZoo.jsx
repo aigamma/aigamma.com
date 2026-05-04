@@ -446,35 +446,33 @@ export default function GarchZoo() {
         yref: 'container',
         yanchor: 'top',
       },
-      // Mobile bottom margin uses 300px (vs desktop 120px) so the horizontal
-      // legend's wrapped rows fit inside the chart container. At phone widths
-      // (~350-390px) the 17 model traces plus ensemble + forecast +
-      // realized-vol overlays force the legend to wrap to ~8-9 rows at ~24px
-      // each, ~200-220px of legend height; the previous 110px clipped most
-      // rows below the container's bottom edge. The container height itself
-      // is also bumped to 800px on mobile (see the chartRef div below) so
-      // the plot area gets 425px of vertical room — a 44% lift over the
-      // previous 295px plot — and matches the new bottom margin so the
-      // chart's vertical footprint occupies most of a phone-class viewport
-      // on first paint instead of the prior ~40% squeeze. The reader scrolls
-      // the page to reach the prose underneath; the chart now dominates the
-      // first view, which is the right framing since the ensemble is the
-      // only model on the page.
-      margin: mobile ? { t: 75, r: 20, b: 300, l: 60 } : { t: 70, r: 30, b: 120, l: 75 },
+      // Plotly's built-in legend is disabled (showlegend: false below) and
+      // a custom HTML legend is rendered below the chartRef div in JSX.
+      // The previous in-chart horizontal legend with y: -0.14 in paper
+      // coords resolved its yanchor: 'auto' to 'bottom' under Plotly
+      // 2.35.2's anchor_utils.js rule (y <= 1/3 selects bottom-anchor
+      // for auto), so the legend's BOTTOM edge anchored at 14% of plot
+      // height below plot bottom and the legend grew UPWARD from there
+      // into the plot area. At phone widths the wrapped 7-9 rows of
+      // model entries (~24px each, ~170-220px total) climbed up from
+      // the bottom anchor through the plot's lower edge and visually
+      // occluded the model traces. Bumping the bottom margin made the
+      // overlap worse rather than better because the larger margin
+      // simply added empty space below the legend's bottom anchor
+      // while the legend continued to grow upward into the plot.
+      // Rendering an HTML legend in normal page flow under the chart
+      // sidesteps the entire Plotly anchor-logic gauntlet: the HTML
+      // legend lives in its own document block below the SVG container,
+      // can never overlap the plot, and grows naturally as the family
+      // picker toggles which models are visible.
+      margin: mobile ? { t: 75, r: 20, b: 70, l: 60 } : { t: 70, r: 30, b: 80, l: 75 },
       xaxis: plotlyAxis('', { type: 'date', range: activeRange, autorange: false }),
       yaxis: plotlyAxis('σ (%)', {
         ticksuffix: '%',
         tickformat: '.1f',
         ...(yRange ? { range: yRange, autorange: false } : {}),
       }),
-      showlegend: true,
-      legend: {
-        orientation: 'h',
-        y: -0.14,
-        x: 0.5,
-        xanchor: 'center',
-        font: PLOTLY_FONTS.legend,
-      },
+      showlegend: false,
       hovermode: 'x unified',
     });
 
@@ -700,7 +698,7 @@ export default function GarchZoo() {
         <div
           style={{
             width: '100%',
-            height: mobile ? 800 : 720,
+            height: 720,
             display: 'flex',
             alignItems: 'center',
             justifyContent: 'center',
@@ -715,7 +713,7 @@ export default function GarchZoo() {
       ) : (
         <div style={{ position: 'relative' }}>
           <ResetButton visible={timeRange != null} onClick={() => setTimeRange(null)} />
-          <div ref={chartRef} style={{ width: '100%', height: mobile ? 800 : 720 }} />
+          <div ref={chartRef} style={{ width: '100%', height: 720 }} />
           {activeRange && firstHistoricalDate && lastForecastDate && (
             <RangeBrush
               min={isoToMs(firstHistoricalDate)}
@@ -725,6 +723,106 @@ export default function GarchZoo() {
               onChange={handleBrushChange}
             />
           )}
+          {/* Custom HTML legend below the chart. See the showlegend: false
+              comment block in the layout above for the rationale; rendering
+              the legend in normal page flow guarantees it sits underneath
+              the plot rather than climbing up into it as Plotly's auto-
+              anchored built-in legend did at phone widths. Each item
+              mirrors the corresponding trace's line style: dotted thin for
+              realized-vol, solid 2px at the family-modulated color for each
+              model trace (with 0.7 opacity to match the chart's per-trace
+              0.6 opacity), thick solid green for the ensemble average, and
+              thick dashed green for the forecast tail. */}
+          <div
+            style={{
+              display: 'flex',
+              flexWrap: 'wrap',
+              gap: '0.45rem 0.95rem',
+              padding: '0.85rem 0.25rem 0',
+              fontFamily: "Calibri, 'Segoe UI', system-ui, sans-serif",
+              fontSize: '0.78rem',
+              lineHeight: 1.4,
+            }}
+          >
+            <span
+              style={{
+                display: 'inline-flex',
+                alignItems: 'center',
+                gap: '0.4rem',
+                color: PLOTLY_COLORS.axisText,
+              }}
+            >
+              <span
+                style={{
+                  width: '24px',
+                  height: 0,
+                  borderTop: `1.5px dotted ${PLOTLY_COLORS.axisText}`,
+                  flexShrink: 0,
+                }}
+              />
+              Realized vol (10d)
+            </span>
+            {visibleModels.map((m, i) => (
+              <span
+                key={m.name}
+                style={{
+                  display: 'inline-flex',
+                  alignItems: 'center',
+                  gap: '0.4rem',
+                  color: rowColors[i],
+                }}
+              >
+                <span
+                  style={{
+                    width: '24px',
+                    height: 0,
+                    borderTop: `2px solid ${rowColors[i]}`,
+                    opacity: 0.7,
+                    flexShrink: 0,
+                  }}
+                />
+                {m.name}
+              </span>
+            ))}
+            <span
+              style={{
+                display: 'inline-flex',
+                alignItems: 'center',
+                gap: '0.4rem',
+                color: ENSEMBLE_COLOR,
+                fontWeight: 600,
+              }}
+            >
+              <span
+                style={{
+                  width: '24px',
+                  height: 0,
+                  borderTop: `2.4px solid ${ENSEMBLE_COLOR}`,
+                  flexShrink: 0,
+                }}
+              />
+              Ensemble average
+            </span>
+            <span
+              style={{
+                display: 'inline-flex',
+                alignItems: 'center',
+                gap: '0.4rem',
+                color: ENSEMBLE_COLOR,
+                fontWeight: 600,
+              }}
+            >
+              <span
+                style={{
+                  width: '24px',
+                  height: 0,
+                  borderTop: `2.4px dashed ${ENSEMBLE_COLOR}`,
+                  flexShrink: 0,
+                }}
+              />
+              Ensemble forecast (30d)
+            </span>
+          </div>
         </div>
       )}
 
