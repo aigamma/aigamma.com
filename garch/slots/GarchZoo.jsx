@@ -446,7 +446,21 @@ export default function GarchZoo() {
         yref: 'container',
         yanchor: 'top',
       },
-      margin: mobile ? { t: 75, r: 20, b: 110, l: 60 } : { t: 70, r: 30, b: 120, l: 75 },
+      // Mobile bottom margin uses 300px (vs desktop 120px) so the horizontal
+      // legend's wrapped rows fit inside the chart container. At phone widths
+      // (~350-390px) the 17 model traces plus ensemble + forecast +
+      // realized-vol overlays force the legend to wrap to ~8-9 rows at ~24px
+      // each, ~200-220px of legend height; the previous 110px clipped most
+      // rows below the container's bottom edge. The container height itself
+      // is also bumped to 800px on mobile (see the chartRef div below) so
+      // the plot area gets 425px of vertical room — a 44% lift over the
+      // previous 295px plot — and matches the new bottom margin so the
+      // chart's vertical footprint occupies most of a phone-class viewport
+      // on first paint instead of the prior ~40% squeeze. The reader scrolls
+      // the page to reach the prose underneath; the chart now dominates the
+      // first view, which is the right framing since the ensemble is the
+      // only model on the page.
+      margin: mobile ? { t: 75, r: 20, b: 300, l: 60 } : { t: 70, r: 30, b: 120, l: 75 },
       xaxis: plotlyAxis('', { type: 'date', range: activeRange, autorange: false }),
       yaxis: plotlyAxis('σ (%)', {
         ticksuffix: '%',
@@ -686,7 +700,7 @@ export default function GarchZoo() {
         <div
           style={{
             width: '100%',
-            height: mobile ? 480 : 720,
+            height: mobile ? 800 : 720,
             display: 'flex',
             alignItems: 'center',
             justifyContent: 'center',
@@ -701,7 +715,7 @@ export default function GarchZoo() {
       ) : (
         <div style={{ position: 'relative' }}>
           <ResetButton visible={timeRange != null} onClick={() => setTimeRange(null)} />
-          <div ref={chartRef} style={{ width: '100%', height: mobile ? 480 : 720 }} />
+          <div ref={chartRef} style={{ width: '100%', height: mobile ? 800 : 720 }} />
           {activeRange && firstHistoricalDate && lastForecastDate && (
             <RangeBrush
               min={isoToMs(firstHistoricalDate)}
