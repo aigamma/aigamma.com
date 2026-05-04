@@ -1,8 +1,7 @@
 // netlify/functions/earnings.mjs
 //
 // Read endpoint for the /earnings surface — an earnings calendar
-// scanner that mirrors and extends SpotGamma's earnings chart. Two
-// payload sections feed two visual surfaces on the page:
+// scanner. Two payload sections feed two visual surfaces on the page:
 //
 //   chartDays (next 5 trading days, with implied moves):
 //     Each entry { date, isoDate, tickers: [...] } where each ticker
@@ -204,15 +203,15 @@ const CALENDAR_DAYS = CALENDAR_WEEKS * 5; // assume Mon-Fri
 const FETCH_CONCURRENCY = 6;
 const EW_CONCURRENCY = 4;
 
-// SpotGamma convention: empirical scale-down from raw ATM straddle
-// premium to the realized post-event one-standard-deviation range. The
-// raw straddle slightly overestimates because (a) it pays
+// Empirical scale-down from raw ATM straddle premium to the realized
+// post-event one-standard-deviation range. The raw straddle slightly
+// overestimates because (a) it pays
 // max(|S_T - K|, 0) which has E[|S_T - K|] under any unimodal
 // distribution exceeding the standard deviation by a small fraction, and
 // (b) for any DTE > 0 the straddle bakes in a small amount of
 // non-earnings vol on top of the earnings-night gap. 0.85 is the factor
-// the SpotGamma earnings chart uses on its own published surface and
-// the convention Eric set for this page.
+// Eric calibrated against post-event realized ranges and the convention
+// he set for this page.
 const STRADDLE_TO_RANGE_FACTOR = 0.85;
 
 // Module-scope cookie cache. Reset on every cold start; reused across
@@ -557,8 +556,8 @@ async function fetchTickerSnapshot(ticker, earningsIso, releaseTime, spot) {
   // daily expirations close to the earnings date and (b) mid-caps that
   // only list third-Friday monthly expirations, where the next listed
   // exp can be 15-25 days past an earnings date that lands mid-month.
-  // The 0.85 straddle factor was calibrated by SpotGamma against the
-  // soonest expiration after the event, so for monthly-only names the
+  // The 0.85 straddle factor was calibrated against the soonest
+  // expiration after the event, so for monthly-only names the
   // chart value will be slightly biased high (extra DTE bakes in
   // non-earnings vol), but covering them is still a more informative
   // signal than dropping them entirely. The deriveImpliedMove() loop
@@ -651,8 +650,8 @@ function midPrice(c) {
   return null;
 }
 
-// Reduce a snapshot to the implied-range estimate using the SpotGamma
-// convention Eric set: 0.85 × (ATM call mid + ATM put mid), where the
+// Reduce a snapshot to the expected-move estimate using the convention
+// Eric calibrated: 0.85 × (ATM call mid + ATM put mid), where the
 // ATM strike is the single nearest-listed strike to spot that has BOTH
 // a call AND a put listed at the chosen expiration. Single strike, not
 // nearest-call + nearest-put separately — picking the legs independently
@@ -795,7 +794,7 @@ export default async function handler(request) {
 
   // Chart subset: first CHART_DAYS trading days, gated by the active
   // chart filter mode. Top-100-by-options-volume is the default (the
-  // SpotGamma-style tight scatter); other modes widen the universe to
+  // tight institutional scatter); other modes widen the universe to
   // top-250 OV or to revenue thresholds of $5B/$1B/$500M for readers
   // who want to see more of the long tail of the earnings calendar.
   // The 4-week grid below the chart is unaffected by this toggle —

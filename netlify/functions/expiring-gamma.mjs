@@ -1,6 +1,6 @@
 // netlify/functions/expiring-gamma.mjs
 //
-// Read endpoint for the /expiring-gamma surface — a SpotGamma-style
+// Read endpoint for the /expiring-gamma surface — an
 // "expiration concentration" bar chart that aggregates per-expiration
 // dollar gamma exposure currently scheduled to roll off.
 //
@@ -39,7 +39,7 @@
 // renders ~15-19 distinct expirations stretching from same-day 0DTE
 // through ~9 months out. This is wider than the front-month
 // expiration_metrics surface (which only carries the 30-DTE ATM IV)
-// and narrower than the SpotGamma reference image (which extends to
+// and narrower than the upstream reference image (which extends to
 // LEAPS 5+ years out — those contracts aren't in the live pipeline).
 //
 // Cache profile: 60s during market hours, 1h off-hours. The intraday

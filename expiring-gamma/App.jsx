@@ -65,7 +65,7 @@ export default function App() {
             same sum across puts, rendered downward so calls and puts
             on the same date read as a mirrored pair. Both are quoted
             in dollars per 1% move at the current spot price, the
-            standard SpotGamma-style dealer-hedging unit.
+            standard dealer-hedging unit.
           </p>
           <p>
             "If spot remains where it is" is the implicit framing.

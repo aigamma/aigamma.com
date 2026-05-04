@@ -60,7 +60,7 @@ export default function App() {
         <div className="lab-brand">
           <span
             className="lab-badge"
-            title="Earnings · upcoming releases by implied move and date, scraped from EarningsWhispers"
+            title="Earnings · upcoming releases by expected move and date, scraped from EarningsWhispers"
           >
             <span className="lab-badge__desktop-text">Earnings</span>
             <span className="lab-badge__mobile-text">Earnings</span>
@@ -112,28 +112,30 @@ export default function App() {
             drives the calendar grid below the chart so both views
             always show the same universe.
             The horizontal axis is the calendar date the company
-            reports; the vertical axis is the options-market implied
-            range as a percent of spot. The implied range is the
+            reports; the vertical axis is the options-market expected
+            move as a percent of spot. The expected move is the
             0.85-scaled at-the-money straddle midprice on the soonest
             expiration that captures the earnings event: same-day or
             later for <span style={BMO_INK}>Before-Open reporters</span>,
             next-day or later for <span style={AMC_INK}>After-Close reporters</span>,
             since same-day options settle at 4 PM ET before an{' '}
             <span style={AMC_INK}>after-close release</span>. The 0.85
-            factor is the SpotGamma convention; it scales raw straddle
-            premium down to the empirically-realized post-event
-            one-standard-deviation range. Color encodes the reporting
+            factor scales the raw straddle premium down to the
+            empirically-realized post-event one-standard-deviation range,
+            correcting for the at-the-money straddle's slight overshoot
+            of a true ±1σ payoff and for the residual non-event vol baked
+            into any DTE &gt; 0 expiration. Color encodes the reporting
             session: <span style={BMO_INK}>blue</span> for{' '}
             <span style={BMO_INK}>Before Market Open</span>,{' '}
             <span style={AMC_INK}>coral</span> for{' '}
             <span style={AMC_INK}>After Market Close</span>,{' '}
             <span style={UNK_INK}>gray</span> for{' '}
             <span style={UNK_INK}>unconfirmed</span>. Hover any dot for
-            the full per-ticker profile, including the dollar implied
-            range, the ATM strike, and the straddle expiration.
+            the full per-ticker profile, including the dollar expected
+            move, the ATM strike, and the straddle expiration.
           </p>
           <p style={{ margin: '0 0 0.7rem' }}>
-            Implied range is computed server-side from the Massive
+            Expected move is computed server-side from the Massive
             options snapshot. For each ticker we identify the soonest
             listed expiration that captures the earnings event (gated
             by reporting session as above), then pick the single strike
@@ -162,7 +164,7 @@ export default function App() {
 
       <footer className="lab-footer">
         <span className="lab-footer-line">
-          AI Gamma · Earnings Calendar · upcoming releases by implied move and date · v0.1.0
+          AI Gamma · Earnings Calendar · upcoming releases by expected move and date · v0.1.0
         </span>
         <a href="/disclaimer/" className="lab-footer-disclaimer">Disclaimer</a>
         <a href="/" className="lab-footer-home">Return Home</a>

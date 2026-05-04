@@ -486,7 +486,7 @@ function LegendDot({ color, label, scale = 1 }) {
 // Scatter chart
 // -----------------------------------------------------------------
 //
-// Reproduces the SpotGamma earnings chart layout from the reference
+// Reproduces the earnings chart layout sketched in the reference
 // at C:\i\earnings chart.png:
 //
 //   X axis: chartDays.length evenly-spaced columns, one per chart
@@ -683,7 +683,7 @@ function ScatterChart({ chartDays, containerWidth, impliedMovesLive, impliedMove
           fontWeight={600}
           fill="#cfd6e6"
         >
-          Implied range (%)
+          Expected Move (%)
         </text>
 
         {/* X axis title */}
@@ -808,9 +808,9 @@ function ScatterChart({ chartDays, containerWidth, impliedMovesLive, impliedMove
           padding: '0.55rem 0.75rem',
           borderRadius: '3px',
         }}>
-          Implied moves: {impliedMovesLive ? 'partial coverage' : 'unavailable'}
+          Expected moves: {impliedMovesLive ? 'partial coverage' : 'unavailable'}
           {impliedMoveDegrade ? `, ${impliedMoveDegrade}` : ''}
-          . Tickers without an implied move drop off the chart but remain in the
+          . Tickers without an expected move drop off the chart but remain in the
           calendar grid below.
         </div>
       )}
@@ -848,8 +848,8 @@ function ChartTooltip({ ticker: t, style, scale = 1 }) {
         {t.company}
       </div>
       <TooltipRow label="Reports" value={formatLongDate(t.isoDate)} />
-      <TooltipRow label="Implied range" value={t.impliedRange != null ? `±$${Number(t.impliedRange).toFixed(2)}` : '—'} highlight />
-      <TooltipRow label="Implied move" value={formatPctMove(t.impliedMove)} subtle />
+      <TooltipRow label="Expected move" value={t.impliedRange != null ? `±$${Number(t.impliedRange).toFixed(2)}` : '—'} highlight />
+      <TooltipRow label="Expected move (%)" value={formatPctMove(t.impliedMove)} subtle />
       <TooltipRow label="ATM straddle" value={t.straddleMid != null ? `$${Number(t.straddleMid).toFixed(2)}` : '—'} subtle />
       <TooltipRow label="Spot" value={t.spot != null ? `$${Number(t.spot).toFixed(2)}` : '—'} />
       <TooltipRow label="ATM strike" value={t.straddleStrike != null ? `$${Number(t.straddleStrike).toFixed(2)}` : '—'} subtle />

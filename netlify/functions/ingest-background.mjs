@@ -704,7 +704,7 @@ function bsGamma(S, K, tau, sigma, r, q) {
 // Dealer gamma profile curve. For each hypothetical spot Ŝ in the sweep
 // window we re-evaluate BS gamma for every contract holding (K, τ, σ, r, q)
 // fixed at their observed values, then sum the dealer-signed dollar gamma per
-// 1% move (calls long, puts short — the SpotGamma-style assumption the rest
+// 1% move (calls long, puts short — the standard dealer-positioning assumption the rest
 // of the file already uses). Because BS gamma is continuous in S, the
 // resulting curve is naturally smooth and has no dependence on arbitrary
 // kernel widths — the zero crossing IS the structural regime boundary.
