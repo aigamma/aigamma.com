@@ -274,8 +274,16 @@ export default function SlotA() {
         yref: 'container',
         yanchor: 'top',
       },
+      // Mobile bottom margin grown from 95 → 130 and legend y from -0.22 → -0.45
+      // so the x-axis title clears the horizontal legend underneath. Legend y
+      // is in plot-area-fraction coords (yref defaults to 'paper'), so the prior
+      // -0.22 on a 170px mobile plot only reached -37px below — borderline
+      // overlap with the 20px-bold axis title + 10 standoff + 12px ticks (~42px
+      // strip below the plot bottom). At -0.45 of the now-135px plot area the
+      // legend lands at ~-61px, well clear of the title strip. Desktop is
+      // unchanged because its 265px plot area already gives -58px clearance.
       margin: mobile
-        ? { t: 75, r: 20, b: 95, l: 65 }
+        ? { t: 75, r: 20, b: 130, l: 65 }
         : { t: 70, r: 30, b: 105, l: 80 },
       xaxis: plotlyAxis('log Δ (days)', {
         tickvals: LAGS.map((d) => Math.log(d)),
@@ -285,7 +293,7 @@ export default function SlotA() {
       showlegend: true,
       legend: {
         orientation: 'h',
-        y: -0.22,
+        y: mobile ? -0.45 : -0.22,
         x: 0.5,
         xanchor: 'center',
         font: PLOTLY_FONTS.legend,

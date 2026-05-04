@@ -586,13 +586,21 @@ export default function SlotB() {
         yref: 'container',
         yanchor: 'top',
       },
-      margin: mobile ? { t: 75, r: 20, b: 90, l: 65 } : { t: 70, r: 30, b: 100, l: 80 },
+      // Mobile bottom margin grown from 90 → 130 and legend y from -0.22 → -0.45
+      // so the x-axis title ("t (years)" at 20px bold + 10 standoff + 12px ticks
+      // ≈ 42px below the plot) clears the horizontal legend block beneath it.
+      // The legend's y is in plot-area-fraction coords (yref defaults to 'paper'),
+      // so a shorter mobile plot at the prior -0.22 only reached ~-34px below the
+      // plot bottom — inside the axis-title strip. -0.45 of the now-115px plot
+      // area lands at ~-52px, matching the desktop fan's working clearance.
+      // Desktop fan stays untouched per the working configuration.
+      margin: mobile ? { t: 75, r: 20, b: 130, l: 65 } : { t: 70, r: 30, b: 100, l: 80 },
       xaxis: plotlyAxis('t (years)'),
       yaxis: plotlyAxis('σ_t', { rangemode: 'tozero', tickformat: '.0%' }),
       showlegend: true,
       legend: {
         orientation: 'h',
-        y: -0.22,
+        y: mobile ? -0.45 : -0.22,
         x: 0.5,
         xanchor: 'center',
         font: PLOTLY_FONTS.legend,
@@ -651,13 +659,22 @@ export default function SlotB() {
         yref: 'container',
         yanchor: 'top',
       },
-      margin: mobile ? { t: 75, r: 20, b: 90, l: 65 } : { t: 70, r: 30, b: 100, l: 80 },
+      // Same bottom-margin / legend-y adjustments as the σ-fan above, plus an
+      // additional desktop fix this chart needs but the fan does not: at the
+      // prior 340px height the desktop plot area was only 170px (vs the fan's
+      // 230px), so legend y=-0.22 landed at ~-37px below the plot — inside
+      // the 20px-bold x-axis title "k = log(K / S₀)" and its 10px standoff.
+      // Both desktop b margin (100 → 130) and legend y (-0.22 → -0.30) are
+      // bumped here; together with the 340 → 380 chart-height bump below
+      // they yield a 180px plot area with -54px clearance, matching the
+      // fan's -51px. Mobile uses the same -0.45 / b=130 pattern as the fan.
+      margin: mobile ? { t: 75, r: 20, b: 130, l: 65 } : { t: 70, r: 30, b: 130, l: 80 },
       xaxis: plotlyAxis('k = log(K / S₀)', { tickformat: '.2f' }),
       yaxis: plotlyAxis('Implied σ', { rangemode: 'tozero', tickformat: '.0%' }),
       showlegend: true,
       legend: {
         orientation: 'h',
-        y: -0.22,
+        y: mobile ? -0.45 : -0.30,
         x: 0.5,
         xanchor: 'center',
         font: PLOTLY_FONTS.legend,
@@ -802,7 +819,7 @@ export default function SlotB() {
       <div ref={fanRef} style={{ width: '100%', height: mobile ? 320 : 400 }} />
 
       <div style={{ marginTop: '0.75rem' }}>
-        <div ref={smileRef} style={{ width: '100%', height: mobile ? 280 : 340 }} />
+        <div ref={smileRef} style={{ width: '100%', height: mobile ? 320 : 380 }} />
       </div>
 
       <div
