@@ -398,49 +398,65 @@ export default function SpxHeatmap() {
                   letterSpacing: '0.1em',
                   textTransform: 'uppercase',
                   display: 'grid',
-                  gridTemplateColumns: '1fr auto 1fr',
+                  gridTemplateColumns: showEmbeddedTitle ? '1fr auto 1fr' : '1fr auto',
                   alignItems: 'center',
                   padding: '0 0.5rem',
                   gap: '0.75rem',
                 }}
               >
-                {/* Three-column grid keeps the per-band layout uniform
-                    across all eleven sectors: sector name pinned left,
-                    count pinned right, middle column reserved for the
-                    page-level title (rendered only on the first band
-                    AND only at desktop widths — phone-class viewports
-                    fall back to the stacked block above this strip,
-                    since 22px is too tight to fit "Information
-                    Technology" + page title + last-updated date
-                    legibly on a 375px iPhone-class width). Using
-                    1fr auto 1fr instead of flex space-between
-                    guarantees the middle text is centered on the
-                    strip's full width regardless of how wide the side
-                    elements grow — flex space-between would center
-                    the middle text on the gap between the sides,
-                    which drifts off-center as one side gets longer
-                    than the other. */}
-                <span style={{ justifySelf: 'start' }}>{band.sector}</span>
-                <span
-                  style={{
-                    justifySelf: 'center',
-                    color: '#9aa3b8',
-                    whiteSpace: 'nowrap',
-                    overflow: 'hidden',
-                    textOverflow: 'ellipsis',
-                  }}
-                >
-                  {showEmbeddedTitle && (
-                    data.mode === 'sector-etf-fallback'
+                {/* Strip layout switches between a three-column and a
+                    two-column grid based on whether the middle slot
+                    carries page-level title content. The middle slot
+                    is only populated on the first band AND only at
+                    desktop widths; everywhere else (all non-first
+                    bands on every viewport, plus the first band on
+                    mobile where the page title lives in the stacked
+                    block above this strip) the middle slot is empty
+                    and the strip drops to a 1fr auto layout so the
+                    sector name claims the full 1fr column instead of
+                    being squeezed into half the strip width. The
+                    squeeze was the original bug: at a 360 px iPhone-
+                    class viewport, 1fr auto 1fr with empty middle
+                    leaves only ~160 px for the first column, and
+                    "INFORMATION TECHNOLOGY" / "CONSUMER
+                    DISCRETIONARY" both need ~180 px at 0.7 rem with
+                    0.1 em letter-spacing uppercased, so the label
+                    wrapped to two lines and the second line was
+                    visually clipped by the 22 px fixed strip height
+                    plus the tile grid sitting directly below. The
+                    two-column layout gives the first column ~320 px
+                    on the same viewport — enough room for every
+                    eleven-letter-or-longer sector name with comfort
+                    to spare. The desktop first-band keeps 1fr auto
+                    1fr so the centered page title and right-aligned
+                    last-updated stamp render exactly as before. */}
+                <span style={{
+                  justifySelf: 'start',
+                  whiteSpace: 'nowrap',
+                  overflow: 'hidden',
+                  textOverflow: 'ellipsis',
+                }}>{band.sector}</span>
+                {showEmbeddedTitle && (
+                  <span
+                    style={{
+                      justifySelf: 'center',
+                      color: '#9aa3b8',
+                      whiteSpace: 'nowrap',
+                      overflow: 'hidden',
+                      textOverflow: 'ellipsis',
+                    }}
+                  >
+                    {data.mode === 'sector-etf-fallback'
                       ? 'Sector ETFs · fallback view'
-                      : 'Top 250 SPX stocks by option volume'
-                  )}
-                </span>
+                      : 'Top 250 SPX stocks by option volume'}
+                  </span>
+                )}
                 <div style={{
                   justifySelf: 'end',
                   display: 'flex',
                   alignItems: 'center',
                   gap: '0.75rem',
+                  whiteSpace: 'nowrap',
                 }}>
                   {showEmbeddedTitle && data.asOf && (
                     <>
