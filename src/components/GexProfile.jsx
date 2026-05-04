@@ -369,15 +369,18 @@ export default function GexProfile({ contracts, spotPrice, levels, prevContracts
       >
         {/* Title row: an upper-left expiration picker (single-chain
             isolation, default ALL EXPIRATIONS) absolute-positioned so
-            the centered chart title stays optically centered regardless
-            of the picker's intrinsic width. The picker option text uses
-            mobile font size at phone widths so it fits on a single row
-            down to ~360 px viewport widths. */}
+            the chart title stays positioned independently of the
+            picker's intrinsic width. On desktop the title is centered;
+            on mobile it right-aligns against the card's right padding
+            so the picker on the left and the title on the right cannot
+            collide at narrow viewport widths (~360 px). The picker
+            option text uses a mobile font size at phone widths so it
+            fits on a single row at the same widths. */}
         <div
           style={{
             display: 'flex',
             alignItems: 'center',
-            justifyContent: 'center',
+            justifyContent: mobile ? 'flex-end' : 'center',
             position: 'relative',
             minHeight: '1.7rem',
           }}
