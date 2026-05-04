@@ -12,8 +12,8 @@ import {
 import RangeBrush from './RangeBrush';
 import ResetButton from './ResetButton';
 
-// Gamma Index Oscillator — historical levels of the daily Gamma Index
-// rendered as a regime-colored bounded oscillator. The index is
+// Gamma Index — daily readings of the dealer-gamma index rendered as
+// a regime-colored bounded oscillator. The index is
 //   10 × (atm_call_gex − atm_put_gex) / (atm_call_gex + atm_put_gex)
 // (falling back to the whole-chain ratio on pre-backfill days), bounded
 // to [-10, +10] and centered at zero. Positive = dealers are net long
@@ -674,11 +674,22 @@ export default function GammaIndexOscillator() {
     };
     const layout = plotly2DChartLayout({
       margin: mobile ? { t: 70, r: 20, b: 40, l: 55 } : { t: 95, r: 30, b: 45, l: 80 },
+      // On mobile the title is left-aligned to the plot area's left
+      // edge (xref: 'paper', x: 0, xanchor: 'left') so it cannot
+      // collide with the right-aligned latest-value badge annotation
+      // sitting at xref: 'paper', x: 0.99 above the plot — at narrow
+      // viewport widths a centered title would extend rightward into
+      // the badge's box and overlap it. Desktop keeps the centered
+      // default since there is plenty of horizontal room between the
+      // two anchors. The rename to "Gamma Index" (from the previous
+      // "Gamma Index Oscillator") was applied at the same time so the
+      // shorter string also reduces the horizontal footprint.
       title: {
-        ...plotlyTitle('Gamma Index Oscillator'),
+        ...plotlyTitle('Gamma Index'),
         y: 0.97,
         yref: 'container',
         yanchor: 'top',
+        ...(mobile ? { x: 0, xref: 'paper', xanchor: 'left' } : {}),
       },
       xaxis: plotlyAxis('', {
         type: 'date',

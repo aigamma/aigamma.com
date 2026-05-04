@@ -682,7 +682,7 @@ export default function App() {
             bands rather than as isolated dots.
           </p>
           <p style={{ margin: '0 0 0.7rem' }}>
-            <strong style={{ color: 'var(--text-primary)' }}>Gamma Index Oscillator.</strong>{' '}
+            <strong style={{ color: 'var(--text-primary)' }}>Gamma Index.</strong>{' '}
             A bounded oscillator in [−10, +10] equal to
             10 · (ATM call GEX − ATM put GEX) / (ATM call GEX + ATM put GEX),
             filled coral below the zero line and green above, with dotted
@@ -696,7 +696,7 @@ export default function App() {
             number readable as "how skewed is the ATM book today".
           </p>
           <p style={{ margin: 0 }}>
-            <strong style={{ color: 'var(--text-primary)' }}>Gamma Index Scatter.</strong>{' '}
+            <strong style={{ color: 'var(--text-primary)' }}>RV vs Flip.</strong>{' '}
             Each session is a dot at (gamma index, 10-day realized vol),
             colored on a red → amber → blue ramp by the index sign. The
             dashed exponential fit y = a · exp(b · x) traces the structural

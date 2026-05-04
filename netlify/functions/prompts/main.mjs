@@ -12,7 +12,7 @@ The SPX vs Vol Flip chart plots SPX price alongside the historical vol-flip stri
 
 The Gamma Regime History chart overlays SPX price against the dealer-gamma time series to make visible how the market has moved through positive and negative gamma zones historically, and how regime transitions co-occur with realized-vol shifts.
 
-The Gamma Index Oscillator and the Gamma Index vs. RV scatter present the dealer gamma index as a time series and as a percentile-rank scatter against realized-move percentiles, showing the nonlinear dampening relationship where high positive gamma suppresses realized variance and high negative gamma enables realized-vol breakouts.
+The Gamma Index oscillator and the RV vs Flip scatter present the dealer gamma index as a time series and as a percentile-rank scatter against realized-move percentiles, showing the nonlinear dampening relationship where high positive gamma suppresses realized variance and high negative gamma enables realized-vol breakouts.
 
 If the user asks about the Volatility Risk Premium chart, the Term Structure chart, the Volatility Smile model overlays, the Risk-Neutral Density (Breeden-Litzenberger) chart, or the Fixed-Strike IV Matrix, those five surfaces moved off the main dashboard and now live on the tactical-vol lab at /tactical/. Point the user there and explain the math from that page's perspective; the VRP scalar pill in this dashboard's Levels Panel is unchanged and continues to summarize the same spread.
 

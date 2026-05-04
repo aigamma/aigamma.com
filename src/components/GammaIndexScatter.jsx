@@ -382,11 +382,22 @@ export default function GammaIndexScatter() {
 
     const layout = plotly2DChartLayout({
       margin: mobile ? { t: 45, r: 15, b: 40, l: 50 } : { t: 80, r: 30, b: 45, l: 70 },
+      // The latest-value badge annotation below sits at xref: 'paper',
+      // x: 0.99, y: 1.15 with xanchor: 'right' (top-right of the plot
+      // area, hanging slightly above it). At narrow phone widths a
+      // centered title would extend rightward into that badge's box,
+      // so the title is left-anchored to the plot area's left edge on
+      // mobile (xref: 'paper', x: 0, xanchor: 'left'). Desktop keeps
+      // the centered default since there is room between the two
+      // anchors. The display name is also "RV vs Flip" on both mobile
+      // and desktop (renamed from the prior "Gamma Index vs. RV") so
+      // the title line is shorter and more reader-friendly.
       title: {
-        ...plotlyTitle('Gamma Index vs. RV'),
+        ...plotlyTitle('RV vs Flip'),
         y: 0.97,
         yref: 'container',
         yanchor: 'top',
+        ...(mobile ? { x: 0, xref: 'paper', xanchor: 'left' } : {}),
       },
       xaxis: plotlyAxis(mobile ? '' : 'Gamma Index', {
         type: 'linear',
