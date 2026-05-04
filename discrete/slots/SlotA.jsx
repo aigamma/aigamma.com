@@ -322,7 +322,14 @@ export default function SlotA() {
             ? `Binomial Convergence<br>SPX ${optionType === 'call' ? 'Call' : 'Put'} · K = ${cfg.K}`
             : `Binomial Convergence · SPX ${optionType === 'call' ? 'Call' : 'Put'} · K = ${cfg.K}`
         ),
-        y: 0.97,
+        // Plotly 2.35.2 with yref='container' and yanchor='top' anchors a
+        // multi-line title's BOTTOM near y, not its TOP, so a two-line
+        // mobile title at y=0.97 renders with the first line ~15-20px above
+        // the SVG top and the top half of that line is clipped. Pull y
+        // down on mobile so the two-line title sits cleanly inside the
+        // top margin band; desktop keeps a single-line title and the
+        // original y.
+        y: mobile ? 0.92 : 0.97,
         yref: 'container',
         yanchor: 'top',
       },

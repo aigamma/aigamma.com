@@ -192,7 +192,11 @@ export default function SlotC() {
     const layout = plotly2DChartLayout({
       title: {
         ...plotlyTitle(mobile ? 'SVI Raw Fit<br>SPX slice' : 'SVI Raw Fit · SPX slice'),
-        y: 0.97,
+        // Plotly 2.35.2 anchors a multi-line title's bottom near y when
+        // yref='container' / yanchor='top'; on mobile (where the title wraps
+        // to two lines) y=0.97 puts the first line ~15-20px above the SVG
+        // top and clips its top half. Drop y on mobile so two lines clear.
+        y: mobile ? 0.92 : 0.97,
         yref: 'container',
         yanchor: 'top',
       },
@@ -271,7 +275,10 @@ export default function SlotC() {
             ? 'No-Butterfly-Arbitrage<br>g(k) ≥ 0 required'
             : 'No-Butterfly-Arbitrage · g(k) ≥ 0 required'
         ),
-        y: 0.96,
+        // Same multi-line title clipping fix as the SVI Raw chart above:
+        // y=0.96 with yref='container' / yanchor='top' puts the first line
+        // of a two-line mobile title above the SVG top, so drop y on mobile.
+        y: mobile ? 0.91 : 0.96,
         yref: 'container',
         yanchor: 'top',
       },

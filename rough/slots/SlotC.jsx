@@ -323,7 +323,11 @@ export default function SlotC() {
             ? 'Hurst estimator triangulation<br>intercept-centered log-log'
             : 'Hurst estimator triangulation · intercept-centered log-log'
         ),
-        y: 0.97,
+        // Plotly 2.35.2 anchors a multi-line title's bottom near y when
+        // yref='container' / yanchor='top'; on mobile (where the title wraps
+        // to two lines) y=0.97 puts the first line ~15-20px above the SVG
+        // top and clips its top half. Drop y on mobile so two lines clear.
+        y: mobile ? 0.92 : 0.97,
         yref: 'container',
         yanchor: 'top',
       },
