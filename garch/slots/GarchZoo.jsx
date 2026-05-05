@@ -433,16 +433,35 @@ export default function GarchZoo() {
       ? `${totalOk} specifications + ensemble average`
       : `${visibleModels.length} of ${totalOk} specifications + ensemble average`;
     const titleText = mobile
-      ? `GARCH Ensemble · Conditional σ (Annualized)<br>${titleSpecs}`
+      ? `GARCH Ensemble<br>Conditional σ (Annualized)<br>${titleSpecs}`
       : `GARCH Ensemble · Conditional σ (Annualized) · ${titleSpecs}`;
     const layout = plotly2DChartLayout({
       title: {
         ...plotlyTitle(titleText),
-        // Plotly 2.35.2 anchors a multi-line title's bottom near y when
-        // yref='container' / yanchor='top'; on mobile (where titleText wraps
-        // to two lines) y=0.97 puts the first line ~15-20px above the SVG
-        // top and clips its top half. Drop y on mobile so two lines clear.
-        y: mobile ? 0.92 : 0.97,
+        // Plotly 2.35.2 effectively anchors a multi-line title's BOTTOM
+        // near y when yref='container' / yanchor='top' (despite the
+        // 'top' anchor's documented top-anchor behavior, the title
+        // block grows UPWARD from y instead of downward for multi-line
+        // strings). The first line of the prior 2-line mobile title --
+        // "GARCH Ensemble · Conditional σ (Annualized)" at 43 chars
+        // * ~10px per char in 20px Calibri = ~430px -- overflowed the
+        // ~310-340px phone-class chart canvas, so on mobile the title
+        // is now split at both " · " separators into three lines:
+        // ["GARCH Ensemble", "Conditional σ (Annualized)", titleSpecs]
+        // at 14 / 26 / 36-42 chars, all comfortably inside phone width.
+        // Three lines at ~26px line-height = ~78px total title block,
+        // so y=0.97 (which works for desktop's single line) would put
+        // the title bottom at ~22px from container top and clip the
+        // top two lines above the SVG. y=0.88 lands the title bottom
+        // at ~86px from container top and the top line at ~8px from
+        // SVG top -- same clearance the prior 2-line config (y=0.92,
+        // ~10px clearance) gave to its first line. The top margin
+        // grows from 75 to 105 below to keep the taller title block
+        // clear of the plot area; that takes the mobile plot area
+        // from 575 to 545px on a 720px container, a 5% haircut to
+        // make room for the third line. Desktop is single-line and
+        // unchanged at y=0.97 / t=70.
+        y: mobile ? 0.88 : 0.97,
         yref: 'container',
         yanchor: 'top',
       },
@@ -465,7 +484,7 @@ export default function GarchZoo() {
       // legend lives in its own document block below the SVG container,
       // can never overlap the plot, and grows naturally as the family
       // picker toggles which models are visible.
-      margin: mobile ? { t: 75, r: 20, b: 70, l: 60 } : { t: 70, r: 30, b: 80, l: 75 },
+      margin: mobile ? { t: 105, r: 20, b: 70, l: 60 } : { t: 70, r: 30, b: 80, l: 75 },
       xaxis: plotlyAxis('', { type: 'date', range: activeRange, autorange: false }),
       yaxis: plotlyAxis('σ (%)', {
         ticksuffix: '%',
