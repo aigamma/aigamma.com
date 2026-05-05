@@ -473,7 +473,21 @@ export default function GarchZoo() {
         ...(yRange ? { range: yRange, autorange: false } : {}),
       }),
       showlegend: false,
-      hovermode: 'x unified',
+      // Mobile disables the hover tooltip entirely. Desktop keeps the unified
+      // hover label so a reader can scrub across dates and read every model's
+      // σ at once. On a phone the same unified label expands to ~20 lines
+      // (realized vol + the 17 visible models + ensemble + forecast), which
+      // covers most of the plot on the first tap and is unactionable as a
+      // chart-reading affordance — there is no precise hover input on touch
+      // and the tap target ambiguity makes the tooltip pop up unintentionally
+      // when a user is just scrolling the page past the chart. hovermode:
+      // false is Plotly's documented switch for "no hover behavior at all"
+      // (https://plotly.com/javascript/reference/layout/#layout-hovermode);
+      // it disables both per-trace tooltips and the unified label so the
+      // chart on mobile is purely a visual artifact, with the same data
+      // surfaced redundantly via the StatCell row above and the per-model
+      // table below.
+      hovermode: mobile ? false : 'x unified',
     });
 
     Plotly.react(chartRef.current, traces, layout, {
