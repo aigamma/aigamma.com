@@ -1,6 +1,8 @@
 import { useEffect, useMemo, useRef } from 'react';
 import usePlotly from '../../hooks/usePlotly';
+import useIsMobile from '../../hooks/useIsMobile';
 import {
+  PLOTLY_BASE_LAYOUT_2D,
   PLOTLY_COLORS,
   PLOTLY_FONTS,
   plotly2DChartLayout,
@@ -50,6 +52,30 @@ function curveFor(series, latestDate, lookbackDays) {
 export default function VixTermStructure({ data }) {
   const { plotly, error: plotlyError } = usePlotly();
   const ref = useRef(null);
+  const isMobile = useIsMobile();
+
+  // Mobile-conditional vertical layout. The shared base legend (orientation
+  // 'h', y -0.18, paper coords, yref defaults to plot-area-fraction) places
+  // the legend top at -0.18 * plot_height below the plot bottom. With the
+  // prior fixed 380 container, 50 top + 80 bottom margins and a 250 plot
+  // area, that put the legend top at -45px while the x-axis title strip
+  // (12px tick label + 10px standoff + 20px bold "Days to expiration (log)"
+  // title) extends to ~-45px below the plot bottom, so the two touched.
+  // On a phone-class viewport (~338px content width inside the .card
+  // padding) the four-entry legend ("Median (3y)" / "1mo ago" / "1wk ago" /
+  // "Today (YYYY-MM-DD)") wraps to 2 rows ~24px each = ~48px legend
+  // height, which would also have run past the 80px bottom margin without
+  // the bump. Mobile fix: container 380 -> 420, bottom margin 80 -> 130,
+  // legend y -0.18 -> -0.30. New mobile plot area 420 - 50 - 130 = 240,
+  // legend top at -0.30 * 240 = -72px (vs the x-axis title's ~-45px =
+  // ~27px clearance), legend bottom at -72 - 48 = -120px which fits inside
+  // the 130px bottom margin with a 10px buffer for narrower viewports
+  // where the legend wraps a third row. Desktop unchanged at 380 / 80 /
+  // -0.18 since the wider card width fits the four-entry legend on a
+  // single ~24px row that lands inside the existing 80px bottom margin.
+  const containerHeight = isMobile ? 420 : 380;
+  const bottomMargin = isMobile ? 130 : 80;
+  const legendY = isMobile ? -0.30 : PLOTLY_BASE_LAYOUT_2D.legend.y;
 
   const curves = useMemo(() => {
     if (!data) return null;
@@ -108,8 +134,9 @@ export default function VixTermStructure({ data }) {
         ticktext: ['1D', '9D', '30D', '3M', '6M', '1Y'],
       }),
       yaxis: plotlyAxis('Implied Vol'),
-      margin: { t: 50, r: 30, b: 80, l: 70 },
-      height: 380,
+      margin: { t: 50, r: 30, b: bottomMargin, l: 70 },
+      legend: { ...PLOTLY_BASE_LAYOUT_2D.legend, y: legendY },
+      height: containerHeight,
       showlegend: true,
     });
 
@@ -124,11 +151,11 @@ export default function VixTermStructure({ data }) {
       window.removeEventListener('resize', onResize);
       if (ref.current) plotly.purge(ref.current);
     };
-  }, [plotly, curves, data]);
+  }, [plotly, curves, data, bottomMargin, containerHeight, legendY]);
 
   return (
     <div className="card">
-      <div ref={ref} style={{ width: '100%', height: 380 }} />
+      <div ref={ref} style={{ width: '100%', height: containerHeight }} />
       {plotlyError && (
         <div style={{ padding: '1rem', color: 'var(--accent-coral)' }}>
           Chart failed to load: {plotlyError}
