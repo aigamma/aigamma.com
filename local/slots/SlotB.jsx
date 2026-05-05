@@ -316,18 +316,56 @@ export default function SlotB() {
       title: {
         ...plotlyTitle(
           mobile
-            ? 'Market Smile vs Local Vol<br>Monte Carlo · SPX'
-            : 'Market Smile vs Local Vol Monte Carlo · SPX'
+            ? 'Market Smile vs Local Vol<br>Monte Carlo'
+            : 'Market Smile vs Local Vol Monte Carlo'
         ),
         // Plotly 2.35.2 anchors a multi-line title's bottom near y when
         // yref='container' / yanchor='top'; on mobile (where the title wraps
         // to two lines) y=0.97 puts the first line ~15-20px above the SVG
         // top and clips its top half. Drop y on mobile so two lines clear.
+        // The trailing " · SPX" suffix that used to live in both branches was
+        // dropped because /local/ is dedicated entirely to SPX volatility (the
+        // lab badge reads "Local Vol", the page-level explainer prose
+        // references SPX repeatedly, the chat agent's per-page system prompt
+        // is anchored to SPX, and useOptionsData is hard-coded to underlying:
+        // 'SPX'); re-asserting "· SPX" inside every chart title was pure
+        // redundancy that ate horizontal title-bar real estate without
+        // conveying information the reader did not already have. Same pattern
+        // the /stochastic/ page applied in commit 1e3e670 for the same
+        // page-level-context reason.
         y: mobile ? 0.92 : 0.97,
         yref: 'container',
         yanchor: 'top',
       },
-      margin: mobile ? { t: 75, r: 30, b: 100, l: 70 } : { t: 70, r: 40, b: 110, l: 85 },
+      // Mobile bottom margin grows from 100 → 200 and the legend.y mobile
+      // override drops from -0.25 to -0.30 so that the wrapped 8-entry
+      // legend (4 expirations × {market line + MC marker}, each ~125-175 px
+      // wide on a phone, wraps to ~4 rows of ~24 px = ~96 px legend height)
+      // has enough vertical room below the x-axis title strip to render
+      // fully inside the SVG container without overflowing or visually
+      // touching the bold "log-moneyness y = ln(K/S)" axis label. Prior
+      // mobile geometry (container 420, b:100, y:-0.25) put the legend top
+      // at -0.25 × (420 - 75 - 100) = -61 px below the plot bottom, only
+      // ~13 px under the ~48-px-tall axis-title strip (12 px tick + 10 px
+      // standoff + 20 px bold title), and the wrapped 4-row legend extending
+      // ~96 px below that landed ~57 px BELOW the 420 px SVG container floor
+      // and was visually clipped. New mobile geometry: container 540 (+120),
+      // bottom margin 200 (+100), legend.y -0.30. New plot_height = 540 − 75
+      // − 200 = 265 (vs the prior 245, a small chart-real-estate gain), new
+      // legend_top below plot = 0.30 × 265 = 79.5 px (vs the prior 61), gap
+      // from x-axis title bottom (~48 px below plot) to legend top widens
+      // from ~13 px to ~31.5 px, and legend bottom at 79.5 + 96 = 175.5 px
+      // below plot fits inside the new 200 px bottom margin with a ~24.5-px
+      // buffer that absorbs edge cases like a 320-px-wide viewport where the
+      // 8-entry legend may wrap to a fifth row. Desktop is mathematically
+      // untouched: the mobile ternaries on container height, margin, and
+      // legend.y all resolve to the prior 500 / b:110 / -0.25 values when
+      // useIsMobile returns false. Same legend-y / paper-coords mechanism
+      // the /vix/ TermStructure (commit a10444b), /stochastic/ SlotD (commit
+      // 1e3e670), and /rough/ slots (commit 0d3df80) used; this slot needs a
+      // larger absolute push because it carries 8 legend entries vs the 4-
+      // 7-entry counts those slots had.
+      margin: mobile ? { t: 75, r: 30, b: 200, l: 70 } : { t: 70, r: 40, b: 110, l: 85 },
       xaxis: plotlyAxis('log-moneyness  y = ln(K/S)', {
         tickformat: '.2f',
       }),
@@ -337,7 +375,7 @@ export default function SlotB() {
       showlegend: true,
       legend: {
         orientation: 'h',
-        y: -0.25,
+        y: mobile ? -0.30 : -0.25,
         x: 0.5,
         xanchor: 'center',
         font: PLOTLY_FONTS.legend,
@@ -462,7 +500,7 @@ export default function SlotB() {
         />
       </div>
 
-      <div ref={chartRef} style={{ width: '100%', height: mobile ? 420 : 500 }} />
+      <div ref={chartRef} style={{ width: '100%', height: mobile ? 540 : 500 }} />
 
       <div
         style={{

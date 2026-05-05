@@ -161,12 +161,38 @@ export default function SlotC() {
         yref: 'container',
         yanchor: 'top',
       },
-      margin: mobile ? { t: 40, r: 20, b: 90, l: 60 } : { t: 50, r: 25, b: 95, l: 75 },
+      // Mobile bottom margin grows from 90 → 130 and the legend.y mobile
+      // override drops from -0.28 to -0.45 so the 2-entry legend ("market σ
+      // (SVI)" + "local vol σ_LV", a single ~22 px row at any phone width)
+      // clears the 20-px-bold "log-moneyness y" axis-title strip beneath
+      // the plot. Prior mobile geometry (container 260, b:90, y:-0.28) gave
+      // a 130-px plot area where the legend top at -0.28 × 130 = -36.4 px
+      // below the plot bottom landed INSIDE the ~48-px-tall axis-title strip
+      // (12 px tick + 10 px standoff + 20 px bold title), so the legend
+      // physically overlapped the "log-moneyness y" label by ~12 px. This is
+      // the same Plotly 2.35.2 layout-arithmetic class the recent /vix/,
+      // /stochastic/, and /rough/ mobile fixes hit — the legend's default
+      // yref 'paper' expresses y as a fraction of plot-area height, so a
+      // chart with a small plot area produces a small absolute legend offset
+      // that cannot clear the fixed-pixel axis-title strip. New mobile
+      // geometry: container 320 (+60), bottom margin 130 (+40), legend.y
+      // -0.45. New plot_height = 320 − 40 − 130 = 150 (vs the prior 130, a
+      // 20-px gain on chart real estate), new legend_top below plot = 0.45
+      // × 150 = 67.5 px, gap from x-axis title bottom (~48 px below plot)
+      // to legend top widens from a colliding −12 px to a comfortable
+      // ~19.5 px, and the 22-px legend bottom at 89.5 px below plot fits
+      // inside the 130 px bottom margin with a ~40.5-px buffer. Desktop is
+      // mathematically untouched: the mobile ternaries on margin and
+      // legend.y resolve to the prior {t:50,r:25,b:95,l:75} / -0.28 values
+      // when useIsMobile returns false. The matching term-structure chart
+      // below in this same slot picks up the same three-value treatment
+      // because it shares an x-axis-title + 2-entry-legend topology.
+      margin: mobile ? { t: 40, r: 20, b: 130, l: 60 } : { t: 50, r: 25, b: 95, l: 75 },
       xaxis: plotlyAxis('log-moneyness y', { tickformat: '.2f' }),
       yaxis: plotlyAxis('σ (%)', { ticksuffix: '%' }),
       legend: {
         orientation: 'h',
-        y: -0.28,
+        y: mobile ? -0.45 : -0.28,
         x: 0.5,
         xanchor: 'center',
         font: PLOTLY_FONTS.legend,
@@ -210,12 +236,18 @@ export default function SlotC() {
         yref: 'container',
         yanchor: 'top',
       },
-      margin: mobile ? { t: 40, r: 20, b: 90, l: 60 } : { t: 50, r: 25, b: 95, l: 75 },
+      // Same mobile-only treatment as the smile chart above — the term
+      // chart shares a 2-entry legend and a 20-px-bold "T (years)" x-axis
+      // title, so its prior mobile geometry produced the same legend-over-
+      // axis-title overlap. See the smile-chart comment for the full layout
+      // arithmetic; the geometry is identical (container 260 → 320, bottom
+      // 90 → 130, legend.y -0.28 → -0.45 on mobile only).
+      margin: mobile ? { t: 40, r: 20, b: 130, l: 60 } : { t: 50, r: 25, b: 95, l: 75 },
       xaxis: plotlyAxis('T (years)', { type: 'log' }),
       yaxis: plotlyAxis('σ (%)', { ticksuffix: '%' }),
       legend: {
         orientation: 'h',
-        y: -0.28,
+        y: mobile ? -0.45 : -0.28,
         x: 0.5,
         xanchor: 'center',
         font: PLOTLY_FONTS.legend,
@@ -302,7 +334,7 @@ export default function SlotC() {
         }}
       >
         <div>
-          <div ref={smileRef} style={{ width: '100%', height: mobile ? 260 : 300 }} />
+          <div ref={smileRef} style={{ width: '100%', height: mobile ? 320 : 300 }} />
           <div style={{ padding: '0.5rem 0.25rem 0.25rem' }}>
             <label
               style={{
@@ -332,7 +364,7 @@ export default function SlotC() {
           </div>
         </div>
         <div>
-          <div ref={termRef} style={{ width: '100%', height: mobile ? 260 : 300 }} />
+          <div ref={termRef} style={{ width: '100%', height: mobile ? 320 : 300 }} />
           <div style={{ padding: '0.5rem 0.25rem 0.25rem' }}>
             <label
               style={{
