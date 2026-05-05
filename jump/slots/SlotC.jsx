@@ -440,41 +440,74 @@ export default function SlotC() {
   }, [activeExp, data]);
   const T = dte != null ? dte / 365 : null;
 
-  const calib = useMemo(() => {
-    if (!data || !activeExp || slice.length < 8 || !T || T <= 0) return null;
-    return calibrateBates(slice, data.spotPrice, T, RATE_R, RATE_Q, INIT_PARAMS);
+  // Bates SVJ calibration (8-parameter combined Heston+Merton, the
+  // heaviest of the four jump-process slots by parameter count and
+  // therefore by simplex iteration count) deferred to idle callback so
+  // chart paints observation dots before the simplex runs.
+  const [calib, setCalib] = useState(null);
+  useEffect(() => {
+    if (!data || !activeExp || slice.length < 8 || !T || T <= 0) {
+      setCalib(null);
+      return undefined;
+    }
+    if (typeof window === 'undefined') {
+      setCalib(calibrateBates(slice, data.spotPrice, T, RATE_R, RATE_Q, INIT_PARAMS));
+      return undefined;
+    }
+    let cancelled = false;
+    const idle = window.requestIdleCallback
+      ? (cb) => window.requestIdleCallback(cb, { timeout: 1500 })
+      : (cb) => setTimeout(cb, 0);
+    const cancel = window.cancelIdleCallback || clearTimeout;
+    const handle = idle(() => {
+      if (cancelled) return;
+      const res = calibrateBates(slice, data.spotPrice, T, RATE_R, RATE_Q, INIT_PARAMS);
+      if (cancelled) return;
+      setCalib(res);
+    });
+    return () => {
+      cancelled = true;
+      cancel(handle);
+    };
   }, [data, activeExp, slice, T]);
 
   useEffect(() => {
-    if (!Plotly || !chartRef.current || !calib || slice.length === 0 || !T || !data) return;
+    if (!Plotly || !chartRef.current || slice.length === 0 || !T || !data) return;
 
     const strikes = slice.map((r) => r.strike);
     const ivs = slice.map((r) => r.iv * 100);
     const K_lo = Math.min(...strikes);
     const K_hi = Math.max(...strikes);
-    const nGrid = 50;
-    const gridK = new Array(nGrid);
-    const gridIv = new Array(nGrid);
-    for (let i = 0; i < nGrid; i++) {
-      const K = K_lo + (i / (nGrid - 1)) * (K_hi - K_lo);
-      gridK[i] = K;
-      const c = batesCall(calib.params, data.spotPrice, K, T, RATE_R, RATE_Q);
-      const iv = bsmIv(c, data.spotPrice, K, T, RATE_R, RATE_Q);
-      gridIv[i] = iv != null ? iv * 100 : null;
+
+    let gridK = null;
+    let gridIv = null;
+    let gridIvNoJump = null;
+    if (calib) {
+      const nGrid = 50;
+      gridK = new Array(nGrid);
+      gridIv = new Array(nGrid);
+      for (let i = 0; i < nGrid; i++) {
+        const K = K_lo + (i / (nGrid - 1)) * (K_hi - K_lo);
+        gridK[i] = K;
+        const c = batesCall(calib.params, data.spotPrice, K, T, RATE_R, RATE_Q);
+        const iv = bsmIv(c, data.spotPrice, K, T, RATE_R, RATE_Q);
+        gridIv[i] = iv != null ? iv * 100 : null;
+      }
+      // Heston-only counterfactual. Jumps switched off; the gap to the
+      // full Bates curve is the smile contribution from the jump
+      // component, exactly the Heston short-skew gap that Bates closes.
+      const noJumpParams = { ...calib.params, lambda: 0 };
+      gridIvNoJump = new Array(nGrid);
+      for (let i = 0; i < nGrid; i++) {
+        const c = batesCall(noJumpParams, data.spotPrice, gridK[i], T, RATE_R, RATE_Q);
+        const iv = bsmIv(c, data.spotPrice, gridK[i], T, RATE_R, RATE_Q);
+        gridIvNoJump[i] = iv != null ? iv * 100 : null;
+      }
     }
 
-    // Heston-only counterfactual. Jumps switched off; the gap to the
-    // full Bates curve is the smile contribution from the jump
-    // component, exactly the Heston short-skew gap that Bates closes.
-    const noJumpParams = { ...calib.params, lambda: 0 };
-    const gridIvNoJump = new Array(nGrid);
-    for (let i = 0; i < nGrid; i++) {
-      const c = batesCall(noJumpParams, data.spotPrice, gridK[i], T, RATE_R, RATE_Q);
-      const iv = bsmIv(c, data.spotPrice, gridK[i], T, RATE_R, RATE_Q);
-      gridIvNoJump[i] = iv != null ? iv * 100 : null;
-    }
-
-    const allIv = [...ivs, ...gridIv.filter((v) => v != null), ...gridIvNoJump.filter((v) => v != null)];
+    const allIv = calib
+      ? [...ivs, ...gridIv.filter((v) => v != null), ...gridIvNoJump.filter((v) => v != null)]
+      : ivs;
     const yMin = Math.min(...allIv);
     const yMax = Math.max(...allIv);
     const pad = (yMax - yMin) * 0.12 || 1;
@@ -488,7 +521,7 @@ export default function SlotC() {
         marker: { color: PLOTLY_COLORS.primary, size: mobile ? 7 : 9, line: { width: 0 } },
         hovertemplate: 'K %{x}<br>σ %{y:.2f}%<extra></extra>',
       },
-      {
+      ...(calib ? [{
         x: gridK,
         y: gridIv,
         mode: 'lines',
@@ -496,8 +529,8 @@ export default function SlotC() {
         line: { color: PLOTLY_COLORS.secondary, width: 2 },
         hoverinfo: 'skip',
         connectgaps: false,
-      },
-      {
+      }] : []),
+      ...(calib ? [{
         x: gridK,
         y: gridIvNoJump,
         mode: 'lines',
@@ -505,7 +538,7 @@ export default function SlotC() {
         line: { color: PLOTLY_COLORS.highlight, width: 1, dash: 'dash' },
         hoverinfo: 'skip',
         connectgaps: false,
-      },
+      }] : []),
       {
         x: [data.spotPrice, data.spotPrice],
         y: [yMin - pad, yMax + pad],
