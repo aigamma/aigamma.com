@@ -1,3 +1,4 @@
+import { useEffect, useRef, useState } from 'react';
 import { formatGamma, formatInteger, formatPercent, formatRatio } from '../lib/format';
 import { daysToExpiration, formatExpirationOption, formatFreshness } from '../lib/dates';
 
@@ -113,9 +114,67 @@ function termSlopeAccent(ratio) {
   return 'var(--accent-coral)';
 }
 
-function Stat({ label, value, accent, sub, bold, className }) {
+// Stat — one cell in the LevelsPanel metric grid. Optional `tooltip` prop
+// turns on a small italic-i info button to the right of the label; clicking
+// the button opens an absolutely positioned popover anchored under the cell
+// that explains what the metric is and how to read it. Same interaction on
+// desktop (click) and mobile (tap) — hover-only would be invisible to touch
+// users, so the icon is always present and click-toggle is the universal
+// affordance. Outside-click and Escape both close. State is per-cell so each
+// Stat manages its own openness; opening one Stat does NOT auto-close another
+// already-open Stat. The container keeps position: relative so the popover's
+// position: absolute / top: 100% places it directly under THIS cell rather
+// than the panel root. The popover uses fixed max-width clamped against the
+// viewport so on phone-class widths it never escapes the right edge of the
+// screen even when the cell itself is narrow.
+function Stat({ label, value, accent, sub, bold, className, tooltip }) {
+  const [showTip, setShowTip] = useState(false);
+  // 'left' anchors the popover at the cell's left edge (default — works for
+  // most cells). 'right' flips the anchor so the popover hugs the cell's
+  // right edge, used when the cell sits in the right half of the viewport
+  // and a left-anchored 280-px popover would otherwise clip off the right
+  // edge of the screen on phone-class widths. Decision is made at toggle
+  // time using getBoundingClientRect, so the side that wins reflects the
+  // actual viewport state at the moment the user opens the tooltip rather
+  // than a stale measurement from mount.
+  const [tipAlign, setTipAlign] = useState('left');
+  const containerRef = useRef(null);
+
+  useEffect(() => {
+    if (!showTip) return;
+    const onClickOutside = (e) => {
+      if (containerRef.current && !containerRef.current.contains(e.target)) {
+        setShowTip(false);
+      }
+    };
+    const onKey = (e) => {
+      if (e.key === 'Escape') setShowTip(false);
+    };
+    document.addEventListener('mousedown', onClickOutside);
+    document.addEventListener('touchstart', onClickOutside);
+    document.addEventListener('keydown', onKey);
+    return () => {
+      document.removeEventListener('mousedown', onClickOutside);
+      document.removeEventListener('touchstart', onClickOutside);
+      document.removeEventListener('keydown', onKey);
+    };
+  }, [showTip]);
+
+  const handleToggle = (e) => {
+    e.stopPropagation();
+    if (!showTip && containerRef.current && typeof window !== 'undefined') {
+      const rect = containerRef.current.getBoundingClientRect();
+      const viewportW = window.innerWidth;
+      // If a left-anchored 280-px popover would overflow the right edge of
+      // the viewport (with a 16-px safety margin), flip to right-anchored
+      // so the popover hugs the cell's right edge instead.
+      setTipAlign(rect.left + 280 > viewportW - 16 ? 'right' : 'left');
+    }
+    setShowTip((s) => !s);
+  };
+
   return (
-    <div className={className} style={{ minWidth: 0 }}>
+    <div ref={containerRef} className={className} style={{ minWidth: 0, position: 'relative' }}>
       <div
         style={{
           fontSize: '0.8rem',
@@ -123,9 +182,44 @@ function Stat({ label, value, accent, sub, bold, className }) {
           textTransform: 'uppercase',
           letterSpacing: '0.08em',
           marginBottom: '0.25rem',
+          display: 'flex',
+          alignItems: 'center',
+          gap: '0.35rem',
         }}
       >
-        {label}
+        <span>{label}</span>
+        {tooltip && (
+          <button
+            type="button"
+            onClick={handleToggle}
+            aria-label={`What is ${label}?`}
+            aria-expanded={showTip}
+            style={{
+              display: 'inline-flex',
+              alignItems: 'center',
+              justifyContent: 'center',
+              width: '15px',
+              height: '15px',
+              borderRadius: '50%',
+              border: `1px solid ${showTip ? 'var(--text-primary)' : 'var(--text-secondary)'}`,
+              background: 'transparent',
+              color: showTip ? 'var(--text-primary)' : 'var(--text-secondary)',
+              fontFamily: "Calibri, 'Segoe UI', system-ui, sans-serif",
+              fontSize: '0.7rem',
+              fontStyle: 'italic',
+              fontWeight: 700,
+              textTransform: 'none',
+              letterSpacing: 'normal',
+              cursor: 'pointer',
+              padding: 0,
+              lineHeight: 1,
+              flexShrink: 0,
+              transition: 'color 120ms ease, border-color 120ms ease',
+            }}
+          >
+            i
+          </button>
+        )}
       </div>
       <div
         className="data-value"
@@ -140,6 +234,36 @@ function Stat({ label, value, accent, sub, bold, className }) {
       {sub && (
         <div style={{ fontSize: '0.8rem', color: 'var(--text-secondary)', marginTop: '0.15rem' }}>
           {sub}
+        </div>
+      )}
+      {tooltip && showTip && (
+        <div
+          role="tooltip"
+          style={{
+            position: 'absolute',
+            top: '100%',
+            left: tipAlign === 'left' ? 0 : 'auto',
+            right: tipAlign === 'right' ? 0 : 'auto',
+            zIndex: 100,
+            marginTop: '0.45rem',
+            padding: '0.65rem 0.8rem',
+            width: 'max-content',
+            maxWidth: 'min(280px, calc(100vw - 2rem))',
+            background: 'var(--bg-card)',
+            border: '1px solid rgba(255, 255, 255, 0.18)',
+            borderRadius: '4px',
+            boxShadow: '0 8px 24px rgba(0, 0, 0, 0.6)',
+            color: 'var(--text-primary)',
+            fontFamily: "Calibri, 'Segoe UI', system-ui, sans-serif",
+            fontSize: '0.78rem',
+            lineHeight: 1.55,
+            textTransform: 'none',
+            letterSpacing: 'normal',
+            fontWeight: 400,
+            whiteSpace: 'normal',
+          }}
+        >
+          {tooltip}
         </div>
       )}
     </div>
@@ -372,6 +496,7 @@ export default function LevelsPanel({ levels, spotPrice, prevClose, expirationMe
               : null
           }
           bold
+          tooltip="Net of three direction signs vs the prior session: +1 each for higher Put Wall, Vol Flip, Call Wall; −1 each for lower. Range −3 to +3. A positive score means today's dealer positioning has shifted upward overnight; the sub-line breaks out the per-level arrows."
         />
         <Stat
           label="Vol Flip"
@@ -379,19 +504,28 @@ export default function LevelsPanel({ levels, spotPrice, prevClose, expirationMe
           accent="var(--accent-amber)"
           sub={volFlipSub}
           bold
+          tooltip="Strike where the dealer-gamma profile crosses zero. Above this line, dealers are net long gamma and dampen moves; below, they're short gamma and amplify them. The sub-line shows distance from spot in dollars and percent."
         />
-        <Stat label="SPX" value={formatInteger(spotPrice)} accent="var(--accent-blue)" sub={spotDeltaSub(spotPrice, prevClose)} />
+        <Stat
+          label="SPX"
+          value={formatInteger(spotPrice)}
+          accent="var(--accent-blue)"
+          sub={spotDeltaSub(spotPrice, prevClose)}
+          tooltip="S&P 500 cash index spot price — the reference point for every other metric on this page. Sub-line shows the move from the prior session's close in dollars and percent."
+        />
         <Stat
           label="Put Wall"
           value={formatInteger(levels.put_wall)}
           accent="var(--accent-coral)"
           sub={putWallSub}
+          tooltip="Strike with the largest negative net dealer gamma within ±15% of spot. Often acts as downside support: as price falls toward it, dealers buy futures to hedge, which slows the decline."
         />
         <Stat
           label="Call Wall"
           value={formatInteger(levels.call_wall)}
           accent="var(--accent-green)"
           sub={callWallSub}
+          tooltip="Strike with the largest positive net dealer gamma within ±15% of spot. Often acts as upside resistance: as price rises toward it, dealers sell futures to hedge, which slows the rally."
         />
         <Stat
           label="P/C Ratio (Volume)"
@@ -403,6 +537,7 @@ export default function LevelsPanel({ levels, spotPrice, prevClose, expirationMe
               : null
           }
           className="levels-pc-volume--mobile"
+          tooltip="Today's total SPX put volume divided by total call volume. Above 1.0 means more puts trading than calls — typically a hedging or bearish-positioning signal. Sub-line shows the raw P and C contract counts."
         />
       </div>
 
@@ -415,6 +550,7 @@ export default function LevelsPanel({ levels, spotPrice, prevClose, expirationMe
           accent={gammaIndexAccent(levels.gamma_index)}
           sub={levels.gamma_index_date ? `as of ${levels.gamma_index_date}` : null}
           bold
+          tooltip="Bounded oscillator in [−10, +10] equal to 10 × (ATM call GEX − ATM put GEX) / (ATM call GEX + ATM put GEX). Reads how skewed the at-the-money book is regardless of overall notional size; ±5 marks the empirical extreme thresholds."
         />
         <Stat
           label="Dist from Risk Off"
@@ -422,12 +558,14 @@ export default function LevelsPanel({ levels, spotPrice, prevClose, expirationMe
           accent={flipDistAccent(flipDist)}
           sub={flipDist != null ? `${((flipDist / spotPrice) * 100).toFixed(2)}%` : null}
           bold
+          tooltip="Spot price minus Vol Flip in dollars. Positive when SPX is above the flip (positive-gamma regime, dealers dampen moves); negative when below (negative-gamma regime, dealers amplify them). The sign IS the regime — there is no neutral middle."
         />
         <Stat
           label="VRP"
           value={vrpMetric ? `${vrpMetric.vrp > 0 ? '+' : ''}${vrpMetric.vrp.toFixed(2)}%` : '—'}
           accent="var(--accent-purple)"
           sub={vrpMetric ? `IV ${vrpMetric.iv.toFixed(1)}% / RV ${vrpMetric.rv.toFixed(1)}%` : null}
+          tooltip="Volatility Risk Premium: 30-day constant-maturity implied vol minus 20-day Yang-Zhang realized vol. Positive readings mean implieds are pricing more vol than has been delivered — the structural compensation option sellers earn on average."
         />
         <Stat
           label="IV Rank"
@@ -438,6 +576,7 @@ export default function LevelsPanel({ levels, spotPrice, prevClose, expirationMe
               ? `252d: ${vrpMetric.ivRankLow.toFixed(1)}% – ${vrpMetric.ivRankHigh.toFixed(1)}%`
               : null
           }
+          tooltip="Where today's 30-day IV sits inside its trailing 252-day high-low band, expressed as a percentile. 100% = highest in a year, 0% = lowest. The sub-line shows the actual IV bounds the rank is computed against."
         />
         <Stat
           label="P/C Ratio (Volume)"
@@ -449,6 +588,7 @@ export default function LevelsPanel({ levels, spotPrice, prevClose, expirationMe
               : null
           }
           className="levels-pc-volume--desktop"
+          tooltip="Today's total SPX put volume divided by total call volume. Above 1.0 means more puts trading than calls — typically a hedging or bearish-positioning signal. Sub-line shows the raw P and C contract counts."
         />
       </div>
 
@@ -499,21 +639,25 @@ export default function LevelsPanel({ levels, spotPrice, prevClose, expirationMe
               accent="var(--accent-purple)"
               sub={expMoveSub}
               bold
+              tooltip="Implied 1-σ move at the selected expiration: spot × ATM IV × √(DTE/365). The sub-line shows the resulting low–high band — roughly two-thirds of historical outcomes have landed inside this range, one-third outside."
             />
             <Stat
               label="25Δ Put IV"
               value={formatPercent(relevantMetric.put_25d_iv)}
               sub={ivDeltaSub(relevantMetric.put_25d_iv, prevMetric?.put_25d_iv)}
+              tooltip="Implied volatility at the 25-delta put for the selected expiration — the OTM strike where the option's delta is roughly −0.25. Higher than ATM IV is the typical equity skew shape; the spread vs ATM is a measure of downside-tail pricing intensity."
             />
             <Stat
               label="ATM IV"
               value={formatPercent(relevantMetric.atm_iv)}
               sub={ivDeltaSub(relevantMetric.atm_iv, prevMetric?.atm_iv)}
+              tooltip="Implied volatility at the at-the-money strike for the selected expiration. The reference point for skew comparisons (vs the 25Δ wings) and the input to the Expected Move calculation. Sub-line shows the day-over-day change in percentage points of IV."
             />
             <Stat
               label="25Δ Call IV"
               value={formatPercent(relevantMetric.call_25d_iv)}
               sub={ivDeltaSub(relevantMetric.call_25d_iv, prevMetric?.call_25d_iv)}
+              tooltip="Implied volatility at the 25-delta call for the selected expiration — the OTM strike where the option's delta is roughly +0.25. Lower than ATM IV is the typical equity skew shape; rising relative to ATM signals upside-call demand or a shift toward right-tail pricing."
             />
             <Stat
               label="Term Slope"
@@ -525,6 +669,7 @@ export default function LevelsPanel({ levels, spotPrice, prevClose, expirationMe
                 ? `${Math.round(Math.abs(termStructure.ratio - 1) * 100)}% · ${termStructure.asOf}`
                 : null}
               className="levels-term-slope--mobile"
+              tooltip="VIX3M / VIX ratio. Above 1 = contango (3-month vol higher than near-term, the calm-regime default). Below 1 = backwardation (urgent near-term vol pricing past the 3-month tenor — often a stress signal). Sub-line shows the magnitude in percent."
             />
           </div>
         </>
