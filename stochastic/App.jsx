@@ -1,13 +1,46 @@
+import { lazy, useEffect } from 'react';
 import '../src/styles/theme.css';
 import '../src/styles/lab.css';
 import ErrorBoundary from '../src/ErrorBoundary';
 import Menu from '../src/components/Menu';
 import TopNav from '../src/components/TopNav';
-import Chat from '../src/components/Chat';
+import LazyMount from '../src/components/LazyMount';
 import SlotA from './slots/SlotA';
-import SlotB from './slots/SlotB';
-import SlotC from './slots/SlotC';
-import SlotD from './slots/SlotD';
+
+// SlotA stays statically imported because it is the first slot in the page
+// reading order and is already (partially) above the fold on a typical
+// desktop viewport, so its bytes need to be on the critical path. SlotB /
+// SlotC / SlotD plus Chat split out into their own Vite chunks via
+// React.lazy so the initial /stochastic/ chunk only carries SlotA's Heston
+// machinery (the closed-form characteristic-function inversion + the
+// Nelder-Mead simplex). The other three slots' calibration code (SABR's
+// Hagan asymptotic, the Dupire-surface finite-difference grid, and SlotD's
+// power-law-on-SVI-skews regression) lands in per-slot chunks that the
+// LazyMount viewport gate fetches when the reader scrolls within ~300 px
+// of the next card. Mirrors the /tactical/ pattern (VRP stays eager, the
+// four below-fold cards lazy + LazyMount-gated). The idle prefetch below
+// warms the disk cache with the three slot chunks during requestIdleCallback
+// after first paint so by the time the reader scrolls into range the
+// Suspense fallback has typically already resolved.
+const SlotB = lazy(() => import('./slots/SlotB'));
+const SlotC = lazy(() => import('./slots/SlotC'));
+const SlotD = lazy(() => import('./slots/SlotD'));
+const Chat = lazy(() => import('../src/components/Chat'));
+
+let prefetchedBelowFold = false;
+function prefetchBelowFoldChunks() {
+  if (prefetchedBelowFold) return;
+  prefetchedBelowFold = true;
+  const idle = (typeof window !== 'undefined' && window.requestIdleCallback)
+    ? (cb) => window.requestIdleCallback(cb, { timeout: 1500 })
+    : (cb) => setTimeout(cb, 200);
+  idle(() => {
+    import('./slots/SlotB');
+    import('./slots/SlotC');
+    import('./slots/SlotD');
+    import('../src/components/Chat');
+  });
+}
 
 // Stochastic Vol Lab — four-slot scratch pad dedicated to the canonical
 // stochastic-volatility model lineage for SPX options. Unlike /regime,
@@ -70,6 +103,10 @@ import SlotD from './slots/SlotD';
 // Return Home link as a last-line fallback. The Menu in the
 // upper-right continues to expose the cross-lab directory.
 export default function App() {
+  useEffect(() => {
+    prefetchBelowFoldChunks();
+  }, []);
+
   return (
     <div className="app-shell lab-shell">
       <header className="lab-header">
@@ -94,12 +131,26 @@ export default function App() {
         <Menu />
       </header>
 
+      {/* SlotA renders eagerly because it is the first card in the reading
+          order and partially above the fold on a typical desktop viewport;
+          the SlotB / SlotC / SlotD cards are LazyMount-gated behind a
+          300 px scroll margin so their (collectively several hundred ms of)
+          Plotly.newPlot + per-slot compute calls don't fire until the reader
+          scrolls within range. Heights match each slot's real rendered
+          footprint (chart area + the in-card explainer prose underneath)
+          so the placeholder occupies the same vertical space as the mounted
+          card and there is no CLS. The 300 px margin is tighter than the
+          400 px main-dashboard default because each slot card is ~1400-
+          1600 px tall — at 400 px every below-fold slot would mount on
+          first paint anyway, defeating the gating. */}
       <section className="lab-slot">
         <ErrorBoundary><SlotA /></ErrorBoundary>
       </section>
 
       <section className="lab-slot">
-        <ErrorBoundary><SlotB /></ErrorBoundary>
+        <ErrorBoundary>
+          <LazyMount height="1500px" margin="300px"><SlotB /></LazyMount>
+        </ErrorBoundary>
       </section>
 
       <div style={{ display: 'flex', justifyContent: 'center', margin: '1.5rem 0' }}>
@@ -124,23 +175,29 @@ export default function App() {
       </div>
 
       <section className="lab-slot">
-        <ErrorBoundary><SlotC /></ErrorBoundary>
+        <ErrorBoundary>
+          <LazyMount height="1600px" margin="300px"><SlotC /></LazyMount>
+        </ErrorBoundary>
       </section>
 
       <section className="lab-slot">
-        <ErrorBoundary><SlotD /></ErrorBoundary>
+        <ErrorBoundary>
+          <LazyMount height="1500px" margin="300px"><SlotD /></LazyMount>
+        </ErrorBoundary>
       </section>
 
       <ErrorBoundary>
-        <Chat
-          context="stochastic"
-          welcome={{
-            quick:
-              'Ask about the four models above, how to read the residuals between a fit and the observed smile for market edge, which model to trust for which trading decision, and how to turn a parameter change into a position. Chat stays on volatility, options, and how stochastic-vol reads translate into SPX options trades.',
-            deep:
-              'Deep Analysis mode: longer and more structurally detailed responses on how each model works, where it breaks down, what the gap between its fit and the market is pricing, and how to act on that gap in practical SPX options structures.',
-          }}
-        />
+        <LazyMount height="320px" margin="200px">
+          <Chat
+            context="stochastic"
+            welcome={{
+              quick:
+                'Ask about the four models above, how to read the residuals between a fit and the observed smile for market edge, which model to trust for which trading decision, and how to turn a parameter change into a position. Chat stays on volatility, options, and how stochastic-vol reads translate into SPX options trades.',
+              deep:
+                'Deep Analysis mode: longer and more structurally detailed responses on how each model works, where it breaks down, what the gap between its fit and the market is pricing, and how to act on that gap in practical SPX options structures.',
+            }}
+          />
+        </LazyMount>
       </ErrorBoundary>
 
       <footer className="lab-footer">

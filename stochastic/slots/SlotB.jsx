@@ -285,38 +285,70 @@ export default function SlotB() {
   const T = dte != null ? dte / 365 : null;
   const F = data && T ? forwardPrice(data.spotPrice, RATE_R, RATE_Q, T) : null;
 
-  const calib = useMemo(() => {
-    if (!slice.length || !F || !T || slice.length < 5) return null;
-    return calibrateSabr(slice, F, T, INIT_SABR);
+  // SABR calibration runs ~50-200 ms on a modern laptop and used to live
+  // in a useMemo that blocked render. Same pattern as SlotA's Heston:
+  // chart paints observation dots immediately and the fit line + the
+  // four parameter cells fill in once the idle callback resolves.
+  const [calib, setCalib] = useState(null);
+  useEffect(() => {
+    if (!slice.length || !F || !T || slice.length < 5) {
+      setCalib(null);
+      return undefined;
+    }
+    if (typeof window === 'undefined') {
+      setCalib(calibrateSabr(slice, F, T, INIT_SABR));
+      return undefined;
+    }
+    let cancelled = false;
+    const idle = window.requestIdleCallback
+      ? (cb) => window.requestIdleCallback(cb, { timeout: 1500 })
+      : (cb) => setTimeout(cb, 0);
+    const cancel = window.cancelIdleCallback || clearTimeout;
+    const handle = idle(() => {
+      if (cancelled) return;
+      const res = calibrateSabr(slice, F, T, INIT_SABR);
+      if (cancelled) return;
+      setCalib(res);
+    });
+    return () => {
+      cancelled = true;
+      cancel(handle);
+    };
   }, [slice, F, T]);
 
   useEffect(() => {
-    if (!Plotly || !chartRef.current || !calib || !F || !T || slice.length === 0) return;
+    if (!Plotly || !chartRef.current || !F || !T || slice.length === 0) return;
 
     const strikes = slice.map((r) => r.strike);
     const ivs = slice.map((r) => r.iv * 100);
     const K_lo = Math.min(...strikes);
     const K_hi = Math.max(...strikes);
-    const nGrid = 120;
-    const gridK = new Array(nGrid);
-    const gridIv = new Array(nGrid);
-    for (let i = 0; i < nGrid; i++) {
-      const K = K_lo + (i / (nGrid - 1)) * (K_hi - K_lo);
-      gridK[i] = K;
-      const iv = sabrIvBetaOne(calib.params, F, K, T);
-      gridIv[i] = iv != null ? iv * 100 : null;
+
+    // Same dots-first-then-fit progression as SlotA. Fit grid + backbone
+    // reference are only built when calib has resolved; until then the
+    // chart shows just the observed dots, the forward marker, and auto-
+    // ranged y. When calib lands a second Plotly.react pass adds the
+    // SABR curve and the σ_ATM backbone reference and re-ranges to fit.
+    let gridK = null;
+    let gridIv = null;
+    let atmIv = null;
+    if (calib) {
+      const nGrid = 120;
+      gridK = new Array(nGrid);
+      gridIv = new Array(nGrid);
+      for (let i = 0; i < nGrid; i++) {
+        const K = K_lo + (i / (nGrid - 1)) * (K_hi - K_lo);
+        gridK[i] = K;
+        const iv = sabrIvBetaOne(calib.params, F, K, T);
+        gridIv[i] = iv != null ? iv * 100 : null;
+      }
+      atmIv = sabrIvBetaOne(calib.params, F, F, T);
     }
 
-    const allIv = [...ivs, ...gridIv.filter((v) => v != null)];
+    const allIv = gridIv ? [...ivs, ...gridIv.filter((v) => v != null)] : ivs;
     const yMin = Math.min(...allIv);
     const yMax = Math.max(...allIv);
     const pad = (yMax - yMin) * 0.12 || 1;
-
-    // Backbone reference: the path σ_ATM traces as F moves, under fixed
-    // SABR parameters and β = 1 → constant (lognormal backbone is flat
-    // in F). Included as a dotted reference line at σ_ATM so the reader
-    // can eyeball deviations.
-    const atmIv = sabrIvBetaOne(calib.params, F, F, T);
 
     const traces = [
       {
@@ -327,7 +359,7 @@ export default function SlotB() {
         marker: { color: PLOTLY_COLORS.primary, size: mobile ? 7 : 9, line: { width: 0 } },
         hovertemplate: 'K %{x}<br>σ %{y:.2f}%<extra></extra>',
       },
-      {
+      ...(calib ? [{
         x: gridK,
         y: gridIv,
         mode: 'lines',
@@ -335,7 +367,7 @@ export default function SlotB() {
         line: { color: PLOTLY_COLORS.positive, width: 2 },
         hoverinfo: 'skip',
         connectgaps: false,
-      },
+      }] : []),
       {
         x: [F, F],
         y: [yMin - pad, yMax + pad],
@@ -345,7 +377,7 @@ export default function SlotB() {
         hoverinfo: 'skip',
         showlegend: false,
       },
-      {
+      ...(calib ? [{
         x: [K_lo, K_hi],
         y: [atmIv * 100, atmIv * 100],
         mode: 'lines',
@@ -353,7 +385,7 @@ export default function SlotB() {
         line: { color: PLOTLY_COLORS.highlight, width: 1, dash: 'dash' },
         hoverinfo: 'skip',
         showlegend: false,
-      },
+      }] : []),
     ];
 
     const layout = plotly2DChartLayout({

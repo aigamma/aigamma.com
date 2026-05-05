@@ -481,35 +481,74 @@ export default function SlotA() {
 
   const T = dte != null ? dte / 365 : null;
 
-  // Calibration is synchronous (~100-400 ms for a typical SPX slice on a
-  // modern laptop) so useMemo is cleaner than setState-in-effect — the
-  // render pause is short enough to be imperceptible against the network
-  // fetch that already gated the slice.
-  const calib = useMemo(() => {
-    if (!data || !activeExp || slice.length < 6 || !T || T <= 0) return null;
-    const res = calibrateHeston(slice, data.spotPrice, T, RATE_R, RATE_Q, INIT_PARAMS);
-    return { ...res, nSlice: slice.length, expiration: activeExp };
+  // Calibration runs ~100-400 ms on a modern laptop, longer on phone-class
+  // hardware, and used to live in a useMemo where it blocked render. Since
+  // the chart can paint the observation dots without waiting for the fit
+  // (the fit only contributes the smile-curve trace), the calibration is
+  // now deferred to a state-set-in-effect that fires inside requestIdle-
+  // Callback. First paint shows the dots immediately; the fit line and the
+  // five parameter cells fill in 100-400 ms later as the idle callback
+  // resolves. On mobile this is the difference between "page froze for half
+  // a second on scroll-into-range" and "dots appeared instantly, fit drew
+  // in on its own a moment later." Cancellation flag prevents a stale
+  // calibration from a now-superseded expiration overwriting fresh state.
+  const [calib, setCalib] = useState(null);
+  useEffect(() => {
+    if (!data || !activeExp || slice.length < 6 || !T || T <= 0) {
+      setCalib(null);
+      return undefined;
+    }
+    if (typeof window === 'undefined') {
+      const res = calibrateHeston(slice, data.spotPrice, T, RATE_R, RATE_Q, INIT_PARAMS);
+      setCalib({ ...res, nSlice: slice.length, expiration: activeExp });
+      return undefined;
+    }
+    let cancelled = false;
+    const idle = window.requestIdleCallback
+      ? (cb) => window.requestIdleCallback(cb, { timeout: 1500 })
+      : (cb) => setTimeout(cb, 0);
+    const cancel = window.cancelIdleCallback || clearTimeout;
+    const handle = idle(() => {
+      if (cancelled) return;
+      const res = calibrateHeston(slice, data.spotPrice, T, RATE_R, RATE_Q, INIT_PARAMS);
+      if (cancelled) return;
+      setCalib({ ...res, nSlice: slice.length, expiration: activeExp });
+    });
+    return () => {
+      cancelled = true;
+      cancel(handle);
+    };
   }, [data, activeExp, slice, T]);
 
   useEffect(() => {
-    if (!Plotly || !chartRef.current || !calib || slice.length === 0 || !T || !data) return;
+    if (!Plotly || !chartRef.current || slice.length === 0 || !T || !data) return;
 
     const strikes = slice.map((r) => r.strike);
     const ivs = slice.map((r) => r.iv * 100);
     const K_lo = Math.min(...strikes);
     const K_hi = Math.max(...strikes);
-    const nGrid = 60;
-    const gridK = new Array(nGrid);
-    const gridIv = new Array(nGrid);
-    for (let i = 0; i < nGrid; i++) {
-      const K = K_lo + (i / (nGrid - 1)) * (K_hi - K_lo);
-      gridK[i] = K;
-      const c = hestonCall(calib.params, data.spotPrice, K, T, RATE_R, RATE_Q);
-      const iv = bsmIv(c, data.spotPrice, K, T, RATE_R, RATE_Q);
-      gridIv[i] = iv != null ? iv * 100 : null;
+
+    // The fit-curve trace is only built when calib has resolved. Until then
+    // the chart renders observation dots + spot line only and Plotly auto-
+    // ranges the y-axis around the observed IVs. When calib lands a second
+    // Plotly.react pass adds the fit curve trace and re-ranges with the
+    // grid included so the smile curve sits comfortably inside the frame.
+    let gridK = null;
+    let gridIv = null;
+    if (calib) {
+      const nGrid = 60;
+      gridK = new Array(nGrid);
+      gridIv = new Array(nGrid);
+      for (let i = 0; i < nGrid; i++) {
+        const K = K_lo + (i / (nGrid - 1)) * (K_hi - K_lo);
+        gridK[i] = K;
+        const c = hestonCall(calib.params, data.spotPrice, K, T, RATE_R, RATE_Q);
+        const iv = bsmIv(c, data.spotPrice, K, T, RATE_R, RATE_Q);
+        gridIv[i] = iv != null ? iv * 100 : null;
+      }
     }
 
-    const allIv = [...ivs, ...gridIv.filter((v) => v != null)];
+    const allIv = gridIv ? [...ivs, ...gridIv.filter((v) => v != null)] : ivs;
     const yMin = Math.min(...allIv);
     const yMax = Math.max(...allIv);
     const pad = (yMax - yMin) * 0.12 || 1;
@@ -523,7 +562,7 @@ export default function SlotA() {
         marker: { color: PLOTLY_COLORS.primary, size: mobile ? 7 : 9, line: { width: 0 } },
         hovertemplate: 'K %{x}<br>σ %{y:.2f}%<extra></extra>',
       },
-      {
+      ...(calib ? [{
         x: gridK,
         y: gridIv,
         mode: 'lines',
@@ -531,7 +570,7 @@ export default function SlotA() {
         line: { color: PLOTLY_COLORS.highlight, width: 2 },
         hoverinfo: 'skip',
         connectgaps: false,
-      },
+      }] : []),
       {
         x: [data.spotPrice, data.spotPrice],
         y: [yMin - pad, yMax + pad],
