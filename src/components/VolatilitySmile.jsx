@@ -505,65 +505,122 @@ export default function VolatilitySmile({
   }, [activeExp, capturedAt]);
   const T = dte != null ? dte / 365 : null;
 
-  const fits = useMemo(() => {
-    if (!spotPrice || !activeExp || slice.length < 6 || !T || T <= 0) return null;
-    const heston = calibrateHeston(slice, spotPrice, T, RATE_R, RATE_Q);
-    const merton = calibrateMerton(slice, spotPrice, T, RATE_R, RATE_Q);
-    const sviResult = fitSviSlice({
-      contracts: sliceContracts,
-      spotPrice,
-      expirationDate: activeExp,
-      capturedAt,
-      forward: spotPrice,
-      maxAbsK: 0.2,
+  // Heston + Merton + SVI calibrations together cost ~300-800 ms wall-
+  // clock on a modern laptop and longer on phone-class hardware (the
+  // explicit reason /tactical/ mobile felt the slowest of any page on
+  // the site). Previously they ran in a synchronous useMemo that blocked
+  // the chart's first paint until all three fits had resolved. Now the
+  // calibration is deferred to a state-set-in-effect that fires inside
+  // requestIdleCallback, so the chart paints observation dots + spot
+  // line first and the three model overlay traces drop in once the idle
+  // callback lands. Cancellation flag prevents a stale calibration from
+  // a now-superseded expiration overwriting fresh state when the reader
+  // changes the dropdown mid-flight.
+  const [fits, setFits] = useState(null);
+  useEffect(() => {
+    if (!spotPrice || !activeExp || slice.length < 6 || !T || T <= 0) {
+      setFits(null);
+      return undefined;
+    }
+    if (typeof window === 'undefined') {
+      const heston = calibrateHeston(slice, spotPrice, T, RATE_R, RATE_Q);
+      const merton = calibrateMerton(slice, spotPrice, T, RATE_R, RATE_Q);
+      const sviResult = fitSviSlice({
+        contracts: sliceContracts,
+        spotPrice,
+        expirationDate: activeExp,
+        capturedAt,
+        forward: spotPrice,
+        maxAbsK: 0.2,
+      });
+      const svi = sviResult.ok
+        ? { params: sviResult.params, rmse: sviResult.rmseIv, T: sviResult.T }
+        : null;
+      setFits({ heston, merton, svi });
+      return undefined;
+    }
+    let cancelled = false;
+    const idle = window.requestIdleCallback
+      ? (cb) => window.requestIdleCallback(cb, { timeout: 1500 })
+      : (cb) => setTimeout(cb, 0);
+    const cancel = window.cancelIdleCallback || clearTimeout;
+    const handle = idle(() => {
+      if (cancelled) return;
+      const heston = calibrateHeston(slice, spotPrice, T, RATE_R, RATE_Q);
+      if (cancelled) return;
+      const merton = calibrateMerton(slice, spotPrice, T, RATE_R, RATE_Q);
+      if (cancelled) return;
+      const sviResult = fitSviSlice({
+        contracts: sliceContracts,
+        spotPrice,
+        expirationDate: activeExp,
+        capturedAt,
+        forward: spotPrice,
+        maxAbsK: 0.2,
+      });
+      if (cancelled) return;
+      const svi = sviResult.ok
+        ? { params: sviResult.params, rmse: sviResult.rmseIv, T: sviResult.T }
+        : null;
+      setFits({ heston, merton, svi });
     });
-    const svi = sviResult.ok
-      ? { params: sviResult.params, rmse: sviResult.rmseIv, T: sviResult.T }
-      : null;
-    return { heston, merton, svi };
+    return () => {
+      cancelled = true;
+      cancel(handle);
+    };
   }, [spotPrice, activeExp, slice, sliceContracts, T, capturedAt]);
 
   useEffect(() => {
-    if (!Plotly || !chartRef.current || !fits || slice.length === 0 || !T || !spotPrice)
+    if (!Plotly || !chartRef.current || slice.length === 0 || !T || !spotPrice)
       return;
 
     const strikes = slice.map((r) => r.strike);
     const ivs = slice.map((r) => r.iv * 100);
     const K_lo = Math.min(...strikes);
     const K_hi = Math.max(...strikes);
-    const nGrid = 80;
-    const gridK = new Array(nGrid);
-    for (let i = 0; i < nGrid; i++) {
-      gridK[i] = K_lo + (i / (nGrid - 1)) * (K_hi - K_lo);
+
+    // Model fit traces are only built when fits has resolved. Until
+    // then the chart paints observation dots + spot dotted line and
+    // Plotly auto-ranges the y-axis around the observed IVs. Once
+    // fits land a second Plotly.react pass adds the three (or fewer,
+    // depending on visible state) model overlay traces and re-ranges
+    // to fit them all.
+    let gridK = null;
+    let gridHeston = null;
+    let gridMerton = null;
+    let gridSvi = null;
+    if (fits) {
+      const nGrid = 80;
+      gridK = new Array(nGrid);
+      for (let i = 0; i < nGrid; i++) {
+        gridK[i] = K_lo + (i / (nGrid - 1)) * (K_hi - K_lo);
+      }
+      gridHeston = gridK.map((K) => {
+        const c = hestonCall(fits.heston.params, spotPrice, K, T, RATE_R, RATE_Q);
+        const iv = bsmIv(c, spotPrice, K, T, RATE_R, RATE_Q);
+        return iv != null ? iv * 100 : null;
+      });
+      gridMerton = gridK.map((K) => {
+        const c = mertonCall(fits.merton.params, spotPrice, K, T, RATE_R, RATE_Q);
+        const iv = bsmIv(c, spotPrice, K, T, RATE_R, RATE_Q);
+        return iv != null ? iv * 100 : null;
+      });
+      gridSvi = fits.svi
+        ? gridK.map((K) => {
+            const k = Math.log(K / spotPrice);
+            const w = sviTotalVariance(fits.svi.params, k);
+            const Tsvi = fits.svi.T;
+            if (!(w > 0) || !(Tsvi > 0)) return null;
+            return Math.sqrt(w / Tsvi) * 100;
+          })
+        : gridK.map(() => null);
     }
-
-    const gridHeston = gridK.map((K) => {
-      const c = hestonCall(fits.heston.params, spotPrice, K, T, RATE_R, RATE_Q);
-      const iv = bsmIv(c, spotPrice, K, T, RATE_R, RATE_Q);
-      return iv != null ? iv * 100 : null;
-    });
-
-    const gridMerton = gridK.map((K) => {
-      const c = mertonCall(fits.merton.params, spotPrice, K, T, RATE_R, RATE_Q);
-      const iv = bsmIv(c, spotPrice, K, T, RATE_R, RATE_Q);
-      return iv != null ? iv * 100 : null;
-    });
-
-    const gridSvi = fits.svi
-      ? gridK.map((K) => {
-          const k = Math.log(K / spotPrice);
-          const w = sviTotalVariance(fits.svi.params, k);
-          const Tsvi = fits.svi.T;
-          if (!(w > 0) || !(Tsvi > 0)) return null;
-          return Math.sqrt(w / Tsvi) * 100;
-        })
-      : gridK.map(() => null);
 
     const allIv = [
       ...ivs,
-      ...(visible.heston ? gridHeston.filter((v) => v != null) : []),
-      ...(visible.merton ? gridMerton.filter((v) => v != null) : []),
-      ...(visible.svi ? gridSvi.filter((v) => v != null) : []),
+      ...(fits && visible.heston ? gridHeston.filter((v) => v != null) : []),
+      ...(fits && visible.merton ? gridMerton.filter((v) => v != null) : []),
+      ...(fits && visible.svi ? gridSvi.filter((v) => v != null) : []),
     ];
     const yMin = Math.min(...allIv);
     const yMax = Math.max(...allIv);
@@ -586,7 +643,7 @@ export default function VolatilitySmile({
         hovertemplate:
           'K %{x}<br>σ %{y:.2f}%<br>Δ %{customdata[0]}<extra></extra>',
       },
-      ...(visible.heston
+      ...(fits && visible.heston
         ? [
             {
               x: gridK,
@@ -599,7 +656,7 @@ export default function VolatilitySmile({
             },
           ]
         : []),
-      ...(visible.merton
+      ...(fits && visible.merton
         ? [
             {
               x: gridK,
@@ -612,7 +669,7 @@ export default function VolatilitySmile({
             },
           ]
         : []),
-      ...(visible.svi
+      ...(fits && visible.svi
         ? [
             {
               x: gridK,
