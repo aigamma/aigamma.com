@@ -509,7 +509,27 @@ function ScatterChart({ chartDays, containerWidth, impliedMovesLive, impliedMove
   const [hovered, setHovered] = useState(null);
 
   const width = Math.max(Math.min(containerWidth - 16, 1100), 320);
-  const height = Math.round(width * 0.62);
+  // Aspect ratio: on mobile (containerWidth < 600px, which catches every
+  // phone-class viewport since the lab-shell padding shaves the wrap to
+  // ~320-360px even on the widest phones) we render the chart roughly
+  // 2.5× TALLER than wide so the implied-move axis has enough vertical
+  // room for the per-ticker dots to spread out and stay readable. The
+  // previous flat 0.62 ratio produced a chart ~198px tall on a phone-
+  // class container floored at 320px wide, which on an 800px viewport
+  // occupied no more than ~25% of the screen and forced readers to
+  // squint at dot clusters bunched along the bottom 100px of the plot.
+  // Bumping to 1.55 on phones lifts the chart to ~62% of viewport on
+  // iPhone 13, ~63% on Pixel 6, and ~74% on iPhone SE (where the
+  // smaller absolute viewport benefits from the larger relative
+  // footprint), matching Eric's "closer to 2/3 of the screen" target.
+  // Desktop stays at the 0.62 ratio because the container is 600-1100px
+  // wide and the dots already have plenty of horizontal room within
+  // each day-column. The cutoff at 600px (vs the platform-wide 768px
+  // mobile breakpoint) avoids flipping ratios on narrow desktop windows
+  // where the wider 0.62 chart still reads cleanly.
+  const isMobileChart = containerWidth > 0 && containerWidth < 600;
+  const heightRatio = isMobileChart ? 1.55 : 0.62;
+  const height = Math.round(width * heightRatio);
 
   // SVG text sizing — multiplied by `scale` from the text-size toggle
   // so a single user choice scales every label, tick, and title in
