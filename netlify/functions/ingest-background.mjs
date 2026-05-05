@@ -358,6 +358,17 @@ function computeGex(pages, targets, startedAt, partial, partialReason = null) {
       open_interest: r.open_interest ?? 0,
       volume: r.day?.volume ?? 0,
       close_price: r.day?.close ?? null,
+      // last_quote is the synchronous NBBO at snapshot time. Persisted
+      // per contract so the /parity card's box-spread and direct-PCP rate
+      // solvers can use a mid that is sampled at the same instant for
+      // every leg — close_price is the per-contract last-trade-of-day,
+      // which is asynchronous across the chain and gets blown into
+      // triple-digit r errors by the box's 1/T·1/ΔK amplifier. Null when
+      // Massive returns no last_quote on this snapshot (off-hours, or a
+      // contract that hasn't been quoted today); the parity slot's
+      // contractMark() handles nulls by falling back to close_price.
+      bid_price: r.last_quote?.bid ?? null,
+      ask_price: r.last_quote?.ask ?? null,
     }));
 
   // Per-strike GEX accumulation.

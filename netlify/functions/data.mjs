@@ -178,7 +178,7 @@ export default async function handler(request) {
     const snapParams = new URLSearchParams({
       run_id: `eq.${run.id}`,
       select:
-        'expiration_date,strike,contract_type,implied_volatility,delta,gamma,open_interest,close_price',
+        'expiration_date,strike,contract_type,implied_volatility,delta,gamma,open_interest,close_price,bid_price,ask_price',
       order: 'expiration_date.asc,strike.asc',
     });
     if (expirationFilter) snapParams.set('expiration_date', `eq.${expirationFilter}`);
@@ -416,6 +416,8 @@ export default async function handler(request) {
       const colGamma = new Array(n);
       const colOi = new Array(n);
       const colPx = new Array(n);
+      const colBid = new Array(n);
+      const colAsk = new Array(n);
       for (let i = 0; i < n; i++) {
         const c = legacyContractRows[i];
         colExp[i] = expIndex.get(c.expiration_date) ?? -1;
@@ -429,6 +431,16 @@ export default async function handler(request) {
         colGamma[i] = g == null ? null : toSigFig(g, 6);
         colOi[i] = c.open_interest;
         colPx[i] = toNum(c.close_price);
+        // 4dp bid/ask precision — option price quanta are 1c/5c, so the
+        // 4th decimal is already two orders of magnitude below the
+        // minimum tick. Null is preserved (not coerced to 0) so the
+        // /parity slot's contractMark() can distinguish "no quote" from
+        // "0 bid". See get_contract_cols_v1 for the same precision
+        // rationale on the RPC path.
+        const bid = toNum(c.bid_price);
+        colBid[i] = bid == null ? null : roundTo(bid, 4);
+        const ask = toNum(c.ask_price);
+        colAsk[i] = ask == null ? null : roundTo(ask, 4);
       }
       contractCols = {
         exp: colExp,
@@ -439,6 +451,8 @@ export default async function handler(request) {
         gamma: colGamma,
         oi: colOi,
         px: colPx,
+        bid: colBid,
+        ask: colAsk,
       };
     }
     // For useRpcContracts branch, expirations + contractCols are already set above.

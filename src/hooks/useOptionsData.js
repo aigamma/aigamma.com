@@ -33,6 +33,15 @@ function rehydrateContracts(payload) {
   // future re-introduction of the column (defensive decoders are cheap) can
   // land without another wire-version bump.
   const volCol = Array.isArray(cols.vol) ? cols.vol : null;
+  // bid/ask are present on every run from the 2026-05-04 schema re-add
+  // forward, but every historical run (and any contract whose Massive
+  // last_quote was absent) carries null in those positions. The /parity
+  // card's contractMark() is the only consumer; it reads bid_price /
+  // ask_price and falls back to close_price on missing-mid, so a tolerant
+  // decoder + the existing fallback covers both the pre-schema and the
+  // missing-quote cases without a separate code path.
+  const bidCol = Array.isArray(cols.bid) ? cols.bid : null;
+  const askCol = Array.isArray(cols.ask) ? cols.ask : null;
   for (let i = 0; i < n; i++) {
     const expIdx = cols.exp[i];
     contracts[i] = {
@@ -45,6 +54,8 @@ function rehydrateContracts(payload) {
       open_interest: cols.oi[i],
       volume: volCol ? volCol[i] : null,
       close_price: cols.px[i],
+      bid_price: bidCol ? bidCol[i] : null,
+      ask_price: askCol ? askCol[i] : null,
     };
   }
   payload.contracts = contracts;
