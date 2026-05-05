@@ -1,21 +1,56 @@
+import { lazy, useEffect } from 'react';
 import '../src/styles/theme.css';
 import '../src/styles/lab.css';
 import '../src/styles/vix.css';
 import ErrorBoundary from '../src/ErrorBoundary';
 import Menu from '../src/components/Menu';
 import TopNav from '../src/components/TopNav';
-import Chat from '../src/components/Chat';
+import LazyMount from '../src/components/LazyMount';
 import useVixData from '../src/hooks/useVixData';
 import VixHeaderProfile from '../src/components/vix/VixHeaderProfile';
 import VixTermStructure from '../src/components/vix/VixTermStructure';
-import VixContangoHistory from '../src/components/vix/VixContangoHistory';
-import VixVrp from '../src/components/vix/VixVrp';
-import VixOuMeanReversion from '../src/components/vix/VixOuMeanReversion';
-import VixVolOfVol from '../src/components/vix/VixVolOfVol';
-import VixCrossAsset from '../src/components/vix/VixCrossAsset';
-import VixSkewIndices from '../src/components/vix/VixSkewIndices';
-import VixRegimeMatrix from '../src/components/vix/VixRegimeMatrix';
-import VixStrategyOverlay from '../src/components/vix/VixStrategyOverlay';
+
+// VixHeaderProfile (the Friday-close pill grid) and VixTermStructure
+// (the six-point curve) stay statically imported because they are the
+// first two cards in the reading order and partially above the fold on
+// a typical desktop viewport. The eight below-fold Vix cards plus Chat
+// split out into per-card Vite chunks via React.lazy so the initial
+// /vix/ chunk only carries the header-pill profile and the term-
+// structure card on the cold-load critical path. With ten Plotly cards
+// previously firing newPlot in the same frame on first paint, this
+// shaves ~500-1500 ms of synchronous main-thread blocking off the cold
+// mobile load (Plotly.newPlot costs 50-200 ms per chart on phone-class
+// hardware; eight cards moved off the critical path is the bulk of the
+// /vix/ mobile slowdown the cards alone produced).
+const VixContangoHistory = lazy(() => import('../src/components/vix/VixContangoHistory'));
+const VixVrp = lazy(() => import('../src/components/vix/VixVrp'));
+const VixOuMeanReversion = lazy(() => import('../src/components/vix/VixOuMeanReversion'));
+const VixVolOfVol = lazy(() => import('../src/components/vix/VixVolOfVol'));
+const VixCrossAsset = lazy(() => import('../src/components/vix/VixCrossAsset'));
+const VixSkewIndices = lazy(() => import('../src/components/vix/VixSkewIndices'));
+const VixRegimeMatrix = lazy(() => import('../src/components/vix/VixRegimeMatrix'));
+const VixStrategyOverlay = lazy(() => import('../src/components/vix/VixStrategyOverlay'));
+const Chat = lazy(() => import('../src/components/Chat'));
+
+let prefetchedBelowFold = false;
+function prefetchBelowFoldChunks() {
+  if (prefetchedBelowFold) return;
+  prefetchedBelowFold = true;
+  const idle = (typeof window !== 'undefined' && window.requestIdleCallback)
+    ? (cb) => window.requestIdleCallback(cb, { timeout: 1500 })
+    : (cb) => setTimeout(cb, 200);
+  idle(() => {
+    import('../src/components/vix/VixContangoHistory');
+    import('../src/components/vix/VixVrp');
+    import('../src/components/vix/VixOuMeanReversion');
+    import('../src/components/vix/VixVolOfVol');
+    import('../src/components/vix/VixCrossAsset');
+    import('../src/components/vix/VixSkewIndices');
+    import('../src/components/vix/VixRegimeMatrix');
+    import('../src/components/vix/VixStrategyOverlay');
+    import('../src/components/Chat');
+  });
+}
 
 // /vix lab — full profile catalog of VIX models.
 //
@@ -43,6 +78,10 @@ import VixStrategyOverlay from '../src/components/vix/VixStrategyOverlay';
 
 export default function App() {
   const { data, loading, error } = useVixData();
+
+  useEffect(() => {
+    prefetchBelowFoldChunks();
+  }, []);
 
   return (
     <div className="app-shell lab-shell">
@@ -91,16 +130,40 @@ export default function App() {
 
       {data && (
         <>
+          {/* Header profile + term structure stay eager: they paint
+              above the fold on most viewports and carry the page's
+              load-bearing first impression. The eight remaining cards
+              are LazyMount-gated behind a 300 px scroll margin so each
+              card's Plotly.newPlot only fires when the reader scrolls
+              within range, rather than firing all ten in the same
+              frame on cold mount. Heights set to each card's real
+              rendered footprint so the placeholders preserve layout. */}
           <ErrorBoundary><VixHeaderProfile data={data} /></ErrorBoundary>
           <ErrorBoundary><VixTermStructure data={data} /></ErrorBoundary>
-          <ErrorBoundary><VixContangoHistory data={data} /></ErrorBoundary>
-          <ErrorBoundary><VixVrp data={data} /></ErrorBoundary>
-          <ErrorBoundary><VixOuMeanReversion data={data} /></ErrorBoundary>
-          <ErrorBoundary><VixVolOfVol data={data} /></ErrorBoundary>
-          <ErrorBoundary><VixCrossAsset data={data} /></ErrorBoundary>
-          <ErrorBoundary><VixSkewIndices data={data} /></ErrorBoundary>
-          <ErrorBoundary><VixRegimeMatrix data={data} /></ErrorBoundary>
-          <ErrorBoundary><VixStrategyOverlay data={data} /></ErrorBoundary>
+          <ErrorBoundary>
+            <LazyMount height="500px" margin="300px"><VixContangoHistory data={data} /></LazyMount>
+          </ErrorBoundary>
+          <ErrorBoundary>
+            <LazyMount height="500px" margin="300px"><VixVrp data={data} /></LazyMount>
+          </ErrorBoundary>
+          <ErrorBoundary>
+            <LazyMount height="500px" margin="300px"><VixOuMeanReversion data={data} /></LazyMount>
+          </ErrorBoundary>
+          <ErrorBoundary>
+            <LazyMount height="500px" margin="300px"><VixVolOfVol data={data} /></LazyMount>
+          </ErrorBoundary>
+          <ErrorBoundary>
+            <LazyMount height="500px" margin="300px"><VixCrossAsset data={data} /></LazyMount>
+          </ErrorBoundary>
+          <ErrorBoundary>
+            <LazyMount height="500px" margin="300px"><VixSkewIndices data={data} /></LazyMount>
+          </ErrorBoundary>
+          <ErrorBoundary>
+            <LazyMount height="500px" margin="300px"><VixRegimeMatrix data={data} /></LazyMount>
+          </ErrorBoundary>
+          <ErrorBoundary>
+            <LazyMount height="500px" margin="300px"><VixStrategyOverlay data={data} /></LazyMount>
+          </ErrorBoundary>
         </>
       )}
 
@@ -252,15 +315,17 @@ export default function App() {
       </div>
 
       <ErrorBoundary>
-        <Chat
-          context="vix"
-          welcome={{
-            quick:
-              'Ask about the VIX term structure, the OU mean-reversion model, vol-of-vol, the SKEW / SDEX skew constructions, the regime classification thresholds, or how the Cboe strategy benchmark indices monetize vol.',
-            deep:
-              'Deep Analysis mode: longer responses on Ornstein-Uhlenbeck calibration math, the vol-of-vol risk premium decomposition, Cboe SKEW vs Nations SDEX construction differences, and the strategy index recipe definitions.',
-          }}
-        />
+        <LazyMount height="320px" margin="200px">
+          <Chat
+            context="vix"
+            welcome={{
+              quick:
+                'Ask about the VIX term structure, the OU mean-reversion model, vol-of-vol, the SKEW / SDEX skew constructions, the regime classification thresholds, or how the Cboe strategy benchmark indices monetize vol.',
+              deep:
+                'Deep Analysis mode: longer responses on Ornstein-Uhlenbeck calibration math, the vol-of-vol risk premium decomposition, Cboe SKEW vs Nations SDEX construction differences, and the strategy index recipe definitions.',
+            }}
+          />
+        </LazyMount>
       </ErrorBoundary>
 
       <footer className="lab-footer">
