@@ -1,12 +1,33 @@
+import { lazy, useEffect } from 'react';
 import '../src/styles/theme.css';
 import '../src/styles/lab.css';
 import ErrorBoundary from '../src/ErrorBoundary';
 import Menu from '../src/components/Menu';
 import TopNav from '../src/components/TopNav';
-import Chat from '../src/components/Chat';
+import LazyMount from '../src/components/LazyMount';
 import SlotB from './slots/SlotB';
-import SlotC from './slots/SlotC';
-import SlotD from './slots/SlotD';
+
+// SlotB stays statically imported because it is the first card in the
+// reading order on this lab and partially above the fold on a typical
+// desktop viewport. SlotC + SlotD plus Chat split into per-slot Vite
+// chunks via React.lazy.
+const SlotC = lazy(() => import('./slots/SlotC'));
+const SlotD = lazy(() => import('./slots/SlotD'));
+const Chat = lazy(() => import('../src/components/Chat'));
+
+let prefetchedBelowFold = false;
+function prefetchBelowFoldChunks() {
+  if (prefetchedBelowFold) return;
+  prefetchedBelowFold = true;
+  const idle = (typeof window !== 'undefined' && window.requestIdleCallback)
+    ? (cb) => window.requestIdleCallback(cb, { timeout: 1500 })
+    : (cb) => setTimeout(cb, 200);
+  idle(() => {
+    import('./slots/SlotC');
+    import('./slots/SlotD');
+    import('../src/components/Chat');
+  });
+}
 
 // Local Volatility Lab — three-slot scratch pad dedicated to Dupire's
 // local-volatility framework end-to-end: extract σ_LV(K, T) from the
@@ -69,6 +90,10 @@ import SlotD from './slots/SlotD';
 // carries a bolded Return Home link for a reader who has scrolled
 // past all three slots and the Chat panel.
 export default function App() {
+  useEffect(() => {
+    prefetchBelowFoldChunks();
+  }, []);
+
   return (
     <div className="app-shell lab-shell">
       <header className="lab-header">
@@ -98,23 +123,29 @@ export default function App() {
       </section>
 
       <section className="lab-slot">
-        <ErrorBoundary><SlotC /></ErrorBoundary>
+        <ErrorBoundary>
+          <LazyMount height="1500px" margin="300px"><SlotC /></LazyMount>
+        </ErrorBoundary>
       </section>
 
       <section className="lab-slot">
-        <ErrorBoundary><SlotD /></ErrorBoundary>
+        <ErrorBoundary>
+          <LazyMount height="1500px" margin="300px"><SlotD /></LazyMount>
+        </ErrorBoundary>
       </section>
 
       <ErrorBoundary>
-        <Chat
-          context="local"
-          welcome={{
-            quick:
-              'Ask about Dupire local volatility, the three slots above, or how pure LV relates to stochastic vol, LSV, rough vol, and the rest of the model lineage. Chat stays on volatility, options, and quantitative finance.',
-            deep:
-              'Deep Analysis mode: longer and more structurally detailed responses on Dupire\'s formula, Gyöngy\'s mimicking theorem, the forward-smile flattening pathology, and the philosophy of a deterministic-diffusion coefficient calibrated to today\'s smile.',
-          }}
-        />
+        <LazyMount height="320px" margin="200px">
+          <Chat
+            context="local"
+            welcome={{
+              quick:
+                'Ask about Dupire local volatility, the three slots above, or how pure LV relates to stochastic vol, LSV, rough vol, and the rest of the model lineage. Chat stays on volatility, options, and quantitative finance.',
+              deep:
+                'Deep Analysis mode: longer and more structurally detailed responses on Dupire\'s formula, Gyöngy\'s mimicking theorem, the forward-smile flattening pathology, and the philosophy of a deterministic-diffusion coefficient calibrated to today\'s smile.',
+            }}
+          />
+        </LazyMount>
       </ErrorBoundary>
 
       <footer className="lab-footer">

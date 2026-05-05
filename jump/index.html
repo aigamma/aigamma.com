@@ -10,6 +10,25 @@
   </head>
   <body>
     <div id="root"></div>
+    <script>
+      // Boot script: fire /api/data while the HTML parser still has the
+      // bundle to load and React to hydrate. Park the promise on
+      // window.__apiBoot.today where useOptionsData drains it via
+      // consumeBootPromise on its first useEffect, so the four slots'
+      // useOptionsData hooks all share the single in-flight promise
+      // rather than racing four independent fetches through the CDN.
+      (function () {
+        function boot(url) {
+          return fetch(url).then(function (r) {
+            if (!r.ok) return r.text().then(function (t) { throw new Error('API ' + r.status + ': ' + t); });
+            return r.json();
+          });
+        }
+        var pToday = boot('/api/data?underlying=SPX&snapshot_type=intraday&v=2');
+        pToday.catch(function () {});
+        window.__apiBoot = { today: pToday };
+      })();
+    </script>
     <script type="module" src="./main.jsx"></script>
   </body>
 </html>

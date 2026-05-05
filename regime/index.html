@@ -10,6 +10,22 @@
   </head>
   <body>
     <div id="root"></div>
+    <script>
+      // Boot script: /regime/ slots all read SPX-history via useGexHistory,
+      // so pre-fire /api/gex-history into __apiBoot.gexHistory where the
+      // hook drains it via the shared-fetch boot-promise mechanism.
+      (function () {
+        function boot(url) {
+          return fetch(url).then(function (r) {
+            if (!r.ok) return r.text().then(function (t) { throw new Error('API ' + r.status + ': ' + t); });
+            return r.json();
+          });
+        }
+        var pGex = boot('/api/gex-history');
+        pGex.catch(function () {});
+        window.__apiBoot = { gexHistory: pGex };
+      })();
+    </script>
     <script type="module" src="./main.jsx"></script>
   </body>
 </html>

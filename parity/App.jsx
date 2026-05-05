@@ -1,11 +1,29 @@
+import { lazy, useEffect } from 'react';
 import '../src/styles/theme.css';
 import '../src/styles/lab.css';
 import ErrorBoundary from '../src/ErrorBoundary';
 import Menu from '../src/components/Menu';
 import TopNav from '../src/components/TopNav';
-import Chat from '../src/components/Chat';
+import LazyMount from '../src/components/LazyMount';
 import SlotA from './slots/SlotA';
-import SlotB from './slots/SlotB';
+
+// SlotA stays statically imported as the first card; SlotB plus Chat
+// split into per-slot Vite chunks via React.lazy.
+const SlotB = lazy(() => import('./slots/SlotB'));
+const Chat = lazy(() => import('../src/components/Chat'));
+
+let prefetchedBelowFold = false;
+function prefetchBelowFoldChunks() {
+  if (prefetchedBelowFold) return;
+  prefetchedBelowFold = true;
+  const idle = (typeof window !== 'undefined' && window.requestIdleCallback)
+    ? (cb) => window.requestIdleCallback(cb, { timeout: 1500 })
+    : (cb) => setTimeout(cb, 200);
+  idle(() => {
+    import('./slots/SlotB');
+    import('../src/components/Chat');
+  });
+}
 
 // Parity Lab. Two slots dedicated to put-call parity on the live SPX
 // chain — the v4 composite (box r vs direct PCP r at q = 0, plus the
@@ -64,6 +82,10 @@ import SlotB from './slots/SlotB';
 // with the "Parity Lab" amber badge already visible on the left
 // side of the same header.
 export default function App() {
+  useEffect(() => {
+    prefetchBelowFoldChunks();
+  }, []);
+
   return (
     <div className="app-shell lab-shell">
       <header className="lab-header">
@@ -93,19 +115,23 @@ export default function App() {
       </section>
 
       <section className="lab-slot">
-        <ErrorBoundary><SlotB /></ErrorBoundary>
+        <ErrorBoundary>
+          <LazyMount height="1400px" margin="300px"><SlotB /></LazyMount>
+        </ErrorBoundary>
       </section>
 
       <ErrorBoundary>
-        <Chat
-          context="parity"
-          welcome={{
-            quick:
-              'Ask about put-call parity, the v4 composite (box r, direct PCP r at q=0, box−PCP ≈ implied q, PCP-recovered SPX forward) and the v1 baseline box-spread rate, or about why the current readings are mis-calibrated and which of the five root-cause candidates is in play. Chat stays on volatility, options, and quantitative finance.',
-            deep:
-              'Deep Analysis mode: longer and more structurally detailed responses on the no-arbitrage parity identity, four-leg box construction vs direct PCP at q=0, the options-implied dividend yield in the box-minus-PCP gap, the PCP-recovered forward F(T) and the cash-and-carry term, and the van Binsbergen-Diamond-Grotteria box-spread risk-free-rate literature.',
-          }}
-        />
+        <LazyMount height="320px" margin="200px">
+          <Chat
+            context="parity"
+            welcome={{
+              quick:
+                'Ask about put-call parity, the v4 composite (box r, direct PCP r at q=0, box−PCP ≈ implied q, PCP-recovered SPX forward) and the v1 baseline box-spread rate, or about why the current readings are mis-calibrated and which of the five root-cause candidates is in play. Chat stays on volatility, options, and quantitative finance.',
+              deep:
+                'Deep Analysis mode: longer and more structurally detailed responses on the no-arbitrage parity identity, four-leg box construction vs direct PCP at q=0, the options-implied dividend yield in the box-minus-PCP gap, the PCP-recovered forward F(T) and the cash-and-carry term, and the van Binsbergen-Diamond-Grotteria box-spread risk-free-rate literature.',
+            }}
+          />
+        </LazyMount>
       </ErrorBoundary>
 
       <footer className="lab-footer">

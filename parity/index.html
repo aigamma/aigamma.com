@@ -10,6 +10,21 @@
   </head>
   <body>
     <div id="root"></div>
+    <script>
+      // Boot script: pre-fire /api/data so the two slots' useOptionsData
+      // hooks all share a single in-flight promise via __apiBoot.today.
+      (function () {
+        function boot(url) {
+          return fetch(url).then(function (r) {
+            if (!r.ok) return r.text().then(function (t) { throw new Error('API ' + r.status + ': ' + t); });
+            return r.json();
+          });
+        }
+        var pToday = boot('/api/data?underlying=SPX&snapshot_type=intraday&v=2');
+        pToday.catch(function () {});
+        window.__apiBoot = { today: pToday };
+      })();
+    </script>
     <script type="module" src="./main.jsx"></script>
   </body>
 </html>

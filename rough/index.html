@@ -10,6 +10,26 @@
   </head>
   <body>
     <div id="root"></div>
+    <script>
+      // Boot script: /rough/ slots read SPX-history via useGexHistory
+      // (not options chains), so the only useful pre-fetch here is the
+      // gex-history payload. Park the promise on __apiBoot.gexHistory
+      // where useGexHistory drains it via the same shared-fetch
+      // mechanism the home page uses for the three below-fold gamma-
+      // index views. The rough lab's calibrations need the SPX log-
+      // return series that ships with this payload.
+      (function () {
+        function boot(url) {
+          return fetch(url).then(function (r) {
+            if (!r.ok) return r.text().then(function (t) { throw new Error('API ' + r.status + ': ' + t); });
+            return r.json();
+          });
+        }
+        var pGex = boot('/api/gex-history');
+        pGex.catch(function () {});
+        window.__apiBoot = { gexHistory: pGex };
+      })();
+    </script>
     <script type="module" src="./main.jsx"></script>
   </body>
 </html>

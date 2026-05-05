@@ -1,10 +1,31 @@
+import { lazy, useEffect } from 'react';
 import '../src/styles/theme.css';
 import '../src/styles/lab.css';
 import ErrorBoundary from '../src/ErrorBoundary';
 import Menu from '../src/components/Menu';
 import TopNav from '../src/components/TopNav';
-import Chat from '../src/components/Chat';
+import LazyMount from '../src/components/LazyMount';
 import GarchZoo from './slots/GarchZoo';
+
+// Single-slot lab: GarchZoo stays statically imported because it IS the
+// slot. Only the Chat splits out into a lazy chunk so the chat bundle
+// (which carries useChat, the Anthropic SDK shim, and the markdown
+// renderer) doesn't land on the critical path. The chat chunk is fetched
+// on demand via LazyMount when the reader scrolls within ~200 px of the
+// bottom of the GARCH chart.
+const Chat = lazy(() => import('../src/components/Chat'));
+
+let prefetchedChat = false;
+function prefetchChatChunk() {
+  if (prefetchedChat) return;
+  prefetchedChat = true;
+  const idle = (typeof window !== 'undefined' && window.requestIdleCallback)
+    ? (cb) => window.requestIdleCallback(cb, { timeout: 1500 })
+    : (cb) => setTimeout(cb, 200);
+  idle(() => {
+    import('../src/components/Chat');
+  });
+}
 
 // /garch/ — GARCH Ensemble page, an integrated Menu lab.
 // Single slot rendering 17 univariate GARCH-family specifications plus an
@@ -29,6 +50,10 @@ import GarchZoo from './slots/GarchZoo';
 // Home link for a reader who has scrolled past the slot and the Chat
 // panel.
 export default function App() {
+  useEffect(() => {
+    prefetchChatChunk();
+  }, []);
+
   return (
     <div className="app-shell lab-shell">
       <header className="lab-header">
@@ -58,15 +83,17 @@ export default function App() {
       </section>
 
       <ErrorBoundary>
-        <Chat
-          context="garch"
-          welcome={{
-            quick:
-              'Ask about the GARCH family, the seventeen specifications, or the equal-weight ensemble above.',
-            deep:
-              'Deep Analysis mode: longer and more structurally detailed responses on GARCH theory, the specific specifications on this page, and the philosophy of fitting a family rather than a single model.',
-          }}
-        />
+        <LazyMount height="320px" margin="200px">
+          <Chat
+            context="garch"
+            welcome={{
+              quick:
+                'Ask about the GARCH family, the seventeen specifications, or the equal-weight ensemble above.',
+              deep:
+                'Deep Analysis mode: longer and more structurally detailed responses on GARCH theory, the specific specifications on this page, and the philosophy of fitting a family rather than a single model.',
+            }}
+          />
+        </LazyMount>
       </ErrorBoundary>
 
       <footer className="lab-footer">

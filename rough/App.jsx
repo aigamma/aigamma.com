@@ -1,12 +1,31 @@
+import { lazy, useEffect } from 'react';
 import '../src/styles/theme.css';
 import '../src/styles/lab.css';
 import ErrorBoundary from '../src/ErrorBoundary';
 import Menu from '../src/components/Menu';
 import TopNav from '../src/components/TopNav';
-import Chat from '../src/components/Chat';
+import LazyMount from '../src/components/LazyMount';
 import SlotA from './slots/SlotA';
-import SlotB from './slots/SlotB';
-import SlotC from './slots/SlotC';
+
+// SlotA stays statically imported as the first card; SlotB / SlotC plus
+// Chat split out into per-slot Vite chunks via React.lazy.
+const SlotB = lazy(() => import('./slots/SlotB'));
+const SlotC = lazy(() => import('./slots/SlotC'));
+const Chat = lazy(() => import('../src/components/Chat'));
+
+let prefetchedBelowFold = false;
+function prefetchBelowFoldChunks() {
+  if (prefetchedBelowFold) return;
+  prefetchedBelowFold = true;
+  const idle = (typeof window !== 'undefined' && window.requestIdleCallback)
+    ? (cb) => window.requestIdleCallback(cb, { timeout: 1500 })
+    : (cb) => setTimeout(cb, 200);
+  idle(() => {
+    import('./slots/SlotB');
+    import('./slots/SlotC');
+    import('../src/components/Chat');
+  });
+}
 
 // Rough Volatility Lab — three-slot scratch pad for rough-path volatility
 // models on SPX daily log returns. "Rough" volatility is the empirical
@@ -59,6 +78,10 @@ import SlotC from './slots/SlotC';
 // nothing on the main site's public nav points here, so /rough is
 // still reached by typing the URL or loading a bookmark.
 export default function App() {
+  useEffect(() => {
+    prefetchBelowFoldChunks();
+  }, []);
+
   return (
     <div className="app-shell lab-shell">
       <header className="lab-header">
@@ -88,23 +111,29 @@ export default function App() {
       </section>
 
       <section className="lab-slot">
-        <ErrorBoundary><SlotB /></ErrorBoundary>
+        <ErrorBoundary>
+          <LazyMount height="1500px" margin="300px"><SlotB /></LazyMount>
+        </ErrorBoundary>
       </section>
 
       <section className="lab-slot">
-        <ErrorBoundary><SlotC /></ErrorBoundary>
+        <ErrorBoundary>
+          <LazyMount height="1500px" margin="300px"><SlotC /></LazyMount>
+        </ErrorBoundary>
       </section>
 
       <ErrorBoundary>
-        <Chat
-          context="rough"
-          welcome={{
-            quick:
-              'Ask about rough volatility, the three methods above, or how the empirical Hurst signature, the rBergomi simulator, and the three-estimator triangulation corroborate or challenge each other. Chat stays on volatility, options, and rough-path modeling.',
-            deep:
-              'Deep Analysis mode: longer and more structurally detailed responses on fractional Brownian motion, Volterra volatility processes, short-end skew asymptotics, and the philosophy of measuring a single Hurst exponent three different ways.',
-          }}
-        />
+        <LazyMount height="320px" margin="200px">
+          <Chat
+            context="rough"
+            welcome={{
+              quick:
+                'Ask about rough volatility, the three methods above, or how the empirical Hurst signature, the rBergomi simulator, and the three-estimator triangulation corroborate or challenge each other. Chat stays on volatility, options, and rough-path modeling.',
+              deep:
+                'Deep Analysis mode: longer and more structurally detailed responses on fractional Brownian motion, Volterra volatility processes, short-end skew asymptotics, and the philosophy of measuring a single Hurst exponent three different ways.',
+            }}
+          />
+        </LazyMount>
       </ErrorBoundary>
 
       <footer className="lab-footer">

@@ -1,15 +1,43 @@
+import { lazy, useEffect } from 'react';
 import '../src/styles/theme.css';
 import '../src/styles/lab.css';
 import ErrorBoundary from '../src/ErrorBoundary';
 import Menu from '../src/components/Menu';
 import TopNav from '../src/components/TopNav';
-import Chat from '../src/components/Chat';
+import LazyMount from '../src/components/LazyMount';
 import SlotA from './slots/SlotA';
-import SlotB from './slots/SlotB';
-import SlotC from './slots/SlotC';
-import SlotD from './slots/SlotD';
-import SlotE from './slots/SlotE';
-import SlotF from './slots/SlotF';
+
+// SlotA stays statically imported because it is the first card in the
+// reading order and partially above the fold on a typical desktop
+// viewport. The other five slots plus Chat split out into their own
+// Vite chunks via React.lazy so the initial /discrete/ chunk only
+// carries SlotA's binomial-tree pricer (the lightest of the six) on
+// the critical path. This is the highest-leverage lazy-load on the
+// site because /discrete/ has six slots; all six were previously
+// landing in a single 76 kB chunk.
+const SlotB = lazy(() => import('./slots/SlotB'));
+const SlotC = lazy(() => import('./slots/SlotC'));
+const SlotD = lazy(() => import('./slots/SlotD'));
+const SlotE = lazy(() => import('./slots/SlotE'));
+const SlotF = lazy(() => import('./slots/SlotF'));
+const Chat = lazy(() => import('../src/components/Chat'));
+
+let prefetchedBelowFold = false;
+function prefetchBelowFoldChunks() {
+  if (prefetchedBelowFold) return;
+  prefetchedBelowFold = true;
+  const idle = (typeof window !== 'undefined' && window.requestIdleCallback)
+    ? (cb) => window.requestIdleCallback(cb, { timeout: 1500 })
+    : (cb) => setTimeout(cb, 200);
+  idle(() => {
+    import('./slots/SlotB');
+    import('./slots/SlotC');
+    import('./slots/SlotD');
+    import('./slots/SlotE');
+    import('./slots/SlotF');
+    import('../src/components/Chat');
+  });
+}
 
 // Discrete & Parametric Vol Lab. Every implied-vol number on the main
 // dashboard is produced by a model fit. This lab opens the model layer
@@ -69,6 +97,10 @@ import SlotF from './slots/SlotF';
 // the main site links here; the lab is bookmark-only and will only be
 // reachable by typing /discrete directly.
 export default function App() {
+  useEffect(() => {
+    prefetchBelowFoldChunks();
+  }, []);
+
   return (
     <div className="app-shell lab-shell">
       <header className="lab-header">
@@ -98,23 +130,33 @@ export default function App() {
       </section>
 
       <section className="lab-slot">
-        <ErrorBoundary><SlotB /></ErrorBoundary>
+        <ErrorBoundary>
+          <LazyMount height="1500px" margin="300px"><SlotB /></LazyMount>
+        </ErrorBoundary>
       </section>
 
       <section className="lab-slot">
-        <ErrorBoundary><SlotC /></ErrorBoundary>
+        <ErrorBoundary>
+          <LazyMount height="1500px" margin="300px"><SlotC /></LazyMount>
+        </ErrorBoundary>
       </section>
 
       <section className="lab-slot">
-        <ErrorBoundary><SlotD /></ErrorBoundary>
+        <ErrorBoundary>
+          <LazyMount height="1500px" margin="300px"><SlotD /></LazyMount>
+        </ErrorBoundary>
       </section>
 
       <section className="lab-slot">
-        <ErrorBoundary><SlotE /></ErrorBoundary>
+        <ErrorBoundary>
+          <LazyMount height="1500px" margin="300px"><SlotE /></LazyMount>
+        </ErrorBoundary>
       </section>
 
       <section className="lab-slot">
-        <ErrorBoundary><SlotF /></ErrorBoundary>
+        <ErrorBoundary>
+          <LazyMount height="1700px" margin="300px"><SlotF /></LazyMount>
+        </ErrorBoundary>
       </section>
 
       <div className="card" style={{ padding: '1.1rem 1.25rem', margin: '1.25rem 0' }}>
@@ -166,15 +208,17 @@ export default function App() {
       </div>
 
       <ErrorBoundary>
-        <Chat
-          context="discrete"
-          welcome={{
-            quick:
-              'Ask about the six slots above, how discrete pricing engines (binomial, trinomial) relate to parametric surfaces (SVI raw, natural, JW, SSVI), or how the two schools work together on a production vol surface. Chat stays on volatility, options, and quantitative finance.',
-            deep:
-              'Deep Analysis mode: longer and more structurally detailed responses on tree convergence, SVI reparameterizations, SSVI arbitrage-freedom conditions, and the philosophy of treating every implied-vol number as the output of a model fit.',
-          }}
-        />
+        <LazyMount height="320px" margin="200px">
+          <Chat
+            context="discrete"
+            welcome={{
+              quick:
+                'Ask about the six slots above, how discrete pricing engines (binomial, trinomial) relate to parametric surfaces (SVI raw, natural, JW, SSVI), or how the two schools work together on a production vol surface. Chat stays on volatility, options, and quantitative finance.',
+              deep:
+                'Deep Analysis mode: longer and more structurally detailed responses on tree convergence, SVI reparameterizations, SSVI arbitrage-freedom conditions, and the philosophy of treating every implied-vol number as the output of a model fit.',
+            }}
+          />
+        </LazyMount>
       </ErrorBoundary>
 
       <footer className="lab-footer">

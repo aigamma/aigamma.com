@@ -1,13 +1,38 @@
+import { lazy, useEffect } from 'react';
 import '../src/styles/theme.css';
 import '../src/styles/lab.css';
 import ErrorBoundary from '../src/ErrorBoundary';
 import Menu from '../src/components/Menu';
 import TopNav from '../src/components/TopNav';
-import Chat from '../src/components/Chat';
-import SlotA from './slots/SlotA';
-import SlotB from './slots/SlotB';
+import LazyMount from '../src/components/LazyMount';
 import SlotC from './slots/SlotC';
-import SlotD from './slots/SlotD';
+
+// SlotC stays statically imported because it is the first card in the
+// reading order on this page (the headline Vanna-Volga reconstruction is
+// the visual entry point) and partially above the fold on a typical
+// desktop viewport. SlotA / SlotB / SlotD plus Chat split out into their
+// own Vite chunks via React.lazy. Mirrors the /tactical/, /stochastic/,
+// /jump/ pattern but with the eager slot anchored on the page's headline
+// card rather than on the alphabetically-first one.
+const SlotA = lazy(() => import('./slots/SlotA'));
+const SlotB = lazy(() => import('./slots/SlotB'));
+const SlotD = lazy(() => import('./slots/SlotD'));
+const Chat = lazy(() => import('../src/components/Chat'));
+
+let prefetchedBelowFold = false;
+function prefetchBelowFoldChunks() {
+  if (prefetchedBelowFold) return;
+  prefetchedBelowFold = true;
+  const idle = (typeof window !== 'undefined' && window.requestIdleCallback)
+    ? (cb) => window.requestIdleCallback(cb, { timeout: 1500 })
+    : (cb) => setTimeout(cb, 200);
+  idle(() => {
+    import('./slots/SlotA');
+    import('./slots/SlotB');
+    import('./slots/SlotD');
+    import('../src/components/Chat');
+  });
+}
 
 // Risk Lab. Four slots dedicated to risk-measurement and Greek-comparison
 // models that the main dashboard does not currently carry. Each slot picks
@@ -58,6 +83,10 @@ import SlotD from './slots/SlotD';
 // direct children — and the footer carries a bolded Return Home link
 // for a reader who has scrolled to the bottom of a long page.
 export default function App() {
+  useEffect(() => {
+    prefetchBelowFoldChunks();
+  }, []);
+
   return (
     <div className="app-shell lab-shell">
       <header className="lab-header">
@@ -87,27 +116,35 @@ export default function App() {
       </section>
 
       <section className="lab-slot">
-        <ErrorBoundary><SlotA /></ErrorBoundary>
+        <ErrorBoundary>
+          <LazyMount height="1500px" margin="300px"><SlotA /></LazyMount>
+        </ErrorBoundary>
       </section>
 
       <section className="lab-slot">
-        <ErrorBoundary><SlotB /></ErrorBoundary>
+        <ErrorBoundary>
+          <LazyMount height="1500px" margin="300px"><SlotB /></LazyMount>
+        </ErrorBoundary>
       </section>
 
       <section className="lab-slot">
-        <ErrorBoundary><SlotD /></ErrorBoundary>
+        <ErrorBoundary>
+          <LazyMount height="1500px" margin="300px"><SlotD /></LazyMount>
+        </ErrorBoundary>
       </section>
 
       <ErrorBoundary>
-        <Chat
-          context="risk"
-          welcome={{
-            quick:
-              'Ask about cross-model Greeks, the four delta definitions, Vanna-Volga, or vanna-volga-charm across strikes, how the model you pick changes the number on your screen, and how to turn that model choice into a concrete trade. Chat stays on volatility, options, and quantitative finance.',
-            deep:
-              'Deep Analysis mode. Longer and more structurally detailed responses on Black-Scholes vs Bachelier vs Heston Greeks, sticky-strike vs sticky-delta vs minimum-variance hedging on SPX, the Castagna-Mercurio three-anchor smile method, and the second-order Greeks (vanna, volga, charm) that quietly carry the SPX vol book.',
-          }}
-        />
+        <LazyMount height="320px" margin="200px">
+          <Chat
+            context="risk"
+            welcome={{
+              quick:
+                'Ask about cross-model Greeks, the four delta definitions, Vanna-Volga, or vanna-volga-charm across strikes, how the model you pick changes the number on your screen, and how to turn that model choice into a concrete trade. Chat stays on volatility, options, and quantitative finance.',
+              deep:
+                'Deep Analysis mode. Longer and more structurally detailed responses on Black-Scholes vs Bachelier vs Heston Greeks, sticky-strike vs sticky-delta vs minimum-variance hedging on SPX, the Castagna-Mercurio three-anchor smile method, and the second-order Greeks (vanna, volga, charm) that quietly carry the SPX vol book.',
+            }}
+          />
+        </LazyMount>
       </ErrorBoundary>
 
       <footer className="lab-footer">

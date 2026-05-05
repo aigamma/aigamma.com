@@ -1,12 +1,31 @@
+import { lazy, useEffect } from 'react';
 import '../src/styles/theme.css';
 import '../src/styles/lab.css';
 import ErrorBoundary from '../src/ErrorBoundary';
 import Menu from '../src/components/Menu';
 import TopNav from '../src/components/TopNav';
-import Chat from '../src/components/Chat';
+import LazyMount from '../src/components/LazyMount';
 import SlotA from './slots/SlotA';
-import SlotB from './slots/SlotB';
-import SlotC from './slots/SlotC';
+
+// SlotA stays statically imported as the first card; SlotB / SlotC plus
+// Chat split into per-slot Vite chunks via React.lazy.
+const SlotB = lazy(() => import('./slots/SlotB'));
+const SlotC = lazy(() => import('./slots/SlotC'));
+const Chat = lazy(() => import('../src/components/Chat'));
+
+let prefetchedBelowFold = false;
+function prefetchBelowFoldChunks() {
+  if (prefetchedBelowFold) return;
+  prefetchedBelowFold = true;
+  const idle = (typeof window !== 'undefined' && window.requestIdleCallback)
+    ? (cb) => window.requestIdleCallback(cb, { timeout: 1500 })
+    : (cb) => setTimeout(cb, 200);
+  idle(() => {
+    import('./slots/SlotB');
+    import('./slots/SlotC');
+    import('../src/components/Chat');
+  });
+}
 
 // Regime Lab, three-slot scratch pad dedicated to regime-identification
 // models on SPX daily log returns. The three slots are not A/B/C variants
@@ -43,6 +62,10 @@ import SlotC from './slots/SlotC';
 // the page is still reached only by typing /regime or loading a
 // bookmark.
 export default function App() {
+  useEffect(() => {
+    prefetchBelowFoldChunks();
+  }, []);
+
   return (
     <div className="app-shell lab-shell">
       <header className="lab-header">
@@ -72,23 +95,29 @@ export default function App() {
       </section>
 
       <section className="lab-slot">
-        <ErrorBoundary><SlotB /></ErrorBoundary>
+        <ErrorBoundary>
+          <LazyMount height="1500px" margin="300px"><SlotB /></LazyMount>
+        </ErrorBoundary>
       </section>
 
       <section className="lab-slot">
-        <ErrorBoundary><SlotC /></ErrorBoundary>
+        <ErrorBoundary>
+          <LazyMount height="1500px" margin="300px"><SlotC /></LazyMount>
+        </ErrorBoundary>
       </section>
 
       <ErrorBoundary>
-        <Chat
-          context="regime"
-          welcome={{
-            quick:
-              'Ask about the three regime models above, how they disagree near transitions, and how to turn a regime signal into an actual trade.',
-            deep:
-              'Deep Analysis mode for longer and more structurally detailed responses on how each model works, how to read its output, and how to act on it in the SPX options market.',
-          }}
-        />
+        <LazyMount height="320px" margin="200px">
+          <Chat
+            context="regime"
+            welcome={{
+              quick:
+                'Ask about the three regime models above, how they disagree near transitions, and how to turn a regime signal into an actual trade.',
+              deep:
+                'Deep Analysis mode for longer and more structurally detailed responses on how each model works, how to read its output, and how to act on it in the SPX options market.',
+            }}
+          />
+        </LazyMount>
       </ErrorBoundary>
 
       <footer className="lab-footer">

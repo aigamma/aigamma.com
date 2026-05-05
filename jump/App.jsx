@@ -1,13 +1,42 @@
+import { lazy, useEffect } from 'react';
 import '../src/styles/theme.css';
 import '../src/styles/lab.css';
 import ErrorBoundary from '../src/ErrorBoundary';
 import Menu from '../src/components/Menu';
 import TopNav from '../src/components/TopNav';
-import Chat from '../src/components/Chat';
+import LazyMount from '../src/components/LazyMount';
 import SlotA from './slots/SlotA';
-import SlotB from './slots/SlotB';
-import SlotC from './slots/SlotC';
-import SlotD from './slots/SlotD';
+
+// SlotA stays statically imported because it is the first card in the
+// reading order and partially above the fold on a typical desktop
+// viewport. SlotB / SlotC / SlotD plus Chat split out into their own
+// Vite chunks via React.lazy so the initial /jump/ chunk only carries
+// SlotA's Merton machinery (Poisson-weighted BSM series + Nelder-Mead
+// simplex). The other three slots' calibration code (Kou's double-
+// exponential characteristic-function inversion, Bates SVJ's eight-
+// parameter combined Heston+Merton fit, and Variance Gamma's pure-
+// jump three-parameter fit) lands in per-slot chunks that the LazyMount
+// viewport gate fetches when the reader scrolls within ~300 px of the
+// next card. Mirrors the /tactical/ and /stochastic/ patterns.
+const SlotB = lazy(() => import('./slots/SlotB'));
+const SlotC = lazy(() => import('./slots/SlotC'));
+const SlotD = lazy(() => import('./slots/SlotD'));
+const Chat = lazy(() => import('../src/components/Chat'));
+
+let prefetchedBelowFold = false;
+function prefetchBelowFoldChunks() {
+  if (prefetchedBelowFold) return;
+  prefetchedBelowFold = true;
+  const idle = (typeof window !== 'undefined' && window.requestIdleCallback)
+    ? (cb) => window.requestIdleCallback(cb, { timeout: 1500 })
+    : (cb) => setTimeout(cb, 200);
+  idle(() => {
+    import('./slots/SlotB');
+    import('./slots/SlotC');
+    import('./slots/SlotD');
+    import('../src/components/Chat');
+  });
+}
 
 // Jump Lab. Four-slot scratch pad dedicated to the canonical
 // jump-process options-pricing models for SPX. The lineage is
@@ -63,6 +92,10 @@ import SlotD from './slots/SlotD';
 // carries a bolded Return Home link for a reader who has scrolled to
 // the bottom of a long page.
 export default function App() {
+  useEffect(() => {
+    prefetchBelowFoldChunks();
+  }, []);
+
   return (
     <div className="app-shell lab-shell">
       <header className="lab-header">
@@ -92,27 +125,35 @@ export default function App() {
       </section>
 
       <section className="lab-slot">
-        <ErrorBoundary><SlotB /></ErrorBoundary>
+        <ErrorBoundary>
+          <LazyMount height="1500px" margin="300px"><SlotB /></LazyMount>
+        </ErrorBoundary>
       </section>
 
       <section className="lab-slot">
-        <ErrorBoundary><SlotC /></ErrorBoundary>
+        <ErrorBoundary>
+          <LazyMount height="1600px" margin="300px"><SlotC /></LazyMount>
+        </ErrorBoundary>
       </section>
 
       <section className="lab-slot">
-        <ErrorBoundary><SlotD /></ErrorBoundary>
+        <ErrorBoundary>
+          <LazyMount height="1500px" margin="300px"><SlotD /></LazyMount>
+        </ErrorBoundary>
       </section>
 
       <ErrorBoundary>
-        <Chat
-          context="jump"
-          welcome={{
-            quick:
-              'Ask about jump-process option pricing, the four slots above, or how the Merton, Kou, Bates, and Variance Gamma lineage relates to the pure stochastic-vol, local-vol, and rough-vol lineages on the sibling labs. Chat stays on volatility, options, and quantitative finance.',
-            deep:
-              'Deep Analysis mode: longer and more structurally detailed responses on compound Poisson and double-exponential jump measures, affine jump-diffusion transform analysis, Levy processes and the Levy-Khintchine decomposition, Variance Gamma as a time-changed Brownian motion, and the philosophy of pricing a jump-augmented market that is formally incomplete.',
-          }}
-        />
+        <LazyMount height="320px" margin="200px">
+          <Chat
+            context="jump"
+            welcome={{
+              quick:
+                'Ask about jump-process option pricing, the four slots above, or how the Merton, Kou, Bates, and Variance Gamma lineage relates to the pure stochastic-vol, local-vol, and rough-vol lineages on the sibling labs. Chat stays on volatility, options, and quantitative finance.',
+              deep:
+                'Deep Analysis mode: longer and more structurally detailed responses on compound Poisson and double-exponential jump measures, affine jump-diffusion transform analysis, Levy processes and the Levy-Khintchine decomposition, Variance Gamma as a time-changed Brownian motion, and the philosophy of pricing a jump-augmented market that is formally incomplete.',
+            }}
+          />
+        </LazyMount>
       </ErrorBoundary>
 
       <footer className="lab-footer">
