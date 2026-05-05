@@ -1,6 +1,7 @@
 import { useEffect, useRef, useState } from 'react';
 import { formatGamma, formatInteger, formatPercent, formatRatio } from '../lib/format';
 import { daysToExpiration, formatExpirationOption, formatFreshness } from '../lib/dates';
+import useIsMobile from '../hooks/useIsMobile';
 
 function distanceSub(level, spot) {
   if (level == null || spot == null) return null;
@@ -187,7 +188,16 @@ function Stat({ label, value, accent, sub, bold, className, tooltip }) {
           gap: '0.35rem',
         }}
       >
-        <span>{label}</span>
+        {/* white-space: nowrap on the label span keeps the text on one
+            line so the trailing tooltip button stays anchored next to the
+            label rather than getting pushed to the cell's right edge by a
+            wrapped multi-line label (the failure mode that "OVERNIGHT
+            ALIGNMENT" hit on a 360 px viewport: the long label wrapped
+            internally to two lines, the span grew to the full available
+            cell width to accommodate the wrap, and the button ended up
+            anchored to the wrapped span's right edge ~140 px away from
+            the label start instead of right next to it). */}
+        <span style={{ whiteSpace: 'nowrap' }}>{label}</span>
         {tooltip && (
           <button
             type="button"
@@ -205,8 +215,8 @@ function Stat({ label, value, accent, sub, bold, className, tooltip }) {
               background: 'transparent',
               color: showTip ? 'var(--text-primary)' : 'var(--text-secondary)',
               fontFamily: "Calibri, 'Segoe UI', system-ui, sans-serif",
-              fontSize: '0.7rem',
-              fontStyle: 'italic',
+              fontSize: '0.78rem',
+              fontStyle: 'normal',
               fontWeight: 700,
               textTransform: 'none',
               letterSpacing: 'normal',
@@ -217,7 +227,7 @@ function Stat({ label, value, accent, sub, bold, className, tooltip }) {
               transition: 'color 120ms ease, border-color 120ms ease',
             }}
           >
-            i
+            ?
           </button>
         )}
       </div>
@@ -285,6 +295,20 @@ function Divider() {
 const ROW_GRID_CLASS = 'levels-row';
 
 export default function LevelsPanel({ levels, spotPrice, prevClose, expirationMetrics, prevExpirationMetrics, expirations, selectedExpiration, onExpirationChange, capturedAt, vrpMetric, overnightAlignment, isSynthetic, regimeIndicator, termStructure }) {
+  // Mobile-shortened label for the Overnight Alignment cell. The default
+  // "OVERNIGHT ALIGNMENT" (19 characters) is too wide to fit alongside the
+  // tooltip "?" button inside a phone-class grid cell — on a 360 px viewport
+  // the 2-column .levels-row grid leaves each cell about 158 px of usable
+  // width, and the uppercase 0.8 rem Calibri label with 0.08 em letter-
+  // spacing renders the full string at roughly 143 px, which when added to
+  // the 0.35 rem flex gap and the 15 px "?" circle pushes the icon a few
+  // pixels past the cell's right edge. Switching to "ALIGNED OVERNIGHT" (17
+  // characters, ~127 px) leaves about 11 px of slack in the cell so the
+  // icon stays anchored next to the label without any overflow. Desktop is
+  // unaffected: at the 5-column desktop grid each cell carries enough room
+  // for the longer noun-phrase form, which reads more naturally there.
+  const isMobile = useIsMobile();
+
   if (!levels) {
     return (
       <div className="card text-muted" style={{ marginBottom: '1rem' }}>
@@ -487,7 +511,7 @@ export default function LevelsPanel({ levels, spotPrice, prevClose, expirationMe
       </div>
       <div className={ROW_GRID_CLASS}>
         <Stat
-          label="Overnight Alignment"
+          label={isMobile ? 'Aligned Overnight' : 'Overnight Alignment'}
           value={alignmentValue(overnightAlignment?.score)}
           accent={alignmentAccent(overnightAlignment?.score)}
           sub={
@@ -504,14 +528,14 @@ export default function LevelsPanel({ levels, spotPrice, prevClose, expirationMe
           accent="var(--accent-amber)"
           sub={volFlipSub}
           bold
-          tooltip="Strike where the dealer-gamma profile crosses zero. Above this line, dealers are net long gamma and dampen moves; below, they're short gamma and amplify them. The sub-line shows distance from spot in dollars and percent."
+          tooltip="Strike where the dealer-gamma profile crosses zero. Above the flip, dealers are net long gamma; their hedging dampens moves and raises the probability of a mean-reverting market. Below the flip, dealers are short gamma; their hedging amplifies moves and raises the probability of trending conditions."
         />
         <Stat
           label="SPX"
           value={formatInteger(spotPrice)}
           accent="var(--accent-blue)"
           sub={spotDeltaSub(spotPrice, prevClose)}
-          tooltip="S&P 500 cash index spot price — the reference point for every other metric on this page. Sub-line shows the move from the prior session's close in dollars and percent."
+          tooltip="S&P 500 cash index spot price. This is the reference point for every other metric on this page. Sub-line shows the move from the prior session's close in dollars and percent."
         />
         <Stat
           label="Put Wall"
@@ -537,7 +561,7 @@ export default function LevelsPanel({ levels, spotPrice, prevClose, expirationMe
               : null
           }
           className="levels-pc-volume--mobile"
-          tooltip="Today's total SPX put volume divided by total call volume. Above 1.0 means more puts trading than calls — typically a hedging or bearish-positioning signal. Sub-line shows the raw P and C contract counts."
+          tooltip="Today's total SPX put volume divided by total call volume. Above 1.0 means more puts trading than calls, typically a hedging or bearish-positioning signal. Sub-line shows the raw P and C contract counts."
         />
       </div>
 
@@ -558,14 +582,14 @@ export default function LevelsPanel({ levels, spotPrice, prevClose, expirationMe
           accent={flipDistAccent(flipDist)}
           sub={flipDist != null ? `${((flipDist / spotPrice) * 100).toFixed(2)}%` : null}
           bold
-          tooltip="Spot price minus Vol Flip in dollars. Positive when SPX is above the flip (positive-gamma regime, dealers dampen moves); negative when below (negative-gamma regime, dealers amplify them). The sign IS the regime — there is no neutral middle."
+          tooltip="Spot price minus Vol Flip in dollars. Positive when SPX is above the flip (positive-gamma regime, dealers dampen moves); negative when below (negative-gamma regime, dealers amplify them). The sign is the regime; there is no neutral middle."
         />
         <Stat
           label="VRP"
           value={vrpMetric ? `${vrpMetric.vrp > 0 ? '+' : ''}${vrpMetric.vrp.toFixed(2)}%` : '—'}
           accent="var(--accent-purple)"
           sub={vrpMetric ? `IV ${vrpMetric.iv.toFixed(1)}% / RV ${vrpMetric.rv.toFixed(1)}%` : null}
-          tooltip="Volatility Risk Premium: 30-day constant-maturity implied vol minus 20-day Yang-Zhang realized vol. Positive readings mean implieds are pricing more vol than has been delivered — the structural compensation option sellers earn on average."
+          tooltip="Volatility Risk Premium: 30-day constant-maturity implied vol minus 20-day Yang-Zhang realized vol. Positive readings mean implieds are pricing more vol than has been delivered, which is the structural compensation option sellers earn on average."
         />
         <Stat
           label="IV Rank"
@@ -588,7 +612,7 @@ export default function LevelsPanel({ levels, spotPrice, prevClose, expirationMe
               : null
           }
           className="levels-pc-volume--desktop"
-          tooltip="Today's total SPX put volume divided by total call volume. Above 1.0 means more puts trading than calls — typically a hedging or bearish-positioning signal. Sub-line shows the raw P and C contract counts."
+          tooltip="Today's total SPX put volume divided by total call volume. Above 1.0 means more puts trading than calls, typically a hedging or bearish-positioning signal. Sub-line shows the raw P and C contract counts."
         />
       </div>
 
@@ -639,13 +663,13 @@ export default function LevelsPanel({ levels, spotPrice, prevClose, expirationMe
               accent="var(--accent-purple)"
               sub={expMoveSub}
               bold
-              tooltip="Implied 1-σ move at the selected expiration: spot × ATM IV × √(DTE/365). The sub-line shows the resulting low–high band — roughly two-thirds of historical outcomes have landed inside this range, one-third outside."
+              tooltip="Implied 1-σ move at the selected expiration: spot × ATM IV × √(DTE/365). The sub-line shows the resulting low–high band. Roughly two-thirds of historical outcomes have landed inside this range, one-third outside."
             />
             <Stat
               label="25Δ Put IV"
               value={formatPercent(relevantMetric.put_25d_iv)}
               sub={ivDeltaSub(relevantMetric.put_25d_iv, prevMetric?.put_25d_iv)}
-              tooltip="Implied volatility at the 25-delta put for the selected expiration — the OTM strike where the option's delta is roughly −0.25. Higher than ATM IV is the typical equity skew shape; the spread vs ATM is a measure of downside-tail pricing intensity."
+              tooltip="Implied volatility at the 25-delta put for the selected expiration, i.e., the OTM strike where the option's delta is roughly −0.25. Higher than ATM IV is the typical equity skew shape; the spread vs ATM is a measure of downside-tail pricing intensity."
             />
             <Stat
               label="ATM IV"
@@ -657,7 +681,7 @@ export default function LevelsPanel({ levels, spotPrice, prevClose, expirationMe
               label="25Δ Call IV"
               value={formatPercent(relevantMetric.call_25d_iv)}
               sub={ivDeltaSub(relevantMetric.call_25d_iv, prevMetric?.call_25d_iv)}
-              tooltip="Implied volatility at the 25-delta call for the selected expiration — the OTM strike where the option's delta is roughly +0.25. Lower than ATM IV is the typical equity skew shape; rising relative to ATM signals upside-call demand or a shift toward right-tail pricing."
+              tooltip="Implied volatility at the 25-delta call for the selected expiration, i.e., the OTM strike where the option's delta is roughly +0.25. Lower than ATM IV is the typical equity skew shape; rising relative to ATM signals upside-call demand or a shift toward right-tail pricing."
             />
             <Stat
               label="Term Slope"
@@ -669,7 +693,7 @@ export default function LevelsPanel({ levels, spotPrice, prevClose, expirationMe
                 ? `${Math.round(Math.abs(termStructure.ratio - 1) * 100)}% · ${termStructure.asOf}`
                 : null}
               className="levels-term-slope--mobile"
-              tooltip="VIX3M / VIX ratio. Above 1 = contango (3-month vol higher than near-term, the calm-regime default). Below 1 = backwardation (urgent near-term vol pricing past the 3-month tenor — often a stress signal). Sub-line shows the magnitude in percent."
+              tooltip="VIX3M / VIX ratio. Above 1 = contango (3-month vol higher than near-term, the calm-regime default). Below 1 = backwardation (urgent near-term vol pricing past the 3-month tenor, often a stress signal). Sub-line shows the magnitude in percent."
             />
           </div>
         </>
