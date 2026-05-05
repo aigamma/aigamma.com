@@ -358,7 +358,7 @@ export default function SlotB() {
 
     const layout = plotly2DChartLayout({
       title: {
-        ...plotlyTitle('SABR Smile Fit · SPX'),
+        ...plotlyTitle('SABR Smile Fit'),
         y: 0.97,
         yref: 'container',
         yanchor: 'top',

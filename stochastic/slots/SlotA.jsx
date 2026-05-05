@@ -545,7 +545,7 @@ export default function SlotA() {
 
     const layout = plotly2DChartLayout({
       title: {
-        ...plotlyTitle('Heston Smile Fit · SPX'),
+        ...plotlyTitle('Heston Smile Fit'),
         y: 0.97,
         yref: 'container',
         yanchor: 'top',
