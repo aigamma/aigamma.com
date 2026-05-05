@@ -319,8 +319,8 @@ export default function SlotA() {
       title: {
         ...plotlyTitle(
           mobile
-            ? `Binomial Convergence<br>SPX ${optionType === 'call' ? 'Call' : 'Put'} · K = ${cfg.K}`
-            : `Binomial Convergence · SPX ${optionType === 'call' ? 'Call' : 'Put'} · K = ${cfg.K}`
+            ? `Binomial Convergence<br>${optionType === 'call' ? 'Call' : 'Put'} · K = ${cfg.K}`
+            : `Binomial Convergence · ${optionType === 'call' ? 'Call' : 'Put'} · K = ${cfg.K}`
         ),
         // Plotly 2.35.2 with yref='container' and yanchor='top' anchors a
         // multi-line title's BOTTOM near y, not its TOP, so a two-line

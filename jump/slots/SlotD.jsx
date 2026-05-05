@@ -467,7 +467,7 @@ export default function SlotD() {
 
     const layout = plotly2DChartLayout({
       title: {
-        ...plotlyTitle('Variance Gamma Fit · SPX'),
+        ...plotlyTitle('Variance Gamma Fit'),
         y: 0.97,
         yref: 'container',
         yanchor: 'top',

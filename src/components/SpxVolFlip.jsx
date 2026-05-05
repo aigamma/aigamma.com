@@ -479,7 +479,7 @@ export default function SpxVolFlip() {
       title: mobile
         ? plotlyTitle('')
         : {
-            ...plotlyTitle('SPX vs Vol Flip'),
+            ...plotlyTitle('Vol Flip'),
             y: 0.97,
             yref: 'container',
             yanchor: 'top',

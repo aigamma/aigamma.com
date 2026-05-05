@@ -191,7 +191,7 @@ export default function SlotC() {
 
     const layout = plotly2DChartLayout({
       title: {
-        ...plotlyTitle(mobile ? 'SVI Raw Fit<br>SPX slice' : 'SVI Raw Fit · SPX slice'),
+        ...plotlyTitle(mobile ? 'SVI Raw Fit<br>slice' : 'SVI Raw Fit · slice'),
         // Plotly 2.35.2 anchors a multi-line title's bottom near y when
         // yref='container' / yanchor='top'; on mobile (where the title wraps
         // to two lines) y=0.97 puts the first line ~15-20px above the SVG

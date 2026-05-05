@@ -418,7 +418,7 @@ export default function SlotA() {
 
     const layout = plotly2DChartLayout({
       title: {
-        ...plotlyTitle('Merton Jump Fit · SPX'),
+        ...plotlyTitle('Merton Jump Fit'),
         y: 0.97,
         yref: 'container',
         yanchor: 'top',

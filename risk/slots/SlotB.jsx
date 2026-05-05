@@ -354,8 +354,8 @@ export default function SlotB() {
       title: {
         ...plotlyTitle(
           mobile
-            ? 'Delta definitions<br>across strikes · SPX'
-            : 'Delta definitions across strikes · SPX'
+            ? 'Delta definitions<br>across strikes'
+            : 'Delta definitions across strikes'
         ),
         // Plotly 2.35.2 anchors a multi-line title's bottom near y when
         // yref='container' / yanchor='top'; on mobile (where the title wraps

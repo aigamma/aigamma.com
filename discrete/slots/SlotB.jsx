@@ -365,8 +365,8 @@ export default function SlotB() {
       title: {
         ...plotlyTitle(
           mobile
-            ? `Binomial vs Trinomial<br>SPX ${optionType === 'call' ? 'Call' : 'Put'} · K = ${cfg.K}`
-            : `Binomial vs Trinomial · SPX ${optionType === 'call' ? 'Call' : 'Put'} · K = ${cfg.K}`
+            ? `Binomial vs Trinomial<br>${optionType === 'call' ? 'Call' : 'Put'} · K = ${cfg.K}`
+            : `Binomial vs Trinomial · ${optionType === 'call' ? 'Call' : 'Put'} · K = ${cfg.K}`
         ),
         // Plotly 2.35.2 anchors a multi-line title's bottom near y when
         // yref='container' / yanchor='top'; on mobile (where the title wraps

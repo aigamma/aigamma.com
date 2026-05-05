@@ -545,8 +545,8 @@ export default function SlotA() {
       title: {
         ...plotlyTitle(
           mobile
-            ? `${greekDef.label} across<br>strikes · SPX`
-            : `${greekDef.label} across strikes · SPX`
+            ? `${greekDef.label} across<br>strikes`
+            : `${greekDef.label} across strikes`
         ),
         // Plotly 2.35.2 anchors a multi-line title's bottom near y when
         // yref='container' / yanchor='top'; on mobile (where the title wraps

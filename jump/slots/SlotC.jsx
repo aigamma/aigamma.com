@@ -519,7 +519,7 @@ export default function SlotC() {
 
     const layout = plotly2DChartLayout({
       title: {
-        ...plotlyTitle('Bates SVJ Fit · SPX'),
+        ...plotlyTitle('Bates SVJ Fit'),
         y: 0.97,
         yref: 'container',
         yanchor: 'top',
