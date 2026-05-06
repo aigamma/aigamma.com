@@ -213,7 +213,7 @@ export default function App() {
             context="discrete"
             welcome={{
               quick:
-                'Ask about the six slots above, how discrete pricing engines (binomial, trinomial) relate to parametric surfaces (SVI raw, natural, JW, SSVI), or how the two schools work together on a production vol surface. Chat stays on volatility, options, and quantitative finance.',
+                'Ask about the six slots above, how discrete pricing engines (binomial, trinomial) relate to parametric surfaces (SVI raw, natural, JW, SSVI), or how the two schools work together on a production vol surface.',
               deep:
                 'Deep Analysis mode: longer and more structurally detailed responses on tree convergence, SVI reparameterizations, SSVI arbitrage-freedom conditions, and the philosophy of treating every implied-vol number as the output of a model fit.',
             }}
@@ -226,6 +226,7 @@ export default function App() {
           AI Gamma · discrete &amp; parametric vol lab · six-slot fitting zoo · v0.1.0
         </span>
         <a href="/disclaimer/" className="lab-footer-disclaimer">Disclaimer</a>
+        <a href="/" className="lab-footer-home">Return Home</a>
         <a href="https://about.aigamma.com/" className="lab-footer-about">Who made this?</a>
       </footer>
     </div>

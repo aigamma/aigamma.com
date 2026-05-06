@@ -192,7 +192,7 @@ export default function App() {
             context="stochastic"
             welcome={{
               quick:
-                'Ask about the four models above, how to read the residuals between a fit and the observed smile for market edge, which model to trust for which trading decision, and how to turn a parameter change into a position. Chat stays on volatility, options, and how stochastic-vol reads translate into SPX options trades.',
+                'Ask about the four models above, how to read the residuals between a fit and the observed smile for market edge, which model to trust for which trading decision, and how to turn a parameter change into a position.',
               deep:
                 'Deep Analysis mode: longer and more structurally detailed responses on how each model works, where it breaks down, what the gap between its fit and the market is pricing, and how to act on that gap in practical SPX options structures.',
             }}

@@ -51,6 +51,7 @@ export default function App() {
           AI Gamma · internal beta lab · not for public consumption · v1.1.2
         </span>
         <a href="/disclaimer/" className="lab-footer-disclaimer">Disclaimer</a>
+        <a href="/" className="lab-footer-home">Return Home</a>
         <a href="https://about.aigamma.com/" className="lab-footer-about">Who made this?</a>
       </footer>
     </div>

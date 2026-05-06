@@ -139,7 +139,7 @@ export default function App() {
             context="risk"
             welcome={{
               quick:
-                'Ask about cross-model Greeks, the four delta definitions, Vanna-Volga, or vanna-volga-charm across strikes, how the model you pick changes the number on your screen, and how to turn that model choice into a concrete trade. Chat stays on volatility, options, and quantitative finance.',
+                'Ask about cross-model Greeks, the four delta definitions, Vanna-Volga, or vanna-volga-charm across strikes, how the model you pick changes the number on your screen, and how to turn that model choice into a concrete trade.',
               deep:
                 'Deep Analysis mode. Longer and more structurally detailed responses on Black-Scholes vs Bachelier vs Heston Greeks, sticky-strike vs sticky-delta vs minimum-variance hedging on SPX, the Castagna-Mercurio three-anchor smile method, and the second-order Greeks (vanna, volga, charm) that quietly carry the SPX vol book.',
             }}
