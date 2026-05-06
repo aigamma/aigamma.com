@@ -1,14 +1,14 @@
-import { useEffect, useMemo, useRef } from 'react';
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import usePlotly from '../../hooks/usePlotly';
 import useIsMobile from '../../hooks/useIsMobile';
 import {
-  PLOTLY_COLORS,
   plotly2DChartLayout,
   plotlyAxis,
-  plotlyRangeslider,
   plotlyTitle,
 } from '../../lib/plotlyTheme';
 import { percentileRank, trailingCloses } from '../../lib/vix-models';
+import RangeBrush from '../RangeBrush';
+import ResetButton from '../ResetButton';
 
 // Cross-asset vol panel. Five Cboe-published implied-vol indices on the
 // same x-axis, normalized to 100 at the start of the visible window so the
@@ -17,6 +17,9 @@ import { percentileRank, trailingCloses } from '../../lib/vix-models';
 // distribution today, surfacing divergences (e.g. equity vol low while
 // crude vol elevated would imply a single-asset stress, not a broad
 // risk-on/off shift).
+//
+// External RangeBrush below the card; see VixSkewIndices.jsx for the
+// rationale on why Plotly's xaxis.rangeslider was rejected.
 
 const SYMBOLS = [
   { sym: 'VIX', label: 'VIX (S&P)',  color: '#4a9eff' },
@@ -26,10 +29,19 @@ const SYMBOLS = [
   { sym: 'GVZ', label: 'GVZ (Gold)', color: '#1abc9c' },
 ];
 
+function isoToMs(iso) {
+  return new Date(`${iso}T00:00:00Z`).getTime();
+}
+
+function msToIso(ms) {
+  return new Date(ms).toISOString().slice(0, 10);
+}
+
 export default function VixCrossAsset({ data }) {
   const { plotly, error: plotlyError } = usePlotly();
   const ref = useRef(null);
   const isMobile = useIsMobile();
+  const [timeRange, setTimeRange] = useState(null);
 
   const traces = useMemo(() => {
     if (!data) return null;
@@ -65,8 +77,33 @@ export default function VixCrossAsset({ data }) {
     return out;
   }, [data]);
 
+  // Brush domain spans the widest visible date range across the five
+  // symbols so partial-coverage symbols (e.g. GVZ vs VIX) do not collapse
+  // the brush window.
+  const { firstDate, lastDate } = useMemo(() => {
+    if (!data) return { firstDate: null, lastDate: null };
+    let first = null;
+    let last = null;
+    for (const { sym } of SYMBOLS) {
+      const arr = data.series?.[sym] || [];
+      if (arr.length === 0) continue;
+      const f = arr[0]?.date;
+      const l = arr[arr.length - 1]?.date;
+      if (f && (!first || f < first)) first = f;
+      if (l && (!last || l > last)) last = l;
+    }
+    return { firstDate: first, lastDate: last };
+  }, [data]);
+  const defaultRange = useMemo(() => {
+    if (!firstDate || !lastDate) return null;
+    return [firstDate, lastDate];
+  }, [firstDate, lastDate]);
+  const activeRange = timeRange || defaultRange;
+
   useEffect(() => {
-    if (!plotly || !ref.current || !traces || traces.length === 0) return;
+    if (!plotly || !ref.current || !traces || traces.length === 0 || !activeRange) return;
+
+    const [windowStart, windowEnd] = activeRange;
 
     const layout = plotly2DChartLayout({
       title: plotlyTitle(
@@ -75,14 +112,13 @@ export default function VixCrossAsset({ data }) {
           : 'Cross-Asset Vol: indexed to 100 at backfill start'
       ),
       xaxis: plotlyAxis('', {
-        rangeslider: plotlyRangeslider({ thickness: 0.07, bgcolor: 'rgba(20,24,32,0.5)' }),
+        type: 'date',
+        range: [windowStart, windowEnd],
+        autorange: false,
       }),
       yaxis: plotlyAxis('Index level (base 100)'),
       margin: { t: isMobile ? 75 : 50, r: 30, b: 80, l: 70 },
-      height: 440,
-      // Override the base layout's dragmode:false so the rangeslider's
-      // brush/scrub interaction works.
-      dragmode: 'pan',
+      height: 380,
       showlegend: true,
       legend: { orientation: 'h', y: -0.18, x: 0.5, xanchor: 'center' },
     });
@@ -98,15 +134,29 @@ export default function VixCrossAsset({ data }) {
       window.removeEventListener('resize', onResize);
       if (ref.current) plotly.purge(ref.current);
     };
-  }, [plotly, traces, isMobile]);
+  }, [plotly, traces, isMobile, activeRange]);
+
+  const handleBrushChange = useCallback((minMs, maxMs) => {
+    setTimeRange([msToIso(minMs), msToIso(maxMs)]);
+  }, []);
 
   return (
-    <div className="card">
-      <div ref={ref} style={{ width: '100%', height: 440 }} />
+    <div className="card" style={{ position: 'relative' }}>
+      <ResetButton visible={timeRange != null} onClick={() => setTimeRange(null)} />
+      <div ref={ref} style={{ width: '100%', height: 380 }} />
       {plotlyError && (
         <div style={{ padding: '1rem', color: 'var(--accent-coral)' }}>
           Chart failed to load: {plotlyError}
         </div>
+      )}
+      {activeRange && firstDate && lastDate && (
+        <RangeBrush
+          min={isoToMs(firstDate)}
+          max={isoToMs(lastDate)}
+          activeMin={isoToMs(activeRange[0])}
+          activeMax={isoToMs(activeRange[1])}
+          onChange={handleBrushChange}
+        />
       )}
       {ranks && (
         <div className="vix-rank-grid" style={{ marginTop: '0.75rem' }}>

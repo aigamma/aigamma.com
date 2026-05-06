@@ -1,14 +1,15 @@
-import { useEffect, useMemo, useRef } from 'react';
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import usePlotly from '../../hooks/usePlotly';
 import useIsMobile from '../../hooks/useIsMobile';
 import {
   PLOTLY_COLORS,
   plotly2DChartLayout,
   plotlyAxis,
-  plotlyRangeslider,
   plotlyTitle,
 } from '../../lib/plotlyTheme';
 import { rollingRealizedVol } from '../../lib/vix-models';
+import RangeBrush from '../RangeBrush';
+import ResetButton from '../ResetButton';
 
 // Vol of vol — annualized realized vol of the VIX level itself, plotted
 // against the VVIX (the implied vol-of-vol that the option market is
@@ -20,13 +21,25 @@ import { rollingRealizedVol } from '../../lib/vix-models';
 // VVIX is plotted on the same axis (annualized vol units in %) so the gap
 // is read as a level difference. A 1y rolling z-score of (VVIX − realized)
 // runs as a small inset bar at the bottom of the card.
+//
+// External RangeBrush below the card; see VixSkewIndices.jsx for the
+// rationale on why Plotly's xaxis.rangeslider was rejected.
 
 const RV_WINDOW = 30;
+
+function isoToMs(iso) {
+  return new Date(`${iso}T00:00:00Z`).getTime();
+}
+
+function msToIso(ms) {
+  return new Date(ms).toISOString().slice(0, 10);
+}
 
 export default function VixVolOfVol({ data }) {
   const { plotly, error: plotlyError } = usePlotly();
   const ref = useRef(null);
   const isMobile = useIsMobile();
+  const [timeRange, setTimeRange] = useState(null);
 
   const series = useMemo(() => {
     if (!data) return null;
@@ -53,13 +66,22 @@ export default function VixVolOfVol({ data }) {
     return out;
   }, [data]);
 
+  const firstDate = series && series.length > 0 ? series[0].date : null;
+  const lastDate = series && series.length > 0 ? series[series.length - 1].date : null;
+  const defaultRange = useMemo(() => {
+    if (!firstDate || !lastDate) return null;
+    return [firstDate, lastDate];
+  }, [firstDate, lastDate]);
+  const activeRange = timeRange || defaultRange;
+
   useEffect(() => {
-    if (!plotly || !ref.current || !series || series.length === 0) return;
+    if (!plotly || !ref.current || !series || series.length === 0 || !activeRange) return;
 
     const dates = series.map((p) => p.date);
     const vvixVals = series.map((p) => p.vvix);
     const rvVals = series.map((p) => p.realizedVoV);
     const gapVals = series.map((p) => p.gap);
+    const [windowStart, windowEnd] = activeRange;
 
     const traces = [
       {
@@ -102,7 +124,9 @@ export default function VixVolOfVol({ data }) {
           : 'Vol of Vol: VVIX vs Realized VIX Vol'
       ),
       xaxis: plotlyAxis('', {
-        rangeslider: plotlyRangeslider({ thickness: 0.07, bgcolor: 'rgba(20,24,32,0.5)' }),
+        type: 'date',
+        range: [windowStart, windowEnd],
+        autorange: false,
       }),
       yaxis: plotlyAxis('Vol level', { side: 'left', domain: [0.30, 1] }),
       yaxis2: plotlyAxis('VVIX − Realized', {
@@ -113,10 +137,7 @@ export default function VixVolOfVol({ data }) {
       }),
       grid: { rows: 2, columns: 1, pattern: 'independent' },
       margin: { t: isMobile ? 75 : 50, r: 30, b: 80, l: 70 },
-      height: 520,
-      // Override the base layout's dragmode:false so the rangeslider's
-      // brush/scrub interaction works.
-      dragmode: 'pan',
+      height: 460,
       showlegend: true,
       legend: { orientation: 'h', y: -0.18, x: 0.5, xanchor: 'center' },
     });
@@ -132,15 +153,29 @@ export default function VixVolOfVol({ data }) {
       window.removeEventListener('resize', onResize);
       if (ref.current) plotly.purge(ref.current);
     };
-  }, [plotly, series, isMobile]);
+  }, [plotly, series, isMobile, activeRange]);
+
+  const handleBrushChange = useCallback((minMs, maxMs) => {
+    setTimeRange([msToIso(minMs), msToIso(maxMs)]);
+  }, []);
 
   return (
-    <div className="card">
-      <div ref={ref} style={{ width: '100%', height: 520 }} />
+    <div className="card" style={{ position: 'relative' }}>
+      <ResetButton visible={timeRange != null} onClick={() => setTimeRange(null)} />
+      <div ref={ref} style={{ width: '100%', height: 460 }} />
       {plotlyError && (
         <div style={{ padding: '1rem', color: 'var(--accent-coral)' }}>
           Chart failed to load: {plotlyError}
         </div>
+      )}
+      {activeRange && firstDate && lastDate && (
+        <RangeBrush
+          min={isoToMs(firstDate)}
+          max={isoToMs(lastDate)}
+          activeMin={isoToMs(activeRange[0])}
+          activeMax={isoToMs(activeRange[1])}
+          onChange={handleBrushChange}
+        />
       )}
     </div>
   );

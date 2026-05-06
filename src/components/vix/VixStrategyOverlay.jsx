@@ -1,11 +1,9 @@
-import { useEffect, useMemo, useRef } from 'react';
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import usePlotly from '../../hooks/usePlotly';
 import useIsMobile from '../../hooks/useIsMobile';
 import {
-  PLOTLY_COLORS,
   plotly2DChartLayout,
   plotlyAxis,
-  plotlyRangeslider,
   plotlyTitle,
 } from '../../lib/plotlyTheme';
 import {
@@ -13,6 +11,8 @@ import {
   annualizedStats,
   maxDrawdown,
 } from '../../lib/vix-models';
+import RangeBrush from '../RangeBrush';
+import ResetButton from '../ResetButton';
 
 // Cboe option-strategy benchmark indices vs SPX. Four strategy variants
 // publicly disseminated by Cboe and tracked in our backfill: BXM (BuyWrite
@@ -26,6 +26,9 @@ import {
 // SPX is plotted in primary blue as the buy-and-hold benchmark; the four
 // strategies branch from there. The accompanying table shows annualized
 // return, vol, Sharpe, and maximum peak-to-trough drawdown for each.
+//
+// External RangeBrush below the card; see VixSkewIndices.jsx for the
+// rationale on why Plotly's xaxis.rangeslider was rejected.
 
 const STRATEGIES = [
   { sym: 'SPX',  label: 'SPX (cash)',     color: '#4a9eff', source: 'spx' },
@@ -34,6 +37,14 @@ const STRATEGIES = [
   { sym: 'BFLY', label: 'BFLY (Iron Butterfly)', color: '#BF7FFF' },
   { sym: 'CNDR', label: 'CNDR (Iron Condor)', color: '#1abc9c' },
 ];
+
+function isoToMs(iso) {
+  return new Date(`${iso}T00:00:00Z`).getTime();
+}
+
+function msToIso(ms) {
+  return new Date(ms).toISOString().slice(0, 10);
+}
 
 function gatherSeries(data, sym, source) {
   if (source === 'spx') {
@@ -50,6 +61,7 @@ export default function VixStrategyOverlay({ data }) {
   const { plotly, error: plotlyError } = usePlotly();
   const ref = useRef(null);
   const isMobile = useIsMobile();
+  const [timeRange, setTimeRange] = useState(null);
 
   const enriched = useMemo(() => {
     if (!data) return null;
@@ -62,8 +74,32 @@ export default function VixStrategyOverlay({ data }) {
     });
   }, [data]);
 
+  // Brush domain spans the widest visible date range across the five
+  // growth series.
+  const { firstDate, lastDate } = useMemo(() => {
+    if (!enriched) return { firstDate: null, lastDate: null };
+    let first = null;
+    let last = null;
+    for (const s of enriched) {
+      if (!s.growth || s.growth.length === 0) continue;
+      const f = s.growth[0]?.date;
+      const l = s.growth[s.growth.length - 1]?.date;
+      if (f && (!first || f < first)) first = f;
+      if (l && (!last || l > last)) last = l;
+    }
+    return { firstDate: first, lastDate: last };
+  }, [enriched]);
+  const defaultRange = useMemo(() => {
+    if (!firstDate || !lastDate) return null;
+    return [firstDate, lastDate];
+  }, [firstDate, lastDate]);
+  const activeRange = timeRange || defaultRange;
+
   useEffect(() => {
-    if (!plotly || !ref.current || !enriched) return;
+    if (!plotly || !ref.current || !enriched || !activeRange) return;
+
+    const [windowStart, windowEnd] = activeRange;
+
     const traces = enriched
       .filter((s) => s.growth.length > 0)
       .map((s) => ({
@@ -83,14 +119,13 @@ export default function VixStrategyOverlay({ data }) {
           : 'Cboe Strategy Benchmark Indices vs SPX (growth of 1)'
       ),
       xaxis: plotlyAxis('', {
-        rangeslider: plotlyRangeslider({ thickness: 0.07, bgcolor: 'rgba(20,24,32,0.5)' }),
+        type: 'date',
+        range: [windowStart, windowEnd],
+        autorange: false,
       }),
       yaxis: plotlyAxis('Growth of $1'),
       margin: { t: isMobile ? 75 : 50, r: 30, b: 80, l: 70 },
-      height: 480,
-      // Override the base layout's dragmode:false so the rangeslider's
-      // brush/scrub interaction works.
-      dragmode: 'pan',
+      height: 420,
       showlegend: true,
       legend: { orientation: 'h', y: -0.18, x: 0.5, xanchor: 'center' },
     });
@@ -106,15 +141,29 @@ export default function VixStrategyOverlay({ data }) {
       window.removeEventListener('resize', onResize);
       if (ref.current) plotly.purge(ref.current);
     };
-  }, [plotly, enriched, isMobile]);
+  }, [plotly, enriched, isMobile, activeRange]);
+
+  const handleBrushChange = useCallback((minMs, maxMs) => {
+    setTimeRange([msToIso(minMs), msToIso(maxMs)]);
+  }, []);
 
   return (
-    <div className="card">
-      <div ref={ref} style={{ width: '100%', height: 480 }} />
+    <div className="card" style={{ position: 'relative' }}>
+      <ResetButton visible={timeRange != null} onClick={() => setTimeRange(null)} />
+      <div ref={ref} style={{ width: '100%', height: 420 }} />
       {plotlyError && (
         <div style={{ padding: '1rem', color: 'var(--accent-coral)' }}>
           Chart failed to load: {plotlyError}
         </div>
+      )}
+      {activeRange && firstDate && lastDate && (
+        <RangeBrush
+          min={isoToMs(firstDate)}
+          max={isoToMs(lastDate)}
+          activeMin={isoToMs(activeRange[0])}
+          activeMax={isoToMs(activeRange[1])}
+          onChange={handleBrushChange}
+        />
       )}
       {enriched && (
         <table className="vix-strategy-table">

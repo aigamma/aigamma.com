@@ -1,13 +1,14 @@
-import { useEffect, useMemo, useRef } from 'react';
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import usePlotly from '../../hooks/usePlotly';
 import useIsMobile from '../../hooks/useIsMobile';
 import {
   PLOTLY_COLORS,
   plotly2DChartLayout,
   plotlyAxis,
-  plotlyRangeslider,
   plotlyTitle,
 } from '../../lib/plotlyTheme';
+import RangeBrush from '../RangeBrush';
+import ResetButton from '../ResetButton';
 
 // Nations SkewDex (SDEX) + TailDex (TDEX) side-by-side. Two complementary
 // readings of SPY tail-pricing pressure that together separate "smile is
@@ -45,6 +46,24 @@ import {
 // those were calibrated against the Cboe-cumulant scale; that calibration
 // does not translate to either Nations construction, so the per-series
 // long-run mean is the right anchor here.
+//
+// Time-axis brush sits below the card via the site-wide RangeBrush
+// component (matches the landing-page DealerGammaRegime / SpxVolFlip
+// pattern). Plotly's built-in xaxis.rangeslider was tried first but it
+// drops a 27 px strip directly on top of the date-tick row and the
+// legend below it, so the legend rendered behind the slider and the
+// tick labels collided with the slider thumbs. The external RangeBrush
+// is a 40 px HTML/CSS strip sitting flush against the card's bottom
+// edge, so the chart's legend + axis below the plot keep their full
+// vertical real estate and the brush sits in clean separated space.
+
+function isoToMs(iso) {
+  return new Date(`${iso}T00:00:00Z`).getTime();
+}
+
+function msToIso(ms) {
+  return new Date(ms).toISOString().slice(0, 10);
+}
 
 function mean(values) {
   if (!values || values.length === 0) return null;
@@ -62,6 +81,7 @@ export default function VixSkewIndices({ data }) {
   const { plotly, error: plotlyError } = usePlotly();
   const ref = useRef(null);
   const isMobile = useIsMobile();
+  const [timeRange, setTimeRange] = useState(null);
 
   const series = useMemo(() => {
     if (!data) return null;
@@ -75,13 +95,38 @@ export default function VixSkewIndices({ data }) {
     };
   }, [data]);
 
+  // Brush domain spans the wider of the two series so a partially-loaded
+  // SDEX or TDEX (e.g. one is a few days behind the other) does not
+  // collapse the brush window.
+  const firstDate = useMemo(() => {
+    if (!series) return null;
+    const candidates = [series.sdex[0]?.date, series.tdex[0]?.date].filter(Boolean);
+    if (candidates.length === 0) return null;
+    return candidates.sort()[0];
+  }, [series]);
+  const lastDate = useMemo(() => {
+    if (!series) return null;
+    const candidates = [
+      series.sdex[series.sdex.length - 1]?.date,
+      series.tdex[series.tdex.length - 1]?.date,
+    ].filter(Boolean);
+    if (candidates.length === 0) return null;
+    return candidates.sort()[candidates.length - 1];
+  }, [series]);
+  const defaultRange = useMemo(() => {
+    if (!firstDate || !lastDate) return null;
+    return [firstDate, lastDate];
+  }, [firstDate, lastDate]);
+  const activeRange = timeRange || defaultRange;
+
   useEffect(() => {
-    if (!plotly || !ref.current || !series) return;
+    if (!plotly || !ref.current || !series || !activeRange) return;
 
     const sdexFirst = series.sdex[0]?.date;
     const sdexLast = series.sdex[series.sdex.length - 1]?.date;
     const tdexFirst = series.tdex[0]?.date;
     const tdexLast = series.tdex[series.tdex.length - 1]?.date;
+    const [windowStart, windowEnd] = activeRange;
 
     const traces = [
       {
@@ -135,7 +180,9 @@ export default function VixSkewIndices({ data }) {
           : 'Skew Indices: Nations SDEX vs TailDex'
       ),
       xaxis: plotlyAxis('', {
-        rangeslider: plotlyRangeslider({ thickness: 0.07, bgcolor: 'rgba(20,24,32,0.5)' }),
+        type: 'date',
+        range: [windowStart, windowEnd],
+        autorange: false,
       }),
       yaxis: plotlyAxis('SDEX', { side: 'left' }),
       yaxis2: plotlyAxis('TDEX', {
@@ -145,10 +192,7 @@ export default function VixSkewIndices({ data }) {
         tickfont: { color: PLOTLY_COLORS.highlight, family: "Calibri, 'Segoe UI', system-ui, sans-serif", size: 12 },
       }),
       margin: { t: isMobile ? 75 : 50, r: 70, b: 80, l: 70 },
-      height: 440,
-      // Override the base layout's dragmode:false so the rangeslider's
-      // brush/scrub interaction works.
-      dragmode: 'pan',
+      height: 380,
       showlegend: true,
       legend: { orientation: 'h', y: -0.18, x: 0.5, xanchor: 'center' },
     });
@@ -164,15 +208,29 @@ export default function VixSkewIndices({ data }) {
       window.removeEventListener('resize', onResize);
       if (ref.current) plotly.purge(ref.current);
     };
-  }, [plotly, series, isMobile]);
+  }, [plotly, series, isMobile, activeRange]);
+
+  const handleBrushChange = useCallback((minMs, maxMs) => {
+    setTimeRange([msToIso(minMs), msToIso(maxMs)]);
+  }, []);
 
   return (
-    <div className="card">
-      <div ref={ref} style={{ width: '100%', height: 440 }} />
+    <div className="card" style={{ position: 'relative' }}>
+      <ResetButton visible={timeRange != null} onClick={() => setTimeRange(null)} />
+      <div ref={ref} style={{ width: '100%', height: 380 }} />
       {plotlyError && (
         <div style={{ padding: '1rem', color: 'var(--accent-coral)' }}>
           Chart failed to load: {plotlyError}
         </div>
+      )}
+      {activeRange && firstDate && lastDate && (
+        <RangeBrush
+          min={isoToMs(firstDate)}
+          max={isoToMs(lastDate)}
+          activeMin={isoToMs(activeRange[0])}
+          activeMax={isoToMs(activeRange[1])}
+          onChange={handleBrushChange}
+        />
       )}
     </div>
   );

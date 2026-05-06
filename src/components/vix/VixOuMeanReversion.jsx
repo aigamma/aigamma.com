@@ -1,14 +1,15 @@
-import { useEffect, useMemo, useRef } from 'react';
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import usePlotly from '../../hooks/usePlotly';
 import useIsMobile from '../../hooks/useIsMobile';
 import {
   PLOTLY_COLORS,
   plotly2DChartLayout,
   plotlyAxis,
-  plotlyRangeslider,
   plotlyTitle,
 } from '../../lib/plotlyTheme';
 import { calibrateOU, ouExpectedLevel } from '../../lib/vix-models';
+import RangeBrush from '../RangeBrush';
+import ResetButton from '../ResetButton';
 
 // Ornstein-Uhlenbeck calibration on log VIX. The card has two surfaces:
 //
@@ -23,6 +24,18 @@ import { calibrateOU, ouExpectedLevel } from '../../lib/vix-models';
 // estimates are stable. Half-life under OU is ln(2) / κ, expressed in
 // years; we convert to trading days for legibility against the chart's
 // daily x-axis.
+//
+// The brush domain spans [first historical date, last forward-projection
+// date] so the user can scrub past the historical tail into the projected
+// 60-day forward expectation.
+
+function isoToMs(iso) {
+  return new Date(`${iso}T00:00:00Z`).getTime();
+}
+
+function msToIso(ms) {
+  return new Date(ms).toISOString().slice(0, 10);
+}
 
 function StatRow({ label, value, sub, tone = 'neutral' }) {
   const colorMap = {
@@ -46,6 +59,7 @@ export default function VixOuMeanReversion({ data }) {
   const { plotly, error: plotlyError } = usePlotly();
   const ref = useRef(null);
   const isMobile = useIsMobile();
+  const [timeRange, setTimeRange] = useState(null);
 
   const result = useMemo(() => {
     if (!data) return null;
@@ -53,35 +67,55 @@ export default function VixOuMeanReversion({ data }) {
     return calibrateOU(closes);
   }, [data]);
 
-  useEffect(() => {
-    if (!plotly || !ref.current || !result || !result.valid || !data) return;
-
-    const series = data.series.VIX || [];
-    const dates = series.map((p) => p.date);
-    const levels = series.map((p) => p.close);
-
-    // Forward expectation from the latest observation, 60 trading days out.
+  // Pre-compute the forward-projection dates so they can feed both the
+  // brush domain (so the user can scrub into the projected window) and
+  // the trace x values inside the effect below.
+  const projection = useMemo(() => {
+    if (!data || !result || !result.valid) return null;
+    const series = data.series?.VIX || [];
     const lastPoint = series[series.length - 1];
+    if (!lastPoint || !Number.isFinite(lastPoint.close)) return null;
     const forwardDays = 60;
     const forwardDates = [];
     const forwardLevels = [];
-    if (lastPoint && Number.isFinite(lastPoint.close)) {
-      const start = new Date(lastPoint.date + 'T00:00:00Z');
-      let businessDays = 0;
-      let cursor = new Date(start);
-      while (businessDays < forwardDays) {
-        cursor.setUTCDate(cursor.getUTCDate() + 1);
-        const dow = cursor.getUTCDay();
-        if (dow === 0 || dow === 6) continue;
-        businessDays += 1;
-        const expected = ouExpectedLevel(
-          { currentLevel: lastPoint.close, kappa: result.kappa, theta: result.theta },
-          businessDays,
-        );
-        forwardDates.push(cursor.toISOString().slice(0, 10));
-        forwardLevels.push(expected);
-      }
+    const start = new Date(lastPoint.date + 'T00:00:00Z');
+    let businessDays = 0;
+    let cursor = new Date(start);
+    while (businessDays < forwardDays) {
+      cursor.setUTCDate(cursor.getUTCDate() + 1);
+      const dow = cursor.getUTCDay();
+      if (dow === 0 || dow === 6) continue;
+      businessDays += 1;
+      const expected = ouExpectedLevel(
+        { currentLevel: lastPoint.close, kappa: result.kappa, theta: result.theta },
+        businessDays,
+      );
+      forwardDates.push(cursor.toISOString().slice(0, 10));
+      forwardLevels.push(expected);
     }
+    return { lastPoint, forwardDates, forwardLevels, series };
+  }, [data, result]);
+
+  const firstDate = projection?.series?.[0]?.date || null;
+  // Brush domain extends past the historical tail into the forward window
+  // so the user can scrub the full visible chart, including the projection.
+  const lastDate = projection
+    ? (projection.forwardDates[projection.forwardDates.length - 1]
+       || projection.lastPoint.date)
+    : null;
+  const defaultRange = useMemo(() => {
+    if (!firstDate || !lastDate) return null;
+    return [firstDate, lastDate];
+  }, [firstDate, lastDate]);
+  const activeRange = timeRange || defaultRange;
+
+  useEffect(() => {
+    if (!plotly || !ref.current || !result || !result.valid || !data || !projection || !activeRange) return;
+
+    const { lastPoint, forwardDates, forwardLevels, series } = projection;
+    const dates = series.map((p) => p.date);
+    const levels = series.map((p) => p.close);
+    const [windowStart, windowEnd] = activeRange;
 
     const traces = [
       // Long-term mean line drawn as a constant.
@@ -123,14 +157,13 @@ export default function VixOuMeanReversion({ data }) {
           : 'Ornstein-Uhlenbeck Mean Reversion'
       ),
       xaxis: plotlyAxis('', {
-        rangeslider: plotlyRangeslider({ thickness: 0.07, bgcolor: 'rgba(20,24,32,0.5)' }),
+        type: 'date',
+        range: [windowStart, windowEnd],
+        autorange: false,
       }),
       yaxis: plotlyAxis('VIX'),
       margin: { t: isMobile ? 75 : 50, r: 30, b: 80, l: 70 },
-      height: 440,
-      // Override the base layout's dragmode:false so the rangeslider's
-      // brush/scrub interaction works.
-      dragmode: 'pan',
+      height: 380,
       showlegend: true,
     });
 
@@ -145,7 +178,11 @@ export default function VixOuMeanReversion({ data }) {
       window.removeEventListener('resize', onResize);
       if (ref.current) plotly.purge(ref.current);
     };
-  }, [plotly, result, data, isMobile]);
+  }, [plotly, result, data, isMobile, projection, activeRange]);
+
+  const handleBrushChange = useCallback((minMs, maxMs) => {
+    setTimeRange([msToIso(minMs), msToIso(maxMs)]);
+  }, []);
 
   if (!result || !result.valid) {
     return (
@@ -167,7 +204,8 @@ export default function VixOuMeanReversion({ data }) {
     : 'coral';
 
   return (
-    <div className="card">
+    <div className="card" style={{ position: 'relative' }}>
+      <ResetButton visible={timeRange != null} onClick={() => setTimeRange(null)} />
       <div className="vix-ou-stats">
         <StatRow
           label="κ (speed)"
@@ -198,11 +236,20 @@ export default function VixOuMeanReversion({ data }) {
           tone={tone}
         />
       </div>
-      <div ref={ref} style={{ width: '100%', height: 440 }} />
+      <div ref={ref} style={{ width: '100%', height: 380 }} />
       {plotlyError && (
         <div style={{ padding: '1rem', color: 'var(--accent-coral)' }}>
           Chart failed to load: {plotlyError}
         </div>
+      )}
+      {activeRange && firstDate && lastDate && (
+        <RangeBrush
+          min={isoToMs(firstDate)}
+          max={isoToMs(lastDate)}
+          activeMin={isoToMs(activeRange[0])}
+          activeMax={isoToMs(activeRange[1])}
+          onChange={handleBrushChange}
+        />
       )}
     </div>
   );

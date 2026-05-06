@@ -1,14 +1,15 @@
-import { useEffect, useMemo, useRef } from 'react';
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import usePlotly from '../../hooks/usePlotly';
 import useIsMobile from '../../hooks/useIsMobile';
 import {
   PLOTLY_COLORS,
   plotly2DChartLayout,
   plotlyAxis,
-  plotlyRangeslider,
   plotlyTitle,
 } from '../../lib/plotlyTheme';
 import { termStructureRatioHistory } from '../../lib/vix-models';
+import RangeBrush from '../RangeBrush';
+import ResetButton from '../ResetButton';
 
 // Historical contango ratio (VIX3M / VIX) over the full backfill window. The
 // 1.0 line is drawn as a horizontal threshold; everything above is contango
@@ -18,22 +19,47 @@ import { termStructureRatioHistory } from '../../lib/vix-models';
 //
 // Conditional fill mirrors the VRP card pattern: green band where ratio > 1
 // (the comfortable state), coral fill where ratio < 1 (the warning state).
+//
+// Time-axis brush sits below the card via the site-wide RangeBrush
+// component — same pattern the landing-page DealerGammaRegime / SpxVolFlip
+// cards use. Plotly's built-in xaxis.rangeslider was not used because it
+// drops a strip directly on top of the date-tick row, which collided with
+// the legend on the dual-axis cards on this page; the external 40 px
+// HTML/CSS brush keeps the chart's plot area unbothered.
+
+function isoToMs(iso) {
+  return new Date(`${iso}T00:00:00Z`).getTime();
+}
+
+function msToIso(ms) {
+  return new Date(ms).toISOString().slice(0, 10);
+}
 
 export default function VixContangoHistory({ data }) {
   const { plotly, error: plotlyError } = usePlotly();
   const ref = useRef(null);
   const isMobile = useIsMobile();
+  const [timeRange, setTimeRange] = useState(null);
 
   const series = useMemo(() => {
     if (!data) return null;
     return termStructureRatioHistory(data.series?.VIX, data.series?.VIX3M);
   }, [data]);
 
+  const firstDate = series && series.length > 0 ? series[0].date : null;
+  const lastDate = series && series.length > 0 ? series[series.length - 1].date : null;
+  const defaultRange = useMemo(() => {
+    if (!firstDate || !lastDate) return null;
+    return [firstDate, lastDate];
+  }, [firstDate, lastDate]);
+  const activeRange = timeRange || defaultRange;
+
   useEffect(() => {
-    if (!plotly || !ref.current || !series || series.length === 0) return;
+    if (!plotly || !ref.current || !series || series.length === 0 || !activeRange) return;
 
     const dates = series.map((p) => p.date);
     const ratios = series.map((p) => p.ratio);
+    const [windowStart, windowEnd] = activeRange;
 
     // Two-trace conditional fill against the 1.0 baseline. The "above" trace
     // shows where ratio exceeds 1.0 (clamped at 1 below); fills downward to
@@ -104,15 +130,13 @@ export default function VixContangoHistory({ data }) {
           : 'Term Structure Contango / Backwardation'
       ),
       xaxis: plotlyAxis('', {
-        rangeslider: plotlyRangeslider({ thickness: 0.07, bgcolor: 'rgba(20,24,32,0.5)' }),
+        type: 'date',
+        range: [windowStart, windowEnd],
+        autorange: false,
       }),
       yaxis: plotlyAxis('VIX3M / VIX'),
       margin: { t: isMobile ? 75 : 50, r: 30, b: 50, l: 70 },
-      height: 380,
-      // Override the base layout's dragmode:false so the rangeslider's
-      // brush/scrub interaction works. Without this, the slider thumb
-      // renders but cannot be dragged.
-      dragmode: 'pan',
+      height: 320,
       showlegend: false,
       annotations: [
         {
@@ -141,15 +165,29 @@ export default function VixContangoHistory({ data }) {
       window.removeEventListener('resize', onResize);
       if (ref.current) plotly.purge(ref.current);
     };
-  }, [plotly, series, isMobile]);
+  }, [plotly, series, isMobile, activeRange]);
+
+  const handleBrushChange = useCallback((minMs, maxMs) => {
+    setTimeRange([msToIso(minMs), msToIso(maxMs)]);
+  }, []);
 
   return (
-    <div className="card">
-      <div ref={ref} style={{ width: '100%', height: 380 }} />
+    <div className="card" style={{ position: 'relative' }}>
+      <ResetButton visible={timeRange != null} onClick={() => setTimeRange(null)} />
+      <div ref={ref} style={{ width: '100%', height: 320 }} />
       {plotlyError && (
         <div style={{ padding: '1rem', color: 'var(--accent-coral)' }}>
           Chart failed to load: {plotlyError}
         </div>
+      )}
+      {activeRange && firstDate && lastDate && (
+        <RangeBrush
+          min={isoToMs(firstDate)}
+          max={isoToMs(lastDate)}
+          activeMin={isoToMs(activeRange[0])}
+          activeMax={isoToMs(activeRange[1])}
+          onChange={handleBrushChange}
+        />
       )}
     </div>
   );

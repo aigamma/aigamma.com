@@ -1,13 +1,14 @@
-import { useEffect, useMemo, useRef } from 'react';
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import usePlotly from '../../hooks/usePlotly';
 import useIsMobile from '../../hooks/useIsMobile';
 import {
   PLOTLY_COLORS,
   plotly2DChartLayout,
   plotlyAxis,
-  plotlyRangeslider,
   plotlyTitle,
 } from '../../lib/plotlyTheme';
+import RangeBrush from '../RangeBrush';
+import ResetButton from '../ResetButton';
 
 // VIX vs SPX 30-day realized vol. The VIX is itself an implied vol on SPX,
 // so this chart is the canonical "VRP" decomposition specialized to read
@@ -18,11 +19,24 @@ import {
 // Conditional fill mirrors the main /tactical VRP card:
 //   green where VIX > RV   — premium positive (the empirically-typical state)
 //   coral where RV > VIX   — premium negative (the rare stress regime)
+//
+// External RangeBrush below the card matches the landing-page pattern;
+// see VixSkewIndices.jsx for the full rationale on why Plotly's built-in
+// xaxis.rangeslider was rejected in favor of this HTML/CSS strip.
+
+function isoToMs(iso) {
+  return new Date(`${iso}T00:00:00Z`).getTime();
+}
+
+function msToIso(ms) {
+  return new Date(ms).toISOString().slice(0, 10);
+}
 
 export default function VixVrp({ data }) {
   const { plotly, error: plotlyError } = usePlotly();
   const ref = useRef(null);
   const isMobile = useIsMobile();
+  const [timeRange, setTimeRange] = useState(null);
 
   const series = useMemo(() => {
     if (!data) return null;
@@ -40,17 +54,25 @@ export default function VixVrp({ data }) {
     return out;
   }, [data]);
 
+  const firstDate = series && series.length > 0 ? series[0].date : null;
+  const lastDate = series && series.length > 0 ? series[series.length - 1].date : null;
+  const defaultRange = useMemo(() => {
+    if (!firstDate || !lastDate) return null;
+    return [firstDate, lastDate];
+  }, [firstDate, lastDate]);
+  const activeRange = timeRange || defaultRange;
+
   useEffect(() => {
-    if (!plotly || !ref.current || !series || series.length === 0) return;
+    if (!plotly || !ref.current || !series || series.length === 0 || !activeRange) return;
 
     const dates = series.map((p) => p.date);
     const vixVals = series.map((p) => p.vix);
     const rvVals = series.map((p) => p.rv);
     const spxVals = series.map((p) => p.spx);
+    const [windowStart, windowEnd] = activeRange;
 
     // Conditional fills: green band where VIX above RV, coral where below.
     const minSeries = series.map((p) => Math.min(p.vix, p.rv));
-    const maxSeries = series.map((p) => Math.max(p.vix, p.rv));
     const greenMask = series.map((p) => (p.vix >= p.rv ? Math.max(p.vix, p.rv) : null));
     const coralMask = series.map((p) => (p.rv > p.vix ? Math.max(p.vix, p.rv) : null));
 
@@ -142,7 +164,9 @@ export default function VixVrp({ data }) {
           : 'VIX vs SPX 20-day Realized Vol'
       ),
       xaxis: plotlyAxis('', {
-        rangeslider: plotlyRangeslider({ thickness: 0.07, bgcolor: 'rgba(20,24,32,0.5)' }),
+        type: 'date',
+        range: [windowStart, windowEnd],
+        autorange: false,
       }),
       yaxis: plotlyAxis('Vol (annualized %)', { side: 'left' }),
       yaxis2: plotlyAxis('SPX', {
@@ -152,10 +176,7 @@ export default function VixVrp({ data }) {
         tickfont: { color: PLOTLY_COLORS.primary, family: "Calibri, 'Segoe UI', system-ui, sans-serif", size: 12 },
       }),
       margin: { t: isMobile ? 75 : 50, r: 70, b: 80, l: 70 },
-      height: 520,
-      // Override the base layout's dragmode:false so the rangeslider's
-      // brush/scrub interaction works.
-      dragmode: 'pan',
+      height: 460,
       showlegend: true,
       legend: {
         orientation: 'h',
@@ -176,15 +197,29 @@ export default function VixVrp({ data }) {
       window.removeEventListener('resize', onResize);
       if (ref.current) plotly.purge(ref.current);
     };
-  }, [plotly, series, isMobile]);
+  }, [plotly, series, isMobile, activeRange]);
+
+  const handleBrushChange = useCallback((minMs, maxMs) => {
+    setTimeRange([msToIso(minMs), msToIso(maxMs)]);
+  }, []);
 
   return (
-    <div className="card">
-      <div ref={ref} style={{ width: '100%', height: 520 }} />
+    <div className="card" style={{ position: 'relative' }}>
+      <ResetButton visible={timeRange != null} onClick={() => setTimeRange(null)} />
+      <div ref={ref} style={{ width: '100%', height: 460 }} />
       {plotlyError && (
         <div style={{ padding: '1rem', color: 'var(--accent-coral)' }}>
           Chart failed to load: {plotlyError}
         </div>
+      )}
+      {activeRange && firstDate && lastDate && (
+        <RangeBrush
+          min={isoToMs(firstDate)}
+          max={isoToMs(lastDate)}
+          activeMin={isoToMs(activeRange[0])}
+          activeMax={isoToMs(activeRange[1])}
+          onChange={handleBrushChange}
+        />
       )}
     </div>
   );

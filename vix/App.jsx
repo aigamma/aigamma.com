@@ -111,14 +111,14 @@ export default function App() {
         <div aria-busy="true" aria-label="Loading VIX history">
           <div className="skeleton-card" style={{ height: '180px' }} />
           <div className="skeleton-card" style={{ height: '380px' }} />
-          <div className="skeleton-card" style={{ height: '400px' }} />
+          <div className="skeleton-card" style={{ height: '360px' }} />
+          <div className="skeleton-card" style={{ height: '500px' }} />
           <div className="skeleton-card" style={{ height: '540px' }} />
-          <div className="skeleton-card" style={{ height: '540px' }} />
-          <div className="skeleton-card" style={{ height: '540px' }} />
-          <div className="skeleton-card" style={{ height: '520px' }} />
-          <div className="skeleton-card" style={{ height: '460px' }} />
+          <div className="skeleton-card" style={{ height: '500px' }} />
+          <div className="skeleton-card" style={{ height: '500px' }} />
+          <div className="skeleton-card" style={{ height: '420px' }} />
           <div className="skeleton-card" style={{ height: '600px' }} />
-          <div className="skeleton-card" style={{ height: '640px' }} />
+          <div className="skeleton-card" style={{ height: '660px' }} />
         </div>
       )}
 
@@ -141,28 +141,28 @@ export default function App() {
           <ErrorBoundary><VixHeaderProfile data={data} /></ErrorBoundary>
           <ErrorBoundary><VixTermStructure data={data} /></ErrorBoundary>
           <ErrorBoundary>
-            <LazyMount height="400px" margin="300px"><VixContangoHistory data={data} /></LazyMount>
+            <LazyMount height="360px" margin="300px"><VixContangoHistory data={data} /></LazyMount>
           </ErrorBoundary>
           <ErrorBoundary>
-            <LazyMount height="540px" margin="300px"><VixVrp data={data} /></LazyMount>
+            <LazyMount height="500px" margin="300px"><VixVrp data={data} /></LazyMount>
           </ErrorBoundary>
           <ErrorBoundary>
             <LazyMount height="540px" margin="300px"><VixOuMeanReversion data={data} /></LazyMount>
           </ErrorBoundary>
           <ErrorBoundary>
-            <LazyMount height="540px" margin="300px"><VixVolOfVol data={data} /></LazyMount>
+            <LazyMount height="500px" margin="300px"><VixVolOfVol data={data} /></LazyMount>
           </ErrorBoundary>
           <ErrorBoundary>
-            <LazyMount height="520px" margin="300px"><VixCrossAsset data={data} /></LazyMount>
+            <LazyMount height="500px" margin="300px"><VixCrossAsset data={data} /></LazyMount>
           </ErrorBoundary>
           <ErrorBoundary>
-            <LazyMount height="460px" margin="300px"><VixSkewIndices data={data} /></LazyMount>
+            <LazyMount height="420px" margin="300px"><VixSkewIndices data={data} /></LazyMount>
           </ErrorBoundary>
           <ErrorBoundary>
             <LazyMount height="500px" margin="300px"><VixRegimeMatrix data={data} /></LazyMount>
           </ErrorBoundary>
           <ErrorBoundary>
-            <LazyMount height="640px" margin="300px"><VixStrategyOverlay data={data} /></LazyMount>
+            <LazyMount height="660px" margin="300px"><VixStrategyOverlay data={data} /></LazyMount>
           </ErrorBoundary>
         </>
       )}
