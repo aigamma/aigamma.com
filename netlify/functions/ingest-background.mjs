@@ -345,31 +345,59 @@ function computeGex(pages, targets, startedAt, partial, partialReason = null) {
       const exp = r.details.expiration_date;
       return monthlyExpirationsSet.has(exp) || exp <= weeklyCutoff;
     })
-    .map((r) => ({
-      expiration_date: r.details.expiration_date,
-      strike: r.details.strike_price,
-      contract_type: r.details.contract_type,
-      root_symbol: parseRoot(r.details.ticker),
-      implied_volatility: r.implied_volatility ?? null,
-      delta: r.greeks.delta ?? null,
-      gamma: r.greeks.gamma ?? null,
-      theta: r.greeks.theta ?? null,
-      vega: r.greeks.vega ?? null,
-      open_interest: r.open_interest ?? 0,
-      volume: r.day?.volume ?? 0,
-      close_price: r.day?.close ?? null,
-      // last_quote is the synchronous NBBO at snapshot time. Persisted
-      // per contract so the /parity card's box-spread and direct-PCP rate
-      // solvers can use a mid that is sampled at the same instant for
-      // every leg — close_price is the per-contract last-trade-of-day,
-      // which is asynchronous across the chain and gets blown into
-      // triple-digit r errors by the box's 1/T·1/ΔK amplifier. Null when
-      // Massive returns no last_quote on this snapshot (off-hours, or a
-      // contract that hasn't been quoted today); the parity slot's
-      // contractMark() handles nulls by falling back to close_price.
-      bid_price: r.last_quote?.bid ?? null,
-      ask_price: r.last_quote?.ask ?? null,
-    }));
+    .map((r) => {
+      // Compute quote_age_ms by diffing the snapshot's captured_at against
+      // last_quote.last_updated. last_updated is in nanoseconds since epoch
+      // (SIP convention) so we downscale to ms before differencing.
+      let quoteAgeMs = null;
+      if (r.last_quote?.last_updated && targets.capturedAtMs) {
+        const quoteMs = Math.floor(r.last_quote.last_updated / 1e6);
+        quoteAgeMs = targets.capturedAtMs - quoteMs;
+      }
+      // last_trade.sip_timestamp is also nanoseconds; downscale to ms for
+      // the bigint column. Stays nullable for contracts that have never
+      // traded or where Massive omitted last_trade on this response.
+      const lastTradeTsMs = r.last_trade?.sip_timestamp
+        ? Math.floor(r.last_trade.sip_timestamp / 1e6)
+        : null;
+      return {
+        expiration_date: r.details.expiration_date,
+        strike: r.details.strike_price,
+        contract_type: r.details.contract_type,
+        root_symbol: parseRoot(r.details.ticker),
+        implied_volatility: r.implied_volatility ?? null,
+        delta: r.greeks.delta ?? null,
+        gamma: r.greeks.gamma ?? null,
+        theta: r.greeks.theta ?? null,
+        vega: r.greeks.vega ?? null,
+        open_interest: r.open_interest ?? 0,
+        volume: r.day?.volume ?? 0,
+        close_price: r.day?.close ?? null,
+        // last_quote is the synchronous NBBO at snapshot time. Persisted
+        // per contract so the /parity card's box-spread and direct-PCP rate
+        // solvers can use a mid that is sampled at the same instant for
+        // every leg. close_price is the per-contract last-trade-of-day,
+        // which is asynchronous across the chain and gets blown into
+        // triple-digit r errors by the box's 1/T * 1/ΔK amplifier. Null when
+        // Massive returns no last_quote on this snapshot (off-hours, the
+        // Options Starter tier which gates last_quote behind Developer, or
+        // a contract that has not been quoted today); the parity slot's
+        // contractMark() handles nulls by falling back to close_price.
+        bid_price: r.last_quote?.bid ?? null,
+        ask_price: r.last_quote?.ask ?? null,
+        bid_size: r.last_quote?.bid_size ?? null,
+        ask_size: r.last_quote?.ask_size ?? null,
+        quote_age_ms: quoteAgeMs,
+        // last_trade is per-contract most-recent-print. Less synchronous
+        // than NBBO mid (different contracts last traded at different
+        // times) but useful as a freshness signal and as a fallback when
+        // last_quote is unavailable. The midPrice fallback chain in
+        // earnings.mjs already documents the preference order.
+        last_trade_price: r.last_trade?.price ?? null,
+        last_trade_size: r.last_trade?.size ?? null,
+        last_trade_ts: lastTradeTsMs,
+      };
+    });
 
   // Per-strike GEX accumulation.
   const gexByStrike = {};

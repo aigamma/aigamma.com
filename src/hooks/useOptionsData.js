@@ -42,6 +42,16 @@ function rehydrateContracts(payload) {
   // missing-quote cases without a separate code path.
   const bidCol = Array.isArray(cols.bid) ? cols.bid : null;
   const askCol = Array.isArray(cols.ask) ? cols.ask : null;
+  // bidSz/askSz/qAge/ltPx/ltSz/ltTs land on Developer ingest runs
+  // (post-2026-05-06 schema additions). Same Array.isArray() tolerance
+  // pattern so older payloads that predate the columns rehydrate cleanly
+  // with nulls and downstream consumers stay null-safe.
+  const bidSzCol = Array.isArray(cols.bidSz) ? cols.bidSz : null;
+  const askSzCol = Array.isArray(cols.askSz) ? cols.askSz : null;
+  const qAgeCol = Array.isArray(cols.qAge) ? cols.qAge : null;
+  const ltPxCol = Array.isArray(cols.ltPx) ? cols.ltPx : null;
+  const ltSzCol = Array.isArray(cols.ltSz) ? cols.ltSz : null;
+  const ltTsCol = Array.isArray(cols.ltTs) ? cols.ltTs : null;
   for (let i = 0; i < n; i++) {
     const expIdx = cols.exp[i];
     contracts[i] = {
@@ -56,6 +66,12 @@ function rehydrateContracts(payload) {
       close_price: cols.px[i],
       bid_price: bidCol ? bidCol[i] : null,
       ask_price: askCol ? askCol[i] : null,
+      bid_size: bidSzCol ? bidSzCol[i] : null,
+      ask_size: askSzCol ? askSzCol[i] : null,
+      quote_age_ms: qAgeCol ? qAgeCol[i] : null,
+      last_trade_price: ltPxCol ? ltPxCol[i] : null,
+      last_trade_size: ltSzCol ? ltSzCol[i] : null,
+      last_trade_ts: ltTsCol ? ltTsCol[i] : null,
     };
   }
   payload.contracts = contracts;

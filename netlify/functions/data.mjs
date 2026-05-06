@@ -178,7 +178,7 @@ export default async function handler(request) {
     const snapParams = new URLSearchParams({
       run_id: `eq.${run.id}`,
       select:
-        'expiration_date,strike,contract_type,implied_volatility,delta,gamma,open_interest,close_price,bid_price,ask_price',
+        'expiration_date,strike,contract_type,implied_volatility,delta,gamma,open_interest,close_price,bid_price,ask_price,bid_size,ask_size,quote_age_ms,last_trade_price,last_trade_size,last_trade_ts',
       order: 'expiration_date.asc,strike.asc',
     });
     if (expirationFilter) snapParams.set('expiration_date', `eq.${expirationFilter}`);
@@ -418,6 +418,12 @@ export default async function handler(request) {
       const colPx = new Array(n);
       const colBid = new Array(n);
       const colAsk = new Array(n);
+      const colBidSz = new Array(n);
+      const colAskSz = new Array(n);
+      const colQAge = new Array(n);
+      const colLtPx = new Array(n);
+      const colLtSz = new Array(n);
+      const colLtTs = new Array(n);
       for (let i = 0; i < n; i++) {
         const c = legacyContractRows[i];
         colExp[i] = expIndex.get(c.expiration_date) ?? -1;
@@ -431,7 +437,7 @@ export default async function handler(request) {
         colGamma[i] = g == null ? null : toSigFig(g, 6);
         colOi[i] = c.open_interest;
         colPx[i] = toNum(c.close_price);
-        // 4dp bid/ask precision — option price quanta are 1c/5c, so the
+        // 4dp bid/ask precision: option price quanta are 1c/5c, so the
         // 4th decimal is already two orders of magnitude below the
         // minimum tick. Null is preserved (not coerced to 0) so the
         // /parity slot's contractMark() can distinguish "no quote" from
@@ -441,6 +447,18 @@ export default async function handler(request) {
         colBid[i] = bid == null ? null : roundTo(bid, 4);
         const ask = toNum(c.ask_price);
         colAsk[i] = ask == null ? null : roundTo(ask, 4);
+        // Sizes are integer counts of contracts; quote_age_ms is a
+        // freshness scalar in milliseconds. last_trade_price stays at
+        // 4dp for symmetry with bid/ask. last_trade_ts is a millisecond
+        // bigint downscaled at ingest time from Massive's nanosecond
+        // sip_timestamp.
+        colBidSz[i] = c.bid_size != null ? Number(c.bid_size) : null;
+        colAskSz[i] = c.ask_size != null ? Number(c.ask_size) : null;
+        colQAge[i] = c.quote_age_ms != null ? Number(c.quote_age_ms) : null;
+        const ltPx = toNum(c.last_trade_price);
+        colLtPx[i] = ltPx == null ? null : roundTo(ltPx, 4);
+        colLtSz[i] = c.last_trade_size != null ? Number(c.last_trade_size) : null;
+        colLtTs[i] = c.last_trade_ts != null ? Number(c.last_trade_ts) : null;
       }
       contractCols = {
         exp: colExp,
@@ -453,6 +471,12 @@ export default async function handler(request) {
         px: colPx,
         bid: colBid,
         ask: colAsk,
+        bidSz: colBidSz,
+        askSz: colAskSz,
+        qAge: colQAge,
+        ltPx: colLtPx,
+        ltSz: colLtSz,
+        ltTs: colLtTs,
       };
     }
     // For useRpcContracts branch, expirations + contractCols are already set above.
