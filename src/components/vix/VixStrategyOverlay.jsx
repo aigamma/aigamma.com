@@ -91,7 +91,14 @@ export default function VixStrategyOverlay({ data }) {
   }, [enriched]);
   const defaultRange = useMemo(() => {
     if (!firstDate || !lastDate) return null;
-    return [firstDate, lastDate];
+    // Open the brush at the right 50 % of the domain so the visible
+    // window is the recent half of the data and the brush thumb's left
+    // handle sits at the midpoint of the track, telegraphing that the
+    // brush is interactive.
+    const firstMs = isoToMs(firstDate);
+    const lastMs = isoToMs(lastDate);
+    const midMs = firstMs + (lastMs - firstMs) / 2;
+    return [msToIso(midMs), lastDate];
   }, [firstDate, lastDate]);
   const activeRange = timeRange || defaultRange;
 
