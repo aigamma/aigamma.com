@@ -30,6 +30,11 @@ for (let i = 0; i < n; i++) {
     close_price: cols.px[i],
     bid_price: cols.bid != null ? cols.bid[i] : undefined,
     ask_price: cols.ask != null ? cols.ask[i] : undefined,
+    bid_size: cols.bidSz != null ? cols.bidSz[i] : undefined,
+    ask_size: cols.askSz != null ? cols.askSz[i] : undefined,
+    quote_age_ms: cols.qAge != null ? cols.qAge[i] : undefined,
+    last_trade_price: cols.ltPx != null ? cols.ltPx[i] : undefined,
+    last_trade_ts: cols.ltTs != null ? cols.ltTs[i] : undefined,
   };
 }
 
@@ -37,6 +42,58 @@ console.log(`spotPrice: ${json.spotPrice}`);
 console.log(`capturedAt: ${json.capturedAt}`);
 console.log(`contracts: ${n}`);
 console.log(`available cols: ${Object.keys(cols).join(', ')}`);
+
+// Quote coverage and freshness summary. The whole point of the parity card
+// is that synchronous mid-of-NBBO marks make the rate solver work; without
+// bid/ask the slot's contractMark falls back to close_price (asynchronous
+// across legs) and rBox blows up by 100x. So the first thing this script
+// reports is how many contracts have usable bid/ask, what their spread
+// distribution looks like, and how fresh the quotes are.
+const withBid = contracts.filter((c) => c.bid_price > 0).length;
+const withAsk = contracts.filter((c) => c.ask_price > 0).length;
+const withBoth = contracts.filter((c) => c.bid_price > 0 && c.ask_price > 0).length;
+const withLastTrade = contracts.filter((c) => c.last_trade_price > 0).length;
+const withClose = contracts.filter((c) => c.close_price > 0).length;
+console.log('');
+console.log('Quote coverage:');
+console.log(`  bid populated:        ${withBid} / ${n} (${(100 * withBid / n).toFixed(1)}%)`);
+console.log(`  ask populated:        ${withAsk} / ${n} (${(100 * withAsk / n).toFixed(1)}%)`);
+console.log(`  both bid+ask:         ${withBoth} / ${n} (${(100 * withBoth / n).toFixed(1)}%)`);
+console.log(`  last_trade populated: ${withLastTrade} / ${n} (${(100 * withLastTrade / n).toFixed(1)}%)`);
+console.log(`  close populated:      ${withClose} / ${n} (${(100 * withClose / n).toFixed(1)}%)`);
+
+if (withBoth > 0) {
+  const spreads = contracts
+    .filter((c) => c.bid_price > 0 && c.ask_price > 0 && c.ask_price >= c.bid_price)
+    .map((c) => (c.ask_price - c.bid_price) / ((c.bid_price + c.ask_price) / 2));
+  spreads.sort((a, b) => a - b);
+  const p10 = spreads[Math.floor(spreads.length * 0.1)];
+  const p50 = spreads[Math.floor(spreads.length * 0.5)];
+  const p90 = spreads[Math.floor(spreads.length * 0.9)];
+  const fmtPct = (s) => `${(s * 100).toFixed(2)}%`;
+  console.log('');
+  console.log('Spread distribution (ask - bid) / mid:');
+  console.log(`  p10 ${fmtPct(p10)}  median ${fmtPct(p50)}  p90 ${fmtPct(p90)}`);
+
+  const ages = contracts
+    .filter((c) => c.quote_age_ms != null && c.quote_age_ms >= 0)
+    .map((c) => c.quote_age_ms);
+  if (ages.length > 0) {
+    ages.sort((a, b) => a - b);
+    const aP10 = ages[Math.floor(ages.length * 0.1)];
+    const aP50 = ages[Math.floor(ages.length * 0.5)];
+    const aP90 = ages[Math.floor(ages.length * 0.9)];
+    console.log('');
+    console.log('Quote freshness (snapshot captured_at minus last_quote.last_updated):');
+    console.log(`  p10 ${aP10} ms  median ${aP50} ms  p90 ${aP90} ms`);
+  }
+} else {
+  console.log('');
+  console.log('NO QUOTE DATA — bid/ask are null on every contract.');
+  console.log('The /v3/quotes entitlement on the Massive Options plan has not');
+  console.log('propagated yet. Until it does, the parity card stays calibration-');
+  console.log('blocked because contractMark() falls through to close_price.');
+}
 console.log('');
 
 const S0 = json.spotPrice;
