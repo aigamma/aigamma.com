@@ -43,6 +43,15 @@ import {
 // through the mean fit intercept. SPX almost always lands in the H ~
 // 0.07–0.15 band — the number itself is the finding.
 //
+// Position on this page: this card sits directly under the rBergomi
+// simulator (SlotB) and directly above the RFSV / Gatheral-Jaisson-
+// Rosenbaum 2018 structure-function diagnostic (SlotA). The simulator
+// generates the rough-vol world from parametric inputs; this card
+// reads the generative claim back out of today's SPX surface in
+// closed form; the structure-function panel below corroborates the
+// same H by an entirely different route on the realized-variance
+// proxy. Three views, one number.
+//
 // Notes on the SVI analytics used to extract ATM skew without a Monte
 // Carlo: with w(y) = a + b·(ρ(y−m) + √((y−m)² + σ²)),
 //
@@ -218,8 +227,7 @@ export default function SlotD() {
     // classical regime. 0.10 is the empirical SPX consensus (Gatheral,
     // Jaisson, Rosenbaum 2018). 0.30 is an "intermediate rough" regime
     // sometimes seen in crypto/commodities. 0.50 is the classical SV
-    // limit corresponding to Brownian-driven models (Heston, Bergomi-05)
-    // — Slot A lives at this H; its skew-scaling would match this line.
+    // limit corresponding to Brownian-driven models (Heston, Bergomi-05).
     const refHs = [0.10, 0.30, 0.50];
     const refColors = [PLOTLY_COLORS.secondary, PLOTLY_COLORS.highlight, PLOTLY_COLORS.primary];
 
@@ -457,9 +465,10 @@ export default function SlotD() {
           <strong style={{ color: PLOTLY_COLORS.primary }}>blue, classical</strong>),
           all pinned to the same intercept so you are comparing slopes only.
           A steeper line means rougher vol means a sharper short-dated skew.
-          The H = 0.5 blue line is what the Heston card above would produce;
-          the gap between that line and the actual dots at the short end is
-          what Heston misses and rough Bergomi was built to price.
+          The H = 0.5 blue line is what a classical Brownian-driven
+          stochastic-vol model (Heston, Bergomi-05) would produce; the gap
+          between that line and the actual dots at the short end is what
+          classical SV misses and rough Bergomi was built to price.
         </p>
         <p style={{ margin: '0 0 0.75rem' }}>
           <strong style={{ color: 'var(--text-primary)' }}>Practical use.</strong>{' '}
@@ -497,14 +506,20 @@ export default function SlotD() {
           market is getting jumpier at the front end.
         </p>
         <p style={{ margin: '0 0 0.75rem' }}>
-          Disagreement check against the Heston card. If Heston above shows
-          a big residual at short-dated downside strikes and H here prints
-          low, the two are telling the same story from opposite directions:
-          rough vol is the explanation for why the mean-reverting SV fit
-          misses the short-end put skew. If Heston fits cleanly at short T
-          and H here prints near 0.5, the market is in a regime where
-          classical SV is sufficient, which is unusual for SPX and is worth
-          noticing.
+          <strong>How this card relates to its neighbors on this page.</strong>{' '}
+          Three views, one number. The rBergomi simulator at the top of this
+          page generates the rough-vol world from parametric inputs and reports
+          a "Recovered H" sanity-check; this card reads H back out of today's
+          SPX surface in closed form via an analytic SVI tangent at y = 0;
+          the RFSV / Gatheral-Jaisson-Rosenbaum 2018 structure-function
+          diagnostic immediately below this card corroborates the same H by
+          an entirely different route on a daily realized-variance proxy
+          rather than the options surface. When all three converge in the
+          0.07 to 0.15 band the rough-vol regime is well calibrated; when
+          the options-surface H here disagrees with the realized-variance
+          H below, the gap is itself the headline (the options market is
+          either pricing more or less roughness than the historical tape
+          has actually delivered, which is a tradeable signal).
         </p>
         <p style={{ margin: 0 }}>
           Caveats. The ATM skew is read from the SVI tangent at y = 0, so

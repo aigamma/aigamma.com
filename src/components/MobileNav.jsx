@@ -124,12 +124,12 @@ const RESEARCH_ITEMS = [
   { href: '/discrete/',   label: '/discrete/',   desc: 'Binomial and trinomial trees, SVI and SSVI surfaces' },
   { href: '/garch/',      label: '/garch/',      desc: 'GARCH family and ensemble forecasts' },
   { href: '/jump/',       label: '/jump/',       desc: 'Merton, Kou, Bates, variance gamma' },
-  { href: '/local/',      label: '/local/',      desc: 'Dupire extraction and local vol pricing' },
+  { href: '/local/',      label: '/local/',      desc: 'Dupire extraction, pricing, slices, forward-smile pathology, full surface heatmap' },
   { href: '/parity/',     label: '/parity/',     desc: 'Put-call parity, box-spread rate, implied forward' },
   { href: '/regime/',     label: '/regime/',     desc: 'Mixture, Markov, Wasserstein regimes' },
   { href: '/risk/',       label: '/risk/',       desc: 'Cross-model Greeks, Vanna-Volga, second-order' },
-  { href: '/rough/',      label: '/rough/',      desc: 'Rough Bergomi and rough vol exploration' },
-  { href: '/stochastic/', label: '/stochastic/', desc: 'Heston, SABR, LSV, rough Bergomi' },
+  { href: '/rough/',      label: '/rough/',      desc: 'rBergomi simulator, skew scaling-law fit, RFSV, three-estimator Hurst triangulation' },
+  { href: '/stochastic/', label: '/stochastic/', desc: 'Heston with CIR variance + Hagan SABR' },
 ];
 
 const ABOUT_ITEM = {

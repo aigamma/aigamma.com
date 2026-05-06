@@ -24,12 +24,12 @@ MENU DROPDOWN (the remaining labs; opens from the MENU trigger):
 - GARCH (/garch/): Univariate and multivariate GARCH family and ensemble forecasts.
 - Heatmap (/heatmap/): Equal-size top-250-by-options-volume heatmap of US single names, organized by sector.
 - Jump Processes (/jump/): Merton, Kou, Bates, and variance gamma.
-- Local Volatility (/local/): Dupire extraction and local vol pricing.
+- Local Volatility (/local/): Dupire extraction, Monte Carlo pricing self-check, smile/term-structure slice navigation, forward-smile pathology, and the whole-surface Dupire local-volatility heatmap as the closing card.
 - Put-Call Parity (/parity/): Put-call parity, box-spread rates, and implied forwards.
 - Regimes (/regime/): Mixture Lognormal, Markov Regime Switching, and Wasserstein K-Means regimes.
 - Risk (/risk/): Cross-model Greeks, Vanna-Volga, and second-order risk.
-- Rough Volatility (/rough/): Rough Bergomi Monte Carlo and RFSV Hurst-signature diagnostics.
-- Stochastic Volatility (/stochastic/): Heston, SABR, LSV, and rough Bergomi models.
+- Rough Volatility (/rough/): Rough Bergomi Monte Carlo simulator, rough-Bergomi skew term-structure scaling-law fit on today's SVI surface, RFSV Hurst-signature structure-function diagnostic, and three-estimator Hurst triangulation across variogram, absolute moments, and DFA.
+- Stochastic Volatility (/stochastic/): Heston with CIR variance and Hagan SABR with beta pinned to one (the two single-slice calibrated-model SV cards). The Dupire local-vol heatmap moved to /local/ and the rough-Bergomi skew term-structure scaling-law fit moved to /rough/ on 2026-05-06.
 - About This Page (https://about.aigamma.com/): Pinned to the bottom of the Menu as the off-site exit.
 - Experimental Sandboxes (/alpha/, /beta/, /dev/): Pre-production testing labs for evaluating unreleased quantitative models. Reached by typing the URL or loading a bookmark; not currently linked from the Menu list.
 

@@ -9,22 +9,27 @@ import SlotA from './slots/SlotA';
 
 // SlotA stays statically imported because it is the first slot in the page
 // reading order and is already (partially) above the fold on a typical
-// desktop viewport, so its bytes need to be on the critical path. SlotB /
-// SlotC / SlotD plus Chat split out into their own Vite chunks via
-// React.lazy so the initial /stochastic/ chunk only carries SlotA's Heston
-// machinery (the closed-form characteristic-function inversion + the
-// Nelder-Mead simplex). The other three slots' calibration code (SABR's
-// Hagan asymptotic, the Dupire-surface finite-difference grid, and SlotD's
-// power-law-on-SVI-skews regression) lands in per-slot chunks that the
-// LazyMount viewport gate fetches when the reader scrolls within ~300 px
-// of the next card. Mirrors the /tactical/ pattern (VRP stays eager, the
-// four below-fold cards lazy + LazyMount-gated). The idle prefetch below
-// warms the disk cache with the three slot chunks during requestIdleCallback
-// after first paint so by the time the reader scrolls into range the
-// Suspense fallback has typically already resolved.
+// desktop viewport, so its bytes need to be on the critical path. SlotB
+// plus Chat split out into their own Vite chunks via React.lazy so the
+// initial /stochastic/ chunk only carries SlotA's Heston machinery (the
+// closed-form characteristic-function inversion + the Nelder-Mead simplex)
+// and SlotB's SABR Hagan asymptotic loads on viewport gate. The previous
+// SlotC (Dupire local-vol heatmap) and SlotD (Rough Bergomi skew term-
+// structure scaling-law fit) were migrated off this page on 2026-05-06:
+// the Dupire heatmap to the bottom of /local/ as SlotE, and the rough-
+// Bergomi skew scaling law to /rough/ as SlotD inserted between the
+// rBergomi simulator and the RFSV structure-function diagnostic. The
+// motivation for the moves was a high-latency cold-mount profile on this
+// page (four slots, all consuming the same SVI fits, kicking off four
+// concurrent SVI-derivative sweeps on the same /api/data response) plus
+// a categorization argument: the Dupire surface heatmap is more
+// naturally adjacent to the /local/ Dupire pricing self-check and slice
+// viewer, and the rough-Bergomi skew term-structure card is more
+// naturally adjacent to the rBergomi simulator and the RFSV /
+// triangulation diagnostics. /stochastic/ now carries only Heston and
+// SABR, the two single-slice calibrated-model cards that share the
+// closed-form Nelder-Mead / Hagan code-path.
 const SlotB = lazy(() => import('./slots/SlotB'));
-const SlotC = lazy(() => import('./slots/SlotC'));
-const SlotD = lazy(() => import('./slots/SlotD'));
 const Chat = lazy(() => import('../src/components/Chat'));
 
 let prefetchedBelowFold = false;
@@ -36,17 +41,13 @@ function prefetchBelowFoldChunks() {
     : (cb) => setTimeout(cb, 200);
   idle(() => {
     import('./slots/SlotB');
-    import('./slots/SlotC');
-    import('./slots/SlotD');
     import('../src/components/Chat');
   });
 }
 
-// Stochastic Vol Lab — four-slot scratch pad dedicated to the canonical
-// stochastic-volatility model lineage for SPX options. Unlike /regime,
-// these slots are not competing methods answering the same question —
-// they are four historically-sequential models that each add structure
-// the previous one could not carry:
+// Stochastic Vol Lab — two-slot scratch pad covering the two
+// single-slice calibrated-model SV cards (Heston and SABR) that
+// together anchor a vol trader's reading of one expiration:
 //
 //   SLOT A — Heston (1993). Mean-reverting square-root stochastic
 //            variance. dv = κ(θ − v)dt + ξ√v dW with Brownian correlation
@@ -67,41 +68,35 @@ function prefetchBelowFoldChunks() {
 //            it enough, and when is the Heston dynamic structure worth
 //            the calibration cost.
 //
-//   SLOT C — Local Stochastic Vol. Starts from Dupire's (1994) local
-//            volatility σ²_LV(K,T) = (∂w/∂T) / (denominator in y = ln K/F
-//            and derivatives of w = σ²T) computed across the full SVI
-//            fit set, then discusses how a stochastic leverage function
-//            L(S,t) — such that E[v_t | S_t=S]·L(S,t)² reproduces
-//            σ²_LV(S,t) under Gyöngy's projection — upgrades Heston to
-//            match today's smile exactly while keeping the forward
-//            dynamics richer than pure local vol. The chart is the
-//            Dupire surface as a (K, T) heatmap; the forward-smile
-//            flattening problem of pure LV is the reading.
+// The page used to carry two more slots: a Dupire local-vol
+// heatmap and a Rough Bergomi skew term-structure scaling-law
+// fit. Both were migrated off /stochastic/ on 2026-05-06 because
+// the four-card composition was slow to mount (every slot pulled
+// the same /api/data response and ran an SVI-derivative sweep
+// concurrently with the Heston Nelder-Mead and the SABR Hagan
+// closed form) and because each of the relocated cards was a
+// more natural neighbor to the labs they moved to: the Dupire
+// surface heatmap to the bottom of /local/ as SlotE, immediately
+// after the local-vol pricing self-check, the slice viewer, and
+// the forward-smile pathology; the rough-Bergomi skew scaling
+// law to /rough/ as SlotD, between the rBergomi simulator and
+// the RFSV / Gatheral-Jaisson-Rosenbaum 2018 structure-function
+// diagnostic. Both moves preserved the cards' code, prose, and
+// stat-row layouts; only the in-card text that referenced the
+// original neighbors was rewritten to point at the new ones.
 //
-//   SLOT D — Rough Bergomi (Bayer, Friz, Gatheral 2016). Variance
-//            driven by a fractional Brownian motion with Hurst H ∈
-//            (0, 1/2), which predicts ATM skew scaling as T^(H − 1/2)
-//            instead of Heston's ~T^(−1/2). SPX empirically scales near
-//            T^(−0.4), consistent with H ≈ 0.10 — a headline result
-//            that motivates the rough paradigm over classical SV. The
-//            slot fits H by log-log regression on |∂σ_ATM/∂k| across
-//            the SVI slice set and overlays theoretical T^(H−1/2)
-//            curves for H = 0.1 / 0.3 / 0.5 as references.
-//
-// All four consume the same live /api/data snapshot so the Heston
-// fit, the SABR fit, the Dupire surface, and the rough-vol skew
-// regression are internally consistent views of one point-in-time
-// chain. Navigation back to the homepage is surfaced in four
-// redundant ways so the reader never has to retype the URL: the
-// logo in the upper-left is a hyperlink to /, a filled green
+// Both slots on this page consume the same live /api/data
+// snapshot so the Heston and SABR calibrations are internally
+// consistent views of one point-in-time chain. Navigation back
+// to the homepage is surfaced in three redundant ways: the logo
+// in the upper-left is a hyperlink to /, a filled green
 // "RETURN HOME" button sits in the lab-header row horizontally
 // aligned with the Menu trigger so it reads as a primary
-// top-level nav affordance from the first viewport, a second
-// centered green "RETURN HOME" button sits between the SABR and
-// LSV slots as a mid-page escape hatch for readers who have
-// scrolled past the header, and the footer carries a bolded
-// Return Home link as a last-line fallback. The Menu in the
-// upper-right continues to expose the cross-lab directory.
+// top-level nav affordance from the first viewport, and the
+// footer carries a bolded Return Home link as a last-line
+// fallback. The Menu in the upper-right continues to expose the
+// cross-lab directory, including direct entries for /local/ and
+// /rough/ where the two relocated cards now live.
 export default function App() {
   useEffect(() => {
     prefetchBelowFoldChunks();
@@ -113,7 +108,7 @@ export default function App() {
         <div className="lab-brand">
           <span
             className="lab-badge"
-            title="Stochastic Vol · Heston, SABR, LSV, Rough Bergomi"
+            title="Stochastic Vol · Heston + SABR (Dupire moved to /local/, rough Bergomi skew moved to /rough/)"
           >
             <span className="lab-badge__desktop-text">Stochastic</span>
             <span className="lab-badge__mobile-text">Stochastic</span>
@@ -131,18 +126,25 @@ export default function App() {
         <Menu />
       </header>
 
-      {/* SlotA renders eagerly because it is the first card in the reading
-          order and partially above the fold on a typical desktop viewport;
-          the SlotB / SlotC / SlotD cards are LazyMount-gated behind a
-          300 px scroll margin so their (collectively several hundred ms of)
-          Plotly.newPlot + per-slot compute calls don't fire until the reader
-          scrolls within range. Heights match each slot's real rendered
-          footprint (chart area + the in-card explainer prose underneath)
-          so the placeholder occupies the same vertical space as the mounted
-          card and there is no CLS. The 300 px margin is tighter than the
-          400 px main-dashboard default because each slot card is ~1400-
-          1600 px tall — at 400 px every below-fold slot would mount on
-          first paint anyway, defeating the gating. */}
+      {/* SlotA (Heston) renders eagerly because it is the first card in
+          the reading order and partially above the fold on a typical
+          desktop viewport. SlotB (SABR) is LazyMount-gated behind a
+          300 px scroll margin so its Plotly.newPlot + Hagan asymptotic
+          calls don't fire until the reader scrolls within range. Height
+          matches the rendered footprint (chart + in-card prose) so the
+          placeholder occupies the same vertical space as the mounted
+          card and there is no CLS. The 300 px margin is tighter than
+          the 400 px main-dashboard default because each slot card is
+          ~1400-1600 px tall; at 400 px every below-fold slot would mount
+          on first paint anyway, defeating the gating. The SlotC (Dupire
+          heatmap) and SlotD (rough-Bergomi skew scaling law) cards
+          previously lived under SABR; both were migrated off this page
+          on 2026-05-06 to cure the page's high cold-mount latency and
+          to put each card next to its more natural lab neighbor. The
+          Dupire heatmap now anchors the bottom of /local/ as SlotE,
+          and the rough-Bergomi skew scaling law sits between the
+          rBergomi simulator and the RFSV diagnostic on /rough/ as
+          SlotD. */}
       <section className="lab-slot">
         <ErrorBoundary><SlotA /></ErrorBoundary>
       </section>
@@ -153,46 +155,13 @@ export default function App() {
         </ErrorBoundary>
       </section>
 
-      <div style={{ display: 'flex', justifyContent: 'center', margin: '1.5rem 0' }}>
-        <a
-          href="/"
-          style={{
-            fontFamily: "Calibri, 'Segoe UI', system-ui, sans-serif",
-            fontSize: '1rem',
-            letterSpacing: '0.14em',
-            textTransform: 'uppercase',
-            padding: '0.75rem 1.75rem',
-            border: '1px solid var(--accent-green)',
-            color: 'var(--accent-green)',
-            background: 'rgba(46, 204, 113, 0.08)',
-            borderRadius: '4px',
-            textDecoration: 'none',
-            fontWeight: 700,
-          }}
-        >
-          Return Home
-        </a>
-      </div>
-
-      <section className="lab-slot">
-        <ErrorBoundary>
-          <LazyMount height="1600px" margin="300px"><SlotC /></LazyMount>
-        </ErrorBoundary>
-      </section>
-
-      <section className="lab-slot">
-        <ErrorBoundary>
-          <LazyMount height="1500px" margin="300px"><SlotD /></LazyMount>
-        </ErrorBoundary>
-      </section>
-
       <ErrorBoundary>
         <LazyMount height="320px" margin="200px">
           <Chat
             context="stochastic"
             welcome={{
               quick:
-                'Ask about the four models above, how to read the residuals between a fit and the observed smile for market edge, which model to trust for which trading decision, and how to turn a parameter change into a position.',
+                'Ask about the two models above, how to read the residuals between a fit and the observed smile for market edge, which model to trust for which trading decision, and how to turn a parameter change into a position. The Dupire local-vol surface heatmap now lives at the bottom of /local/, and the rough-Bergomi skew term-structure scaling law now lives on /rough/ between the simulator and the RFSV diagnostic.',
               deep:
                 'Deep Analysis mode: longer and more structurally detailed responses on how each model works, where it breaks down, what the gap between its fit and the market is pricing, and how to act on that gap in practical SPX options structures.',
             }}
@@ -202,7 +171,7 @@ export default function App() {
 
       <footer className="lab-footer">
         <span className="lab-footer-line">
-          AI Gamma · stochastic vol lab · four-model lineage · v0.1.0 ·{' '}
+          AI Gamma · stochastic vol lab · Heston + SABR · v0.2.0 ·{' '}
           <a href="/" style={{ color: 'inherit', fontWeight: 700 }}>
             Return Home
           </a>

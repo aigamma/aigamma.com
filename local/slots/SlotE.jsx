@@ -14,7 +14,15 @@ import {
 } from '../../src/lib/plotlyTheme';
 
 // -----------------------------------------------------------------------------
-// Local Stochastic Volatility.
+// Dupire Local Volatility Surface (whole-surface heatmap).
+//
+// The three slots above on this page each operate on the Dupire surface from
+// a different angle: the pricing self-check (SlotB) confirms the SDE prices
+// back the smile per Gyongy, the slice viewer (SlotC) walks 1D y- and T-
+// slices through the (y, T) grid, and the forward-smile pathology (SlotD)
+// shows where pure local vol breaks. This card displays the whole surface
+// in one picture so the reader can see the (K, T) shape as a single object
+// before reading the diagnostic and slice-by-slice surfaces above.
 //
 // Dupire (1994) showed that any arbitrage-free implied volatility surface
 // Σ(K, T) uniquely determines a deterministic local volatility function
@@ -35,32 +43,17 @@ import {
 // analytic (see src/lib/svi.js). The T-derivative is a finite difference
 // across adjacent slices, which preserves the calendar-arbitrage-free
 // property of the input surface so long as w is non-decreasing in T at
-// every y — the "linear-in-total-variance" interpolation between slices
-// (Gatheral & Jacquier 2014) has that property by construction.
+// every y, i.e. the "linear-in-total-variance" interpolation between
+// slices (Gatheral & Jacquier 2014) has that property by construction.
 //
 // Pure local vol reproduces today's smile exactly by design. Where it
-// fails is the forward smile: the smile implied by the model for a
-// future date, conditioned on a future spot, flattens out as T
-// increases — an artifact of the deterministic mapping from (S, t) to
-// volatility. The observed forward smile is sticky and shifts with
-// spot, not flat. This is the motivation for Local Stochastic Vol
-// (LSV): write variance as the product of a stochastic factor and a
-// deterministic leverage function,
-//
-//     σ²(S, t) = L(S, t)² · v_t
-//
-// with v_t a Heston-style process, and choose L so that Gyöngy's
-// projection theorem reproduces the Dupire local vol:
-//
-//     L(S, t)² = σ²_LV(S, t) / E[v_t | S_t = S]
-//
-// The conditional expectation is solved forward by PDE or particle
-// Monte Carlo — out of scope for the card — but the heatmap below is
-// the σ_LV(K, T) surface that goes into the numerator of that ratio.
-// Calibrating LSV in practice reduces to solving for L(S, t) on a
-// (K, T) grid from exactly this surface plus a choice of the
-// stochastic factor. The shape of σ_LV is what LSV has to match;
-// everything else is a numerical projection.
+// fails is the forward smile, the smile implied by the model for a
+// future date conditioned on a future spot, which flattens out as T
+// increases. That is the deterministic-mapping artifact local stochastic
+// vol exists to cure (Gyongy projection plus a leverage function on a
+// stochastic factor). The forward-smile pathology surface above (SlotD)
+// shows that flattening directly with Monte Carlo; this heatmap shows
+// the input surface that those diagnostics consume.
 // -----------------------------------------------------------------------------
 
 const DUPIRE_MIN_VARIANCE = 1e-5;         // floor for σ²_LV to keep sqrt real
@@ -232,7 +225,7 @@ function StatCell({ label, value, sub, accent }) {
   );
 }
 
-export default function SlotC() {
+export default function SlotE() {
   const chartRef = useRef(null);
   const { plotly: Plotly, error: plotlyError } = usePlotly();
   const mobile = useIsMobile();
@@ -521,26 +514,33 @@ export default function SlotC() {
           protection bid.
         </p>
         <p style={{ margin: '0 0 0.75rem' }}>
-          <strong>Why Dupire matters over a single-model fit.</strong> The
-          Heston and SABR cards above fit one expiration at a time. This
-          surface uses every expiration in the chain at once, so it shows you
-          the shape of vol across strike and time in a single object rather
-          than four independent slices. When the models above argue (Heston
-          misses the short end, SABR hugs each slice cleanly but carries no
-          dynamics), this surface is the arbiter: it is the actual smile the
-          market quoted, in local-vol coordinates, with nothing fit to it.
+          <strong>How this card relates to the three above.</strong> The
+          pricing self-check (top of the page) confirms that simulating the
+          Dupire SDE under this surface prices the smile back exactly per
+          Gyongy. The slice viewer (middle) cuts the same surface into 1D
+          y-slices and T-slices so the reader can isolate one row or one
+          column and read the local-vol smile or term structure point by
+          point. The forward-smile pathology (just above this card) takes the
+          same surface, simulates paths to a future date, and shows how the
+          conditional smile flattens out, which is the artifact local
+          stochastic vol exists to fix. This heatmap is the input every one
+          of those diagnostics consumes, displayed as a single object so the
+          (K, T) shape is legible at a glance before the slice-by-slice
+          readings above narrow it down.
         </p>
         <p style={{ margin: '0 0 0.75rem' }}>
           <strong>Caveat on the forward smile.</strong> A pure local-vol model
           reproduces today&apos;s prices exactly but gives a forward smile
-          that flattens with time, which the real market does not do. If you
-          are pricing a forward-starting structure (cliquets, forward variance
-          swaps, barrier options whose value depends on how the smile will
-          look next month), this surface alone will underprice wing risk.
-          Local stochastic vol (LSV) is the model that uses this surface as
-          its input and then adds a stochastic factor on top to produce
-          realistic forward dynamics; the surface here is the first half of
-          that calibration.
+          that flattens with time, which the real market does not do. The
+          forward-smile pathology surface above (SlotD) demonstrates that
+          flattening directly with Monte Carlo. If you are pricing a
+          forward-starting structure (cliquets, forward variance swaps,
+          barrier options whose value depends on how the smile will look next
+          month), this surface alone will underprice wing risk. Local
+          stochastic vol (LSV) is the model that uses this surface as its
+          input and then adds a stochastic factor on top to produce realistic
+          forward dynamics; the surface here is the first half of that
+          calibration.
         </p>
         <p style={{ margin: 0 }}>
           Noise note. The very top of the chart (tenors shorter than about a

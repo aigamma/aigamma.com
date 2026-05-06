@@ -9,10 +9,11 @@ import SlotB from './slots/SlotB';
 
 // SlotB stays statically imported because it is the first card in the
 // reading order on this lab and partially above the fold on a typical
-// desktop viewport. SlotC + SlotD plus Chat split into per-slot Vite
-// chunks via React.lazy.
+// desktop viewport. SlotC + SlotD + SlotE plus Chat split into per-slot
+// Vite chunks via React.lazy.
 const SlotC = lazy(() => import('./slots/SlotC'));
 const SlotD = lazy(() => import('./slots/SlotD'));
+const SlotE = lazy(() => import('./slots/SlotE'));
 const Chat = lazy(() => import('../src/components/Chat'));
 
 let prefetchedBelowFold = false;
@@ -25,24 +26,27 @@ function prefetchBelowFoldChunks() {
   idle(() => {
     import('./slots/SlotC');
     import('./slots/SlotD');
+    import('./slots/SlotE');
     import('../src/components/Chat');
   });
 }
 
-// Local Volatility Lab — three-slot scratch pad dedicated to Dupire's
+// Local Volatility Lab — four-slot scratch pad dedicated to Dupire's
 // local-volatility framework end-to-end: extract σ_LV(K, T) from the
 // SVI slice set of today's SPX chain, price options under the Dupire
 // SDE dS = (r−q)·S dt + σ_LV(S, t)·S dW, visualize the surface from
-// multiple angles, and then run the diagnostic that exposes local
-// vol's signature weakness — flattened forward smiles, the reason
-// local-stochastic vol exists as a paradigm at all.
+// multiple angles, run the diagnostic that exposes local vol's
+// signature weakness (flattened forward smiles, the reason local-
+// stochastic vol exists as a paradigm at all), and then close with
+// the whole-surface heatmap so the reader can see the (K, T) shape
+// as a single object after the slice-by-slice readings above.
 //
-// Where the /stochastic lab puts local vol into the broader SV
-// lineage (Heston → SABR → LSV → Rough Bergomi) as a single slot,
-// this lab treats local vol as the subject. Each slot here is a
-// distinct operation on the same extracted surface, so a disagreement
-// between slots can only be a disagreement in reading — the numerics
-// come from one shared file (local/dupire.js).
+// Where the /stochastic lab keeps the broader SV lineage (Heston,
+// SABR), this lab treats local vol as the subject from extraction
+// through pricing through diagnostic through whole-surface display.
+// All four slots operate on the same extracted Dupire surface, so a
+// disagreement between slots can only be a disagreement in reading,
+// not in numerics.
 //
 //   SLOT B — Local Vol Pricing. Vectorized Monte Carlo under the
 //            Dupire SDE with bilinear σ_LV(S, t) look-up, Euler-
@@ -50,13 +54,13 @@ function prefetchBelowFoldChunks() {
 //            per-expiration call pricing at five moneyness points.
 //            Compares MC-recovered implied vols against the SVI
 //            market smile on the same chain. Pure local vol is
-//            designed to reproduce today's smile exactly — any
+//            designed to reproduce today's smile exactly, so any
 //            residual is MC noise plus discretization error, which
 //            is the self-check.
 //
 //   SLOT C — Local Vol Surface Slices. Two linked 1D slice panels
-//            on the σ_LV(y, T) grid with interactive slice selectors
-//            — fix T and sweep y to see the local-vol smile at a
+//            on the σ_LV(y, T) grid with interactive slice selectors:
+//            fix T and sweep y to see the local-vol smile at a
 //            chosen tenor, or fix K and sweep T to see the local-vol
 //            term structure at a chosen strike. The earlier rendition
 //            of this slot carried a Plotly 3D surface mesh above the
@@ -67,8 +71,8 @@ function prefetchBelowFoldChunks() {
 //
 //   SLOT D — Forward Smile Pathology. The textbook motivation for
 //            local-stochastic vol: pure LV reproduces today's smile
-//            but its forward smile — the implied smile the model
-//            prices at a future date conditioned on a future spot —
+//            but its forward smile (the implied smile the model
+//            prices at a future date conditioned on a future spot)
 //            flattens out. Monte-Carlo to an intermediate T*, bin
 //            paths whose S_{T*} lands near today's spot, continue
 //            those paths for additional τ years, price a fresh
@@ -76,19 +80,34 @@ function prefetchBelowFoldChunks() {
 //            The gap is the Gyöngy-projection artifact that LSV with
 //            a leverage function L(S, t) is constructed to cure.
 //
-// All three slots consume the same live /api/data snapshot through
-// useOptionsData, so the MC pricer, the slice viewer, and the
-// forward-smile diagnostic are internally consistent views of one
-// point-in-time SPX chain. Unlike the other bookmark-only labs, this page now
-// carries active egress back to the main dashboard at three
-// redundant affordances, matching the /parity/ and /jump/ pattern:
-// the logo in the header is a hyperlink to `/`, a filled green
-// RETURN HOME button sits in the header itself between the Local
-// Vol Lab brand on the left and the Menu trigger on the right —
-// centered horizontally on the same row as the other nav items via
-// the header's flex space-between distribution — and the footer
-// carries a bolded Return Home link for a reader who has scrolled
-// past all three slots and the Chat panel.
+//   SLOT E — Dupire Local Volatility Surface. Whole-surface heatmap
+//            in (log-moneyness, T) coordinates of the same σ_LV the
+//            three slots above consume. Reading straight up a column
+//            gives the term structure for one strike; reading across
+//            a row gives the local-vol smile at one tenor. Stat row
+//            highlights the σ_LV median plus tenths and the short-T
+//            put-skew metric (σ_LV(−18%) − σ_LV(0) at the shortest
+//            tenor) so the reader can compare today's surface
+//            against historical norms at a glance. Originally lived
+//            on /stochastic/; relocated here on 2026-05-06 because
+//            the four-card stochastic page was slow to mount and
+//            the surface heatmap is a more natural fit at the bottom
+//            of the dedicated local-vol lab.
+//
+// All four slots consume the same live /api/data snapshot through
+// useOptionsData, so the MC pricer, the slice viewer, the forward-
+// smile diagnostic, and the whole-surface heatmap are internally
+// consistent views of one point-in-time SPX chain. Unlike the other
+// bookmark-only labs, this page now carries active egress back to
+// the main dashboard at three redundant affordances, matching the
+// /parity/ and /jump/ pattern: the logo in the header is a hyperlink
+// to `/`, a filled green RETURN HOME button sits in the header
+// itself between the Local Vol Lab brand on the left and the Menu
+// trigger on the right (centered horizontally on the same row as
+// the other nav items via the header's flex space-between
+// distribution), and the footer carries a bolded Return Home link
+// for a reader who has scrolled past all four slots and the Chat
+// panel.
 export default function App() {
   useEffect(() => {
     prefetchBelowFoldChunks();
@@ -134,13 +153,19 @@ export default function App() {
         </ErrorBoundary>
       </section>
 
+      <section className="lab-slot">
+        <ErrorBoundary>
+          <LazyMount height="1400px" margin="300px"><SlotE /></LazyMount>
+        </ErrorBoundary>
+      </section>
+
       <ErrorBoundary>
         <LazyMount height="320px" margin="200px">
           <Chat
             context="local"
             welcome={{
               quick:
-                'Ask about Dupire local volatility, the three slots above, or how pure LV relates to stochastic vol, LSV, rough vol, and the rest of the model lineage.',
+                'Ask about Dupire local volatility, the four slots above, or how pure LV relates to stochastic vol, LSV, rough vol, and the rest of the model lineage.',
               deep:
                 'Deep Analysis mode: longer and more structurally detailed responses on Dupire\'s formula, Gyöngy\'s mimicking theorem, the forward-smile flattening pathology, and the philosophy of a deterministic-diffusion coefficient calibrated to today\'s smile.',
             }}
