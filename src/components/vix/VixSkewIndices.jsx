@@ -32,11 +32,18 @@ import {
 // is broadly re-pricing, not tail-specifically. Both up together is the
 // textbook risk-off pattern.
 //
-// Reference dotted lines are drawn at each series' own long-run mean so
-// the reader has a "current vs history" anchor without the false-precision
-// of absolute thresholds (the legacy SKEW overlay used 140/150 lines, but
-// those calibrations do not translate to SDEX/TDEX, which are constructed
-// differently).
+// Each series' long-run mean over the displayed window is added as a
+// separate dotted-line trace pinned to its own y-axis, with the numeric
+// value in the legend label (e.g. "SDEX mean (57.6)"). The mean lines
+// live in the legend strip below the chart rather than as inline
+// annotations on the chart body, so they cannot collide with the data
+// trace they describe and the reader has the four-entry legend
+// {SDEX, SDEX mean, TDEX, TDEX mean} as a single grouped key.
+//
+// The legacy SKEW overlay used 140/150 absolute threshold lines because
+// those were calibrated against the Cboe-cumulant scale; that calibration
+// does not translate to either Nations construction, so the per-series
+// long-run mean is the right anchor here.
 
 function mean(values) {
   if (!values || values.length === 0) return null;
@@ -70,6 +77,11 @@ export default function VixSkewIndices({ data }) {
   useEffect(() => {
     if (!plotly || !ref.current || !series) return;
 
+    const sdexFirst = series.sdex[0]?.date;
+    const sdexLast = series.sdex[series.sdex.length - 1]?.date;
+    const tdexFirst = series.tdex[0]?.date;
+    const tdexLast = series.tdex[series.tdex.length - 1]?.date;
+
     const traces = [
       {
         x: series.sdex.map((p) => p.date),
@@ -80,48 +92,38 @@ export default function VixSkewIndices({ data }) {
         line: { color: PLOTLY_COLORS.primarySoft, width: 1.6 },
         hovertemplate: 'SDEX %{y:.2f}<extra></extra>',
       },
-      {
-        x: series.tdex.map((p) => p.date),
-        y: series.tdex.map((p) => p.close),
+    ];
+    if (series.sdexMean != null && sdexFirst && sdexLast) {
+      traces.push({
+        x: [sdexFirst, sdexLast],
+        y: [series.sdexMean, series.sdexMean],
         type: 'scatter',
         mode: 'lines',
-        name: 'Nations TDEX',
-        line: { color: PLOTLY_COLORS.highlight, width: 1.4 },
-        yaxis: 'y2',
-        hovertemplate: 'TDEX %{y:.2f}<extra></extra>',
-      },
-    ];
-
-    const shapes = [];
-    const annotations = [];
-    if (series.sdexMean != null) {
-      shapes.push({
-        type: 'line',
-        x0: 0, x1: 1, xref: 'paper',
-        y0: series.sdexMean, y1: series.sdexMean, yref: 'y',
+        name: `SDEX mean (${series.sdexMean.toFixed(1)})`,
         line: { color: PLOTLY_COLORS.primarySoft, width: 1, dash: 'dot' },
-      });
-      annotations.push({
-        x: 0.01, xref: 'paper', y: series.sdexMean, yref: 'y',
-        text: `SDEX mean ${series.sdexMean.toFixed(1)}`,
-        showarrow: false,
-        font: { color: PLOTLY_COLORS.primarySoft, size: 11, family: "Calibri, 'Segoe UI', system-ui, sans-serif" },
-        xanchor: 'left', yanchor: 'bottom',
+        hoverinfo: 'skip',
       });
     }
-    if (series.tdexMean != null) {
-      shapes.push({
-        type: 'line',
-        x0: 0, x1: 1, xref: 'paper',
-        y0: series.tdexMean, y1: series.tdexMean, yref: 'y2',
+    traces.push({
+      x: series.tdex.map((p) => p.date),
+      y: series.tdex.map((p) => p.close),
+      type: 'scatter',
+      mode: 'lines',
+      name: 'Nations TDEX',
+      line: { color: PLOTLY_COLORS.highlight, width: 1.4 },
+      yaxis: 'y2',
+      hovertemplate: 'TDEX %{y:.2f}<extra></extra>',
+    });
+    if (series.tdexMean != null && tdexFirst && tdexLast) {
+      traces.push({
+        x: [tdexFirst, tdexLast],
+        y: [series.tdexMean, series.tdexMean],
+        type: 'scatter',
+        mode: 'lines',
+        name: `TDEX mean (${series.tdexMean.toFixed(1)})`,
         line: { color: PLOTLY_COLORS.highlight, width: 1, dash: 'dot' },
-      });
-      annotations.push({
-        x: 0.99, xref: 'paper', y: series.tdexMean, yref: 'y2',
-        text: `TDEX mean ${series.tdexMean.toFixed(1)}`,
-        showarrow: false,
-        font: { color: PLOTLY_COLORS.highlight, size: 11, family: "Calibri, 'Segoe UI', system-ui, sans-serif" },
-        xanchor: 'right', yanchor: 'bottom',
+        yaxis: 'y2',
+        hoverinfo: 'skip',
       });
     }
 
@@ -143,8 +145,6 @@ export default function VixSkewIndices({ data }) {
       height: 380,
       showlegend: true,
       legend: { orientation: 'h', y: -0.18, x: 0.5, xanchor: 'center' },
-      shapes,
-      annotations,
     });
 
     plotly.newPlot(ref.current, traces, layout, {

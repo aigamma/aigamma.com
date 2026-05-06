@@ -294,8 +294,10 @@ export default function App() {
             rather than a tail-specific one.{' '}
             <strong style={{ color: 'var(--text-primary)' }}>Both up together</strong> is the
             textbook risk-off pattern: the curve is steepening and the dollar cost of out-of-money
-            protection is rising at the same time. Dotted reference lines on each axis mark each
-            series' long-run mean over the displayed window.
+            protection is rising at the same time. The dotted entries in the legend below the chart
+            (<strong style={{ color: 'var(--text-primary)' }}>SDEX mean</strong> and{' '}
+            <strong style={{ color: 'var(--text-primary)' }}>TDEX mean</strong>) carry each
+            series' long-run mean over the displayed window as the "current vs history" anchor.
           </p>
           <p style={{ margin: '0 0 0.7rem' }}>
             <strong style={{ color: 'var(--text-primary)' }}>Regime Matrix.</strong>{' '}
