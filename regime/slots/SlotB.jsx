@@ -398,8 +398,17 @@ export default function SlotB() {
       }),
       showlegend: true,
       legend: {
+        // Mobile y nudged from -0.18 to -0.20 to add ~4 px of breathing
+        // room between the Date axis title and the legend strip below it.
+        // With mobile plot height ~220 px (container 360 - top 75 - bottom
+        // 65), the prior y=-0.18 placed the legend top ~40 px below the
+        // plot baseline against an axis-title stack ending at ~46 px below
+        // baseline (no collision but visibly cramped); the 0.02 bump
+        // translates to ~4 px additional offset at this plot height, the
+        // "a little bit" of padding the user asked for. Desktop y stays at
+        // -0.18 since the desktop layout reads with adequate room already.
         orientation: 'h',
-        y: -0.18,
+        y: mobile ? -0.20 : -0.18,
         x: 0.5,
         xanchor: 'center',
         font: PLOTLY_FONTS.legend,
