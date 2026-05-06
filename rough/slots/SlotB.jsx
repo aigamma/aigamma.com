@@ -834,13 +834,14 @@ export default function SlotB() {
           type="button"
           onClick={() => setSeed((s) => (s + 1) >>> 0)}
           style={{
-            background: 'transparent',
-            border: '1px solid var(--bg-card-border)',
-            color: 'var(--text-secondary)',
+            background: 'var(--accent-blue)',
+            border: '1px solid var(--accent-blue)',
+            color: '#0d1016',
             fontFamily: "Calibri, 'Segoe UI', system-ui, sans-serif",
             fontSize: '0.75rem',
             letterSpacing: '0.08em',
             textTransform: 'uppercase',
+            fontWeight: 600,
             padding: '0.35rem 0.85rem',
             cursor: 'pointer',
             borderRadius: '3px',
