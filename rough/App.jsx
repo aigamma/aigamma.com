@@ -5,11 +5,11 @@ import ErrorBoundary from '../src/ErrorBoundary';
 import Menu from '../src/components/Menu';
 import TopNav from '../src/components/TopNav';
 import LazyMount from '../src/components/LazyMount';
-import SlotA from './slots/SlotA';
+import SlotB from './slots/SlotB';
 
-// SlotA stays statically imported as the first card; SlotB / SlotC plus
-// Chat split out into per-slot Vite chunks via React.lazy.
-const SlotB = lazy(() => import('./slots/SlotB'));
+// SlotB (rBergomi simulator) stays statically imported as the first card;
+// SlotA / SlotC plus Chat split out into per-slot Vite chunks via React.lazy.
+const SlotA = lazy(() => import('./slots/SlotA'));
 const SlotC = lazy(() => import('./slots/SlotC'));
 const Chat = lazy(() => import('../src/components/Chat'));
 
@@ -21,7 +21,7 @@ function prefetchBelowFoldChunks() {
     ? (cb) => window.requestIdleCallback(cb, { timeout: 1500 })
     : (cb) => setTimeout(cb, 200);
   idle(() => {
-    import('./slots/SlotB');
+    import('./slots/SlotA');
     import('./slots/SlotC');
     import('../src/components/Chat');
   });
@@ -39,14 +39,12 @@ function prefetchBelowFoldChunks() {
 // SABR, and every classical affine SV model could not.
 //
 // The three slots here are not A/B/C variants of one model — they are
-// three different views of the same rough-vol hypothesis:
-//
-//   SLOT A — RFSV Hurst Signature (Gatheral-Jaisson-Rosenbaum diagnostic).
-//            Compute a daily realized-variance proxy, take its log, and
-//            fit the structure-function scaling m(q, Δ) = ⟨|ΔX|^q⟩ ~ Δ^(qH)
-//            across multiple moment orders q. Under RFSV, the slopes
-//            should pin down a single H ≈ 0.1-0.15 that is ~invariant in
-//            q. The log-log plot is the canonical empirical signature.
+// three different views of the same rough-vol hypothesis. The labels
+// below name the per-file components (SlotA.jsx / SlotB.jsx / SlotC.jsx);
+// the on-page render order is B → A → C, with the rBergomi simulator
+// promoted to the top so the reader meets the generative model first
+// and reads the empirical signature beneath it as the calibration
+// target rather than the headline:
 //
 //   SLOT B — Rough Bergomi Simulator. Cholesky-based Monte Carlo of the
 //            rBergomi (Bayer-Friz-Gatheral 2016) model. Tunable H, η, ρ,
@@ -55,6 +53,13 @@ function prefetchBelowFoldChunks() {
 //            inverts ATM call prices at multiple maturities to recover the
 //            implied-vol term structure. The fitted T^(H−1/2) slope on
 //            ATM skew is the generative counterpart to Slot A's signature.
+//
+//   SLOT A — RFSV Hurst Signature (Gatheral-Jaisson-Rosenbaum diagnostic).
+//            Compute a daily realized-variance proxy, take its log, and
+//            fit the structure-function scaling m(q, Δ) = ⟨|ΔX|^q⟩ ~ Δ^(qH)
+//            across multiple moment orders q. Under RFSV, the slopes
+//            should pin down a single H ≈ 0.1-0.15 that is ~invariant in
+//            q. The log-log plot is the canonical empirical signature.
 //
 //   SLOT C — Hurst Estimator Triangulation. Three orthogonal H estimators
 //            (variogram on log RV, absolute-moments method on log RV,
@@ -107,12 +112,12 @@ export default function App() {
       </header>
 
       <section className="lab-slot">
-        <ErrorBoundary><SlotA /></ErrorBoundary>
+        <ErrorBoundary><SlotB /></ErrorBoundary>
       </section>
 
       <section className="lab-slot">
         <ErrorBoundary>
-          <LazyMount height="1500px" margin="300px"><SlotB /></LazyMount>
+          <LazyMount height="1500px" margin="300px"><SlotA /></LazyMount>
         </ErrorBoundary>
       </section>
 
@@ -128,7 +133,7 @@ export default function App() {
             context="rough"
             welcome={{
               quick:
-                'Ask about rough volatility, the three methods above, or how the empirical Hurst signature, the rBergomi simulator, and the three-estimator triangulation corroborate or challenge each other.',
+                'Ask about rough volatility, the three methods above, or how the rBergomi simulator, the empirical Hurst signature, and the three-estimator triangulation corroborate or challenge each other.',
               deep:
                 'Deep Analysis mode: longer and more structurally detailed responses on fractional Brownian motion, Volterra volatility processes, short-end skew asymptotics, and the philosophy of measuring a single Hurst exponent three different ways.',
             }}
