@@ -65,7 +65,7 @@ Sign convention follows dealer positioning: calls create positive gamma (stabili
 | daily_gex_stats | Daily GEX summary (net/call/put GEX, walls, vol flip) |
 | spx_intraday_bars | 30-minute SPX bars for the /seasonality lab |
 | daily_eod | Index and stock symbol daily OHLC for cross-asset and stock surfaces |
-| vix_family_eod | VIX family + cross-asset vol + skew benchmarks |
+| vix_family_eod | VIX family + cross-asset vol + Nations skew/tail-cost (SDEX, TDEX) + Cboe strategy benchmarks |
 | reconciliation_audit | Daily self-consistency probe log |
 
 ## Stack
