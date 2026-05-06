@@ -342,9 +342,10 @@ export default function SlotA() {
 
   // Merton calibration (5-parameter Nelder-Mead on Poisson-weighted BSM)
   // moved from synchronous useMemo into a state-set-in-effect that fires
-  // inside requestIdleCallback. Same pattern as /stochastic/ SlotA / SlotB
-  // and /tactical/'s VolatilitySmile: chart paints observation dots before
-  // the simplex runs.
+  // inside requestIdleCallback. Same pattern as the /stochastic/ SlotA
+  // multi-model Volatility Smile (Heston + Merton + SVI raw concurrent
+  // fits) and the /stochastic/ SlotB Hagan SABR card: chart paints
+  // observation dots before the simplex runs.
   const [calib, setCalib] = useState(null);
   useEffect(() => {
     if (!data || !activeExp || slice.length < 6 || !T || T <= 0) {

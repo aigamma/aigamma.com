@@ -1023,8 +1023,9 @@ body {
   cursor: not-allowed;
 }
 
-/* Expiration picker <select> elements on the dashboard (VolatilitySmile,
-   LevelsPanel) reuse the chat-input's pulsing ambient glow so the two
+/* Expiration picker <select> elements on the dashboard (the multi-model
+   Volatility Smile card on /stochastic/, LevelsPanel) reuse the chat-input's
+   pulsing ambient glow so the two
    primary user affordances on the page — pick an expiration, talk to the
    bot — read as members of the same interactive-element family. The
    accent is site blue (74, 158, 255) rather than the chat's per-tab

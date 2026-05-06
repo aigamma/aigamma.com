@@ -11,17 +11,20 @@ import useSviFits from '../src/hooks/useSviFits';
 
 // VRP stays statically imported because it is the only chart guaranteed to
 // paint above the fold on every viewport, and the VRP chunk contains the
-// rangeslider / brush wiring used by the rest of the page anyway. The four
+// rangeslider / brush wiring used by the rest of the page anyway. The three
 // below-fold charts plus Chat are code-split via React.lazy so their source
 // bytes do not land in the initial tactical chunk — each becomes its own
 // Vite chunk fetched on demand when the LazyMount viewport gate fires.
 // Combined with the idle prefetch below, this keeps the first-paint critical
-// path to "header + VRP" instead of "header + five Plotly.newPlot calls
+// path to "header + VRP" instead of "header + four Plotly.newPlot calls
 // firing in the same frame," which on Chrome DevTools profiling shaves
 // roughly 600-1200 ms of main-thread blocking off the first interactive
-// frame on a typical mid-tier laptop.
+// frame on a typical mid-tier laptop. The Volatility Smile multi-model card
+// (Heston + Merton + SVI raw concurrent fits) was migrated off this page on
+// 2026-05-06 to anchor the top of /stochastic/ above the Hagan SABR card,
+// so a reader looking for the multi-model smile read should follow the
+// /stochastic/ link in the Menu dropdown.
 const TermStructure = lazy(() => import('../src/components/TermStructure'));
-const VolatilitySmile = lazy(() => import('../src/components/VolatilitySmile'));
 const RiskNeutralDensity = lazy(() => import('../src/components/RiskNeutralDensity'));
 const FixedStrikeIvMatrix = lazy(() => import('../src/components/FixedStrikeIvMatrix'));
 const Chat = lazy(() => import('../src/components/Chat'));
@@ -44,7 +47,6 @@ function prefetchBelowFoldChunks() {
     : (cb) => setTimeout(cb, 200);
   idle(() => {
     import('../src/components/TermStructure');
-    import('../src/components/VolatilitySmile');
     import('../src/components/RiskNeutralDensity');
     import('../src/components/FixedStrikeIvMatrix');
     import('../src/components/Chat');
@@ -53,24 +55,31 @@ function prefetchBelowFoldChunks() {
 
 // /tactical/ — Tactical Vol Lab.
 //
-// Five tactical-positioning surfaces moved off the main landing page so the
+// Four tactical-positioning surfaces moved off the main landing page so the
 // main dashboard can lead with the dealer-gamma regime read (status badge,
 // LevelsPanel scalars, gamma-profile visualizations) without competing for
 // attention against the deeper IV-surface and risk-neutral-density work
 // that this page now hosts. The grouping is a coherent reading sequence
 // from macro to micro: VRP (cross-sectional implied vs. realized regime
-// summary) → Term Structure (IV across tenors at the index level) → Smile
-// (IV across strikes at one tenor) → Risk-Neutral Density (the smile re-
-// expressed as a probability distribution over terminal spot via Breeden-
-// Litzenberger) → Fixed-Strike IV Matrix (the strike × tenor grid that
-// makes day-over-day re-pricing events visible cell by cell).
+// summary) → Term Structure (IV across tenors at the index level) → Risk-
+// Neutral Density (the smile re-expressed as a probability distribution
+// over terminal spot via Breeden-Litzenberger) → Fixed-Strike IV Matrix
+// (the strike × tenor grid that makes day-over-day re-pricing events
+// visible cell by cell). The single-tenor multi-model Volatility Smile
+// card (Heston + Merton + SVI raw concurrent fits) used to sit between
+// Term Structure and RND on this page; it was migrated to /stochastic/ on
+// 2026-05-06 to cure cold-mount latency on this page (five concurrent
+// Plotly.newPlot calls firing on first paint was the slowest page on the
+// site) and to consolidate the parametric / calibrated single-slice smile
+// reads in one lab next to the Hagan SABR card.
 //
 // Data layer mirrors the main dashboard: useOptionsData drains the
 // __apiBoot.today promise pre-fired by index.html for the live SPX chain,
 // useVrpHistory (called inside VolatilityRiskPremium) drains the
 // __apiBoot.vrpHistory promise, useSviFits dispatches the per-expiration
-// SVI calibration to the shared Web Worker so the RND density curves do
-// not block scroll. The prev-day chain for the FixedStrikeIvMatrix
+// SVI calibration to the shared Web Worker so the RND density curves on
+// the Risk-Neutral Density card do not block scroll. The prev-day chain
+// for the FixedStrikeIvMatrix
 // 1D-change overlay is no longer fetched here — the matrix component
 // owns its own prev-day data and pulls a thin IV-only projection from
 // /api/fixed-strike-iv in two phases (visible expirations first, the
@@ -78,20 +87,23 @@ function prefetchBelowFoldChunks() {
 // idle fetch that lived in this App.jsx until 2026-04-26.
 //
 // Render layer: VRP renders eagerly (the only above-fold chart on a
-// typical viewport). The four other charts plus Chat are React.lazy +
+// typical viewport). The three other charts plus Chat are React.lazy +
 // LazyMount-gated, which means (a) their source bytes are split into
 // per-card chunks instead of bundling into the initial tactical chunk
 // and (b) their Plotly.newPlot calls don't fire until the reader scrolls
-// within 200 px of each card. An idle-time prefetch fires the four
+// within 200 px of each card. An idle-time prefetch fires the three
 // import() calls during requestIdleCallback so the chunks land in the
 // disk cache before the reader scrolls and the Suspense fallback inside
 // LazyMount typically never paints. This pattern was added 2026-04-27
 // after profiling /tactical as the slowest page on the site — a cold
 // load was firing five Plotly.newPlot calls in the same frame, costing
 // ~600-1200 ms of synchronous main-thread work that the user perceived
-// as a long blank-then-everything-at-once load. The new flow paints
-// header + VRP within ~300 ms of /api/data resolution and hydrates the
-// remaining cards quietly as the reader scrolls.
+// as a long blank-then-everything-at-once load. Migrating the multi-
+// model Volatility Smile card to /stochastic/ on 2026-05-06 took this
+// page from five eager-or-near-eager charts down to four, shedding the
+// most expensive concurrent calibration cost (Heston Nelder-Mead +
+// Merton Poisson-weighted simplex + SVI Levenberg-Marquardt all on the
+// same slice) off the tactical critical path entirely.
 //
 // Three redundant Return-Home affordances follow the /parity/ and /jump/
 // pattern: the logo wraps a hyperlink to `/`, a green RETURN HOME button
@@ -124,7 +136,7 @@ export default function App() {
         <div className="lab-brand">
           <span
             className="lab-badge"
-            title="Tactical Vol · VRP, term structure, smile, RND, fixed-strike IV"
+            title="Tactical Vol · VRP, term structure, RND, fixed-strike IV (smile moved to /stochastic/)"
           >
             <span className="lab-badge__desktop-text">Tactical Vol</span>
             <span className="lab-badge__mobile-text">Tactical Vol</span>
@@ -146,7 +158,6 @@ export default function App() {
         <div aria-busy="true" aria-label="Loading options data">
           <div className="skeleton-card" style={{ height: '564px' }} />
           <div className="skeleton-card" style={{ height: '564px' }} />
-          <div className="skeleton-card" style={{ height: '600px' }} />
           <div className="skeleton-card" style={{ height: '560px' }} />
           <div className="skeleton-card" style={{ height: '600px' }} />
         </div>
@@ -213,17 +224,6 @@ export default function App() {
           </ErrorBoundary>
 
           <ErrorBoundary>
-            <LazyMount height="600px" margin="200px">
-              <VolatilitySmile
-                contracts={data.contracts}
-                spotPrice={data.spotPrice}
-                capturedAt={data.capturedAt}
-                expirations={data.expirations}
-              />
-            </LazyMount>
-          </ErrorBoundary>
-
-          <ErrorBoundary>
             <LazyMount height="560px" margin="200px">
               <RiskNeutralDensity
                 fits={sviFits.byExpiration}
@@ -284,17 +284,6 @@ export default function App() {
             options pricing more urgent vol than long-dated.
           </p>
           <p style={{ margin: '0 0 0.7rem' }}>
-            <strong style={{ color: 'var(--text-primary)' }}>Volatility Smile.</strong>{' '}
-            One expiration slice fit by three concurrent models:{' '}
-            <strong style={{ color: 'var(--text-primary)' }}>Heston</strong> stochastic variance,{' '}
-            <strong style={{ color: 'var(--text-primary)' }}>Merton</strong> diffusion-plus-jumps,
-            and the <strong style={{ color: 'var(--text-primary)' }}>SVI raw parameterization</strong>,
-            overlaid on the observed OTM-preferred IV points.{' '}
-            <strong style={{ color: 'var(--accent-amber)' }}>Disagreement at the wings</strong>{' '}
-            is the interesting reading: where the three fits agree, the smile is well-described by
-            any of them; where they diverge, the choice of model carries information.
-          </p>
-          <p style={{ margin: '0 0 0.7rem' }}>
             <strong style={{ color: 'var(--text-primary)' }}>Risk-Neutral Density.</strong>{' '}
             The <strong style={{ color: 'var(--text-primary)' }}>Breeden-Litzenberger construction</strong>:
             the <strong style={{ color: 'var(--text-primary)' }}>second partial derivative of European
@@ -326,9 +315,9 @@ export default function App() {
             context="tactical"
             welcome={{
               quick:
-                'Ask about VRP, the term structure, the smile model overlays, the Breeden-Litzenberger density, or how to read day-over-day moves on the fixed-strike matrix.',
+                'Ask about VRP, the term structure, the Breeden-Litzenberger density, or how to read day-over-day moves on the fixed-strike matrix. The multi-model Volatility Smile card (Heston, Merton, SVI raw concurrent fits) moved to /stochastic/ on 2026-05-06.',
               deep:
-                'Deep Analysis mode: longer and more structurally detailed responses on Heston / Merton / SVI smile fitting, Gatheral parameterizations, the analytical Breeden-Litzenberger derivation, and how the IV surface decomposes into tenor and strike effects.',
+                'Deep Analysis mode: longer and more structurally detailed responses on the volatility risk premium, term-structure cloud-band construction, the analytical Breeden-Litzenberger derivation from SVI fits, and how the IV surface decomposes into tenor and strike effects.',
             }}
           />
         </LazyMount>

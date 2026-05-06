@@ -10,8 +10,9 @@ const WIRE_VERSION = 2;
 
 // Rehydrate the server's columnar contractCols payload back into the
 // row-of-objects shape every downstream consumer (LevelsPanel,
-// FixedStrikeIvMatrix, VolatilitySmile, GexProfile, useSviFits, gammaProfile,
-// gex, svi, Chat) already reads. Saves ~515 KB gzipped on the wire versus the
+// FixedStrikeIvMatrix, the multi-model Volatility Smile card on /stochastic/,
+// GexProfile, useSviFits, gammaProfile, gex, svi, Chat) already reads. Saves
+// ~515 KB gzipped on the wire versus the
 // prior row-of-objects encoding on a live 18,878-contract SPX snapshot, with
 // zero component-code churn because the rehydrated rows carry the same key
 // names (expiration_date / strike_price / contract_type / implied_volatility /

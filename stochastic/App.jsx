@@ -11,24 +11,24 @@ import SlotA from './slots/SlotA';
 // reading order and is already (partially) above the fold on a typical
 // desktop viewport, so its bytes need to be on the critical path. SlotB
 // plus Chat split out into their own Vite chunks via React.lazy so the
-// initial /stochastic/ chunk only carries SlotA's Heston machinery (the
-// closed-form characteristic-function inversion + the Nelder-Mead simplex)
+// initial /stochastic/ chunk only carries SlotA's multi-model Volatility
+// Smile machinery (Heston "Little Trap" characteristic-function inversion +
+// Nelder-Mead simplex, Merton Poisson-weighted BSM series, and SVI raw
+// Levenberg-Marquardt calibration on the same OTM-preferred ±20% slice)
 // and SlotB's SABR Hagan asymptotic loads on viewport gate. The previous
 // SlotC (Dupire local-vol heatmap) and SlotD (Rough Bergomi skew term-
 // structure scaling-law fit) were migrated off this page on 2026-05-06:
 // the Dupire heatmap to the bottom of /local/ as SlotE, and the rough-
 // Bergomi skew scaling law to /rough/ as SlotD inserted between the
-// rBergomi simulator and the RFSV structure-function diagnostic. The
-// motivation for the moves was a high-latency cold-mount profile on this
-// page (four slots, all consuming the same SVI fits, kicking off four
-// concurrent SVI-derivative sweeps on the same /api/data response) plus
-// a categorization argument: the Dupire surface heatmap is more
-// naturally adjacent to the /local/ Dupire pricing self-check and slice
-// viewer, and the rough-Bergomi skew term-structure card is more
-// naturally adjacent to the rBergomi simulator and the RFSV /
-// triangulation diagnostics. /stochastic/ now carries only Heston and
-// SABR, the two single-slice calibrated-model cards that share the
-// closed-form Nelder-Mead / Hagan code-path.
+// rBergomi simulator and the RFSV structure-function diagnostic. On the
+// same date the multi-model Volatility Smile card was migrated INTO this
+// page from /tactical/, replacing the prior Heston-only SlotA so the
+// reader can compare the smooth-SV story (Heston), the jump-fear story
+// (Merton), and the model-agnostic curve (SVI raw) in a single overlay
+// next to the Hagan SABR card below. The migration cures a cold-mount
+// latency problem on /tactical/ (which used to fire five Plotly.newPlot
+// calls in the same frame) and consolidates the parametric / calibrated
+// single-slice smile reads in one lab.
 const SlotB = lazy(() => import('./slots/SlotB'));
 const Chat = lazy(() => import('../src/components/Chat'));
 
@@ -45,18 +45,26 @@ function prefetchBelowFoldChunks() {
   });
 }
 
-// Stochastic Vol Lab — two-slot scratch pad covering the two
-// single-slice calibrated-model SV cards (Heston and SABR) that
-// together anchor a vol trader's reading of one expiration:
+// Stochastic Vol Lab — two-slot scratch pad covering the multi-
+// model single-slice Volatility Smile read on top and the Hagan SABR
+// practitioner-model read directly below, the two parametric /
+// calibrated single-slice surfaces that together anchor a vol
+// trader's reading of one expiration:
 //
-//   SLOT A — Heston (1993). Mean-reverting square-root stochastic
-//            variance. dv = κ(θ − v)dt + ξ√v dW with Brownian correlation
-//            ρ to the stock. Closed-form characteristic function; call
-//            prices by the Lewis (2001) single-integral inversion.
-//            Calibrated to a live SPX expiration slice by Nelder-Mead
-//            on the IV residual. Answers: what does the simplest
-//            economically-motivated SV model produce, and where does it
-//            miss the observed smile.
+//   SLOT A — Volatility Smile · Heston (1993) + Merton (1976) + SVI
+//            raw (Gatheral) concurrent fits on the same OTM-preferred
+//            ±20% log-moneyness slice. Heston is the benchmark mean-
+//            reverting square-root stochastic-variance model with the
+//            "Little Trap" characteristic function. Merton bolts a log-
+//            normal compound Poisson jump component onto Black-Scholes
+//            diffusion to produce sharp left-wing slopes Heston cannot.
+//            SVI fits total variance directly to log-moneyness with no
+//            underlying-process commitment and arbitrage-free wing
+//            slopes by Roger Lee's bounds. The reader can toggle each
+//            overlay independently; Heston is on by default. Answers:
+//            where does the smile agree across the three model frames
+//            (model choice carries no information), and where does it
+//            disagree (jump risk, crash premium, model-implied tail).
 //
 //   SLOT B — SABR (Hagan, Kumar, Lesniewski, Woodward 2002). Stochastic
 //            α-β-ρ with CEV elasticity β pinned to 1 for equities
@@ -108,7 +116,7 @@ export default function App() {
         <div className="lab-brand">
           <span
             className="lab-badge"
-            title="Stochastic Vol · Heston + SABR (Dupire moved to /local/, rough Bergomi skew moved to /rough/)"
+            title="Stochastic Vol · multi-model Volatility Smile (Heston + Merton + SVI raw) + Hagan SABR"
           >
             <span className="lab-badge__desktop-text">Stochastic</span>
             <span className="lab-badge__mobile-text">Stochastic</span>
@@ -126,25 +134,28 @@ export default function App() {
         <Menu />
       </header>
 
-      {/* SlotA (Heston) renders eagerly because it is the first card in
-          the reading order and partially above the fold on a typical
-          desktop viewport. SlotB (SABR) is LazyMount-gated behind a
-          300 px scroll margin so its Plotly.newPlot + Hagan asymptotic
-          calls don't fire until the reader scrolls within range. Height
-          matches the rendered footprint (chart + in-card prose) so the
-          placeholder occupies the same vertical space as the mounted
-          card and there is no CLS. The 300 px margin is tighter than
-          the 400 px main-dashboard default because each slot card is
-          ~1400-1600 px tall; at 400 px every below-fold slot would mount
-          on first paint anyway, defeating the gating. The SlotC (Dupire
-          heatmap) and SlotD (rough-Bergomi skew scaling law) cards
-          previously lived under SABR; both were migrated off this page
-          on 2026-05-06 to cure the page's high cold-mount latency and
-          to put each card next to its more natural lab neighbor. The
-          Dupire heatmap now anchors the bottom of /local/ as SlotE,
-          and the rough-Bergomi skew scaling law sits between the
-          rBergomi simulator and the RFSV diagnostic on /rough/ as
-          SlotD. */}
+      {/* SlotA (multi-model Volatility Smile · Heston + Merton + SVI
+          raw concurrent fits) renders eagerly because it is the first
+          card in the reading order and partially above the fold on a
+          typical desktop viewport. SlotB (SABR) is LazyMount-gated
+          behind a 300 px scroll margin so its Plotly.newPlot + Hagan
+          asymptotic calls don't fire until the reader scrolls within
+          range. Height matches the rendered footprint (chart + in-card
+          prose) so the placeholder occupies the same vertical space as
+          the mounted card and there is no CLS. The 300 px margin is
+          tighter than the 400 px main-dashboard default because each
+          slot card is ~1400-1600 px tall; at 400 px every below-fold
+          slot would mount on first paint anyway, defeating the gating.
+          The SlotC (Dupire heatmap) and SlotD (rough-Bergomi skew
+          scaling law) cards previously lived under SABR; both were
+          migrated off this page on 2026-05-06 to cure the page's high
+          cold-mount latency and to put each card next to its more
+          natural lab neighbor. The Dupire heatmap now anchors the
+          bottom of /local/ as SlotE, and the rough-Bergomi skew
+          scaling law sits between the rBergomi simulator and the RFSV
+          diagnostic on /rough/ as SlotD. The multi-model Volatility
+          Smile card was migrated INTO this page from /tactical/ on
+          the same date, replacing the prior Heston-only SlotA. */}
       <section className="lab-slot">
         <ErrorBoundary><SlotA /></ErrorBoundary>
       </section>
@@ -161,7 +172,7 @@ export default function App() {
             context="stochastic"
             welcome={{
               quick:
-                'Ask about the two models above, how to read the residuals between a fit and the observed smile for market edge, which model to trust for which trading decision, and how to turn a parameter change into a position. The Dupire local-vol surface heatmap now lives at the bottom of /local/, and the rough-Bergomi skew term-structure scaling law now lives on /rough/ between the simulator and the RFSV diagnostic.',
+                'Ask about the multi-model Volatility Smile (Heston + Merton + SVI raw concurrent fits) and the Hagan SABR card below it, how to read the residuals between any one fit and the observed dots for market edge, which model to trust for which trading decision, and how to turn a parameter change into a position. The Dupire local-vol surface heatmap now lives at the bottom of /local/, and the rough-Bergomi skew term-structure scaling law now lives on /rough/ between the simulator and the RFSV diagnostic.',
               deep:
                 'Deep Analysis mode: longer and more structurally detailed responses on how each model works, where it breaks down, what the gap between its fit and the market is pricing, and how to act on that gap in practical SPX options structures.',
             }}
@@ -171,7 +182,7 @@ export default function App() {
 
       <footer className="lab-footer">
         <span className="lab-footer-line">
-          AI Gamma · stochastic vol lab · Heston + SABR · v0.2.0 ·{' '}
+          AI Gamma · stochastic vol lab · Volatility Smile (Heston + Merton + SVI raw) + SABR · v0.3.0 ·{' '}
           <a href="/" style={{ color: 'inherit', fontWeight: 700 }}>
             Return Home
           </a>

@@ -76,7 +76,7 @@ const MENU_ITEMS = [
   { type: 'item', href: '/regime/',         label: '/regime/',         desc: 'Mixture, Markov, Wasserstein regimes' },
   { type: 'item', href: '/risk/',           label: '/risk/',           desc: 'Cross-model Greeks, Vanna-Volga, second-order' },
   { type: 'item', href: '/rough/',          label: '/rough/',          desc: 'Rough Bergomi simulator + skew scaling-law fit, RFSV diagnostic, three-estimator Hurst triangulation' },
-  { type: 'item', href: '/stochastic/',     label: '/stochastic/',     desc: 'Heston with CIR variance + Hagan SABR' },
+  { type: 'item', href: '/stochastic/',     label: '/stochastic/',     desc: 'Multi-model Volatility Smile (Heston + Merton + SVI raw) + Hagan SABR' },
   { type: 'header', label: 'About' },
   { type: 'item', href: '/disclaimer/', label: '/disclaimer/', desc: 'As-is mathematics, MIT license, no commercial purpose, standard trading disclaimers' },
   { type: 'item', href: 'https://about.aigamma.com/', label: 'About This Page', desc: 'Created by Eric Allione' },

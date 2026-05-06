@@ -108,7 +108,7 @@ import { useCallback, useEffect, useRef, useState } from 'react';
 // row chrome and the lab-badge on the left side of the .lab-header.
 
 const TOOLS_ITEMS = [
-  { href: '/tactical/',       label: '/tactical/',       desc: 'VRP, term structure, smile, RND, fixed-strike IV' },
+  { href: '/tactical/',       label: '/tactical/',       desc: 'VRP, term structure, RND, fixed-strike IV' },
   { href: '/earnings/',       label: '/earnings/',       desc: 'Earnings calendar by implied move and date' },
   { href: '/scan/',           label: '/scan/',           desc: '25Δ skew vs ATM IV scanner across single names' },
   { href: '/rotations/',      label: '/rotations/',      desc: 'Sector rotation chart and 1D/1W/1M bar trio' },
@@ -129,7 +129,7 @@ const RESEARCH_ITEMS = [
   { href: '/regime/',     label: '/regime/',     desc: 'Mixture, Markov, Wasserstein regimes' },
   { href: '/risk/',       label: '/risk/',       desc: 'Cross-model Greeks, Vanna-Volga, second-order' },
   { href: '/rough/',      label: '/rough/',      desc: 'rBergomi simulator, skew scaling-law fit, RFSV, three-estimator Hurst triangulation' },
-  { href: '/stochastic/', label: '/stochastic/', desc: 'Heston with CIR variance + Hagan SABR' },
+  { href: '/stochastic/', label: '/stochastic/', desc: 'Multi-model Volatility Smile (Heston + Merton + SVI raw) + Hagan SABR' },
 ];
 
 const ABOUT_ITEM = {
