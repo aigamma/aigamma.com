@@ -348,7 +348,7 @@ export default function App() {
 
       <footer className="lab-footer">
         <span className="lab-footer-line">
-          AI Gamma · VIX catalog · term / VRP / OU / vol-of-vol / cross-asset / skew / regime / strategy · v0.1.0
+          AI Gamma · VIX catalog · term / VRP / OU / vol-of-vol / cross-asset / skew &amp; tail / regime / strategy · v0.1.0
         </span>
         <a href="/disclaimer/" className="lab-footer-disclaimer">Disclaimer</a>
         <a href="/" className="lab-footer-home">Return Home</a>
