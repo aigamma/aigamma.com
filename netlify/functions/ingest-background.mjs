@@ -986,6 +986,43 @@ async function insertAll({ run, contracts, computedLevels, expirationMetrics }) 
     insertComputedLevels(runId, computedLevels),
     insertExpirationMetrics(runId, expirationMetrics),
   ]);
+
+  // After a successful run, recompute the snapshot-source row of
+  // daily_block_summary for the trading_date this run belongs to. The
+  // function aggregates volume * close_price across the full chain at the
+  // most recent successful run on that date and upserts one row per
+  // expiration. Idempotent on the composite primary key. Skipped on
+  // partial runs because no snapshots were written; the next successful
+  // run picks up the correct aggregates.
+  if (!skipSnapshots) {
+    try {
+      const recomputeRes = await fetch(
+        `${SUPABASE_URL}/rest/v1/rpc/recompute_daily_block_summary_for_date`,
+        {
+          method: 'POST',
+          headers: supabaseHeaders(),
+          body: JSON.stringify({ p_trading_date: run.trading_date }),
+        }
+      );
+      if (!recomputeRes.ok) {
+        // Non-fatal: log but do not throw. The aggregates can be
+        // recomputed by the next successful run, or by the
+        // scripts/backfill/option-trade-aggregates-massive.mjs walker
+        // when it lands the source=flatfile rows for this date.
+        console.warn(
+          `[ingest] recompute_daily_block_summary_for_date returned ${recomputeRes.status}`
+        );
+      } else {
+        const rows = await recomputeRes.json();
+        const written = rows?.[0]?.rows_written ?? 0;
+        console.log(
+          `[ingest] daily_block_summary recompute: ${written} rows for ${run.trading_date}`
+        );
+      }
+    } catch (err) {
+      console.warn(`[ingest] daily_block_summary recompute failed: ${err.message}`);
+    }
+  }
 }
 
 async function insertSnapshotsBatched(runId, contracts) {
