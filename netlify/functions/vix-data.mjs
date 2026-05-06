@@ -52,7 +52,14 @@ const VIX_SYMBOLS = [
   'VIX', 'VIX1D', 'VIX9D', 'VIX3M', 'VIX6M', 'VIX1Y',
   'VVIX',
   'VXN', 'RVX', 'OVX', 'GVZ',
-  'SKEW', 'SDEX',
+  // Nations skew + tail-cost pair — SDEX is the normalized 30 DTE skew
+  // slope on SPY, TDEX is the running 30 DTE cost of a 3σ SPY put. Together
+  // they decompose the tail premium into "smile shape" (SDEX) vs
+  // "tail-put price" (TDEX). Cboe SKEW was retired from this catalog on
+  // 2026-05-06 in favor of the SDEX/TDEX pair; SKEW rows still exist in
+  // vix_family_eod from the prior catalog but are no longer projected onto
+  // the wire.
+  'SDEX', 'TDEX',
   'BXM', 'BXMD', 'BFLY', 'CNDR',
 ];
 

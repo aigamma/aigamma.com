@@ -69,7 +69,7 @@ function prefetchBelowFoldChunks() {
 //   5. VixOuMeanReversion   — Ornstein-Uhlenbeck calibration + 60d forward
 //   6. VixVolOfVol          — VVIX vs realized vol-of-VIX (vol-of-vol VRP)
 //   7. VixCrossAsset        — VIX/VXN/RVX/OVX/GVZ on shared axis + 1y ranks
-//   8. VixSkewIndices       — Cboe SKEW vs Nations SDEX overlay
+//   8. VixSkewIndices       — Nations SDEX vs Nations TDEX overlay
 //   9. VixRegimeMatrix      — 4-state classification + N-day transitions
 //  10. VixStrategyOverlay   — Cboe option-strategy benchmarks vs SPX
 //
@@ -191,8 +191,8 @@ export default function App() {
             <strong style={{ color: 'var(--text-primary)' }}>VIX6M</strong> /{' '}
             <strong style={{ color: 'var(--text-primary)' }}>VIX1Y</strong>),{' '}
             <strong style={{ color: 'var(--text-primary)' }}>VVIX</strong> (option-implied vol of
-            VIX), the two skew constructions (<strong style={{ color: 'var(--text-primary)' }}>Cboe SKEW</strong>{' '}
-            and <strong style={{ color: 'var(--text-primary)' }}>Nations SkewDex</strong>), and a
+            VIX), the Nations skew/tail-cost pair (<strong style={{ color: 'var(--text-primary)' }}>SDEX</strong>{' '}
+            and <strong style={{ color: 'var(--text-primary)' }}>TDEX</strong>), and a
             derived term-structure scalar (<strong style={{ color: 'var(--text-primary)' }}>contango
             ratio = VIX3M ÷ VIX</strong>). Each cell carries a{' '}
             <strong style={{ color: 'var(--text-primary)' }}>1-year percentile rank</strong>{' '}
@@ -273,13 +273,29 @@ export default function App() {
           </p>
           <p style={{ margin: '0 0 0.7rem' }}>
             <strong style={{ color: 'var(--text-primary)' }}>Skew Indices.</strong>{' '}
-            Two distinct constructions of the same tail-pricing asymmetry:{' '}
-            <strong style={{ color: 'var(--text-primary)' }}>Cboe SKEW</strong> from the cumulants
-            of the SPX option-implied risk-neutral density,{' '}
-            <strong style={{ color: 'var(--text-primary)' }}>Nations SkewDex</strong> from a
-            different cumulant decomposition. Plotted on dual axes; divergence between the two
-            methodologies is informative about which estimator is being driven by tail vs
-            near-money asymmetry on a given day.
+            Two complementary readings of SPY tail-pricing pressure built on
+            the same option surface but separating shape from price.{' '}
+            <strong style={{ color: 'var(--text-primary)' }}>SDEX</strong> (Nations SkewDex) is the
+            normalized 30 DTE smile slope:{' '}
+            <strong style={{ color: 'var(--text-primary)' }}>(1σ SPY put IV − ATM SPY IV) / ATM
+            SPY IV</strong>. Higher values mean OTM puts price a steeper IV premium relative to
+            ATM, scaled out of the ATM-vol level so it stays comparable across vol regimes.{' '}
+            <strong style={{ color: 'var(--text-primary)' }}>TDEX</strong> (Nations TailDex) is the
+            running 30 DTE cost of a 3σ SPY put: an absolute tail-protection price that moves on
+            either rising ATM IV or steepening skew (or both).
+          </p>
+          <p style={{ margin: '0 0 0.7rem' }}>
+            Plotted on dual axes, divergence between the two reads is informative.{' '}
+            <strong style={{ color: 'var(--text-primary)' }}>SDEX up while TDEX flat</strong> means
+            the smile is steepening but ATM IV is rising in lockstep, so the relative tail premium
+            is unchanged in absolute dollar terms.{' '}
+            <strong style={{ color: 'var(--text-primary)' }}>TDEX up while SDEX flat</strong> means
+            ATM IV is broadly re-pricing without the smile getting any steeper, a level shock
+            rather than a tail-specific one.{' '}
+            <strong style={{ color: 'var(--text-primary)' }}>Both up together</strong> is the
+            textbook risk-off pattern: the curve is steepening and the dollar cost of out-of-money
+            protection is rising at the same time. Dotted reference lines on each axis mark each
+            series' long-run mean over the displayed window.
           </p>
           <p style={{ margin: '0 0 0.7rem' }}>
             <strong style={{ color: 'var(--text-primary)' }}>Regime Matrix.</strong>{' '}
@@ -320,9 +336,9 @@ export default function App() {
             context="vix"
             welcome={{
               quick:
-                'Ask about the VIX term structure, the OU mean-reversion model, vol-of-vol, the SKEW / SDEX skew constructions, the regime classification thresholds, or how the Cboe strategy benchmark indices monetize vol.',
+                'Ask about the VIX term structure, the OU mean-reversion model, vol-of-vol, the Nations SDEX / TDEX skew-and-tail-cost pair, the regime classification thresholds, or how the Cboe strategy benchmark indices monetize vol.',
               deep:
-                'Deep Analysis mode: longer responses on Ornstein-Uhlenbeck calibration math, the vol-of-vol risk premium decomposition, Cboe SKEW vs Nations SDEX construction differences, and the strategy index recipe definitions.',
+                'Deep Analysis mode: longer responses on Ornstein-Uhlenbeck calibration math, the vol-of-vol risk premium decomposition, Nations SDEX (normalized 30 DTE smile slope) vs Nations TDEX (running 30 DTE cost of a 3σ SPY put) construction differences, and the strategy index recipe definitions.',
             }}
           />
         </LazyMount>

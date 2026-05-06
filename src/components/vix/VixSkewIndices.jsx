@@ -8,14 +8,47 @@ import {
   plotlyTitle,
 } from '../../lib/plotlyTheme';
 
-// Cboe SKEW + Nations SkewDex side-by-side. Two distinct constructions of
-// the same underlying risk-off premium: SKEW is built from the cumulants
-// of the risk-neutral density implied by SPX option prices and is centered
-// at 100 with crash-pricing > 150; SDEX (SkewDex) uses an alternative
-// cumulant decomposition and indexes differently. Plotting them on shared
-// time / dual y axes shows whether the two methodologies agree on the
-// direction and magnitude of skew shifts — divergence is informative
-// about which estimator is being driven by tail vs near-money asymmetry.
+// Nations SkewDex (SDEX) + TailDex (TDEX) side-by-side. Two complementary
+// readings of SPY tail-pricing pressure that together separate "smile is
+// steepening" from "tail puts are getting expensive":
+//
+//   SDEX = (1σ SPY put IV − ATM SPY IV) / ATM SPY IV at ~30 DTE.
+//     A normalized smile-slope measure. Higher SDEX = OTM puts are pricing
+//     a steeper IV premium relative to ATM. Pure shape, scaled out of the
+//     ATM-vol level so it is comparable across vol regimes. Range typically
+//     46-70 with a long-run mean near 58.
+//
+//   TDEX = the running 30 DTE cost of a 3σ SPY put.
+//     An absolute price measure. Moves on (a) ATM IV rising, (b) skew
+//     steepening, or (c) both. Range typically 6-20 with a long-run mean
+//     near 13; the upper tail is set by the 2025-04 stress prints where
+//     3σ put cost repriced sharply.
+//
+// Plotting them on shared time / dual y axes shows whether the two
+// constructions agree on the direction and magnitude of tail-premium
+// shifts. Divergence is informative: SDEX up while TDEX is flat means
+// the smile is steepening but ATM IV is also rising (relative tail
+// unchanged in absolute terms); TDEX up while SDEX is flat means ATM IV
+// is broadly re-pricing, not tail-specifically. Both up together is the
+// textbook risk-off pattern.
+//
+// Reference dotted lines are drawn at each series' own long-run mean so
+// the reader has a "current vs history" anchor without the false-precision
+// of absolute thresholds (the legacy SKEW overlay used 140/150 lines, but
+// those calibrations do not translate to SDEX/TDEX, which are constructed
+// differently).
+
+function mean(values) {
+  if (!values || values.length === 0) return null;
+  let sum = 0;
+  let n = 0;
+  for (const v of values) {
+    if (v == null || !Number.isFinite(v)) continue;
+    sum += v;
+    n += 1;
+  }
+  return n === 0 ? null : sum / n;
+}
 
 export default function VixSkewIndices({ data }) {
   const { plotly, error: plotlyError } = usePlotly();
@@ -24,9 +57,14 @@ export default function VixSkewIndices({ data }) {
 
   const series = useMemo(() => {
     if (!data) return null;
-    const skew = data.series?.SKEW || [];
     const sdex = data.series?.SDEX || [];
-    return { skew, sdex };
+    const tdex = data.series?.TDEX || [];
+    return {
+      sdex,
+      tdex,
+      sdexMean: mean(sdex.map((p) => p.close)),
+      tdexMean: mean(tdex.map((p) => p.close)),
+    };
   }, [data]);
 
   useEffect(() => {
@@ -34,35 +72,68 @@ export default function VixSkewIndices({ data }) {
 
     const traces = [
       {
-        x: series.skew.map((p) => p.date),
-        y: series.skew.map((p) => p.close),
-        type: 'scatter',
-        mode: 'lines',
-        name: 'Cboe SKEW',
-        line: { color: PLOTLY_COLORS.primarySoft, width: 1.6 },
-        hovertemplate: 'SKEW %{y:.2f}<extra></extra>',
-      },
-      {
         x: series.sdex.map((p) => p.date),
         y: series.sdex.map((p) => p.close),
         type: 'scatter',
         mode: 'lines',
         name: 'Nations SDEX',
-        line: { color: PLOTLY_COLORS.highlight, width: 1.4 },
-        yaxis: 'y2',
+        line: { color: PLOTLY_COLORS.primarySoft, width: 1.6 },
         hovertemplate: 'SDEX %{y:.2f}<extra></extra>',
       },
+      {
+        x: series.tdex.map((p) => p.date),
+        y: series.tdex.map((p) => p.close),
+        type: 'scatter',
+        mode: 'lines',
+        name: 'Nations TDEX',
+        line: { color: PLOTLY_COLORS.highlight, width: 1.4 },
+        yaxis: 'y2',
+        hovertemplate: 'TDEX %{y:.2f}<extra></extra>',
+      },
     ];
+
+    const shapes = [];
+    const annotations = [];
+    if (series.sdexMean != null) {
+      shapes.push({
+        type: 'line',
+        x0: 0, x1: 1, xref: 'paper',
+        y0: series.sdexMean, y1: series.sdexMean, yref: 'y',
+        line: { color: PLOTLY_COLORS.primarySoft, width: 1, dash: 'dot' },
+      });
+      annotations.push({
+        x: 0.01, xref: 'paper', y: series.sdexMean, yref: 'y',
+        text: `SDEX mean ${series.sdexMean.toFixed(1)}`,
+        showarrow: false,
+        font: { color: PLOTLY_COLORS.primarySoft, size: 11, family: "Calibri, 'Segoe UI', system-ui, sans-serif" },
+        xanchor: 'left', yanchor: 'bottom',
+      });
+    }
+    if (series.tdexMean != null) {
+      shapes.push({
+        type: 'line',
+        x0: 0, x1: 1, xref: 'paper',
+        y0: series.tdexMean, y1: series.tdexMean, yref: 'y2',
+        line: { color: PLOTLY_COLORS.highlight, width: 1, dash: 'dot' },
+      });
+      annotations.push({
+        x: 0.99, xref: 'paper', y: series.tdexMean, yref: 'y2',
+        text: `TDEX mean ${series.tdexMean.toFixed(1)}`,
+        showarrow: false,
+        font: { color: PLOTLY_COLORS.highlight, size: 11, family: "Calibri, 'Segoe UI', system-ui, sans-serif" },
+        xanchor: 'right', yanchor: 'bottom',
+      });
+    }
 
     const layout = plotly2DChartLayout({
       title: plotlyTitle(
         isMobile
-          ? 'Skew Indices:<br>Cboe SKEW vs Nations SkewDex'
-          : 'Skew Indices: Cboe SKEW vs Nations SkewDex'
+          ? 'Skew Indices:<br>Nations SDEX vs TailDex'
+          : 'Skew Indices: Nations SDEX vs TailDex'
       ),
       xaxis: plotlyAxis(''),
-      yaxis: plotlyAxis('Cboe SKEW', { side: 'left' }),
-      yaxis2: plotlyAxis('SDEX', {
+      yaxis: plotlyAxis('SDEX', { side: 'left' }),
+      yaxis2: plotlyAxis('TDEX', {
         overlaying: 'y',
         side: 'right',
         showgrid: false,
@@ -72,34 +143,8 @@ export default function VixSkewIndices({ data }) {
       height: 380,
       showlegend: true,
       legend: { orientation: 'h', y: -0.18, x: 0.5, xanchor: 'center' },
-      shapes: [
-        {
-          type: 'line',
-          x0: 0, x1: 1, xref: 'paper',
-          y0: 150, y1: 150, yref: 'y',
-          line: { color: PLOTLY_COLORS.secondary, width: 1, dash: 'dot' },
-        },
-        {
-          type: 'line',
-          x0: 0, x1: 1, xref: 'paper',
-          y0: 140, y1: 140, yref: 'y',
-          line: { color: PLOTLY_COLORS.highlight, width: 1, dash: 'dot' },
-        },
-      ],
-      annotations: [
-        {
-          x: 0.99, xref: 'paper', y: 150, yref: 'y',
-          text: 'crash pricing', showarrow: false,
-          font: { color: PLOTLY_COLORS.secondary, size: 11, family: "Calibri, 'Segoe UI', system-ui, sans-serif" },
-          xanchor: 'right', yanchor: 'bottom',
-        },
-        {
-          x: 0.99, xref: 'paper', y: 140, yref: 'y',
-          text: 'elevated tail premium', showarrow: false,
-          font: { color: PLOTLY_COLORS.highlight, size: 11, family: "Calibri, 'Segoe UI', system-ui, sans-serif" },
-          xanchor: 'right', yanchor: 'bottom',
-        },
-      ],
+      shapes,
+      annotations,
     });
 
     plotly.newPlot(ref.current, traces, layout, {

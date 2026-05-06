@@ -19,8 +19,10 @@ import {
 //   5. VIX6M — 6-month vol
 //   6. VIX1Y — 1-year vol (long-end of Cboe-published curve)
 //   7. VVIX — vol of vol + 1y percentile rank
-//   8. SKEW — Cboe SKEW index, color thresholds at 130/140/150
-//   9. SDEX — Nations SkewDex
+//   8. SDEX — Nations SkewDex (normalized 30 DTE skew slope on SPY),
+//      color cue from 1y percentile rank
+//   9. TDEX — Nations TailDex (running 30 DTE cost of a 3σ SPY put),
+//      color cue from 1y percentile rank
 //  10. Term Slope — VIX3M / VIX rendered as a binary regime label
 //      (Contango / Backwardation) plus percent spread |ratio − 1| × 100%.
 //      The earlier 3-decimal ratio gave false precision to a metric whose
@@ -35,7 +37,11 @@ import {
 // that had no empirical calibration. The Term Structure chart further
 // down the page already conveys the convexity of the curve in shape;
 // reducing it to a third decimal of a butterfly was redundant and read
-// as false precision.
+// as false precision. Cboe SKEW (with its 130/140/150 thresholds) was
+// retired on 2026-05-06 in favor of Nations TDEX, the running 30 DTE
+// cost of a 3σ SPY put — a more direct read on tail-protection price
+// than SKEW's cumulant-based index, and one that pairs cleanly with
+// SDEX (smile shape) below.
 
 function PillCell({ label, value, sub, tone = 'neutral', title }) {
   const toneColor = TONE[tone] || 'var(--text-primary)';
@@ -71,14 +77,6 @@ function pctTone(rank) {
   return 'green';
 }
 
-function skewTone(level) {
-  if (level == null) return 'neutral';
-  if (level >= 150) return 'coral';
-  if (level >= 140) return 'amber';
-  if (level >= 130) return 'neutral';
-  return 'green';
-}
-
 function fmt(n, dp = 2) {
   if (n == null || !Number.isFinite(n)) return '—';
   return n.toFixed(dp);
@@ -111,7 +109,8 @@ export default function VixHeaderProfile({ data }) {
 
     const vixRank = percentileRank(last('VIX'), window('VIX'));
     const vvixRank = percentileRank(last('VVIX'), window('VVIX'));
-    const skewRank = percentileRank(last('SKEW'), window('SKEW'));
+    const sdexRank = percentileRank(last('SDEX'), window('SDEX'));
+    const tdexRank = percentileRank(last('TDEX'), window('TDEX'));
 
     return {
       VIX: { value: last('VIX'), rank: vixRank },
@@ -121,8 +120,8 @@ export default function VixHeaderProfile({ data }) {
       VIX6M: { value: last('VIX6M') },
       VIX1Y: { value: last('VIX1Y') },
       VVIX: { value: last('VVIX'), rank: vvixRank },
-      SKEW: { value: last('SKEW'), rank: skewRank },
-      SDEX: { value: last('SDEX') },
+      SDEX: { value: last('SDEX'), rank: sdexRank },
+      TDEX: { value: last('TDEX'), rank: tdexRank },
       contango: ts.contangoRatio,
     };
   }, [data]);
@@ -190,17 +189,18 @@ export default function VixHeaderProfile({ data }) {
           title="Vol-of-vol: implied vol on the VIX itself. Elevated VVIX with suppressed VIX is the textbook complacency-before-expansion tell."
         />
         <PillCell
-          label="SKEW"
-          value={fmt(cells.SKEW.value, 1)}
-          sub={fmtRank(cells.SKEW.rank)}
-          tone={skewTone(cells.SKEW.value)}
-          title="Cboe SKEW Index: fat-tail premium from out-of-the-money SPX puts. >150 = crash-pricing, >140 = elevated tail premium, ~120 = normal."
-        />
-        <PillCell
           label="SDEX"
           value={fmt(cells.SDEX.value, 1)}
-          tone="neutral"
-          title="Nations SkewDex: alternative skewness construction. Cross-validates the Cboe SKEW reading via a different methodology."
+          sub={fmtRank(cells.SDEX.rank)}
+          tone={pctTone(cells.SDEX.rank)}
+          title="Nations SkewDex: (1σ SPY put IV − ATM SPY IV) / ATM SPY IV at ~30 DTE. Normalized smile-slope read on the SPY surface. Color reflects 1-year percentile rank."
+        />
+        <PillCell
+          label="TDEX"
+          value={fmt(cells.TDEX.value, 1)}
+          sub={fmtRank(cells.TDEX.rank)}
+          tone={pctTone(cells.TDEX.rank)}
+          title="Nations TailDex: running 30 DTE cost of a 3σ SPY put. Absolute tail-protection price; moves on either rising ATM IV or steepening skew. Color reflects 1-year percentile rank."
         />
         <PillCell
           label="Term Slope"

@@ -42,9 +42,18 @@ const DEFAULT_SYMBOLS = [
   'RVX',  // Russell 2000 implied vol
   'OVX',  // Crude oil implied vol (USO)
   'GVZ',  // Gold implied vol (GLD)
-  // Skew indices — fat-tail premium gauges
-  'SKEW', // Cboe SKEW (S&P 500 skewness from option prices, centered at 100)
-  'SDEX', // Nations SkewDex (alternative skew construction)
+  // Nations skew + tail-cost indices — companion fat-tail premium gauges
+  // built on the SPY surface. SDEX = (1σ SPY put IV − ATM SPY IV) / ATM SPY
+  // IV at ~30 DTE, a normalized smile-slope measure. TDEX = the running
+  // 30 DTE cost of a 3σ SPY put, an absolute tail-protection price. Both
+  // move with risk-off pressure but separate it: SDEX moves on smile-shape
+  // alone, TDEX moves on price (so it captures both rising ATM IV and
+  // rising skew). The pair lets the /vix Skew Indices card distinguish
+  // "skew is steepening" from "tail puts are getting expensive."
+  // Cboe SKEW was retired from this catalog on 2026-05-06 in favor of
+  // TDEX; SDEX + TDEX is the dual-construction view the page now serves.
+  'SDEX', // Nations SkewDex (normalized 30 DTE skew slope on SPY)
+  'TDEX', // Nations TailDex (running 30 DTE cost of a 3σ SPY put)
   // Cboe option-strategy benchmark indices (publicly disseminated, free to display)
   'BXM',  // BuyWrite Index (covered call at-the-money)
   'BXMD', // BuyWrite 30-Delta (covered call ~OTM)
