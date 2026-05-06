@@ -89,35 +89,34 @@ create table iv_rank_daily (
   iv_percentile_1y numeric,           -- pct of trailing 252 sessions where IV < current
   iv_high_1y numeric,
   iv_low_1y numeric,
-  source text not null,               -- 'thetadata' | 'massive'
+  source text not null,               -- 'massive' (only path going forward)
   primary key (ticker, trading_date)
 );
 create index iv_rank_daily_ticker_date on iv_rank_daily (ticker, trading_date desc);
 ```
 
-**Data source: ThetaData Options Standard.** Already subscribed (per
-CLAUDE.md). Endpoints:
+**Data source: Massive Options Starter** ($30/mo, not yet subscribed
+on this account). Massive's options daily aggregate endpoints provide
+per-contract historical Greeks and IV at the Options Starter tier;
+the existing Stocks Starter and Indices Starter tiers do not cover
+per-contract historical options Greeks. Subscribing to Options
+Starter is the gating step for this backfill. Once entitled:
 
-- `option/history/greeks/eod` returns full EOD report with IV per
-  contract, back to 2017-01-03 at Standard tier. We compute ATM IV by
-  picking the strike nearest spot for the soonest expiration in
-  [21D, 45D] DTE — same convention as /scan.
-- Wildcard expiration query (`expiration=*`) returns every listed
-  contract for a ticker on a given date in a single response, so per
-  ticker per day = 1 ThetaData call.
+- A historical daily-aggregate fetch per ticker per date returns
+  per-contract OHLC and (at the Options tier) computed IV / Greeks.
+  ATM IV is picked at the strike nearest spot for the soonest
+  expiration in [21D, 45D] DTE — same convention as /scan.
+- Daily incremental update: ~250 calls at Options Starter's
+  unmetered call budget. Estimated wall: a few minutes per day.
+- Backfill window depends on Options Starter's historical depth
+  (verify on subscribe; Massive Indices Starter offers 1+ year, the
+  options tier is documented similarly).
 
-Daily incremental update: 1 ThetaData call × ~250 tickers = 250 calls
-at the Standard tier's 2-thread concurrency cap. Estimated wall:
-~2 minutes per day. Backfill from 2017-01-03 to today = ~2,300
-trading days × 250 tickers = ~575,000 calls = ~96 hours wall at
-2-thread. Run as a chunked overnight backfill across multiple
-sessions; the existing /seasonality and /heatmap historical pulls set
-the precedent for multi-day backfills.
-
-**Latency / cost profile.** ThetaData is included in the existing
-subscription; no marginal cost. Compute is local (Theta Terminal
-running on Eric's machine). Storage in Supabase: ~575k rows × ~80
-bytes/row = ~46 MB, well within the free tier.
+**Latency / cost profile.** $30/mo for the Options Starter tier is
+the marginal cost. No local terminal dependency — runs entirely as a
+Netlify function against the remote Massive API. Storage in
+Supabase: ~250 rows/day × ~252 trading days × ~5 years ≈ ~315k rows
+× ~80 bytes/row ≈ ~25 MB, well within the free tier.
 
 **Computation.** IV rank and percentile are derived on insert from
 the trailing 252 trading days of `atm_iv`:
@@ -132,17 +131,17 @@ const pct = ivs.filter(x => x < current).length / ivs.length * 100;
 ```
 
 **Implementation cost.** New script
-`scripts/backfill/iv-rank-backfill.mjs` (~150 lines: ThetaData
-ATM-IV resolver, Supabase writer, chunked walker, resume-from-state
-prompt template per the auto-memory feedback). New scheduled
-function `netlify/functions/iv-rank-ingest.mjs` (~80 lines: fires
-nightly at 9 PM ET, writes today's row + recomputes the trailing
-window for every roster ticker). 1-2 days of work + ~4 nights of
-backfill wall time.
+`scripts/backfill/iv-rank-backfill.mjs` (~150 lines: Massive
+options-aggregate ATM-IV resolver, Supabase writer, chunked walker,
+resume-from-state prompt template per the auto-memory feedback). New
+scheduled function `netlify/functions/iv-rank-ingest.mjs` (~80
+lines: fires nightly at 9 PM ET, writes today's row + recomputes the
+trailing window for every roster ticker). 1-2 days of work + a
+shorter wall-clock window than the previous local-terminal plan.
 
 **Blocked by:**
-- Theta Terminal must be running during backfill (already a
-  precondition for /seasonality, /heatmap historical work).
+- Massive Options Starter subscription ($30/mo) — confirm coverage
+  of per-contract historical Greeks/IV before subscribing.
 - Supabase migration must be applied to the production project
   (`tbxhvpoyyyhbvoyefggu`) before the function deploys.
 - Roster (`src/data/options-volume-roster.json`) must be the
@@ -199,47 +198,46 @@ microsecond-resolution historical playback.
 - Sub-second realtime options flow becomes a feature (e.g., a real-
   time gamma flow scanner). Massive's 5-minute snapshot cadence
   isn't enough.
-- Historical IV beyond ThetaData's 2017 floor. Databento's OPRA
-  history starts earlier and may include depth data ThetaData
-  doesn't.
+- Deeper or earlier historical OPRA depth than Massive's tiers
+  expose. Databento's OPRA history goes back further and includes
+  microsecond-resolution depth data.
 - Tick-level options flow analysis (gamma exposure tape, dealer
   positioning hypothesis testing). Massive aggregates; Databento
   preserves trade-level detail.
 
-**When ThetaData is sufficient.** ThetaData's Options Standard tier
-covers everything the current models need: EOD greeks, IV history
-back to 2017, trade-level greeks at Standard tier (per CLAUDE.md).
-The IV rank backfill above runs entirely on ThetaData. Until the
-sub-second / pre-2017 / tick-flow use cases mature, ThetaData is the
-right tier.
+**When Massive is sufficient.** Massive Indices Starter + Stocks
+Starter covers everything the dashboard currently shows. Adding
+Options Starter ($30/mo) covers the IV rank backfill above. Until
+the sub-second / deep-history / tick-flow use cases mature, the
+Massive tier ladder is the right place to spend the next dollar.
 
 **Cost gate.** Databento is metered per byte transferred. A full
 options chain history pull would be substantially more expensive
-than ThetaData's flat subscription. Worth a 1-week trial when one of
-the three triggers above lands.
+than Massive's flat-rate tier ladder. Worth a 1-week trial when one
+of the three triggers above lands.
 
 **MCP scriptability.** Eric noted Databento has no MCP server but is
 "scriptable on my own if that kind of extra data lane would be
 necessary." Confirmed — Databento has Python and Rust SDKs and a
-plain HTTPS API. A custom integration would mirror the ThetaData
-ingest pattern (local terminal-style worker that fetches in
-chunks, writes to Supabase). MCP convenience would be a nice-to-have
-for ad-hoc exploration but not a blocker for backfill scripts.
+plain HTTPS API. A custom integration would mirror the existing
+Massive ingest pattern (Netlify function fetches in chunks, writes
+to Supabase). MCP convenience would be a nice-to-have for ad-hoc
+exploration but not a blocker for backfill scripts.
 
 **Recommendation: don't subscribe yet.** Capture this evaluation in
 the roadmap so the next time a model needs sub-second flow or
-pre-2017 IV history, the decision tree is already drawn. Until
-then, ThetaData is sufficient for /earnings and the broader
-dashboard.
+deeper-history options data, the decision tree is already drawn.
+Until then, the Massive tier ladder is sufficient for /earnings and
+the broader dashboard.
 
 ## Summary table
 
 | Item | Status | Source | Cost | Trigger |
 |---|---|---|---|---|
 | Market cap filter | Stub in UI, not built | Massive `/v3/reference/tickers` | Half-day work | When user wants it |
-| IV rank backfill | Designed, not built | ThetaData `option/history/greeks/eod` | 1-2 days work + 4 nights wall | High-leverage cross-cutting asset; recommend next |
+| IV rank backfill | Designed, not built | Massive Options Starter ($30/mo) | 1-2 days work after subscription lands | High-leverage cross-cutting asset; recommend next |
 | Options volume automation | Manual works, deferred | Massive grouped options OR Barchart CSV | TBD | Only if IV-rank consumers need dynamic universe |
-| Databento subscription | Not subscribed | Databento APIs | Metered, $1k+/mo for full history | Only if sub-second flow / pre-2017 IV needed |
+| Databento subscription | Not subscribed | Databento APIs | Metered, $1k+/mo for full history | Only if sub-second flow / deep-history options needed |
 
 ## Sequencing
 
@@ -253,5 +251,5 @@ The recommended order if all four are pursued:
 3. **Options volume automation** (deferred) — only worth doing once
    IV-rank consumers want a dynamic universe.
 4. **Databento subscription** (deferred) — only worth doing for a
-   specific feature (sub-second flow scanner or pre-2017 IV
-   archaeology) that the current ThetaData tier can't deliver.
+   specific feature (sub-second flow scanner or deep-history options
+   data) that Massive's tier ladder can't deliver.

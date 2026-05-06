@@ -65,14 +65,9 @@ Two paths to replace the manual Barchart pull:
    ```
    200 = entitled. 401/403 with NOT_AUTHORIZED = tier upgrade required.
 
-2. **ThetaData Options Standard** (`option/history/eod` with `expiration=*`
-   per ticker per date). Returns every listed contract for a ticker on a
-   date, including volume. Already entitled. Good for *refreshing volume
-   on a known ticker list*, NOT for discovering an unknown universe
-   (chicken-and-egg — you need a ticker list before you can query it).
-
-Until path 1 is verified entitled, the manual Barchart pull is
-authoritative.
+Until path 1 is verified entitled (or Massive Options Starter is
+subscribed for an alternate options-aggregate path), the manual
+Barchart pull is authoritative.
 
 ## Distribution shape (2026-04-26 pull, n=250)
 
@@ -137,8 +132,10 @@ top 100). Editorial decision, not automatic.
 ### Layer 2 — Dynamic tail (data-derived, smoothed)
 
 Names below the anchor cutoff, derived from a **30-day rolling-average
-options-volume ranking**. Use Massive grouped aggregates (if entitled)
-or ThetaData EOD over a known superset. Total roster size stays at ~250.
+options-volume ranking**. Use Massive grouped options aggregates once
+the Options Starter tier is subscribed (or another Massive options
+aggregate endpoint that ships at the current tier ladder). Total
+roster size stays at ~250.
 
 The tail is the layer that churns. Single-week ranking shifts in the
 tail are normal and expected.

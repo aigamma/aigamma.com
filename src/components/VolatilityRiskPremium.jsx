@@ -301,16 +301,16 @@ export default function VolatilityRiskPremium({ spotPrice, capturedAt }) {
     const windowStart = timeRange ? timeRange[0] : defaultStart;
     const windowEnd = timeRange ? timeRange[1] : lastDate;
 
-    // Compute y-axis ranges from the full backfill (back to the ThetaData
-    // Index Standard floor at 2022-01-03 when SPX was ~3577) regardless of
-    // the current renderPhase. With spxMin anchored at that historical
-    // low, the 0.95 padding puts spxLo well below any value in a recent
-    // zoom, which naturally pins the SPX line to the top ~15-20% of the
-    // chart — the visual layout that separates SPX context cleanly from
-    // the IV/RV ribbon below. Reading from the always-full fullSpxSeries
-    // (rather than the phase-sliced spxSeries used for trace data) keeps
-    // the SPX y-axis stable across the initial→full re-render so the
-    // chart doesn't visually jump when the historical tail lands.
+    // Compute y-axis ranges from the full backfill regardless of the
+    // current renderPhase. With spxMin anchored at the earliest populated
+    // SPX close, the 0.95 padding puts spxLo well below any value in a
+    // recent zoom, which naturally pins the SPX line to the top ~15-20%
+    // of the chart — the visual layout that separates SPX context cleanly
+    // from the IV/RV ribbon below. Reading from the always-full
+    // fullSpxSeries (rather than the phase-sliced spxSeries used for
+    // trace data) keeps the SPX y-axis stable across the initial→full
+    // re-render so the chart doesn't visually jump when the historical
+    // tail lands.
     const spxMin = Math.min(...fullSpxSeries.map((r) => r.spx_close));
     const spxMax = Math.max(...fullSpxSeries.map((r) => r.spx_close));
     const spxLo = spxMin * 0.95;

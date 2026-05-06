@@ -20,9 +20,10 @@ import ResetButton from './ResetButton';
 // a dotted reference level, and a filled band between them.
 //
 // Data source is /api/gex-history, which reads daily_gex_stats and returns
-// one row per trading date with spx_close and vol_flip_strike. Index
-// Standard at ThetaData gates SPX OHLC to 2022-01-03 onward, so the series
-// naturally starts there regardless of how far back the request reaches.
+// one row per trading date with spx_close and vol_flip_strike. Historical
+// depth is bounded by the EOD tables' fill window; the series naturally
+// starts at the earliest populated trading_date regardless of how far back
+// the request reaches.
 //
 // The series is split into contiguous same-sign segments at each SPX/Flip
 // crossing (linearly interpolated in both time and level), and each segment

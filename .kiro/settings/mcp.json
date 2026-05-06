@@ -1,10 +1,5 @@
 {
   "mcpServers": {
-    "ThetaData": {
-      "url": "http://127.0.0.1:25503/mcp/sse",
-      "disabled": true,
-      "autoApprove": ["*"]
-    },
     "supabase": {
       "type": "http",
       "url": "https://mcp.supabase.com/mcp?project_ref=tbxhvpoyyyhbvoyefggu",

@@ -21,14 +21,13 @@ import {
 // filled circle plus the symbol label, and hover text reports date /
 // ratio / momentum on every dot.
 //
-// Data source: ThetaData /v3/stock/history/eod (Stock Value tier) via
-// public.daily_eod → /api/rotations. The default universe matches the
-// reference chart at C:\i\: SPY benchmark plus the eleven SPDR sector
-// ETFs and three additional theme ETFs (XBI / XLB / XLC / XLE / XLF /
-// XLI / XLK / XLP / XLRE / XLU / XLV / XLY / XME / KWEB). Adding a
-// symbol to scripts/backfill/daily-eod.mjs's DEFAULT_SYMBOLS list and
-// re-running the backfill will surface it on the chart automatically
-// with no client-side edits.
+// Data source: Massive Stocks daily aggregates via public.daily_eod →
+// /api/rotations. The default universe matches the reference chart at
+// C:\i\: SPY benchmark plus the eleven SPDR sector ETFs and three
+// additional theme ETFs (XBI / XLB / XLC / XLE / XLF / XLI / XLK / XLP /
+// XLRE / XLU / XLV / XLY / XME / KWEB). Adding a symbol to the daily
+// backfill's universe list and re-running the backfill will surface it
+// on the chart automatically with no client-side edits.
 //
 // Per-symbol visibility row (RotationSymbolToggle) sits between the meta
 // band and the chart canvas. Each pill is colored by the current

@@ -8,19 +8,19 @@ Production deployment: https://aigamma.com
 
 A quantitative finance platform that visualizes gamma exposure, implied volatility structure, dealer positioning, and volatility risk premium for SPX options. The dashboard consumes real-time options chain snapshots every 5 minutes during market hours, computes GEX per strike, derives key levels (Call Wall, Put Wall, Absolute Gamma Strike, Volatility Flip), fits SVI volatility surfaces, extracts Breeden-Litzenberger risk-neutral densities, and renders interactive Plotly charts on a dark-themed interface.
 
-Historical analysis is powered by a one-year backfill of EOD options data from ThetaData, enabling percentile-banded term structure visualization, volatility risk premium modeling, and regime detection. A reconciliation job verifies intraday-collected derived features against ThetaData EOD as the source of record.
+Historical analysis is powered by EOD data layers ingested from the same vendor as the live chain, enabling percentile-banded term structure visualization, volatility risk premium modeling, and regime detection. A daily self-consistency reconciliation job verifies the closing intraday snapshot against the vendor's daily aggregate endpoint and audits the day's intraday run completeness.
 
-This project independently reconstructs the category of tooling offered by institutional derivatives analytics platforms, using serverless infrastructure and two independent data sources for integrity.
+This project independently reconstructs the category of tooling offered by institutional derivatives analytics platforms, using serverless infrastructure entirely.
 
 ## Architecture
 
-The system separates real-time data collection, historical data reconciliation, and data serving into three independent layers.
+The system separates real-time data collection, historical data, self-consistency auditing, and data serving into independent layers.
 
 **Intraday Layer.** A scheduled Netlify Function (ingest-background.mjs) fetches the full SPX options chain from the Massive API every 5 minutes during market hours. It computes GEX and positioning metrics and writes to four Supabase tables: ingest_runs, snapshots, computed_levels, and expiration_metrics. The frontend reads from Supabase through a separate Netlify Function (data.mjs) with a 900-second CDN cache. The browser never contacts the data source directly.
 
-**Historical Layer.** The Theta Terminal V3 runs locally and serves EOD options data through a REST API at http://127.0.0.1:25503/v3. A backfill pipeline pulls historical SPX options chains day by day, computes derived features (ATM IV per tenor, Yang-Zhang realized volatility, volatility risk premium), and writes to daily_term_structure, daily_cloud_bands, and daily_volatility_stats. Raw chain data is consumed locally and discarded. Only derived scalars persist.
+**Historical Layer.** A set of EOD tables (daily_volatility_stats, daily_term_structure, daily_cloud_bands, daily_gex_stats, spx_intraday_bars, daily_eod, vix_family_eod) is fed from Massive. Index EOD lands via direct daily-aggregate calls; SPX-specific tables (term structure, cloud bands, GEX history) are derived from daily downsamples of the intraday snapshots and expiration_metrics already in Supabase. Stock and sector ETF OHLC for /rotations, /heatmap, /stocks, /sector-performance, and /stock-performance comes from Massive Stocks Starter.
 
-**Reconciliation Layer.** A daily reconciliation job (scripts/reconcile/) compares Massive-collected derived levels against ThetaData EOD as the source of record. If any level diverges by more than 2%, ThetaData overwrites the Massive value. The entire per-day mutation set executes inside a single PostgreSQL stored procedure (reconcile_day_atomic) for all-or-nothing transaction semantics. Directional flags cascade on correction; percentile bands do not. The reconciliation layer is opportunistic: if the Theta Terminal is unreachable, the job logs and exits cleanly, and the dashboard continues serving Massive-sourced data at full fidelity.
+**Reconciliation Layer.** A daily reconciliation job (netlify/functions/reconcile-background.mjs) runs at 22:00 UTC weekdays and records five self-consistency probes into public.reconciliation_audit. The headline probe is a Path-A-vs-Path-B cross-check: the closing intraday snapshot's inferred spot price (Path A) against Massive's I:SPX daily aggregate close (Path B). The other four probes audit completeness of the day's intraday runs (run count, partial-fetch rate, atm_iv null rate, lateness of the final snapshot). Single-vendor by design; the goal is to catch ingestion-side bugs (spot inference regressions, snapshot-time drift, schema misassignment) rather than vendor-side data quality.
 
 CDN edge caching absorbs read traffic, so Supabase sees approximately one query per edge location per cache window regardless of concurrent user count.
 
@@ -59,11 +59,14 @@ Sign convention follows dealer positioning: calls create positive gamma (stabili
 | snapshots | 5-minute options chain snapshots |
 | computed_levels | Intraday derived levels (PW, CW, VF) |
 | expiration_metrics | Per-expiration intraday metrics |
-| daily_levels | Reconciled daily key levels with directional flags and coordination metric |
 | daily_term_structure | Per-tenor ATM IV history, one row per (trading_date, expiration_date) |
 | daily_cloud_bands | Frozen percentile bands (p10/p30/p50/p70/p90) per (trading_date, DTE) |
 | daily_volatility_stats | Yang-Zhang realized vol, constant-maturity IV, and VRP spread |
-| reconciliation_audit | Append-only correction event log |
+| daily_gex_stats | Daily GEX summary (net/call/put GEX, walls, vol flip) |
+| spx_intraday_bars | 30-minute SPX bars for the /seasonality lab |
+| daily_eod | Index and stock symbol daily OHLC for cross-asset and stock surfaces |
+| vix_family_eod | VIX family + cross-asset vol + skew benchmarks |
+| reconciliation_audit | Daily self-consistency probe log |
 
 ## Stack
 
@@ -73,18 +76,7 @@ Sign convention follows dealer positioning: calls create positive gamma (stabili
 | Plotly.js + Three.js | Chart rendering (2D and 3D) |
 | Netlify | Hosting, CDN, scheduled functions, DNS |
 | Supabase Pro | PostgreSQL persistence, RPC, and caching |
-| Massive API | Real-time options chain snapshots (OPRA-sourced) |
-| ThetaData (Options Standard) | Historical EOD options data, pre-computed Greeks, IV |
-
-## Reconciliation Test Harness
-
-A permanent test harness validates the reconciliation job's invariants:
-
-```bash
-npm run test:reconcile
-```
-
-Four scenarios: transaction rollback on simulated crash leaves reconciled=false, re-running a fully reconciled day is a no-op, cascade propagates directional flips across multiple subsequent days, and terminal-unreachable exits cleanly with zero state changes.
+| Massive API | Real-time options chain snapshots, daily index/stock aggregates (OPRA-sourced) |
 
 ## Development
 
@@ -95,9 +87,7 @@ npm install
 npm run dev
 ```
 
-The dev server runs at localhost:5173. The API proxy (/api/data) only functions on Netlify, so local development shows a loading state unless you configure a local data source.
-
-Historical data features require the Theta Terminal V3 running locally with a ThetaData subscription (Options Standard or higher) and a populated Supabase instance. See scripts/reconcile/README.md for the reconciliation architecture and scripts/backfill/ for the historical data pipeline.
+The dev server runs at localhost:5173. The API proxy (/api/data) only functions on Netlify, so local development shows a loading state unless you configure a local data source. See scripts/backfill/ for the historical data pipeline.
 
 ## Related Sites
 
@@ -111,4 +101,3 @@ MIT. The code is free. The expertise is what employers are hiring.
 
 Eric Allione / AI Gamma / Prescott, AZ
 Revenue Systems Architect
-
