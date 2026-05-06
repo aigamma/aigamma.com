@@ -342,8 +342,19 @@ export default function SlotA() {
         yref: 'container',
         yanchor: 'top',
       },
+      // Mobile bottom margin is 140 (vs 105 on desktop) and the legend.y is
+      // pushed from -0.22 to -0.42 because the 5-trace legend ("empirical",
+      // "calm · X.X% of days", "crisis · Y.Y% of days", "mixture",
+      // "1-Gaussian baseline") wraps to ~3 rows at iPhone widths and the
+      // x-axis title "Daily log return" at fontsize 20 with standoff 10 sits
+      // at ~46 px below the plot baseline. With the prior y=-0.22 the
+      // legend's TOP rendered at 0.22 × plot_height ≈ 38 px below the
+      // baseline, so the first legend row was buried under the axis title.
+      // Pushing y to -0.42 puts the legend top at ~73 px below baseline (a
+      // ~27 px gap below the axis title), and the matching b: 140 reserves
+      // enough vertical room for axis title + 3 wrapped legend rows.
       margin: mobile
-        ? { t: 75, r: 20, b: 90, l: 60 }
+        ? { t: 75, r: 20, b: 140, l: 60 }
         : { t: 70, r: 30, b: 105, l: 75 },
       xaxis: plotlyAxis('Daily log return', {
         range: [lo, hi],
@@ -354,7 +365,7 @@ export default function SlotA() {
       showlegend: true,
       legend: {
         orientation: 'h',
-        y: -0.22,
+        y: mobile ? -0.42 : -0.22,
         x: 0.5,
         xanchor: 'center',
         font: PLOTLY_FONTS.legend,
@@ -470,7 +481,7 @@ export default function SlotA() {
         />
       </div>
 
-      <div ref={chartRef} style={{ width: '100%', height: mobile ? 340 : 440 }} />
+      <div ref={chartRef} style={{ width: '100%', height: mobile ? 390 : 440 }} />
 
       <div
         style={{
