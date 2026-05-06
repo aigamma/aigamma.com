@@ -1156,16 +1156,26 @@ body {
      height 1.6 wraps the combination to 14-18 lines = roughly 420-540 px
      of content), forcing the disclaimer underneath an inner scroll bar
      that most readers never hit. The default state now occupies the same
-     calc(100vh - 180px) the active state uses — large enough that the
-     welcome + disclaimer renders in full on every common modern phone,
-     and consistent with the active size so the body does not jump in
-     height when the first prompt is sent. The 180 px figure mirrors the
-     active rule: tabs (~44 px) + input row (~76 px) + breathing room +
-     mobile-chrome slack. */
+     calc(100vh - 240px) the active state uses below — large enough that
+     the welcome + disclaimer renders in full on every common modern
+     phone, and consistent with the active size so the body does not jump
+     in height when the first prompt is sent. The 240 px figure budgets
+     tabs (~44 px) + input row (~76 px) + breathing room + a deeper bottom
+     gutter (~60 px / two welcome lines) so the input row clears the
+     iPhone portrait home-indicator and Safari's bottom toolbar without
+     overlap. The active-state override below uses the same value so it
+     wins over the universal `.chat-card.chat-active .chat-body` rule
+     (which sits outside this media query and would otherwise re-impose
+     the desktop 180 px budget on mobile via specificity). */
   .chat-body {
-    height: calc(100vh - 180px);
-    min-height: calc(100vh - 180px);
-    max-height: calc(100vh - 180px);
+    height: calc(100vh - 240px);
+    min-height: calc(100vh - 240px);
+    max-height: calc(100vh - 240px);
+  }
+  .chat-card.chat-active .chat-body {
+    height: calc(100vh - 240px);
+    min-height: calc(100vh - 240px);
+    max-height: calc(100vh - 240px);
   }
   .chat-tab { padding: 0.75rem 0.75rem; font-size: 0.62rem; }
   .chat-input-row { padding: 0.75rem 1rem; }
