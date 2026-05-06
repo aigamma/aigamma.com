@@ -5,6 +5,7 @@ import {
   PLOTLY_COLORS,
   plotly2DChartLayout,
   plotlyAxis,
+  plotlyRangeslider,
   plotlyTitle,
 } from '../../lib/plotlyTheme';
 import {
@@ -81,10 +82,15 @@ export default function VixStrategyOverlay({ data }) {
           ? 'Cboe Strategy Benchmark Indices<br>vs SPX (growth of 1)'
           : 'Cboe Strategy Benchmark Indices vs SPX (growth of 1)'
       ),
-      xaxis: plotlyAxis(''),
+      xaxis: plotlyAxis('', {
+        rangeslider: plotlyRangeslider({ thickness: 0.07, bgcolor: 'rgba(20,24,32,0.5)' }),
+      }),
       yaxis: plotlyAxis('Growth of $1'),
       margin: { t: isMobile ? 75 : 50, r: 30, b: 80, l: 70 },
-      height: 420,
+      height: 480,
+      // Override the base layout's dragmode:false so the rangeslider's
+      // brush/scrub interaction works.
+      dragmode: 'pan',
       showlegend: true,
       legend: { orientation: 'h', y: -0.18, x: 0.5, xanchor: 'center' },
     });
@@ -104,7 +110,7 @@ export default function VixStrategyOverlay({ data }) {
 
   return (
     <div className="card">
-      <div ref={ref} style={{ width: '100%', height: 420 }} />
+      <div ref={ref} style={{ width: '100%', height: 480 }} />
       {plotlyError && (
         <div style={{ padding: '1rem', color: 'var(--accent-coral)' }}>
           Chart failed to load: {plotlyError}

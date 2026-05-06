@@ -5,6 +5,7 @@ import {
   PLOTLY_COLORS,
   plotly2DChartLayout,
   plotlyAxis,
+  plotlyRangeslider,
   plotlyTitle,
 } from '../../lib/plotlyTheme';
 
@@ -140,7 +141,9 @@ export default function VixVrp({ data }) {
           ? 'VIX vs SPX<br>20-day Realized Vol'
           : 'VIX vs SPX 20-day Realized Vol'
       ),
-      xaxis: plotlyAxis(''),
+      xaxis: plotlyAxis('', {
+        rangeslider: plotlyRangeslider({ thickness: 0.07, bgcolor: 'rgba(20,24,32,0.5)' }),
+      }),
       yaxis: plotlyAxis('Vol (annualized %)', { side: 'left' }),
       yaxis2: plotlyAxis('SPX', {
         overlaying: 'y',
@@ -149,7 +152,10 @@ export default function VixVrp({ data }) {
         tickfont: { color: PLOTLY_COLORS.primary, family: "Calibri, 'Segoe UI', system-ui, sans-serif", size: 12 },
       }),
       margin: { t: isMobile ? 75 : 50, r: 70, b: 80, l: 70 },
-      height: 460,
+      height: 520,
+      // Override the base layout's dragmode:false so the rangeslider's
+      // brush/scrub interaction works.
+      dragmode: 'pan',
       showlegend: true,
       legend: {
         orientation: 'h',
@@ -174,7 +180,7 @@ export default function VixVrp({ data }) {
 
   return (
     <div className="card">
-      <div ref={ref} style={{ width: '100%', height: 460 }} />
+      <div ref={ref} style={{ width: '100%', height: 520 }} />
       {plotlyError && (
         <div style={{ padding: '1rem', color: 'var(--accent-coral)' }}>
           Chart failed to load: {plotlyError}

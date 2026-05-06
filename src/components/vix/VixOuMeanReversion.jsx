@@ -5,6 +5,7 @@ import {
   PLOTLY_COLORS,
   plotly2DChartLayout,
   plotlyAxis,
+  plotlyRangeslider,
   plotlyTitle,
 } from '../../lib/plotlyTheme';
 import { calibrateOU, ouExpectedLevel } from '../../lib/vix-models';
@@ -121,10 +122,15 @@ export default function VixOuMeanReversion({ data }) {
           ? 'Ornstein-Uhlenbeck<br>Mean Reversion'
           : 'Ornstein-Uhlenbeck Mean Reversion'
       ),
-      xaxis: plotlyAxis(''),
+      xaxis: plotlyAxis('', {
+        rangeslider: plotlyRangeslider({ thickness: 0.07, bgcolor: 'rgba(20,24,32,0.5)' }),
+      }),
       yaxis: plotlyAxis('VIX'),
       margin: { t: isMobile ? 75 : 50, r: 30, b: 80, l: 70 },
-      height: 380,
+      height: 440,
+      // Override the base layout's dragmode:false so the rangeslider's
+      // brush/scrub interaction works.
+      dragmode: 'pan',
       showlegend: true,
     });
 
@@ -192,7 +198,7 @@ export default function VixOuMeanReversion({ data }) {
           tone={tone}
         />
       </div>
-      <div ref={ref} style={{ width: '100%', height: 380 }} />
+      <div ref={ref} style={{ width: '100%', height: 440 }} />
       {plotlyError && (
         <div style={{ padding: '1rem', color: 'var(--accent-coral)' }}>
           Chart failed to load: {plotlyError}

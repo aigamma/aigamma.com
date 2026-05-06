@@ -5,6 +5,7 @@ import {
   PLOTLY_COLORS,
   plotly2DChartLayout,
   plotlyAxis,
+  plotlyRangeslider,
   plotlyTitle,
 } from '../../lib/plotlyTheme';
 import { rollingRealizedVol } from '../../lib/vix-models';
@@ -100,7 +101,9 @@ export default function VixVolOfVol({ data }) {
           ? 'Vol of Vol:<br>VVIX vs Realized VIX Vol'
           : 'Vol of Vol: VVIX vs Realized VIX Vol'
       ),
-      xaxis: plotlyAxis(''),
+      xaxis: plotlyAxis('', {
+        rangeslider: plotlyRangeslider({ thickness: 0.07, bgcolor: 'rgba(20,24,32,0.5)' }),
+      }),
       yaxis: plotlyAxis('Vol level', { side: 'left', domain: [0.30, 1] }),
       yaxis2: plotlyAxis('VVIX − Realized', {
         side: 'left',
@@ -110,7 +113,10 @@ export default function VixVolOfVol({ data }) {
       }),
       grid: { rows: 2, columns: 1, pattern: 'independent' },
       margin: { t: isMobile ? 75 : 50, r: 30, b: 80, l: 70 },
-      height: 460,
+      height: 520,
+      // Override the base layout's dragmode:false so the rangeslider's
+      // brush/scrub interaction works.
+      dragmode: 'pan',
       showlegend: true,
       legend: { orientation: 'h', y: -0.18, x: 0.5, xanchor: 'center' },
     });
@@ -130,7 +136,7 @@ export default function VixVolOfVol({ data }) {
 
   return (
     <div className="card">
-      <div ref={ref} style={{ width: '100%', height: 460 }} />
+      <div ref={ref} style={{ width: '100%', height: 520 }} />
       {plotlyError && (
         <div style={{ padding: '1rem', color: 'var(--accent-coral)' }}>
           Chart failed to load: {plotlyError}

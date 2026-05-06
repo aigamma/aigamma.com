@@ -5,6 +5,7 @@ import {
   PLOTLY_COLORS,
   plotly2DChartLayout,
   plotlyAxis,
+  plotlyRangeslider,
   plotlyTitle,
 } from '../../lib/plotlyTheme';
 import { termStructureRatioHistory } from '../../lib/vix-models';
@@ -102,10 +103,16 @@ export default function VixContangoHistory({ data }) {
           ? 'Term Structure<br>Contango / Backwardation'
           : 'Term Structure Contango / Backwardation'
       ),
-      xaxis: plotlyAxis(''),
+      xaxis: plotlyAxis('', {
+        rangeslider: plotlyRangeslider({ thickness: 0.07, bgcolor: 'rgba(20,24,32,0.5)' }),
+      }),
       yaxis: plotlyAxis('VIX3M / VIX'),
       margin: { t: isMobile ? 75 : 50, r: 30, b: 50, l: 70 },
-      height: 320,
+      height: 380,
+      // Override the base layout's dragmode:false so the rangeslider's
+      // brush/scrub interaction works. Without this, the slider thumb
+      // renders but cannot be dragged.
+      dragmode: 'pan',
       showlegend: false,
       annotations: [
         {
@@ -138,7 +145,7 @@ export default function VixContangoHistory({ data }) {
 
   return (
     <div className="card">
-      <div ref={ref} style={{ width: '100%', height: 320 }} />
+      <div ref={ref} style={{ width: '100%', height: 380 }} />
       {plotlyError && (
         <div style={{ padding: '1rem', color: 'var(--accent-coral)' }}>
           Chart failed to load: {plotlyError}

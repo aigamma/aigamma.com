@@ -5,6 +5,7 @@ import {
   PLOTLY_COLORS,
   plotly2DChartLayout,
   plotlyAxis,
+  plotlyRangeslider,
   plotlyTitle,
 } from '../../lib/plotlyTheme';
 
@@ -133,7 +134,9 @@ export default function VixSkewIndices({ data }) {
           ? 'Skew Indices:<br>Nations SDEX vs TailDex'
           : 'Skew Indices: Nations SDEX vs TailDex'
       ),
-      xaxis: plotlyAxis(''),
+      xaxis: plotlyAxis('', {
+        rangeslider: plotlyRangeslider({ thickness: 0.07, bgcolor: 'rgba(20,24,32,0.5)' }),
+      }),
       yaxis: plotlyAxis('SDEX', { side: 'left' }),
       yaxis2: plotlyAxis('TDEX', {
         overlaying: 'y',
@@ -142,7 +145,10 @@ export default function VixSkewIndices({ data }) {
         tickfont: { color: PLOTLY_COLORS.highlight, family: "Calibri, 'Segoe UI', system-ui, sans-serif", size: 12 },
       }),
       margin: { t: isMobile ? 75 : 50, r: 70, b: 80, l: 70 },
-      height: 380,
+      height: 440,
+      // Override the base layout's dragmode:false so the rangeslider's
+      // brush/scrub interaction works.
+      dragmode: 'pan',
       showlegend: true,
       legend: { orientation: 'h', y: -0.18, x: 0.5, xanchor: 'center' },
     });
@@ -162,7 +168,7 @@ export default function VixSkewIndices({ data }) {
 
   return (
     <div className="card">
-      <div ref={ref} style={{ width: '100%', height: 380 }} />
+      <div ref={ref} style={{ width: '100%', height: 440 }} />
       {plotlyError && (
         <div style={{ padding: '1rem', color: 'var(--accent-coral)' }}>
           Chart failed to load: {plotlyError}

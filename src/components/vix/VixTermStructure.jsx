@@ -116,15 +116,36 @@ export default function VixTermStructure({ data }) {
         x: curves.today.map((p) => p.dte),
         y: curves.today.map((p) => p.close),
         text: curves.today.map((p) => p.symbol),
-        mode: 'lines+markers+text',
-        textposition: 'top center',
-        textfont: { ...PLOTLY_FONTS.axisTick, color: PLOTLY_COLORS.titleText },
+        mode: 'lines+markers',
         name: `Today (${data.asOf || ''})`,
         line: { color: PLOTLY_COLORS.primarySoft, width: 2.5 },
         marker: { color: PLOTLY_COLORS.primarySoft, size: 10 },
         hovertemplate: '%{text}<br>%{y:.2f}<extra>today</extra>',
       },
     ];
+
+    // Per-point ticker labels for the "today" curve, drawn as annotations
+    // rather than via Plotly's `mode: '...+text'` so we can paint a solid
+    // bg-card-colored fill behind each label. The "Median (3y)" trace
+    // below the curves uses dash:'dot' which would otherwise show through
+    // the bare text glyphs at the points where the today curve crosses or
+    // sits close to the median, making "VIX3M" / "VIX6M" / "VIX1Y"
+    // unreadable. Annotations support bgcolor / borderpad and Plotly draws
+    // them in the annotation layer above all traces so the fill cleanly
+    // masks the dotted line behind. yshift: 14 lifts the box just above
+    // the 10px marker.
+    const todayAnnotations = curves.today.map((p) => ({
+      x: Math.log10(p.dte),
+      y: p.close,
+      xref: 'x',
+      yref: 'y',
+      text: p.symbol,
+      showarrow: false,
+      yshift: 14,
+      bgcolor: PLOTLY_COLORS.plot,
+      borderpad: 2,
+      font: { ...PLOTLY_FONTS.axisTick, color: PLOTLY_COLORS.titleText },
+    }));
 
     const layout = plotly2DChartLayout({
       title: plotlyTitle('VIX Term Structure'),
@@ -138,6 +159,7 @@ export default function VixTermStructure({ data }) {
       legend: { ...PLOTLY_BASE_LAYOUT_2D.legend, y: legendY },
       height: containerHeight,
       showlegend: true,
+      annotations: todayAnnotations,
     });
 
     plotly.newPlot(ref.current, traces, layout, {
