@@ -266,7 +266,7 @@ export default async function handler(request) {
         'computed_levels'
       ),
       fetchWithTimeout(
-        `${supabaseUrl}/rest/v1/expiration_metrics?run_id=eq.${run.id}&order=expiration_date.asc&select=expiration_date,atm_iv,put_25d_iv,call_25d_iv`,
+        `${supabaseUrl}/rest/v1/expiration_metrics?run_id=eq.${run.id}&order=expiration_date.asc&select=expiration_date,atm_iv,put_25d_iv,call_25d_iv,avg_chain_spread_pct,atm_spread_pct,wing_spread_pct,liquidity_score`,
         { headers },
         'expiration_metrics'
       ),
@@ -555,6 +555,16 @@ export default async function handler(request) {
       atm_iv: toNum(m.atm_iv),
       put_25d_iv: toNum(m.put_25d_iv),
       call_25d_iv: toNum(m.call_25d_iv),
+      // Per-expiration spread aggregates from the post-2026-05-06 schema
+      // additions on expiration_metrics. Stay null on every expiration
+      // until the Massive Options Developer entitlement finishes
+      // propagating /v3/quotes; auto-populate from the next ingest after
+      // that. Wire shape is a strict superset; older client builds that
+      // do not read these fields just ignore them.
+      avg_chain_spread_pct: toNum(m.avg_chain_spread_pct),
+      atm_spread_pct: toNum(m.atm_spread_pct),
+      wing_spread_pct: toNum(m.wing_spread_pct),
+      liquidity_score: toNum(m.liquidity_score),
     }));
 
     // Bands are DTE-keyed on the wire. Trading-date → expiration-date
