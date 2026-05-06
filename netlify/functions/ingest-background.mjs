@@ -548,9 +548,60 @@ function computeGex(pages, targets, startedAt, partial, partialReason = null) {
     // 25-delta risk reversal (call - put). Negative = put-side richer than
     // call-side (typical equity-index skew), positive = call-skew. Cheap to
     // persist now that both legs are already computed, even though no live
-    // reader surfaces it yet — removes a null trap for any future consumer.
+    // reader surfaces it yet -- removes a null trap for any future consumer.
     const skew25dRr =
       put25dIv != null && call25dIv != null ? call25dIv - put25dIv : null;
+
+    // Per-expiration spread aggregates. Computed from per-strike bid/ask
+    // when both legs are quoted; aggregate-only by design so the per-strike
+    // bid/ask never needs to render publicly. avgChainSpread averages
+    // (ask - bid) / mid across every contract at this expiration that
+    // carries both a bid and an ask. atmSpread uses the same metric but
+    // restricted to atmContract. wingSpread averages the metric on the
+    // 25-delta call and the 25-delta put. liquidityScore is a single 0-100
+    // scalar combining the three: a 0 means at least one of the metrics
+    // is unavailable; a 100 means ATM and wings both quote within ~0.5%
+    // of mid and the chain-wide average is also tight. Until /v3/quotes
+    // entitlement propagates these all evaluate to null because the
+    // bid_price / ask_price fields stay null on every contract; the
+    // moment quotes flip the columns auto-populate from the next ingest.
+    const spreadPct = (c) => {
+      if (!(c?.bid_price > 0) || !(c?.ask_price > 0)) return null;
+      const mid = (c.bid_price + c.ask_price) / 2;
+      if (!(mid > 0)) return null;
+      return (c.ask_price - c.bid_price) / mid;
+    };
+    const chainSpreads = expContracts.map(spreadPct).filter((v) => v != null);
+    const avgChainSpreadPct =
+      chainSpreads.length > 0
+        ? chainSpreads.reduce((s, v) => s + v, 0) / chainSpreads.length
+        : null;
+    const atmSpreadPct = atmContract ? spreadPct(atmContract) : null;
+    const wingSpreadEntries = [spreadPct(call25d), spreadPct(put25d)].filter(
+      (v) => v != null
+    );
+    const wingSpreadPct =
+      wingSpreadEntries.length > 0
+        ? wingSpreadEntries.reduce((s, v) => s + v, 0) / wingSpreadEntries.length
+        : null;
+    // liquidityScore: tighter spread = higher score. Reference points:
+    // 0.5% spread (very tight, deep ATM SPX) -> ~95; 2% spread (typical
+    // ATM during off-hours) -> ~80; 5% spread (illiquid wing) -> ~50;
+    // 10% spread (deep OTM thin quote) -> ~30; >20% -> approaches 0.
+    // Formula: score = 100 * exp(-spread / 0.05) clamped to [0, 100].
+    // Combines the three measurements with weights 0.5 ATM, 0.3 wings,
+    // 0.2 chain-average to reflect the surface caring about ATM the
+    // most (it is what every term-structure read leans on), wings
+    // second (the smile and skew surfaces care here), chain-wide last.
+    const scoreOne = (s) =>
+      s == null ? null : Math.max(0, Math.min(100, 100 * Math.exp(-s / 0.05)));
+    const sAtm = scoreOne(atmSpreadPct);
+    const sWing = scoreOne(wingSpreadPct);
+    const sChain = scoreOne(avgChainSpreadPct);
+    const liquidityScore =
+      sAtm != null && sWing != null && sChain != null
+        ? 0.5 * sAtm + 0.3 * sWing + 0.2 * sChain
+        : null;
 
     expirationMetrics.push({
       expiration_date: exp,
@@ -560,6 +611,10 @@ function computeGex(pages, targets, startedAt, partial, partialReason = null) {
       call_25d_iv: call25dIv,
       skew_25d_rr: skew25dRr,
       contract_count: expContracts.length,
+      avg_chain_spread_pct: avgChainSpreadPct,
+      atm_spread_pct: atmSpreadPct,
+      wing_spread_pct: wingSpreadPct,
+      liquidity_score: liquidityScore,
     });
   }
 
