@@ -650,6 +650,67 @@ export default function SlotA() {
     };
   }, [data, activeExp, slice, sliceContracts, T]);
 
+  // Plot grid for the dense overlay curves. Recomputed only when the slice
+  // bounds change (i.e. on a new expiration or a fresh data refresh that
+  // moves K_lo / K_hi); cached otherwise so toggling overlays on or off
+  // doesn't rebuild it.
+  const gridK = useMemo(() => {
+    if (slice.length === 0) return null;
+    const strikes = slice.map((r) => r.strike);
+    const K_lo = Math.min(...strikes);
+    const K_hi = Math.max(...strikes);
+    const nGrid = 80;
+    const out = new Array(nGrid);
+    for (let i = 0; i < nGrid; i++) {
+      out[i] = K_lo + (i / (nGrid - 1)) * (K_hi - K_lo);
+    }
+    return out;
+  }, [slice]);
+
+  // Per-overlay grids gated on the visible flag for that overlay. Each memo
+  // returns null when the overlay is hidden or the prerequisite inputs are
+  // missing, so toggling Merton on does not invalidate the cached Heston
+  // grid (and vice versa). The first toggle of a hidden overlay pays the
+  // grid build at click time, but with the precompute-once-per-parameter-set
+  // shape from the prior commit each grid is single-digit milliseconds on
+  // desktop — well below the threshold a user can perceive on a click.
+  const gridHeston = useMemo(() => {
+    if (!visible.heston || !fits || !gridK || !T || !data?.spotPrice) return null;
+    const hestonGrid = precomputeHestonCfGrid(
+      fits.heston.params,
+      data.spotPrice,
+      T,
+      RATE_R,
+      RATE_Q
+    );
+    return gridK.map((K) => {
+      const c = hestonCallFromCfGrid(hestonGrid, data.spotPrice, K, T, RATE_R, RATE_Q);
+      const iv = bsmIv(c, data.spotPrice, K, T, RATE_R, RATE_Q);
+      return iv != null ? iv * 100 : null;
+    });
+  }, [visible.heston, fits, gridK, T, data]);
+
+  const gridMerton = useMemo(() => {
+    if (!visible.merton || !fits || !gridK || !T || !data?.spotPrice) return null;
+    return gridK.map((K) => {
+      const c = mertonCall(fits.merton.params, data.spotPrice, K, T, RATE_R, RATE_Q);
+      const iv = bsmIv(c, data.spotPrice, K, T, RATE_R, RATE_Q);
+      return iv != null ? iv * 100 : null;
+    });
+  }, [visible.merton, fits, gridK, T, data]);
+
+  const gridSvi = useMemo(() => {
+    if (!visible.svi || !fits?.svi || !gridK || !data?.spotPrice) return null;
+    const Tsvi = fits.svi.T;
+    if (!(Tsvi > 0)) return null;
+    return gridK.map((K) => {
+      const k = Math.log(K / data.spotPrice);
+      const w = sviTotalVariance(fits.svi.params, k);
+      if (!(w > 0)) return null;
+      return Math.sqrt(w / Tsvi) * 100;
+    });
+  }, [visible.svi, fits, gridK, data]);
+
   useEffect(() => {
     if (!Plotly || !chartRef.current || slice.length === 0 || !T || !data?.spotPrice)
       return;
@@ -659,52 +720,11 @@ export default function SlotA() {
     const K_lo = Math.min(...strikes);
     const K_hi = Math.max(...strikes);
 
-    let gridK = null;
-    let gridHeston = null;
-    let gridMerton = null;
-    let gridSvi = null;
-    if (fits) {
-      const nGrid = 80;
-      gridK = new Array(nGrid);
-      for (let i = 0; i < nGrid; i++) {
-        gridK[i] = K_lo + (i / (nGrid - 1)) * (K_hi - K_lo);
-      }
-      // Build the Heston CF table once for the calibrated parameter set, then
-      // sum it against e^{-iu·log(K)} for each grid strike. Same shape as the
-      // calibration objective.
-      const hestonGrid = precomputeHestonCfGrid(
-        fits.heston.params,
-        data.spotPrice,
-        T,
-        RATE_R,
-        RATE_Q
-      );
-      gridHeston = gridK.map((K) => {
-        const c = hestonCallFromCfGrid(hestonGrid, data.spotPrice, K, T, RATE_R, RATE_Q);
-        const iv = bsmIv(c, data.spotPrice, K, T, RATE_R, RATE_Q);
-        return iv != null ? iv * 100 : null;
-      });
-      gridMerton = gridK.map((K) => {
-        const c = mertonCall(fits.merton.params, data.spotPrice, K, T, RATE_R, RATE_Q);
-        const iv = bsmIv(c, data.spotPrice, K, T, RATE_R, RATE_Q);
-        return iv != null ? iv * 100 : null;
-      });
-      gridSvi = fits.svi
-        ? gridK.map((K) => {
-            const k = Math.log(K / data.spotPrice);
-            const w = sviTotalVariance(fits.svi.params, k);
-            const Tsvi = fits.svi.T;
-            if (!(w > 0) || !(Tsvi > 0)) return null;
-            return Math.sqrt(w / Tsvi) * 100;
-          })
-        : gridK.map(() => null);
-    }
-
     const allIv = [
       ...ivs,
-      ...(fits && visible.heston ? gridHeston.filter((v) => v != null) : []),
-      ...(fits && visible.merton ? gridMerton.filter((v) => v != null) : []),
-      ...(fits && visible.svi ? gridSvi.filter((v) => v != null) : []),
+      ...(gridHeston ? gridHeston.filter((v) => v != null) : []),
+      ...(gridMerton ? gridMerton.filter((v) => v != null) : []),
+      ...(gridSvi ? gridSvi.filter((v) => v != null) : []),
     ];
     const yMin = Math.min(...allIv);
     const yMax = Math.max(...allIv);
@@ -727,7 +747,7 @@ export default function SlotA() {
         hovertemplate:
           'K %{x}<br>σ %{y:.2f}%<br>Δ %{customdata[0]}<extra></extra>',
       },
-      ...(fits && visible.heston
+      ...(gridHeston
         ? [
             {
               x: gridK,
@@ -740,7 +760,7 @@ export default function SlotA() {
             },
           ]
         : []),
-      ...(fits && visible.merton
+      ...(gridMerton
         ? [
             {
               x: gridK,
@@ -753,7 +773,7 @@ export default function SlotA() {
             },
           ]
         : []),
-      ...(fits && visible.svi
+      ...(gridSvi
         ? [
             {
               x: gridK,
@@ -810,7 +830,7 @@ export default function SlotA() {
       responsive: true,
       displayModeBar: false,
     });
-  }, [Plotly, fits, slice, T, data, mobile, visible]);
+  }, [Plotly, gridK, gridHeston, gridMerton, gridSvi, slice, T, data, mobile]);
 
   if (loading && !data) {
     return (
