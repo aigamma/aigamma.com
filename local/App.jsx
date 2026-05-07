@@ -101,7 +101,7 @@ function prefetchBelowFoldChunks() {
 // consistent views of one point-in-time SPX chain. Unlike the other
 // bookmark-only labs, this page now carries active egress back to
 // the main dashboard at three redundant affordances, matching the
-// /parity/ and /jump/ pattern: the logo in the header is a hyperlink
+// /jump/ pattern: the logo in the header is a hyperlink
 // to `/`, a filled green RETURN HOME button sits in the header
 // itself between the Local Vol Lab brand on the left and the Menu
 // trigger on the right (centered horizontally on the same row as

@@ -68,6 +68,23 @@
   status = 301
   force = true
 
+# Permanent redirect from the retired /parity/ lab to /. The page was
+# deleted on 2026-05-07 because the put-call-parity box-spread r solver
+# requires synchronous mid-of-NBBO marks, and Massive does not sell
+# delayed options quotes at any tier compatible with public-website
+# redistribution (Quotes-tier is live-only, regulatorily blocked for
+# OPRA redistribution to non-pro subscribers on a public site).
+# External bookmarks and search results land on the homepage instead
+# of 404-ing, with the navigation visible so the reader can route to
+# whichever current lab interests them. Status 301 (permanent) tells
+# search engines and aggressive caches to update their indices to /.
+# Keep this entry indefinitely; there is no successor surface.
+[[redirects]]
+  from = "/parity/*"
+  to = "/"
+  status = 301
+  force = true
+
 # Specific /api/snapshot.json redirect MUST come before the /api/* wildcard —
 # otherwise the wildcard expands :splat to `snapshot.json` and Netlify looks
 # for a function literally named `snapshot.json` (which doesn't exist). The

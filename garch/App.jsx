@@ -41,8 +41,8 @@ function prefetchChatChunk() {
 // the freed space was redirected into a taller main chart.
 //
 // This page carries active egress back to the main dashboard at three
-// redundant affordances, matching the /parity/ and /jump/ pattern: the
-// logo in the header is a hyperlink to `/`, a filled green RETURN HOME
+// redundant affordances, matching the /jump/ pattern: the logo in the
+// header is a hyperlink to `/`, a filled green RETURN HOME
 // button sits in the header itself between the GARCH LAB brand on the
 // left and the Menu trigger on the right — centered horizontally
 // on the same row as the other nav items via the header's flex

@@ -44,10 +44,7 @@ import { MOBILE_TOOLS, MOBILE_RESEARCH } from '../data/pages.js';
 // surfaces from the desktop Menu (/stocks/, /heatmap/, /expiring-gamma/).
 // The RESEARCH dropdown contains the eight calibrated-model research
 // zoos (/discrete/, /garch/, /jump/, /local/, /regime/, /risk/, /rough/,
-// /smile/) plus /parity/ — the put-call parity / box-spread / implied-
-// forward surface that lives under research on mobile because it documents
-// a no-arbitrage identity rather than carrying an operational dashboard
-// read like the other Tools entries. The dropdown then closes with an
+// /smile/). The dropdown then closes with an
 // "About This Page" off-site exit followed by the on-site /disclaimer/
 // link, both pinned to the bottom — the About entry mirrors the bottom-
 // of-Menu About entry on desktop, and the /disclaimer/ entry mirrors the

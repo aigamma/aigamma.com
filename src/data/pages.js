@@ -153,13 +153,6 @@ export const PAGES = {
     menu: { section: 'research', desc: 'Dupire extraction, local vol pricing, slice viewer, forward-smile pathology' },
     mobile_desc: 'Dupire extraction, pricing, slices, forward-smile pathology',
   },
-  '/parity/': {
-    vite: 'parity',
-    html: 'parity/index.html',
-    title: 'Parity',
-    chat: { surface: 'parity', prompt: 'netlify/functions/prompts/parity.mjs' },
-    menu: { section: 'research', desc: 'Put-call parity, box-spread rate, implied forward' },
-  },
   '/regime/': {
     vite: 'regime',
     html: 'regime/index.html',

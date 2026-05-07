@@ -78,8 +78,8 @@ function lazyChunkPreloadPlugin() {
 // bookmark-only four-slot jump-process lab at `jump/index.html`
 // (served at `/jump/`), and the bookmark-only six-slot discrete and
 // parametric lab at `discrete/index.html` (served at `/discrete/`),
-// and the two-slot put-call-parity lab at `parity/index.html`
-// (served at `/parity/`).
+// (the /parity lab that previously sat at `parity/index.html` was
+// retired on 2026-05-07 and the URL 301-redirects to /).
 // The dev lab is a peer
 // scratch pad to /alpha — same pre-β release stage, independent
 // concept. The garch lab is a dedicated family-zoo surface for the
@@ -123,25 +123,16 @@ function lazyChunkPreloadPlugin() {
 // (Cox-Ross-Rubinstein binomial tree, Kamrad-Ritchken trinomial tree)
 // against the four-parameterization SVI family (raw, natural, JW, SSVI)
 // so the reader can compare what a state-space pricer and a parametric
-// surface smoother each produce from the same live chain. The parity
-// lab is the staging home for the put-call-parity study that
-// originated in /alpha as a Discord-prompted prototype: a v4
-// composite of box-spread r vs direct-PCP r at q = 0 stacked over the
-// PCP-recovered SPX forward, paired with the v1 box-spread baseline.
-// The parity entry is linked from the Menu as the tail item — it is
-// a measurement surface (no-arbitrage diagnostic that reads r, q, and
-// F off the chain with no pricer on top), not a trading strategy
-// (box spreads are not the desk's focus), so it sits at the bottom
-// of the sequence rather than the top. The page currently produces
-// implausible live-chain readings (median r ≈ −222%, nearest ≈ −87%)
-// and carries an in-page calibration warning while box construction,
-// mark quality, sign / unit conventions, and dividend treatment are
-// being audited; see parity/App.jsx for the five-candidate diagnostic
-// checklist. Nothing in the built output
-// links the thirteen together. See beta/App.jsx, alpha/App.jsx,
+// surface smoother each produce from the same live chain. The /parity
+// lab existed briefly as a put-call-parity study originated in /alpha,
+// but was retired on 2026-05-07 once it became clear that synchronous
+// mid-of-NBBO marks (the data the box-spread r solver requires) are
+// not buyable on Massive at any tier compatible with public-website
+// redistribution; the URL 301-redirects to /. Nothing in the built
+// output links the labs together. See beta/App.jsx, alpha/App.jsx,
 // dev/App.jsx, garch/App.jsx, regime/App.jsx, rough/App.jsx,
-// stochastic/App.jsx, local/App.jsx, risk/App.jsx, jump/App.jsx,
-// discrete/App.jsx, and parity/App.jsx for the rationale.
+// local/App.jsx, risk/App.jsx, jump/App.jsx, and discrete/App.jsx for
+// the rationale.
 export default defineConfig({
   plugins: [react(), lazyChunkPreloadPlugin()],
   server: {

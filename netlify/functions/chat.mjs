@@ -60,7 +60,6 @@ import localPrompt from './prompts/local.mjs';
 import jumpPrompt from './prompts/jump.mjs';
 import riskPrompt from './prompts/risk.mjs';
 import discretePrompt from './prompts/discrete.mjs';
-import parityPrompt from './prompts/parity.mjs';
 import tacticalPrompt from './prompts/tactical.mjs';
 
 import { CORE_PERSONA } from './prompts/core_persona.mjs';
@@ -100,7 +99,6 @@ const SYSTEM_PROMPTS = {
   jump: jumpPrompt,
   risk: riskPrompt,
   discrete: discretePrompt,
-  parity: parityPrompt,
   tactical: tacticalPrompt,
 };
 

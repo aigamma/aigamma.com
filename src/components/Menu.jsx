@@ -30,14 +30,10 @@ import { MENU_TOOLS, MENU_RESEARCH, MENU_ABOUT } from '../data/pages.js';
 // (sector-weighted overview) and /expiring-gamma/ (dated catalyst).
 // The earlier alphabetized order put /expiring-gamma/ at the top,
 // which understated the centrality of the single-names and sector
-// views to the daily read. /parity/ was previously listed as a
-// fourth Tools entry but moved into the Research section because
-// it documents a no-arbitrage identity (put-call parity, the box-
-// spread funding rate, the implied dividend-adjusted forward) rather
-// than carrying an operational dashboard read like the other Tools
-// pages, so it sits more naturally next to the calibrated-model
-// research zoos. Its alphabetical-by-href slot in Research lands
-// between /local/ and /regime/.
+// views to the daily read. The /parity lab that previously sat in
+// Research between /local/ and /regime/ was retired on 2026-05-07
+// and the URL 301-redirects to /; the section now collapses to the
+// nine remaining research zoos.
 //
 // Six lab pages — /tactical/, /earnings/, /scan/, /rotations/,
 // /vix/, /seasonality/ — live in the TopNav component (see

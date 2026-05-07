@@ -9,8 +9,10 @@ import SlotB, { slotName as slotBName } from './slots/SlotB';
 // Dev — two-slot scratch pad, a peer to the alpha lab at /alpha. Same
 // pre-β release stage, independent concept. Keeping two sibling surfaces
 // alive at once — /alpha and /dev — buys the platform room to carry a
-// stable visible example (the Discord-seeded put-call-parity card on
-// /alpha) without freezing a second, earlier-stage idea out of the
+// stable visible example (formerly the Discord-seeded put-call-parity
+// surface on /alpha; that lab was retired alongside the standalone
+// /parity page on 2026-05-07) without freezing a second, earlier-stage
+// idea out of the
 // scratch-pad tier. The second slot inside each surface exists so an
 // incremental change can be tested in one slot while the baseline stays
 // untouched in the other — SlotA and SlotB start byte-identical and

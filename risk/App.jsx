@@ -74,8 +74,8 @@ function prefetchBelowFoldChunks() {
 // Greeks, deltas, and smile reconstructions describe one point-in-time
 // chain. Unlike the bookmark-only lab surfaces, this page carries
 // active egress back to the main dashboard at three redundant
-// affordances, matching the /parity/, /jump/, /garch/, /regime/, and
-// /smile/ pattern: the logo in the header is a hyperlink to `/`,
+// affordances, matching the /jump/, /garch/, /regime/, and /smile/
+// pattern: the logo in the header is a hyperlink to `/`,
 // a filled green RETURN HOME button sits in the header itself between
 // the Risk Lab brand on the left and the Menu trigger on the
 // right — centered horizontally as the midpoint of the other two nav

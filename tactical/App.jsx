@@ -105,8 +105,8 @@ function prefetchBelowFoldChunks() {
 // Merton Poisson-weighted simplex + SVI Levenberg-Marquardt all on the
 // same slice) off the tactical critical path entirely.
 //
-// Three redundant Return-Home affordances follow the /parity/ and /jump/
-// pattern: the logo wraps a hyperlink to `/`, a green RETURN HOME button
+// Three redundant Return-Home affordances follow the /jump/ pattern:
+// the logo wraps a hyperlink to `/`, a green RETURN HOME button
 // sits in the header alongside the Menu trigger, and the footer carries a
 // bolded link for readers who scroll past the Chat panel.
 export default function App() {

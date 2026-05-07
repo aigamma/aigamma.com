@@ -12,8 +12,6 @@ Events and earnings calendars. The earnings page at aigamma.com/earnings hosts t
 
 Expiring gamma diagnostics. The expiring-gamma page at aigamma.com/expiring-gamma hosts the per-expiration dealer dollar-gamma roll-off chart with calls and puts mirrored, frozen-book unwind framing, and the standard dealer-hedging unit of dollars per one percent move.
 
-Parity and chain integrity. The parity page at aigamma.com/parity hosts the put-call parity box-spread implied rate term structure, the box-versus-direct rate comparison with PCP-recovered forward term structure, and chain-integrity diagnostics. Currently in calibration with median rates printing outside expected risk-free range.
-
 Discrete pricing and parametric smile fits. The discrete page at aigamma.com/discrete hosts CRR binomial trees with European and American exercise, Boyle-Kamrad-Ritchken trinomial trees with stretch parameter lambda equals root-three, and convergence diagnostics against the Black-Scholes reference. Also hosts SVI in raw, natural, and Jump-Wings parameterizations with Levenberg-Marquardt calibration and Durrleman g(k) butterfly arbitrage diagnostics, plus SSVI joint surface fitting with calendar-arbitrage guarantees and per-tenor RMSE comparison against raw SVI.
 
 GARCH ensemble. The garch page at aigamma.com/garch hosts a 17-specification GARCH ensemble across ten model families covering symmetric, asymmetric, power, absolute, component, in-mean, score-driven, long-memory, regime-switching, and realized variants, with conditional sigma paths and 30-day forward forecasting.
