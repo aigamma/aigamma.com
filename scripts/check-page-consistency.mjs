@@ -27,7 +27,12 @@ const REPO_ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..
 
 // Modules in netlify/functions/prompts/ that are shared bits of every
 // system prompt rather than per-page surfaces.
-const SHARED_PROMPT_MODULES = new Set(['core_persona.mjs', 'behavior.mjs', 'site_nav.mjs']);
+const SHARED_PROMPT_MODULES = new Set([
+  'core_persona.mjs',
+  'behavior.mjs',
+  'site_nav.mjs',
+  'scope_blocks.mjs',
+]);
 
 async function read(rel) {
   return readFile(path.join(REPO_ROOT, rel), 'utf8');

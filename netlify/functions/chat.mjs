@@ -66,6 +66,7 @@ import tacticalPrompt from './prompts/tactical.mjs';
 import { CORE_PERSONA } from './prompts/core_persona.mjs';
 import { BEHAVIORAL_CONSTRAINTS } from './prompts/behavior.mjs';
 import { SITE_NAVIGATION_CONTEXT } from './prompts/site_nav.mjs';
+import { STRICT_SCOPE_DISCIPLINE, SITE_LEVEL_QUESTION_HANDLING, SITE_INDEX_FAILSAFE } from './prompts/scope_blocks.mjs';
 
 // Runtime site index, loaded once at module init. The file is the
 // authoritative reference for what pages exist on aigamma.com, organized by
@@ -442,18 +443,25 @@ export default async (req) => {
   // shape is stable even if the RAG corpus is partially deindexed during a
   // re-ingestion cycle.
   const rawTemplate = SYSTEM_PROMPTS[surface] || SYSTEM_PROMPTS.main;
+  // The site-index block uses the runtime-loaded src/data/site-index.txt
+  // when available (preferred), and falls back to the SITE_INDEX_FAILSAFE
+  // constant from prompts/scope_blocks.mjs when the runtime load fails
+  // (cold-start ENOENT, missing [functions.chat] included_files entry in
+  // netlify.toml, etc.). The fallback string lives in one place rather
+  // than being duplicated in every per-page prompt — a Phase D change
+  // that turned the page-list maintenance tax from 11 copies to 1.
   const siteIndexBlock = SITE_INDEX_CONTENT
     ? '[SITE INDEX]\n\n' + SITE_INDEX_CONTENT.trim()
-    : null;
+    : SITE_INDEX_FAILSAFE;
   const promptParts = [
     CORE_PERSONA,
     SITE_NAVIGATION_CONTEXT,
+    siteIndexBlock,
+    rawTemplate,
+    STRICT_SCOPE_DISCIPLINE,
+    SITE_LEVEL_QUESTION_HANDLING,
+    BEHAVIORAL_CONSTRAINTS,
   ];
-  if (siteIndexBlock) {
-    promptParts.push(siteIndexBlock);
-  }
-  promptParts.push(rawTemplate);
-  promptParts.push(BEHAVIORAL_CONSTRAINTS);
   if (retrievedContextBlock) {
     promptParts.push(retrievedContextBlock);
   }
