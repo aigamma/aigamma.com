@@ -166,7 +166,7 @@ export default function App() {
             context="local"
             welcome={{
               quick:
-                'Ask about Dupire local volatility, the four slots above, or how pure LV relates to stochastic vol, LSV, rough vol, and the rest of the model lineage.',
+                'Ask about Dupire local volatility, the four models above, or how pure LV relates to stochastic vol, LSV, rough vol, and the rest of the model lineage.',
               deep:
                 'Deep Analysis mode: longer and more structurally detailed responses on Dupire\'s formula, Gyöngy\'s mimicking theorem, the forward-smile flattening pathology, and the philosophy of a deterministic-diffusion coefficient calibrated to today\'s smile.',
             }}

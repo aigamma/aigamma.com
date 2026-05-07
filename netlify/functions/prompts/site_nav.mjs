@@ -10,7 +10,7 @@ Together, the site consists of a main dashboard and 14 distinct mathematical lab
 AVAILABLE ROUTES:
 
 TOP NAV (promoted; visible as direct buttons in every page header):
-- Tactical Vol (/tactical/): Four tactical-positioning surfaces: Volatility Risk Premium, Term Structure, Risk-Neutral Density (Breeden-Litzenberger), and the Fixed-Strike IV Matrix. The multi-model Volatility Smile card (Heston / Merton / SVI raw concurrent fits) was migrated off this page on 2026-05-06 and now anchors its own /smile/ lab.
+- Tactical Vol (/tactical/): Four tactical-positioning surfaces: Volatility Risk Premium, Term Structure, Risk-Neutral Density (Breeden-Litzenberger), and the Fixed-Strike IV Matrix. The multi-model Volatility Smile model (Heston / Merton / SVI raw concurrent fits) was migrated off this page on 2026-05-06 and now anchors its own /smile/ lab.
 - Earnings (/earnings/): Earnings calendar by implied move and date.
 - Scan (/scan/): Call and put 25Δ skew vs ATM IV scanner across the options-volume roster.
 - Rotations (/rotations/): Relative sector rotation chart with the SPDR sector ETFs and three theme ETFs placed on a (rotation-ratio, rotation-momentum) plane with trailing tails, plus three horizontal sector-performance bar charts (1D, 1W, 1M) below.
@@ -24,12 +24,12 @@ MENU DROPDOWN (the remaining labs; opens from the MENU trigger):
 - GARCH (/garch/): Univariate and multivariate GARCH family and ensemble forecasts.
 - Heatmap (/heatmap/): Equal-size top-250-by-options-volume heatmap of US single names, organized by sector.
 - Jump Processes (/jump/): Merton, Kou, Bates, and variance gamma.
-- Local Volatility (/local/): Dupire extraction, Monte Carlo pricing self-check, smile/term-structure slice navigation, forward-smile pathology, and the whole-surface Dupire local-volatility heatmap as the closing card.
+- Local Volatility (/local/): Dupire extraction, Monte Carlo pricing self-check, smile/term-structure slice navigation, forward-smile pathology, and the whole-surface Dupire local-volatility heatmap as the closing model.
 - Put-Call Parity (/parity/): Put-call parity, box-spread rates, and implied forwards.
 - Regimes (/regime/): Mixture Lognormal, Markov Regime Switching, and Wasserstein K-Means regimes.
 - Risk (/risk/): Cross-model Greeks, Vanna-Volga, and second-order risk.
 - Rough Volatility (/rough/): Rough Bergomi Monte Carlo simulator, rough-Bergomi skew term-structure scaling-law fit on today's SVI surface, RFSV Hurst-signature structure-function diagnostic, and three-estimator Hurst triangulation across variogram, absolute moments, and DFA.
-- Volatility Smile (/smile/): Multi-model Volatility Smile reading surface — Heston with CIR variance, Merton diffusion-plus-jumps, and SVI raw concurrent fits on one expiration slice with reader-toggle visibility (Heston enabled by default) — as the single card on the page. Promoted to its own page on 2026-05-06 after migrating from /tactical/ via a brief pairing with Hagan SABR on the now-retired /stochastic/ page; SABR was dropped at the promotion because its Hagan-asymptotic Plotly mount inherited the same latency profile the original migration off /tactical/ was supposed to cure, and the residual it earned over the multi-model fit did not justify the cost. The /stochastic/ URL 301-redirects to /smile/ for any external bookmarks.
+- Volatility Smile (/smile/): Multi-model Volatility Smile reading surface — Heston with CIR variance, Merton diffusion-plus-jumps, and SVI raw concurrent fits on one expiration slice with reader-toggle visibility (Heston enabled by default) — as the single model on the page. Promoted to its own page on 2026-05-06 after migrating from /tactical/ via a brief pairing with Hagan SABR on the now-retired /stochastic/ page; SABR was dropped at the promotion because its Hagan-asymptotic Plotly mount inherited the same latency profile the original migration off /tactical/ was supposed to cure, and the residual it earned over the multi-model fit did not justify the cost. The /stochastic/ URL 301-redirects to /smile/ for any external bookmarks.
 - About This Page (https://about.aigamma.com/): Pinned to the bottom of the Menu as the off-site exit.
 - Experimental Sandboxes (/alpha/, /beta/, /dev/): Pre-production testing labs for evaluating unreleased quantitative models. Reached by typing the URL or loading a bookmark; not currently linked from the Menu list.
 

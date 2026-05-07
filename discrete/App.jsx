@@ -213,7 +213,7 @@ export default function App() {
             context="discrete"
             welcome={{
               quick:
-                'Ask about the six slots above, how discrete pricing engines (binomial, trinomial) relate to parametric surfaces (SVI raw, natural, JW, SSVI), or how the two schools work together on a production vol surface.',
+                'Ask about the six models above, how discrete pricing engines (binomial, trinomial) relate to parametric surfaces (SVI raw, natural, JW, SSVI), or how the two schools work together on a production vol surface.',
               deep:
                 'Deep Analysis mode: longer and more structurally detailed responses on tree convergence, SVI reparameterizations, SSVI arbitrage-freedom conditions, and the philosophy of treating every implied-vol number as the output of a model fit.',
             }}

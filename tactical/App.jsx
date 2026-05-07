@@ -315,7 +315,7 @@ export default function App() {
             context="tactical"
             welcome={{
               quick:
-                'Ask about VRP, the term structure, the Breeden-Litzenberger density, or how to read day-over-day moves on the fixed-strike matrix. The multi-model Volatility Smile card (Heston, Merton, SVI raw concurrent fits) moved to /smile/ on 2026-05-06.',
+                'Ask about VRP, the term structure, the Breeden-Litzenberger density, or how to read day-over-day moves on the fixed-strike matrix. The multi-model Volatility Smile (Heston, Merton, SVI raw concurrent fits) moved to /smile/ on 2026-05-06.',
               deep:
                 'Deep Analysis mode: longer and more structurally detailed responses on the volatility risk premium, term-structure cloud-band construction, the analytical Breeden-Litzenberger derivation from SVI fits, and how the IV surface decomposes into tenor and strike effects.',
             }}
