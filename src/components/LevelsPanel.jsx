@@ -25,7 +25,7 @@ function expectedMoveDollar(spot, atmIv, dte) {
 }
 
 // IVs in the payload are fractions (0.2345 = 23.45%), so the day-over-day
-// delta is reported in percentage points of IV, not a relative change —
+// delta is reported in percentage points of IV, not a relative change.
 // "+0.12pp" reads unambiguously to a vol trader, whereas "+0.51%" on an
 // already-percent quantity is the classic absolute-vs-relative trap.
 function ivDeltaSub(current, prior) {
@@ -33,6 +33,46 @@ function ivDeltaSub(current, prior) {
   const pp = (current - prior) * 100;
   const sign = pp >= 0 ? '+' : '';
   return `${sign}${pp.toFixed(2)}pp d/d`;
+}
+
+// Combined sub-line for an IV stat cell: day-over-day delta plus the
+// bid/ask spread reading at the relevant point of the chain when it is
+// available (atm_spread_pct for the ATM IV cell, wing_spread_pct for the
+// 25Δ wing cells). Spread is null on every expiration during the
+// pre-Developer-tier window where last_quote is undefined; the moment
+// /v3/quotes propagates, the spread clause auto-appears next to the
+// existing dod delta. Spread is shown to one decimal place because a
+// vol trader sizing a position cares about "1.4%" vs "2.1%" but not
+// about "1.42%" vs "1.43%".
+function ivQualitySub(current, prior, spreadPct) {
+  const dodPart = ivDeltaSub(current, prior);
+  if (spreadPct == null || !Number.isFinite(spreadPct) || spreadPct <= 0) {
+    return dodPart;
+  }
+  const spreadPart = `spread ${(spreadPct * 100).toFixed(1)}%`;
+  return dodPart != null ? `${dodPart}  ·  ${spreadPart}` : spreadPart;
+}
+
+// Liquidity score (0-100) is the composite quote-tightness indicator
+// added to expiration_metrics on 2026-05-06 and computed in the ingest
+// function from the per-strike bid/ask of contracts at the selected
+// expiration. Stays null until /v3/quotes entitlement propagates.
+// Three-band color treatment matches the regime-indicator language used
+// elsewhere in the panel: tight quotes (>= 80) read green, moderate
+// (50-80) read amber, wide (< 50) read coral. Null returns undefined so
+// the Stat helper falls back to the default text color.
+function liquidityScoreAccent(score) {
+  if (score == null || !Number.isFinite(score)) return undefined;
+  if (score >= 80) return '#02A29F';
+  if (score >= 50) return 'var(--accent-amber)';
+  return 'var(--accent-coral)';
+}
+
+function liquidityScoreLabel(score) {
+  if (score == null || !Number.isFinite(score)) return '—';
+  if (score >= 80) return 'tight';
+  if (score >= 50) return 'moderate';
+  return 'wide';
 }
 
 // Overnight Alignment helpers. Score is the net of per-level signs in
@@ -668,20 +708,20 @@ export default function LevelsPanel({ levels, spotPrice, prevClose, expirationMe
             <Stat
               label="25Δ Put IV"
               value={formatPercent(relevantMetric.put_25d_iv)}
-              sub={ivDeltaSub(relevantMetric.put_25d_iv, prevMetric?.put_25d_iv)}
-              tooltip="Implied volatility at the 25-delta put for the selected expiration, i.e., the OTM strike where the option's delta is roughly −0.25. Higher than ATM IV is the typical equity skew shape; the spread vs ATM is a measure of downside-tail pricing intensity."
+              sub={ivQualitySub(relevantMetric.put_25d_iv, prevMetric?.put_25d_iv, relevantMetric.wing_spread_pct)}
+              tooltip="Implied volatility at the 25-delta put for the selected expiration, i.e., the OTM strike where the option's delta is roughly −0.25. Higher than ATM IV is the typical equity skew shape; the spread vs ATM is a measure of downside-tail pricing intensity. The sub-line's spread reading is the bid/ask round-trip cost averaged across the 25Δ wings at this expiration."
             />
             <Stat
               label="ATM IV"
               value={formatPercent(relevantMetric.atm_iv)}
-              sub={ivDeltaSub(relevantMetric.atm_iv, prevMetric?.atm_iv)}
-              tooltip="Implied volatility at the at-the-money strike for the selected expiration. The reference point for skew comparisons (vs the 25Δ wings) and the input to the Expected Move calculation. Sub-line shows the day-over-day change in percentage points of IV."
+              sub={ivQualitySub(relevantMetric.atm_iv, prevMetric?.atm_iv, relevantMetric.atm_spread_pct)}
+              tooltip="Implied volatility at the at-the-money strike for the selected expiration. The reference point for skew comparisons (vs the 25Δ wings) and the input to the Expected Move calculation. Sub-line shows the day-over-day change in percentage points of IV plus the ATM bid/ask round-trip cost as a percent of mid."
             />
             <Stat
               label="25Δ Call IV"
               value={formatPercent(relevantMetric.call_25d_iv)}
-              sub={ivDeltaSub(relevantMetric.call_25d_iv, prevMetric?.call_25d_iv)}
-              tooltip="Implied volatility at the 25-delta call for the selected expiration, i.e., the OTM strike where the option's delta is roughly +0.25. Lower than ATM IV is the typical equity skew shape; rising relative to ATM signals upside-call demand or a shift toward right-tail pricing."
+              sub={ivQualitySub(relevantMetric.call_25d_iv, prevMetric?.call_25d_iv, relevantMetric.wing_spread_pct)}
+              tooltip="Implied volatility at the 25-delta call for the selected expiration, i.e., the OTM strike where the option's delta is roughly +0.25. Lower than ATM IV is the typical equity skew shape; rising relative to ATM signals upside-call demand or a shift toward right-tail pricing. The sub-line's spread reading is the bid/ask round-trip cost averaged across the 25Δ wings at this expiration."
             />
             <Stat
               label="Term Slope"
