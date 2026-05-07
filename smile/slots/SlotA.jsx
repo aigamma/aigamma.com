@@ -173,69 +173,15 @@ function nelderMead(f, x0, { maxIters = 200, tol = 1e-8, step = 0.15 } = {}) {
 }
 
 // --------------------------------------------------------------------------
-// Heston: complex arithmetic + "Little Trap" characteristic function, then
-// Simpson's rule on the two-integral Heston inversion.
-
-function cAdd(a, b) { return [a[0] + b[0], a[1] + b[1]]; }
-function cSub(a, b) { return [a[0] - b[0], a[1] - b[1]]; }
-function cMul(a, b) {
-  return [a[0] * b[0] - a[1] * b[1], a[0] * b[1] + a[1] * b[0]];
-}
-function cDiv(a, b) {
-  const denom = b[0] * b[0] + b[1] * b[1];
-  return [
-    (a[0] * b[0] + a[1] * b[1]) / denom,
-    (a[1] * b[0] - a[0] * b[1]) / denom,
-  ];
-}
-function cScale(a, s) { return [a[0] * s, a[1] * s]; }
-function cExp(a) {
-  const m = Math.exp(a[0]);
-  return [m * Math.cos(a[1]), m * Math.sin(a[1])];
-}
-function cLog(a) {
-  return [0.5 * Math.log(a[0] * a[0] + a[1] * a[1]), Math.atan2(a[1], a[0])];
-}
-function cSqrt(a) {
-  const r = Math.sqrt(a[0] * a[0] + a[1] * a[1]);
-  const re = Math.sqrt(0.5 * (r + a[0]));
-  const im = Math.sign(a[1] || 1) * Math.sqrt(0.5 * (r - a[0]));
-  return [re, im];
-}
-
-function hestonCf(u, j, params, S0, T, r, q) {
-  const { kappa, theta, xi, rho, v0 } = params;
-  const bj = j === 1 ? kappa - rho * xi : kappa;
-  const uj = j === 1 ? 0.5 : -0.5;
-  const iu = [0, u];
-  const rhoXi = rho * xi;
-  const a = [-bj, rhoXi * u];
-  const aSquared = cMul(a, a);
-  const disc = cSub(aSquared, [
-    -xi * xi * u * u,
-    2 * xi * xi * uj * u,
-  ]);
-  const d = cSqrt(disc);
-  const bMinusA = [bj, -rhoXi * u];
-  const num = cSub(bMinusA, d);
-  const den = cAdd(bMinusA, d);
-  const g = cDiv(num, den);
-  const edT = cExp(cScale(d, -T));
-  const one = [1, 0];
-  const n1 = cSub(one, cMul(g, edT));
-  const n2 = cSub(one, g);
-  const ratio = cDiv(n1, n2);
-  const logRatio = cLog(ratio);
-  const rmq_iu_T = cScale(iu, (r - q) * T);
-  const term = cSub(cScale(num, T), cScale(logRatio, 2));
-  const Cj = cAdd(rmq_iu_T, cScale(term, (kappa * theta) / (xi * xi)));
-  const numer = cSub(one, edT);
-  const denom = cSub(one, cMul(g, edT));
-  const Dj = cMul(cScale(num, 1 / (xi * xi)), cDiv(numer, denom));
-  const iuLogS = cScale(iu, Math.log(S0));
-  const exponent = cAdd(cAdd(Cj, cScale(Dj, v0)), iuLogS);
-  return cExp(exponent);
-}
+// Heston: "Little Trap" characteristic function on a fixed Simpson grid in u.
+// The CF is independent of strike, so for one (params, S0, T, r, q) we
+// precompute the 160-point CF table once for j=1 and j=2, then sum it
+// against the per-strike inversion kernel e^{-iu·log(K)} for every K in
+// the slice. That one structural change replaces ~50× redundant CF work
+// inside each Nelder-Mead objective evaluation. The CF math is also
+// inlined as scalar (re, im) pairs rather than 2-element arrays so a
+// full Heston calibration no longer churns the GC with millions of tiny
+// allocations.
 
 const U_GRID = new Float64Array(INT_N);
 const U_WEIGHTS = new Float64Array(INT_N);
@@ -251,23 +197,148 @@ const U_WEIGHTS = new Float64Array(INT_N);
   }
 }
 
-function hestonProb(j, params, S0, K, T, r, q) {
-  const logK = Math.log(K);
-  let acc = 0;
+// Fill the (re, im) buffers with the Heston "Little Trap" characteristic
+// function at every u in U_GRID for the chosen j ∈ {1, 2}. Inlined complex
+// arithmetic — no array allocations inside the loop. Each loop iteration
+// implements the standard CF:
+//
+//   d   = sqrt((b_j - ρξ·iu)² - ξ²(2 u_j iu - u²))
+//   g   = (b_j - ρξ·iu - d) / (b_j - ρξ·iu + d)
+//   C_j = (r-q)·iu·T + (κθ/ξ²)·[(b_j - ρξ·iu - d)·T - 2·log((1 - g·e^{-dT})/(1 - g))]
+//   D_j = ((b_j - ρξ·iu - d)/ξ²) · (1 - e^{-dT})/(1 - g·e^{-dT})
+//   φ   = exp(C_j + D_j·v₀ + iu·log(S₀))
+//
+// where b_1 = κ - ρξ, b_2 = κ, u_1 = 1/2, u_2 = -1/2.
+function fillHestonCf(outRe, outIm, j, params, S0, T, r, q) {
+  const { kappa, theta, xi, rho, v0 } = params;
+  const bj = j === 1 ? kappa - rho * xi : kappa;
+  const uj = j === 1 ? 0.5 : -0.5;
+  const rhoXi = rho * xi;
+  const xi2 = xi * xi;
+  const ktxi2 = (kappa * theta) / xi2;
+  const rmqT = (r - q) * T;
+  const logS0 = Math.log(S0);
+
   for (let i = 0; i < INT_N; i++) {
     const u = U_GRID[i];
-    const f = hestonCf(u, j, params, S0, T, r, q);
-    const eNegIu = [Math.cos(u * logK), -Math.sin(u * logK)];
-    const num = cMul(eNegIu, f);
-    const re = num[1] / u;
-    acc += U_WEIGHTS[i] * re;
+
+    // a = (-b_j, ρξ·u) — equivalently -(b_j - ρξ·iu).
+    const a_re = -bj;
+    const a_im = rhoXi * u;
+    // a² = (a_re² - a_im², 2·a_re·a_im).
+    const aSq_re = a_re * a_re - a_im * a_im;
+    const aSq_im = 2 * a_re * a_im;
+    // disc = a² - ξ²·(-u² + 2 u_j u·i) = (aSq_re + ξ²u², aSq_im - 2 ξ² u_j u).
+    const disc_re = aSq_re + xi2 * u * u;
+    const disc_im = aSq_im - 2 * xi2 * uj * u;
+    // d = sqrt(disc) — principal branch with sign continuity.
+    const disc_mag = Math.sqrt(disc_re * disc_re + disc_im * disc_im);
+    const d_re = Math.sqrt(0.5 * (disc_mag + disc_re));
+    const d_im = Math.sign(disc_im || 1) * Math.sqrt(0.5 * (disc_mag - disc_re));
+
+    // bMinusA = (b_j, -ρξ·u) = b_j - ρξ·iu.
+    const bma_re = bj;
+    const bma_im = -rhoXi * u;
+    // num = bMinusA - d, den = bMinusA + d.
+    const num_re = bma_re - d_re;
+    const num_im = bma_im - d_im;
+    const den_re = bma_re + d_re;
+    const den_im = bma_im + d_im;
+    // g = num / den.
+    const den_mag2 = den_re * den_re + den_im * den_im;
+    const g_re = (num_re * den_re + num_im * den_im) / den_mag2;
+    const g_im = (num_im * den_re - num_re * den_im) / den_mag2;
+
+    // edT = exp(-d·T).
+    const negDT_re = -d_re * T;
+    const negDT_im = -d_im * T;
+    const expMag1 = Math.exp(negDT_re);
+    const edT_re = expMag1 * Math.cos(negDT_im);
+    const edT_im = expMag1 * Math.sin(negDT_im);
+
+    // gEdT = g · edT — also serves as the denominator of D_j (= 1 - gEdT).
+    const gEdT_re = g_re * edT_re - g_im * edT_im;
+    const gEdT_im = g_re * edT_im + g_im * edT_re;
+
+    // n1 = 1 - gEdT, n2 = 1 - g, ratio = n1 / n2.
+    const n1_re = 1 - gEdT_re;
+    const n1_im = -gEdT_im;
+    const n2_re = 1 - g_re;
+    const n2_im = -g_im;
+    const n2_mag2 = n2_re * n2_re + n2_im * n2_im;
+    const ratio_re = (n1_re * n2_re + n1_im * n2_im) / n2_mag2;
+    const ratio_im = (n1_im * n2_re - n1_re * n2_im) / n2_mag2;
+    // logRatio = log(ratio) — principal branch.
+    const logRatio_re = 0.5 * Math.log(ratio_re * ratio_re + ratio_im * ratio_im);
+    const logRatio_im = Math.atan2(ratio_im, ratio_re);
+
+    // term = num·T - 2·logRatio.
+    const term_re = num_re * T - 2 * logRatio_re;
+    const term_im = num_im * T - 2 * logRatio_im;
+
+    // Cj = (r-q)·iu·T + (κθ/ξ²)·term. (r-q)·iu·T contributes (0, u·rmqT).
+    const Cj_re = term_re * ktxi2;
+    const Cj_im = u * rmqT + term_im * ktxi2;
+
+    // numer = 1 - edT, inner = numer / n1 (n1 == 1 - gEdT == denom of D_j).
+    const numer_re = 1 - edT_re;
+    const numer_im = -edT_im;
+    const n1_mag2 = n1_re * n1_re + n1_im * n1_im;
+    const inner_re = (numer_re * n1_re + numer_im * n1_im) / n1_mag2;
+    const inner_im = (numer_im * n1_re - numer_re * n1_im) / n1_mag2;
+
+    // Dj = (num/ξ²) · inner.
+    const numXi2_re = num_re / xi2;
+    const numXi2_im = num_im / xi2;
+    const Dj_re = numXi2_re * inner_re - numXi2_im * inner_im;
+    const Dj_im = numXi2_re * inner_im + numXi2_im * inner_re;
+
+    // exponent = Cj + Dj·v0 + iu·log(S0). iu·log(S0) contributes (0, u·logS0).
+    const exp_re = Cj_re + Dj_re * v0;
+    const exp_im = Cj_im + Dj_im * v0 + u * logS0;
+    // φ = exp(exponent).
+    const expMag = Math.exp(exp_re);
+    outRe[i] = expMag * Math.cos(exp_im);
+    outIm[i] = expMag * Math.sin(exp_im);
   }
-  return 0.5 + acc / Math.PI;
 }
 
-function hestonCall(params, S0, K, T, r, q) {
-  const P1 = hestonProb(1, params, S0, K, T, r, q);
-  const P2 = hestonProb(2, params, S0, K, T, r, q);
+// Build the full (j=1, j=2) CF table for one parameter set. Called once per
+// Nelder-Mead objective evaluation, once per chart-paint of the Heston
+// overlay. The four Float64Arrays are then read by hestonCallFromCfGrid for
+// every strike on the slice or the dense paint grid.
+function precomputeHestonCfGrid(params, S0, T, r, q) {
+  const F1_re = new Float64Array(INT_N);
+  const F1_im = new Float64Array(INT_N);
+  const F2_re = new Float64Array(INT_N);
+  const F2_im = new Float64Array(INT_N);
+  fillHestonCf(F1_re, F1_im, 1, params, S0, T, r, q);
+  fillHestonCf(F2_re, F2_im, 2, params, S0, T, r, q);
+  return { F1_re, F1_im, F2_re, F2_im };
+}
+
+// Strike-dependent step. Sums the precomputed CF table against the inversion
+// kernel e^{-iu·log(K)}; only the imaginary part of the product matters per
+// the standard Gil-Pelaez / Heston (1993) inversion. The CF values are
+// reused across every K in the same calibration objective call.
+function hestonCallFromCfGrid(grid, S0, K, T, r, q) {
+  const { F1_re, F1_im, F2_re, F2_im } = grid;
+  const logK = Math.log(K);
+  let acc1 = 0;
+  let acc2 = 0;
+  for (let i = 0; i < INT_N; i++) {
+    const u = U_GRID[i];
+    const c = Math.cos(u * logK);
+    const s = Math.sin(u * logK);
+    // Im(e^{-iu·logK} · F) = c·Fim - s·Fre.
+    const im1 = c * F1_im[i] - s * F1_re[i];
+    const im2 = c * F2_im[i] - s * F2_re[i];
+    const w = U_WEIGHTS[i];
+    acc1 += (w * im1) / u;
+    acc2 += (w * im2) / u;
+  }
+  const P1 = 0.5 + acc1 / Math.PI;
+  const P2 = 0.5 + acc2 / Math.PI;
   return S0 * Math.exp(-q * T) * P1 - K * Math.exp(-r * T) * P2;
 }
 
@@ -301,10 +372,12 @@ function calibrateHeston(slice, S0, T, r, q) {
   const obj = (theta) => {
     const p = hestonUnpack(theta);
     if (p.kappa > 50 || p.theta > 1 || p.xi > 3 || p.v0 > 1) return 1e6;
+    // One CF table per parameter set; every strike on the slice reuses it.
+    const grid = precomputeHestonCfGrid(p, S0, T, r, q);
     let sse = 0;
     let n = 0;
     for (const { strike, iv } of slice) {
-      const c = hestonCall(p, S0, strike, T, r, q);
+      const c = hestonCallFromCfGrid(grid, S0, strike, T, r, q);
       const modelIv = bsmIv(c, S0, strike, T, r, q);
       if (modelIv == null || !Number.isFinite(modelIv)) return 1e6;
       const diff = modelIv - iv;
@@ -596,8 +669,18 @@ export default function SlotA() {
       for (let i = 0; i < nGrid; i++) {
         gridK[i] = K_lo + (i / (nGrid - 1)) * (K_hi - K_lo);
       }
+      // Build the Heston CF table once for the calibrated parameter set, then
+      // sum it against e^{-iu·log(K)} for each grid strike. Same shape as the
+      // calibration objective.
+      const hestonGrid = precomputeHestonCfGrid(
+        fits.heston.params,
+        data.spotPrice,
+        T,
+        RATE_R,
+        RATE_Q
+      );
       gridHeston = gridK.map((K) => {
-        const c = hestonCall(fits.heston.params, data.spotPrice, K, T, RATE_R, RATE_Q);
+        const c = hestonCallFromCfGrid(hestonGrid, data.spotPrice, K, T, RATE_R, RATE_Q);
         const iv = bsmIv(c, data.spotPrice, K, T, RATE_R, RATE_Q);
         return iv != null ? iv * 100 : null;
       });
