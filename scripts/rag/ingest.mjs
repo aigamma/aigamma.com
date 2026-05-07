@@ -66,7 +66,7 @@ const SOURCES = [
   { rel: 'netlify/functions/prompts/garch.mjs',      surface: 'garch',      kind: 'system_prompt', extract: extractTemplateLiteral, title: 'GARCH lab system prompt' },
   { rel: 'netlify/functions/prompts/regime.mjs',     surface: 'regime',     kind: 'system_prompt', extract: extractTemplateLiteral, title: 'Regimes lab system prompt' },
   { rel: 'netlify/functions/prompts/rough.mjs',      surface: 'rough',      kind: 'system_prompt', extract: extractTemplateLiteral, title: 'Rough Volatility lab system prompt' },
-  { rel: 'netlify/functions/prompts/stochastic.mjs', surface: 'stochastic', kind: 'system_prompt', extract: extractTemplateLiteral, title: 'Stochastic Volatility lab system prompt' },
+  { rel: 'netlify/functions/prompts/smile.mjs',      surface: 'smile',      kind: 'system_prompt', extract: extractTemplateLiteral, title: 'Volatility Smile lab system prompt' },
   { rel: 'netlify/functions/prompts/local.mjs',      surface: 'local',      kind: 'system_prompt', extract: extractTemplateLiteral, title: 'Local Volatility lab system prompt' },
   { rel: 'netlify/functions/prompts/jump.mjs',       surface: 'jump',       kind: 'system_prompt', extract: extractTemplateLiteral, title: 'Jump Processes lab system prompt' },
   { rel: 'netlify/functions/prompts/risk.mjs',       surface: 'risk',       kind: 'system_prompt', extract: extractTemplateLiteral, title: 'Risk lab system prompt' },
