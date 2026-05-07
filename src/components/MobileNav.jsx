@@ -112,7 +112,7 @@ const TOOLS_ITEMS = [
   { href: '/earnings/',       label: '/earnings/',       desc: 'Earnings calendar by implied move and date' },
   { href: '/scan/',           label: '/scan/',           desc: '25Δ skew vs ATM IV scanner across single names' },
   { href: '/rotations/',      label: '/rotations/',      desc: 'Sector rotation chart and 1D/1W/1M bar trio' },
-  { href: '/vix/',            label: '/vix/',            desc: 'VIX term structure, OU, vol-of-vol, regimes' },
+  { href: '/vix/',            label: '/vix/',            desc: 'VIX term structure, contango, Ornstein-Uhlenbeck, VVIX, SDEX/TDEX, regimes, Cboe strategies' },
   { href: '/seasonality/',    label: '/seasonality/',    desc: 'SPX intraday and daily seasonality grids' },
   { href: '/stocks/',         label: '/stocks/',         desc: 'Top option-liquid names, performance + rotation' },
   { href: '/heatmap/',        label: '/heatmap/',        desc: 'Equal-size top-250-by-options-volume heatmap' },
@@ -123,11 +123,11 @@ const TOOLS_ITEMS = [
 const RESEARCH_ITEMS = [
   { href: '/discrete/',   label: '/discrete/',   desc: 'Binomial and trinomial trees, SVI and SSVI' },
   { href: '/garch/',      label: '/garch/',      desc: 'GARCH ensemble of RV forecasts' },
-  { href: '/jump/',       label: '/jump/',       desc: 'Merton, Kou, Bates, variance' },
+  { href: '/jump/',       label: '/jump/',       desc: 'Merton, Kou, Bates, variance gamma' },
   { href: '/local/',      label: '/local/',      desc: 'Dupire extraction, pricing, slices, forward-smile pathology' },
   { href: '/parity/',     label: '/parity/',     desc: 'Put-call parity, box-spread rate, implied forward' },
   { href: '/regime/',     label: '/regime/',     desc: 'Mixture, Markov, Wasserstein' },
-  { href: '/risk/',       label: '/risk/',       desc: 'Cross-model second-order Greeks, Vanna-Volga' },
+  { href: '/risk/',       label: '/risk/',       desc: 'Vanna-Volga and second-order Greeks' },
   { href: '/rough/',      label: '/rough/',      desc: 'rBergomi simulator, skew scaling-law fit, RFSV, three-estimator Hurst triangulation' },
   { href: '/smile/',      label: '/smile/',      desc: 'Multi-model Volatility Smile · Heston + Merton + SVI raw concurrent fits' },
 ];
