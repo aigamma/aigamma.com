@@ -17,7 +17,7 @@ import SlotA from './slots/SlotA';
 // parameter combined Heston+Merton fit, and Variance Gamma's pure-
 // jump three-parameter fit) lands in per-slot chunks that the LazyMount
 // viewport gate fetches when the reader scrolls within ~300 px of the
-// next card. Mirrors the /tactical/ and /stochastic/ patterns.
+// next card. Mirrors the /tactical/ and /smile/ patterns.
 const SlotB = lazy(() => import('./slots/SlotB'));
 const SlotC = lazy(() => import('./slots/SlotC'));
 const SlotD = lazy(() => import('./slots/SlotD'));

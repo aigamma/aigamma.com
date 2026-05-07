@@ -55,7 +55,7 @@ import mainPrompt from './prompts/main.mjs';
 import garchPrompt from './prompts/garch.mjs';
 import regimePrompt from './prompts/regime.mjs';
 import roughPrompt from './prompts/rough.mjs';
-import stochasticPrompt from './prompts/stochastic.mjs';
+import smilePrompt from './prompts/smile.mjs';
 import localPrompt from './prompts/local.mjs';
 import jumpPrompt from './prompts/jump.mjs';
 import riskPrompt from './prompts/risk.mjs';
@@ -94,7 +94,7 @@ const SYSTEM_PROMPTS = {
   garch: garchPrompt,
   regime: regimePrompt,
   rough: roughPrompt,
-  stochastic: stochasticPrompt,
+  smile: smilePrompt,
   local: localPrompt,
   jump: jumpPrompt,
   risk: riskPrompt,

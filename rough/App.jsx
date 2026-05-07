@@ -10,8 +10,9 @@ import SlotB from './slots/SlotB';
 // SlotB (rBergomi simulator) stays statically imported as the first card;
 // SlotD / SlotA / SlotC plus Chat split out into per-slot Vite chunks via
 // React.lazy. SlotD (rough Bergomi skew term-structure scaling law) was
-// migrated here from /stochastic/ on 2026-05-06; on this page it sits
-// between the Bergomi simulator (which generates the rough-vol world)
+// migrated here from the now-retired /stochastic/ page on 2026-05-06;
+// on this page it sits between the Bergomi simulator (which generates
+// the rough-vol world)
 // and the RFSV structure-function diagnostic (which corroborates H from
 // the realized-variance proxy on the same realized-vol series).
 const SlotA = lazy(() => import('./slots/SlotA'));
@@ -70,8 +71,9 @@ function prefetchBelowFoldChunks() {
 //            tenor to recover H from slope + 1/2. Reference T^(H−1/2)
 //            curves at H = 0.10 / 0.30 / 0.50 overlay through the mean
 //            empirical intercept so the rough/classical comparison is
-//            anchored on the data. Migrated here from /stochastic/ on
-//            2026-05-06 because the four-card stochastic page was slow
+//            anchored on the data. Migrated here from the now-retired
+//            /stochastic/ page on 2026-05-06 because that four-card
+//            stochastic-vol composition was slow
 //            to mount and this card is conceptually a rough-vol surface
 //            counterpart to the simulator and the structure-function
 //            diagnostic that already lived on this lab.

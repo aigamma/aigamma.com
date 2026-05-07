@@ -11,7 +11,7 @@ import SlotC from './slots/SlotC';
 // reading order on this page (the headline Vanna-Volga reconstruction is
 // the visual entry point) and partially above the fold on a typical
 // desktop viewport. SlotA / SlotB / SlotD plus Chat split out into their
-// own Vite chunks via React.lazy. Mirrors the /tactical/, /stochastic/,
+// own Vite chunks via React.lazy. Mirrors the /tactical/, /smile/,
 // /jump/ pattern but with the eager slot anchored on the page's headline
 // card rather than on the alphabetically-first one.
 const SlotA = lazy(() => import('./slots/SlotA'));
@@ -75,7 +75,7 @@ function prefetchBelowFoldChunks() {
 // chain. Unlike the bookmark-only lab surfaces, this page carries
 // active egress back to the main dashboard at three redundant
 // affordances, matching the /parity/, /jump/, /garch/, /regime/, and
-// /stochastic/ pattern: the logo in the header is a hyperlink to `/`,
+// /smile/ pattern: the logo in the header is a hyperlink to `/`,
 // a filled green RETURN HOME button sits in the header itself between
 // the Risk Lab brand on the left and the Menu trigger on the
 // right — centered horizontally as the midpoint of the other two nav

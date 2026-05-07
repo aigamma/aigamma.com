@@ -46,7 +46,7 @@ import MobileNav from './MobileNav';
 // not get promoted to the top nav.
 //
 // Why the Research section: the eight model-family zoos
-// (/garch/, /regime/, /rough/, /stochastic/, /local/, /risk/,
+// (/garch/, /regime/, /rough/, /smile/, /local/, /risk/,
 // /jump/, /discrete/) are intellectually distinct from the
 // operational tools — they are calibrated-in-browser model libraries
 // rather than dashboards, and a reader scanning Menu in a flat
@@ -76,7 +76,7 @@ const MENU_ITEMS = [
   { type: 'item', href: '/regime/',         label: '/regime/',         desc: 'Mixture, Markov, Wasserstein regimes' },
   { type: 'item', href: '/risk/',           label: '/risk/',           desc: 'Cross-model Greeks, Vanna-Volga, second-order' },
   { type: 'item', href: '/rough/',          label: '/rough/',          desc: 'Rough Bergomi simulator + skew scaling-law fit, RFSV diagnostic, three-estimator Hurst triangulation' },
-  { type: 'item', href: '/stochastic/',     label: '/stochastic/',     desc: 'Multi-model Volatility Smile (Heston + Merton + SVI raw) + Hagan SABR' },
+  { type: 'item', href: '/smile/',          label: '/smile/',          desc: 'Multi-model Volatility Smile · Heston + Merton + SVI raw concurrent fits, Heston on by default' },
   { type: 'header', label: 'About' },
   { type: 'item', href: '/disclaimer/', label: '/disclaimer/', desc: 'As-is mathematics, MIT license, no commercial purpose, standard trading disclaimers' },
   { type: 'item', href: 'https://about.aigamma.com/', label: 'About This Page', desc: 'Created by Eric Allione' },

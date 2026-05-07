@@ -21,9 +21,9 @@ import useSviFits from '../src/hooks/useSviFits';
 // roughly 600-1200 ms of main-thread blocking off the first interactive
 // frame on a typical mid-tier laptop. The Volatility Smile multi-model card
 // (Heston + Merton + SVI raw concurrent fits) was migrated off this page on
-// 2026-05-06 to anchor the top of /stochastic/ above the Hagan SABR card,
-// so a reader looking for the multi-model smile read should follow the
-// /stochastic/ link in the Menu dropdown.
+// 2026-05-06 and now anchors its own /smile/ lab as the single reading
+// surface on the page, so a reader looking for the multi-model smile read
+// should follow the /smile/ link in the Menu dropdown.
 const TermStructure = lazy(() => import('../src/components/TermStructure'));
 const RiskNeutralDensity = lazy(() => import('../src/components/RiskNeutralDensity'));
 const FixedStrikeIvMatrix = lazy(() => import('../src/components/FixedStrikeIvMatrix'));
@@ -67,7 +67,7 @@ function prefetchBelowFoldChunks() {
 // (the strike × tenor grid that makes day-over-day re-pricing events
 // visible cell by cell). The single-tenor multi-model Volatility Smile
 // card (Heston + Merton + SVI raw concurrent fits) used to sit between
-// Term Structure and RND on this page; it was migrated to /stochastic/ on
+// Term Structure and RND on this page; it was migrated to /smile/ on
 // 2026-05-06 to cure cold-mount latency on this page (five concurrent
 // Plotly.newPlot calls firing on first paint was the slowest page on the
 // site) and to consolidate the parametric / calibrated single-slice smile
@@ -99,7 +99,7 @@ function prefetchBelowFoldChunks() {
 // load was firing five Plotly.newPlot calls in the same frame, costing
 // ~600-1200 ms of synchronous main-thread work that the user perceived
 // as a long blank-then-everything-at-once load. Migrating the multi-
-// model Volatility Smile card to /stochastic/ on 2026-05-06 took this
+// model Volatility Smile card to /smile/ on 2026-05-06 took this
 // page from five eager-or-near-eager charts down to four, shedding the
 // most expensive concurrent calibration cost (Heston Nelder-Mead +
 // Merton Poisson-weighted simplex + SVI Levenberg-Marquardt all on the
@@ -136,7 +136,7 @@ export default function App() {
         <div className="lab-brand">
           <span
             className="lab-badge"
-            title="Tactical Vol · VRP, term structure, RND, fixed-strike IV (smile moved to /stochastic/)"
+            title="Tactical Vol · VRP, term structure, RND, fixed-strike IV (smile moved to /smile/)"
           >
             <span className="lab-badge__desktop-text">Tactical Vol</span>
             <span className="lab-badge__mobile-text">Tactical Vol</span>
@@ -315,7 +315,7 @@ export default function App() {
             context="tactical"
             welcome={{
               quick:
-                'Ask about VRP, the term structure, the Breeden-Litzenberger density, or how to read day-over-day moves on the fixed-strike matrix. The multi-model Volatility Smile card (Heston, Merton, SVI raw concurrent fits) moved to /stochastic/ on 2026-05-06.',
+                'Ask about VRP, the term structure, the Breeden-Litzenberger density, or how to read day-over-day moves on the fixed-strike matrix. The multi-model Volatility Smile card (Heston, Merton, SVI raw concurrent fits) moved to /smile/ on 2026-05-06.',
               deep:
                 'Deep Analysis mode: longer and more structurally detailed responses on the volatility risk premium, term-structure cloud-band construction, the analytical Breeden-Litzenberger derivation from SVI fits, and how the IV surface decomposes into tenor and strike effects.',
             }}

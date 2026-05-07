@@ -43,7 +43,7 @@ import { useCallback, useEffect, useRef, useState } from 'react';
 // surfaces from the desktop Menu (/stocks/, /heatmap/, /expiring-gamma/).
 // The RESEARCH dropdown contains the eight calibrated-model research
 // zoos (/discrete/, /garch/, /jump/, /local/, /regime/, /risk/, /rough/,
-// /stochastic/) plus /parity/ — the put-call parity / box-spread / implied-
+// /smile/) plus /parity/ — the put-call parity / box-spread / implied-
 // forward surface that lives under research on mobile because it documents
 // a no-arbitrage identity rather than carrying an operational dashboard
 // read like the other Tools entries. The dropdown then closes with an
@@ -129,7 +129,7 @@ const RESEARCH_ITEMS = [
   { href: '/regime/',     label: '/regime/',     desc: 'Mixture, Markov, Wasserstein regimes' },
   { href: '/risk/',       label: '/risk/',       desc: 'Cross-model Greeks, Vanna-Volga, second-order' },
   { href: '/rough/',      label: '/rough/',      desc: 'rBergomi simulator, skew scaling-law fit, RFSV, three-estimator Hurst triangulation' },
-  { href: '/stochastic/', label: '/stochastic/', desc: 'Multi-model Volatility Smile (Heston + Merton + SVI raw) + Hagan SABR' },
+  { href: '/smile/',      label: '/smile/',      desc: 'Multi-model Volatility Smile · Heston + Merton + SVI raw concurrent fits, Heston on by default' },
 ];
 
 const ABOUT_ITEM = {

@@ -89,10 +89,11 @@ function prefetchBelowFoldChunks() {
 //            put-skew metric (σ_LV(−18%) − σ_LV(0) at the shortest
 //            tenor) so the reader can compare today's surface
 //            against historical norms at a glance. Originally lived
-//            on /stochastic/; relocated here on 2026-05-06 because
-//            the four-card stochastic page was slow to mount and
-//            the surface heatmap is a more natural fit at the bottom
-//            of the dedicated local-vol lab.
+//            on the now-retired /stochastic/ page; relocated here
+//            on 2026-05-06 because that four-card stochastic-vol
+//            composition was slow to mount and the surface heatmap
+//            is a more natural fit at the bottom of the dedicated
+//            local-vol lab.
 //
 // All four slots consume the same live /api/data snapshot through
 // useOptionsData, so the MC pricer, the slice viewer, the forward-

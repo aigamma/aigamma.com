@@ -469,7 +469,7 @@
      the navigation-back-to-home affordance the logo previously
      supplied. .lab-logo-link is the wrapper anchor (now used on
      every lab entry, including the formerly inline-styled alpha /
-     beta / dev / discrete / stochastic anchors that picked up the
+     beta / dev / discrete / smile anchors that picked up the
      class as part of the same change); hiding the wrapper rather
      than just the inner img drops the entire flex item out of the
      row so no orphan gap is reserved on the left. */

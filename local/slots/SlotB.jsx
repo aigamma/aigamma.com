@@ -331,8 +331,8 @@ export default function SlotB() {
         // 'SPX'); re-asserting "· SPX" inside every chart title was pure
         // redundancy that ate horizontal title-bar real estate without
         // conveying information the reader did not already have. Same pattern
-        // the /stochastic/ page applied in commit 1e3e670 for the same
-        // page-level-context reason.
+        // the now-retired /stochastic/ page applied in commit 1e3e670
+        // for the same page-level-context reason.
         y: mobile ? 0.92 : 0.97,
         yref: 'container',
         yanchor: 'top',
@@ -361,8 +361,9 @@ export default function SlotB() {
       // untouched: the mobile ternaries on container height, margin, and
       // legend.y all resolve to the prior 500 / b:110 / -0.25 values when
       // useIsMobile returns false. Same legend-y / paper-coords mechanism
-      // the /vix/ TermStructure (commit a10444b), /stochastic/ SlotD (commit
-      // 1e3e670), and /rough/ slots (commit 0d3df80) used; this slot needs a
+      // the /vix/ TermStructure (commit a10444b), the now-retired
+      // /stochastic/ SlotD (commit 1e3e670), and /rough/ slots (commit
+      // 0d3df80) used; this slot needs a
       // larger absolute push because it carries 8 legend entries vs the 4-
       // 7-entry counts those slots had.
       margin: mobile ? { t: 75, r: 30, b: 200, l: 70 } : { t: 70, r: 40, b: 110, l: 85 },

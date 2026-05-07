@@ -69,8 +69,8 @@ function lazyChunkPreloadPlugin() {
 // (served at `/garch/`), the bookmark-only three-slot regime-model
 // lab at `regime/index.html` (served at `/regime/`), the
 // bookmark-only three-slot rough-volatility lab at `rough/index.html`
-// (served at `/rough/`), the bookmark-only four-slot stochastic-
-// vol lab at `stochastic/index.html` (served at `/stochastic/`), the
+// (served at `/rough/`), the bookmark-only single-slot volatility
+// smile lab at `smile/index.html` (served at `/smile/`), the
 // bookmark-only four-slot local-volatility lab at
 // `local/index.html` (served at `/local/`), the bookmark-only
 // four-slot risk lab at `risk/index.html` (served at `/risk/`), the
@@ -90,11 +90,17 @@ function lazyChunkPreloadPlugin() {
 // fractional-Brownian / Volterra-type volatility models: an RFSV
 // Hurst-signature diagnostic, a Rough Bergomi Monte Carlo simulator,
 // and a multi-estimator Hurst triangulation, all fit in-browser on
-// the same daily SPX log-return series. The stochastic-vol lab is a
-// four-slot lineage of the canonical options-market SV family —
-// Heston (1993), SABR (2002), Local Stochastic Vol (Dupire + LSV
-// leverage function), and Rough Bergomi (2016) — fit in-browser
-// against the current SPX options chain and its SVI slice set. The
+// the same daily SPX log-return series. The volatility-smile lab is
+// a single-slot lab that hosts the multi-model Volatility Smile
+// card — Heston (1993) stochastic variance, Merton (1976) diffusion-
+// plus-jumps, and Gatheral SVI raw concurrent fits on one OTM-
+// preferred ±20% log-moneyness slice of the live SPX chain, with
+// reader-toggle visibility (Heston enabled by default). The card
+// lived briefly on /tactical/ as one of five surfaces and then on
+// /stochastic/ alongside a Hagan SABR card before being promoted to
+// its own page on 2026-05-06; SABR was dropped because its mount cost
+// inherited the same latency profile the move off /tactical/ was
+// supposed to cure. The
 // local-vol lab is a dedicated four-slot study of Dupire local
 // volatility end-to-end: surface extraction from the SVI slice set,
 // Monte Carlo pricing as a self-check of the extraction, an
@@ -156,7 +162,7 @@ export default defineConfig({
         garch: fileURLToPath(new URL('./garch/index.html', import.meta.url)),
         regime: fileURLToPath(new URL('./regime/index.html', import.meta.url)),
         rough: fileURLToPath(new URL('./rough/index.html', import.meta.url)),
-        stochastic: fileURLToPath(new URL('./stochastic/index.html', import.meta.url)),
+        smile: fileURLToPath(new URL('./smile/index.html', import.meta.url)),
         local: fileURLToPath(new URL('./local/index.html', import.meta.url)),
         risk: fileURLToPath(new URL('./risk/index.html', import.meta.url)),
         jump: fileURLToPath(new URL('./jump/index.html', import.meta.url)),

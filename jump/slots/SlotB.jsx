@@ -407,7 +407,7 @@ export default function SlotB() {
   const T = dte != null ? dte / 365 : null;
 
   // Kou calibration deferred to idle callback so chart paints observation
-  // dots before the simplex runs. Same pattern as /stochastic/ SlotA / SlotB.
+  // dots before the simplex runs. Same pattern as /smile/ SlotA.
   const [calib, setCalib] = useState(null);
   useEffect(() => {
     if (!data || !activeExp || slice.length < 6 || !T || T <= 0) {

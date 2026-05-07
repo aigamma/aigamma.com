@@ -171,7 +171,7 @@ export default function SlotC() {
       // (12 px tick + 10 px standoff + 20 px bold title), so the legend
       // physically overlapped the "log-moneyness y" label by ~12 px. This is
       // the same Plotly 2.35.2 layout-arithmetic class the recent /vix/,
-      // /stochastic/, and /rough/ mobile fixes hit — the legend's default
+      // /smile/, and /rough/ mobile fixes hit — the legend's default
       // yref 'paper' expresses y as a fraction of plot-area height, so a
       // chart with a small plot area produces a small absolute legend offset
       // that cannot clear the fixed-pixel axis-title strip. New mobile

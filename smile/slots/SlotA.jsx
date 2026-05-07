@@ -26,10 +26,13 @@ import { fitSviSlice, sviTotalVariance } from '../../src/lib/svi';
 //     in src/lib/svi.js)
 //
 // All three share an identical OTM-preferred ±20% log-moneyness observation
-// set and are compared in IV-space. Migrated off /tactical/ on 2026-05-06
-// where it had been one of five concurrent surfaces; now anchors the top of
-// /stochastic/ above the Hagan SABR card. Heston is the only fit toggled on
-// by default so the reader meets the benchmark stochastic-variance overlay
+// set and are compared in IV-space. Originally one of five concurrent
+// surfaces on /tactical/, briefly relocated to /stochastic/ atop a Hagan
+// SABR card, and finally promoted to its own /smile/ page on 2026-05-06
+// after profiling showed SABR's Plotly.newPlot + Hagan asymptotic mount
+// was the next bottleneck on phone-class hardware once the multi-model
+// smile chart had been migrated. Heston is the only fit toggled on by
+// default so the reader meets the benchmark stochastic-variance overlay
 // first, with Merton and SVI a single tap away.
 // -----------------------------------------------------------------------------
 
@@ -469,9 +472,11 @@ function StatCell({ label, value, accent }) {
 // of the SPX chain at the reader-selected expiration. Heston is the only
 // fit toggled on by default so first-paint shows the benchmark stochastic-
 // variance overlay against the observed dots; the reader can flip Merton
-// (jump-fear) and SVI (model-agnostic) on with a single tap. The card lives
-// at the top of /stochastic/ above the Hagan SABR card and consumes the
-// same live SPX snapshot the SABR card below it does.
+// (jump-fear) and SVI (model-agnostic) on with a single tap. The card is
+// the sole reading surface on /smile/ — promoted to its own page on
+// 2026-05-06 after the prior /stochastic/ pairing with Hagan SABR
+// inherited a second slow Plotly.newPlot mount that defeated the latency
+// reasons for splitting the smile off /tactical/ in the first place.
 
 export default function SlotA() {
   const chartRef = useRef(null);
