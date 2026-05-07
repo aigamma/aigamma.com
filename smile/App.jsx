@@ -72,7 +72,7 @@ export default function App() {
             className="lab-badge"
             title="Volatility Smile · Heston + Merton + SVI raw concurrent fits on one expiration slice"
           >
-            <span className="lab-badge__desktop-text">Volatility Smile</span>
+            <span className="lab-badge__desktop-text">Smile</span>
             <span className="lab-badge__mobile-text">Smile</span>
           </span>
         </div>
