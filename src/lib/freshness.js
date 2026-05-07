@@ -113,6 +113,33 @@ export function summarizeQuoteContext(contracts, { now = Date.now() } = {}) {
   };
 }
 
+// Standalone variant of the freshness/spread clause for surfaces that do
+// not have an existing chart-info span to append to. Returns the same
+// scalars but without the leading " · " separator and (when the caller
+// wants a label) prefixed by a label argument. Returns null when neither
+// signal is available so the caller can short-circuit on `if (!clause)
+// return null;` and avoid rendering an empty wrapper div.
+//
+// Usage:
+//   const clause = standaloneFreshnessLine(data?.contracts);
+//   if (!clause) return null;
+//   <div style={{ fontSize: '0.75rem', color: 'var(--text-secondary)' }}>
+//     chain inputs · {clause}
+//   </div>
+//
+// (The leading prefix is the caller's responsibility because it differs
+// per-surface: "chain inputs", "slice", "per-expiration", etc.)
+export function standaloneFreshnessLine(contracts, opts) {
+  const { medianAgeMs, medianSpread } = summarizeQuoteContext(contracts, opts);
+  const ageStr = formatAge(medianAgeMs);
+  const spreadStr = formatSpreadPct(medianSpread);
+  const parts = [];
+  if (ageStr) parts.push(`last print ${ageStr}`);
+  if (spreadStr) parts.push(`spread ${spreadStr}`);
+  if (parts.length === 0) return null;
+  return parts.join('  ·  ');
+}
+
 // Compose a single sub-line clause from the two scalars. Returns:
 //   ""                           - both null (nothing to render)
 //   " · last print 3m"           - only freshness available
