@@ -345,59 +345,20 @@ function computeGex(pages, targets, startedAt, partial, partialReason = null) {
       const exp = r.details.expiration_date;
       return monthlyExpirationsSet.has(exp) || exp <= weeklyCutoff;
     })
-    .map((r) => {
-      // Compute quote_age_ms by diffing the snapshot's captured_at against
-      // last_quote.last_updated. last_updated is in nanoseconds since epoch
-      // (SIP convention) so we downscale to ms before differencing.
-      let quoteAgeMs = null;
-      if (r.last_quote?.last_updated && targets.capturedAtMs) {
-        const quoteMs = Math.floor(r.last_quote.last_updated / 1e6);
-        quoteAgeMs = targets.capturedAtMs - quoteMs;
-      }
-      // last_trade.sip_timestamp is also nanoseconds; downscale to ms for
-      // the bigint column. Stays nullable for contracts that have never
-      // traded or where Massive omitted last_trade on this response.
-      const lastTradeTsMs = r.last_trade?.sip_timestamp
-        ? Math.floor(r.last_trade.sip_timestamp / 1e6)
-        : null;
-      return {
-        expiration_date: r.details.expiration_date,
-        strike: r.details.strike_price,
-        contract_type: r.details.contract_type,
-        root_symbol: parseRoot(r.details.ticker),
-        implied_volatility: r.implied_volatility ?? null,
-        delta: r.greeks.delta ?? null,
-        gamma: r.greeks.gamma ?? null,
-        theta: r.greeks.theta ?? null,
-        vega: r.greeks.vega ?? null,
-        open_interest: r.open_interest ?? 0,
-        volume: r.day?.volume ?? 0,
-        close_price: r.day?.close ?? null,
-        // last_quote is the synchronous NBBO at snapshot time. Persisted
-        // per contract so the /parity card's box-spread and direct-PCP rate
-        // solvers can use a mid that is sampled at the same instant for
-        // every leg. close_price is the per-contract last-trade-of-day,
-        // which is asynchronous across the chain and gets blown into
-        // triple-digit r errors by the box's 1/T * 1/ΔK amplifier. Null when
-        // Massive returns no last_quote on this snapshot (off-hours, the
-        // Options Starter tier which gates last_quote behind Developer, or
-        // a contract that has not been quoted today); the parity slot's
-        // contractMark() handles nulls by falling back to close_price.
-        bid_price: r.last_quote?.bid ?? null,
-        ask_price: r.last_quote?.ask ?? null,
-        bid_size: r.last_quote?.bid_size ?? null,
-        ask_size: r.last_quote?.ask_size ?? null,
-        quote_age_ms: quoteAgeMs,
-        // last_trade is per-contract most-recent-print. Less synchronous
-        // than NBBO mid (different contracts last traded at different
-        // times) but useful as a freshness signal and as a fallback when
-        // last_quote is unavailable. The midPrice fallback chain in
-        // earnings.mjs already documents the preference order.
-        last_trade_price: r.last_trade?.price ?? null,
-        last_trade_size: r.last_trade?.size ?? null,
-        last_trade_ts: lastTradeTsMs,
-      };
-    });
+    .map((r) => ({
+      expiration_date: r.details.expiration_date,
+      strike: r.details.strike_price,
+      contract_type: r.details.contract_type,
+      root_symbol: parseRoot(r.details.ticker),
+      implied_volatility: r.implied_volatility ?? null,
+      delta: r.greeks.delta ?? null,
+      gamma: r.greeks.gamma ?? null,
+      theta: r.greeks.theta ?? null,
+      vega: r.greeks.vega ?? null,
+      open_interest: r.open_interest ?? 0,
+      volume: r.day?.volume ?? 0,
+      close_price: r.day?.close ?? null,
+    }));
 
   // Per-strike GEX accumulation.
   const gexByStrike = {};
@@ -548,60 +509,9 @@ function computeGex(pages, targets, startedAt, partial, partialReason = null) {
     // 25-delta risk reversal (call - put). Negative = put-side richer than
     // call-side (typical equity-index skew), positive = call-skew. Cheap to
     // persist now that both legs are already computed, even though no live
-    // reader surfaces it yet -- removes a null trap for any future consumer.
+    // reader surfaces it yet — removes a null trap for any future consumer.
     const skew25dRr =
       put25dIv != null && call25dIv != null ? call25dIv - put25dIv : null;
-
-    // Per-expiration spread aggregates. Computed from per-strike bid/ask
-    // when both legs are quoted; aggregate-only by design so the per-strike
-    // bid/ask never needs to render publicly. avgChainSpread averages
-    // (ask - bid) / mid across every contract at this expiration that
-    // carries both a bid and an ask. atmSpread uses the same metric but
-    // restricted to atmContract. wingSpread averages the metric on the
-    // 25-delta call and the 25-delta put. liquidityScore is a single 0-100
-    // scalar combining the three: a 0 means at least one of the metrics
-    // is unavailable; a 100 means ATM and wings both quote within ~0.5%
-    // of mid and the chain-wide average is also tight. Until /v3/quotes
-    // entitlement propagates these all evaluate to null because the
-    // bid_price / ask_price fields stay null on every contract; the
-    // moment quotes flip the columns auto-populate from the next ingest.
-    const spreadPct = (c) => {
-      if (!(c?.bid_price > 0) || !(c?.ask_price > 0)) return null;
-      const mid = (c.bid_price + c.ask_price) / 2;
-      if (!(mid > 0)) return null;
-      return (c.ask_price - c.bid_price) / mid;
-    };
-    const chainSpreads = expContracts.map(spreadPct).filter((v) => v != null);
-    const avgChainSpreadPct =
-      chainSpreads.length > 0
-        ? chainSpreads.reduce((s, v) => s + v, 0) / chainSpreads.length
-        : null;
-    const atmSpreadPct = atmContract ? spreadPct(atmContract) : null;
-    const wingSpreadEntries = [spreadPct(call25d), spreadPct(put25d)].filter(
-      (v) => v != null
-    );
-    const wingSpreadPct =
-      wingSpreadEntries.length > 0
-        ? wingSpreadEntries.reduce((s, v) => s + v, 0) / wingSpreadEntries.length
-        : null;
-    // liquidityScore: tighter spread = higher score. Reference points:
-    // 0.5% spread (very tight, deep ATM SPX) -> ~95; 2% spread (typical
-    // ATM during off-hours) -> ~80; 5% spread (illiquid wing) -> ~50;
-    // 10% spread (deep OTM thin quote) -> ~30; >20% -> approaches 0.
-    // Formula: score = 100 * exp(-spread / 0.05) clamped to [0, 100].
-    // Combines the three measurements with weights 0.5 ATM, 0.3 wings,
-    // 0.2 chain-average to reflect the surface caring about ATM the
-    // most (it is what every term-structure read leans on), wings
-    // second (the smile and skew surfaces care here), chain-wide last.
-    const scoreOne = (s) =>
-      s == null ? null : Math.max(0, Math.min(100, 100 * Math.exp(-s / 0.05)));
-    const sAtm = scoreOne(atmSpreadPct);
-    const sWing = scoreOne(wingSpreadPct);
-    const sChain = scoreOne(avgChainSpreadPct);
-    const liquidityScore =
-      sAtm != null && sWing != null && sChain != null
-        ? 0.5 * sAtm + 0.3 * sWing + 0.2 * sChain
-        : null;
 
     expirationMetrics.push({
       expiration_date: exp,
@@ -611,10 +521,6 @@ function computeGex(pages, targets, startedAt, partial, partialReason = null) {
       call_25d_iv: call25dIv,
       skew_25d_rr: skew25dRr,
       contract_count: expContracts.length,
-      avg_chain_spread_pct: avgChainSpreadPct,
-      atm_spread_pct: atmSpreadPct,
-      wing_spread_pct: wingSpreadPct,
-      liquidity_score: liquidityScore,
     });
   }
 
@@ -986,43 +892,6 @@ async function insertAll({ run, contracts, computedLevels, expirationMetrics }) 
     insertComputedLevels(runId, computedLevels),
     insertExpirationMetrics(runId, expirationMetrics),
   ]);
-
-  // After a successful run, recompute the snapshot-source row of
-  // daily_block_summary for the trading_date this run belongs to. The
-  // function aggregates volume * close_price across the full chain at the
-  // most recent successful run on that date and upserts one row per
-  // expiration. Idempotent on the composite primary key. Skipped on
-  // partial runs because no snapshots were written; the next successful
-  // run picks up the correct aggregates.
-  if (!skipSnapshots) {
-    try {
-      const recomputeRes = await fetch(
-        `${SUPABASE_URL}/rest/v1/rpc/recompute_daily_block_summary_for_date`,
-        {
-          method: 'POST',
-          headers: supabaseHeaders(),
-          body: JSON.stringify({ p_trading_date: run.trading_date }),
-        }
-      );
-      if (!recomputeRes.ok) {
-        // Non-fatal: log but do not throw. The aggregates can be
-        // recomputed by the next successful run, or by the
-        // scripts/backfill/option-trade-aggregates-massive.mjs walker
-        // when it lands the source=flatfile rows for this date.
-        console.warn(
-          `[ingest] recompute_daily_block_summary_for_date returned ${recomputeRes.status}`
-        );
-      } else {
-        const rows = await recomputeRes.json();
-        const written = rows?.[0]?.rows_written ?? 0;
-        console.log(
-          `[ingest] daily_block_summary recompute: ${written} rows for ${run.trading_date}`
-        );
-      }
-    } catch (err) {
-      console.warn(`[ingest] daily_block_summary recompute failed: ${err.message}`);
-    }
-  }
 }
 
 async function insertSnapshotsBatched(runId, contracts) {

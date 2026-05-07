@@ -178,7 +178,7 @@ export default async function handler(request) {
     const snapParams = new URLSearchParams({
       run_id: `eq.${run.id}`,
       select:
-        'expiration_date,strike,contract_type,implied_volatility,delta,gamma,open_interest,close_price,bid_price,ask_price,bid_size,ask_size,quote_age_ms,last_trade_price,last_trade_size,last_trade_ts',
+        'expiration_date,strike,contract_type,implied_volatility,delta,gamma,open_interest,close_price',
       order: 'expiration_date.asc,strike.asc',
     });
     if (expirationFilter) snapParams.set('expiration_date', `eq.${expirationFilter}`);
@@ -266,7 +266,7 @@ export default async function handler(request) {
         'computed_levels'
       ),
       fetchWithTimeout(
-        `${supabaseUrl}/rest/v1/expiration_metrics?run_id=eq.${run.id}&order=expiration_date.asc&select=expiration_date,atm_iv,put_25d_iv,call_25d_iv,avg_chain_spread_pct,atm_spread_pct,wing_spread_pct,liquidity_score`,
+        `${supabaseUrl}/rest/v1/expiration_metrics?run_id=eq.${run.id}&order=expiration_date.asc&select=expiration_date,atm_iv,put_25d_iv,call_25d_iv`,
         { headers },
         'expiration_metrics'
       ),
@@ -416,14 +416,6 @@ export default async function handler(request) {
       const colGamma = new Array(n);
       const colOi = new Array(n);
       const colPx = new Array(n);
-      const colBid = new Array(n);
-      const colAsk = new Array(n);
-      const colBidSz = new Array(n);
-      const colAskSz = new Array(n);
-      const colQAge = new Array(n);
-      const colLtPx = new Array(n);
-      const colLtSz = new Array(n);
-      const colLtTs = new Array(n);
       for (let i = 0; i < n; i++) {
         const c = legacyContractRows[i];
         colExp[i] = expIndex.get(c.expiration_date) ?? -1;
@@ -437,28 +429,6 @@ export default async function handler(request) {
         colGamma[i] = g == null ? null : toSigFig(g, 6);
         colOi[i] = c.open_interest;
         colPx[i] = toNum(c.close_price);
-        // 4dp bid/ask precision: option price quanta are 1c/5c, so the
-        // 4th decimal is already two orders of magnitude below the
-        // minimum tick. Null is preserved (not coerced to 0) so the
-        // /parity slot's contractMark() can distinguish "no quote" from
-        // "0 bid". See get_contract_cols_v1 for the same precision
-        // rationale on the RPC path.
-        const bid = toNum(c.bid_price);
-        colBid[i] = bid == null ? null : roundTo(bid, 4);
-        const ask = toNum(c.ask_price);
-        colAsk[i] = ask == null ? null : roundTo(ask, 4);
-        // Sizes are integer counts of contracts; quote_age_ms is a
-        // freshness scalar in milliseconds. last_trade_price stays at
-        // 4dp for symmetry with bid/ask. last_trade_ts is a millisecond
-        // bigint downscaled at ingest time from Massive's nanosecond
-        // sip_timestamp.
-        colBidSz[i] = c.bid_size != null ? Number(c.bid_size) : null;
-        colAskSz[i] = c.ask_size != null ? Number(c.ask_size) : null;
-        colQAge[i] = c.quote_age_ms != null ? Number(c.quote_age_ms) : null;
-        const ltPx = toNum(c.last_trade_price);
-        colLtPx[i] = ltPx == null ? null : roundTo(ltPx, 4);
-        colLtSz[i] = c.last_trade_size != null ? Number(c.last_trade_size) : null;
-        colLtTs[i] = c.last_trade_ts != null ? Number(c.last_trade_ts) : null;
       }
       contractCols = {
         exp: colExp,
@@ -469,14 +439,6 @@ export default async function handler(request) {
         gamma: colGamma,
         oi: colOi,
         px: colPx,
-        bid: colBid,
-        ask: colAsk,
-        bidSz: colBidSz,
-        askSz: colAskSz,
-        qAge: colQAge,
-        ltPx: colLtPx,
-        ltSz: colLtSz,
-        ltTs: colLtTs,
       };
     }
     // For useRpcContracts branch, expirations + contractCols are already set above.
@@ -555,16 +517,6 @@ export default async function handler(request) {
       atm_iv: toNum(m.atm_iv),
       put_25d_iv: toNum(m.put_25d_iv),
       call_25d_iv: toNum(m.call_25d_iv),
-      // Per-expiration spread aggregates from the post-2026-05-06 schema
-      // additions on expiration_metrics. Stay null on every expiration
-      // until the Massive Options Developer entitlement finishes
-      // propagating /v3/quotes; auto-populate from the next ingest after
-      // that. Wire shape is a strict superset; older client builds that
-      // do not read these fields just ignore them.
-      avg_chain_spread_pct: toNum(m.avg_chain_spread_pct),
-      atm_spread_pct: toNum(m.atm_spread_pct),
-      wing_spread_pct: toNum(m.wing_spread_pct),
-      liquidity_score: toNum(m.liquidity_score),
     }));
 
     // Bands are DTE-keyed on the wire. Trading-date → expiration-date
