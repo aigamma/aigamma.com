@@ -11,6 +11,7 @@ import {
   plotlyTitle,
 } from '../../src/lib/plotlyTheme';
 import { daysToExpiration, pickDefaultExpiration, filterPickerExpirations } from '../../src/lib/dates';
+import { freshnessAndSpreadClause } from '../../src/lib/freshness';
 
 // -----------------------------------------------------------------------------
 // Delta Comparison.
@@ -484,8 +485,11 @@ export default function SlotB() {
           ))}
         </select>
         <span style={{ fontSize: '0.75rem', color: 'var(--text-secondary)' }}>
-          DTE {dte != null ? dte.toFixed(1) : '-'} · {slice.length} strikes ·{' '}
-          F = {F != null ? F.toFixed(2) : '-'} ·{' '}
+          DTE {dte != null ? dte.toFixed(1) : '-'} · {slice.length} strikes
+          {freshnessAndSpreadClause(
+            data?.contracts?.filter((c) => c.expiration_date === activeExp) ?? []
+          )}
+          {' '}· F = {F != null ? F.toFixed(2) : '-'} ·{' '}
           SVI {sviSlice ? 'ok' : 'fallback'}
         </span>
       </div>

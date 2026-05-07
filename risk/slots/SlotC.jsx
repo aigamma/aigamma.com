@@ -10,6 +10,7 @@ import {
   plotlyTitle,
 } from '../../src/lib/plotlyTheme';
 import { daysToExpiration, pickDefaultExpiration, filterPickerExpirations } from '../../src/lib/dates';
+import { freshnessAndSpreadClause } from '../../src/lib/freshness';
 
 // -----------------------------------------------------------------------------
 // Vanna-Volga Decomposition.
@@ -615,8 +616,11 @@ export default function SlotC() {
           ))}
         </select>
         <span style={{ fontSize: '0.75rem', color: 'var(--text-secondary)' }}>
-          DTE {dte != null ? dte.toFixed(1) : '-'} · {slice.length} strikes ·{' '}
-          F = {anchors ? anchors.atm.forward.toFixed(2) : '-'}
+          DTE {dte != null ? dte.toFixed(1) : '-'} · {slice.length} strikes
+          {freshnessAndSpreadClause(
+            data?.contracts?.filter((c) => c.expiration_date === activeExp) ?? []
+          )}
+          {' '}· F = {anchors ? anchors.atm.forward.toFixed(2) : '-'}
         </span>
       </div>
 

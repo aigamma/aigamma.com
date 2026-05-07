@@ -10,6 +10,7 @@ import {
   plotlyTitle,
 } from '../../src/lib/plotlyTheme';
 import { daysToExpiration, pickDefaultExpiration, filterPickerExpirations } from '../../src/lib/dates';
+import { freshnessAndSpreadClause } from '../../src/lib/freshness';
 
 // -----------------------------------------------------------------------------
 // Second-Order Greeks.
@@ -459,8 +460,11 @@ export default function SlotD() {
           ))}
         </select>
         <span style={{ fontSize: '0.75rem', color: 'var(--text-secondary)' }}>
-          DTE {dte != null ? dte.toFixed(1) : '-'} · {slice.length} strikes ·{' '}
-          spot {data?.spotPrice != null ? data.spotPrice.toFixed(2) : '-'}
+          DTE {dte != null ? dte.toFixed(1) : '-'} · {slice.length} strikes
+          {freshnessAndSpreadClause(
+            data?.contracts?.filter((c) => c.expiration_date === activeExp) ?? []
+          )}
+          {' '}· spot {data?.spotPrice != null ? data.spotPrice.toFixed(2) : '-'}
         </span>
       </div>
 
