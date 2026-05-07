@@ -114,22 +114,22 @@ const TOOLS_ITEMS = [
   { href: '/rotations/',      label: '/rotations/',      desc: 'Sector rotation chart and 1D/1W/1M bar trio' },
   { href: '/vix/',            label: '/vix/',            desc: 'VIX term structure, OU, vol-of-vol, regimes' },
   { href: '/seasonality/',    label: '/seasonality/',    desc: 'SPX intraday and daily seasonality grids' },
-  { href: '/stocks/',         label: '/stocks/',         desc: 'Top option-liquid single names, performance + rotation' },
-  { href: '/heatmap/',        label: '/heatmap/',        desc: 'Equal-size top-250-by-options-volume heatmap by sector' },
-  { href: '/events/',         label: '/events/',         desc: 'US macro release calendar with SPX implied-move overlays' },
+  { href: '/stocks/',         label: '/stocks/',         desc: 'Top option-liquid names, performance + rotation' },
+  { href: '/heatmap/',        label: '/heatmap/',        desc: 'Equal-size top-250-by-options-volume heatmap' },
+  { href: '/events/',         label: '/events/',         desc: 'US economic event calendar' },
   { href: '/expiring-gamma/', label: '/expiring-gamma/', desc: 'Gamma scheduled to expire per date' },
 ];
 
 const RESEARCH_ITEMS = [
-  { href: '/discrete/',   label: '/discrete/',   desc: 'Binomial and trinomial trees, SVI and SSVI surfaces' },
-  { href: '/garch/',      label: '/garch/',      desc: 'GARCH family and ensemble forecasts' },
-  { href: '/jump/',       label: '/jump/',       desc: 'Merton, Kou, Bates, variance gamma' },
-  { href: '/local/',      label: '/local/',      desc: 'Dupire extraction, pricing, slices, forward-smile pathology, full surface heatmap' },
+  { href: '/discrete/',   label: '/discrete/',   desc: 'Binomial and trinomial trees, SVI and SSVI' },
+  { href: '/garch/',      label: '/garch/',      desc: 'GARCH ensemble of RV forecasts' },
+  { href: '/jump/',       label: '/jump/',       desc: 'Merton, Kou, Bates, variance' },
+  { href: '/local/',      label: '/local/',      desc: 'Dupire extraction, pricing, slices, forward-smile pathology' },
   { href: '/parity/',     label: '/parity/',     desc: 'Put-call parity, box-spread rate, implied forward' },
-  { href: '/regime/',     label: '/regime/',     desc: 'Mixture, Markov, Wasserstein regimes' },
-  { href: '/risk/',       label: '/risk/',       desc: 'Cross-model Greeks, Vanna-Volga, second-order' },
+  { href: '/regime/',     label: '/regime/',     desc: 'Mixture, Markov, Wasserstein' },
+  { href: '/risk/',       label: '/risk/',       desc: 'Cross-model second-order Greeks, Vanna-Volga' },
   { href: '/rough/',      label: '/rough/',      desc: 'rBergomi simulator, skew scaling-law fit, RFSV, three-estimator Hurst triangulation' },
-  { href: '/smile/',      label: '/smile/',      desc: 'Multi-model Volatility Smile · Heston + Merton + SVI raw concurrent fits, Heston on by default' },
+  { href: '/smile/',      label: '/smile/',      desc: 'Multi-model Volatility Smile · Heston + Merton + SVI raw concurrent fits' },
 ];
 
 const ABOUT_ITEM = {
