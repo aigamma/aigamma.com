@@ -57,24 +57,7 @@ const INT_N = 220;
 const INT_U_MAX = 180;
 const NM_MAX_ITERS = 240;
 
-// -------- complex arithmetic ---------------------------------------------
-
-function cAdd(a, b) { return [a[0] + b[0], a[1] + b[1]]; }
-function cMul(a, b) { return [a[0]*b[0] - a[1]*b[1], a[0]*b[1] + a[1]*b[0]]; }
-function cScale(a, s) { return [a[0]*s, a[1]*s]; }
-function cExp(a) {
-  const m = Math.exp(a[0]);
-  return [m * Math.cos(a[1]), m * Math.sin(a[1])];
-}
-function cLog(a) {
-  return [0.5 * Math.log(a[0]*a[0] + a[1]*a[1]), Math.atan2(a[1], a[0])];
-}
-// Complex power for non-integer real exponents: z^p = exp(p · log z).
-function cPow(a, p) {
-  return cExp(cScale(cLog(a), p));
-}
-
-// Pre-computed Simpson weights and u-grid.
+// Pre-computed Simpson weights and u-grid for Lewis (2001) inversion.
 const U_GRID = new Float64Array(INT_N);
 const U_WEIGHTS = new Float64Array(INT_N);
 {
@@ -91,58 +74,93 @@ const U_WEIGHTS = new Float64Array(INT_N);
 
 // ---- VG characteristic function of log S_T ------------------------------
 //
-// For complex u (used in Lewis pricing with u → u − i/2), the inner
-// expression is (1 − i·u·θ·ν + 0.5·σ²·ν·u²). Computing each piece in
-// complex arithmetic:
-//   i·u for complex u = (u_re + i·u_im) gives (−u_im, u_re)
-//   u² for complex u: (u_re² − u_im², 2·u_re·u_im)
-function vgCf(uComplex, params, S0, T, r, q) {
+// Same precompute-once / per-K-sum factorisation that the Heston pricer on
+// /smile/ and /risk/ uses. The CF is independent of strike, so for one
+// (params, S0, T, r, q) we evaluate φ(u − i/2) once at every u in U_GRID
+// and store the (re, im) pair into Float64Arrays. Per-K pricing then
+// reduces to a tight O(INT_N) sum against the Lewis kernel
+// e^(i·u·k)/(u²+1/4).
+//
+//   φ_X(u; T)   = (1 − i·u·θ·ν + 0.5·σ²·ν·u²)^(−T/ν)
+//   φ_lnS(u; T) = exp[i·u·(ln S₀ + (r − q + ω)·T)] · φ_X(u; T)
+//   ω           = (1/ν)·ln(1 − θ·ν − 0.5·σ²·ν)
+//
+// At u = u_real − i/2 the complex parts collapse to:
+//   iu        = (1/2, u_real)
+//   u²        = (u_real² − 1/4, −u_real)
+//
+// Returns true on success, false if the parameters fall in the inadmissible
+// region (1 − θν − 0.5σ²ν ≤ 0); the calibration objective penalises that
+// region with a hard penalty so a single Float64Array NaN flag is enough.
+function fillVgCf(outRe, outIm, params, S0, T, r, q) {
   const { sigma, nu, theta } = params;
-  const uRe = uComplex[0];
-  const uIm = uComplex[1];
-  const iu = [-uIm, uRe];
-  const u2 = [uRe * uRe - uIm * uIm, 2 * uRe * uIm];
-
-  // Inner = 1 − iu·θ·ν + 0.5·σ²·ν·u²
-  const term1 = [1, 0];
-  const term2 = cScale(iu, -theta * nu);
-  const term3 = cScale(u2, 0.5 * sigma * sigma * nu);
-  const inner = cAdd(cAdd(term1, term2), term3);
-
-  // Power: inner^(−T/ν)
-  const phiX = cPow(inner, -T / nu);
-
-  // Compensator ω = (1/ν)·ln(1 − θ·ν − 0.5·σ²·ν). For θ·ν + 0.5·σ²·ν > 1
-  // the log argument is non-positive and the model is ill-posed;
-  // calibration penalty below blocks this region.
   const innerOmega = 1 - theta * nu - 0.5 * sigma * sigma * nu;
-  if (!(innerOmega > 0)) return [Number.NaN, Number.NaN];
+  if (!(innerOmega > 0)) {
+    for (let i = 0; i < INT_N; i++) {
+      outRe[i] = Number.NaN;
+      outIm[i] = Number.NaN;
+    }
+    return false;
+  }
   const omega = Math.log(innerOmega) / nu;
-
   const drift = Math.log(S0) + (r - q + omega) * T;
-  const expIuDrift = cExp(cScale(iu, drift));
-  return cMul(expIuDrift, phiX);
+  const power = -T / nu;
+  const halfSigma2Nu = 0.5 * sigma * sigma * nu;
+  const thetaNu = theta * nu;
+
+  for (let i = 0; i < INT_N; i++) {
+    const u = U_GRID[i];
+
+    // Inner = 1 − iu·θν + 0.5·σ²·ν·u²
+    //   −iu·θν = (−0.5·θν, −u·θν)
+    //   0.5·σ²ν·u² = (0.5·σ²ν·(u²−1/4), 0.5·σ²ν·(−u))
+    const inner_re = 1 - 0.5 * thetaNu + halfSigma2Nu * (u * u - 0.25);
+    const inner_im = -u * thetaNu + halfSigma2Nu * -u;
+
+    // phiX = inner^power = exp(power · log(inner))
+    const inner_mag2 = inner_re * inner_re + inner_im * inner_im;
+    const logInner_re = 0.5 * Math.log(inner_mag2);
+    const logInner_im = Math.atan2(inner_im, inner_re);
+    const phiX_exp_re = power * logInner_re;
+    const phiX_exp_im = power * logInner_im;
+    const phiXMag = Math.exp(phiX_exp_re);
+    const phiX_re = phiXMag * Math.cos(phiX_exp_im);
+    const phiX_im = phiXMag * Math.sin(phiX_exp_im);
+
+    // expIuDrift = exp(iu·drift) — iu·drift = (0.5·drift, u·drift)
+    const eIuDriftMag = Math.exp(0.5 * drift);
+    const eIuDrift_re = eIuDriftMag * Math.cos(u * drift);
+    const eIuDrift_im = eIuDriftMag * Math.sin(u * drift);
+
+    // φ = expIuDrift · phiX
+    outRe[i] = eIuDrift_re * phiX_re - eIuDrift_im * phiX_im;
+    outIm[i] = eIuDrift_re * phiX_im + eIuDrift_im * phiX_re;
+  }
+  return true;
+}
+
+function precomputeVgCfGrid(params, S0, T, r, q) {
+  const F_re = new Float64Array(INT_N);
+  const F_im = new Float64Array(INT_N);
+  const ok = fillVgCf(F_re, F_im, params, S0, T, r, q);
+  return { F_re, F_im, ok };
 }
 
 // ---- Lewis call price ----------------------------------------------------
-function vgCall(params, S0, K, T, r, q) {
-  const innerOmega = 1 - params.theta * params.nu - 0.5 * params.sigma * params.sigma * params.nu;
-  if (!(innerOmega > 0)) return Number.NaN;
-
+function vgCallFromCfGrid(grid, S0, K, T, r, q) {
+  if (!grid.ok) return Number.NaN;
+  const { F_re, F_im } = grid;
   const k = Math.log(K / S0) - (r - q) * T;
   let acc = 0;
   for (let i = 0; i < INT_N; i++) {
     const u = U_GRID[i];
-    const arg = [u, -0.5];
-    const phi = vgCf(arg, params, S0, T, r, q);
-    if (!Number.isFinite(phi[0]) || !Number.isFinite(phi[1])) return Number.NaN;
-    const eIuk = [Math.cos(u * k), Math.sin(u * k)];
-    const num = cMul(eIuk, phi);
-    const denom = u * u + 0.25;
-    acc += U_WEIGHTS[i] * num[0] / denom;
+    const c = Math.cos(u * k);
+    const s = Math.sin(u * k);
+    const num_re = c * F_re[i] - s * F_im[i];
+    acc += (U_WEIGHTS[i] * num_re) / (u * u + 0.25);
   }
   const sqrtSK = Math.sqrt(S0 * K);
-  const factor = sqrtSK * Math.exp(-(r + q) * T / 2) / Math.PI;
+  const factor = (sqrtSK * Math.exp((-(r + q) * T) / 2)) / Math.PI;
   const call = S0 * Math.exp(-q * T) - factor * acc;
   return Math.max(call, Math.max(S0 * Math.exp(-q * T) - K * Math.exp(-r * T), 0));
 }
@@ -310,10 +328,13 @@ function calibrateVg(slice, S0, T, r, q, init) {
     // Compensator condition: 1 − θν − 0.5σ²ν > 0
     const innerOmega = 1 - p.theta * p.nu - 0.5 * p.sigma * p.sigma * p.nu;
     if (!(innerOmega > 0.01)) return 1e6;
+    // One CF table per parameter set; every strike on the slice reuses it.
+    const grid = precomputeVgCfGrid(p, S0, T, r, q);
+    if (!grid.ok) return 1e6;
     let sse = 0;
     let n = 0;
     for (const { strike, iv } of slice) {
-      const c = vgCall(p, S0, strike, T, r, q);
+      const c = vgCallFromCfGrid(grid, S0, strike, T, r, q);
       if (!Number.isFinite(c)) return 1e6;
       const modelIv = bsmIv(c, S0, strike, T, r, q);
       if (modelIv == null || !Number.isFinite(modelIv)) return 1e6;
@@ -455,10 +476,19 @@ export default function SlotD() {
       const nGrid = 70;
       gridK = new Array(nGrid);
       gridIv = new Array(nGrid);
+      // Build the VG CF table once for the calibrated parameter set, then
+      // sum it against the Lewis kernel for each grid strike.
+      const vgGrid = precomputeVgCfGrid(
+        calib.params,
+        data.spotPrice,
+        T,
+        RATE_R,
+        RATE_Q
+      );
       for (let i = 0; i < nGrid; i++) {
         const K = K_lo + (i / (nGrid - 1)) * (K_hi - K_lo);
         gridK[i] = K;
-        const c = vgCall(calib.params, data.spotPrice, K, T, RATE_R, RATE_Q);
+        const c = vgCallFromCfGrid(vgGrid, data.spotPrice, K, T, RATE_R, RATE_Q);
         const iv = Number.isFinite(c) ? bsmIv(c, data.spotPrice, K, T, RATE_R, RATE_Q) : null;
         gridIv[i] = iv != null ? iv * 100 : null;
       }

@@ -42,31 +42,7 @@ const INT_N = 200;
 const INT_U_MAX = 130;
 const NM_MAX_ITERS = 280;
 
-// -------- complex arithmetic ---------------------------------------------
-
-function cAdd(a, b) { return [a[0] + b[0], a[1] + b[1]]; }
-function cSub(a, b) { return [a[0] - b[0], a[1] - b[1]]; }
-function cMul(a, b) { return [a[0]*b[0] - a[1]*b[1], a[0]*b[1] + a[1]*b[0]]; }
-function cDiv(a, b) {
-  const denom = b[0]*b[0] + b[1]*b[1];
-  return [(a[0]*b[0] + a[1]*b[1]) / denom, (a[1]*b[0] - a[0]*b[1]) / denom];
-}
-function cScale(a, s) { return [a[0]*s, a[1]*s]; }
-function cExp(a) {
-  const m = Math.exp(a[0]);
-  return [m * Math.cos(a[1]), m * Math.sin(a[1])];
-}
-function cLog(a) {
-  return [0.5 * Math.log(a[0]*a[0] + a[1]*a[1]), Math.atan2(a[1], a[0])];
-}
-function cSqrt(a) {
-  const r = Math.sqrt(a[0]*a[0] + a[1]*a[1]);
-  const re = Math.sqrt(0.5 * (r + a[0]));
-  const im = Math.sign(a[1] || 1) * Math.sqrt(0.5 * (r - a[0]));
-  return [re, im];
-}
-
-// Pre-computed Simpson weights and u-grid.
+// Pre-computed Simpson weights and u-grid for Lewis (2001) inversion.
 const U_GRID = new Float64Array(INT_N);
 const U_WEIGHTS = new Float64Array(INT_N);
 {
@@ -81,88 +57,173 @@ const U_WEIGHTS = new Float64Array(INT_N);
   }
 }
 
-// ---- Heston characteristic function (Little-Trap, single CF formulation)
+// ---- Bates CF: Heston (Schoutens single-CF form) × Merton jump factor ---
 //
-// Returns φ(u) for log S_T under the risk-neutral measure with no jump
-// component included. Uses the "Schoutens" form so that there is one
-// CF (not the Heston P₁/P₂ pair); Lewis pricing wants the un-pinned
-// single CF directly.
-function hestonCfSingle(uComplex, params, S0, T, r, q) {
-  const { kappa, theta, xi, rho, v0 } = params;
-  const i = [0, 1];
-  const iu = cMul(i, uComplex);
-  // d = √((ρ·ξ·iu − κ)² + ξ²·(iu + u²))
-  // Compute ρ·ξ·iu − κ
-  const a = cSub(cScale(iu, rho * xi), [kappa, 0]);
-  // u² (complex)
-  const u2 = cMul(uComplex, uComplex);
-  // iu + u²
-  const iuPlusU2 = cAdd(iu, u2);
-  // a² + ξ²·(iu + u²)
-  const inside = cAdd(cMul(a, a), cScale(iuPlusU2, xi * xi));
-  const d = cSqrt(inside);
+// Same precompute-once / per-K-sum factorisation that the Heston pricer on
+// /smile/ and /risk/ uses, applied to the Schoutens single-CF form that
+// Lewis (2001) pricing wants. The CF is independent of strike, so for one
+// (params, S0, T, r, q) we evaluate φ(u − i/2) once at every u in U_GRID
+// and store the (re, im) pair into Float64Arrays. Per-K pricing then
+// reduces to a tight O(INT_N) sum against the Lewis kernel
+// e^(i·u·k)/(u²+1/4) with no fresh CF evaluations and zero array
+// allocations.
+//
+// At u = u_real − i/2 the complex parts collapse to:
+//   iu        = (1/2, u_real)
+//   u²        = (u_real² − 1/4, −u_real)
+//   iu + u²   = (u_real² + 1/4, 0)        ← purely real
+//   ξ²·(iu+u²) = (ξ²·(u_real²+1/4), 0)
+function fillBatesCf(outRe, outIm, params, S0, T, r, q) {
+  const { kappa, theta, xi, rho, v0, lambda, muJ, sigmaJ } = params;
+  const xi2 = xi * xi;
+  const rhoXi = rho * xi;
+  const ktxi2 = (kappa * theta) / xi2;
+  const rmqT = (r - q) * T;
+  const logS0 = Math.log(S0);
+  const k_j = Math.exp(muJ + 0.5 * sigmaJ * sigmaJ) - 1;
+  const halfSigJ2 = 0.5 * sigmaJ * sigmaJ;
+  const lambdaT = lambda * T;
 
-  // g = (κ − ρ·ξ·iu − d) / (κ − ρ·ξ·iu + d)  (Little-Trap form)
-  const aMinus = cSub([kappa, 0], cScale(iu, rho * xi));
-  const num = cSub(aMinus, d);
-  const den = cAdd(aMinus, d);
-  const g = cDiv(num, den);
+  for (let i = 0; i < INT_N; i++) {
+    const u = U_GRID[i];
 
-  const eDt = cExp(cScale(d, -T));
-  const one = [1, 0];
-  // (1 − g·e^(−dT)) / (1 − g)
-  const ratio = cDiv(cSub(one, cMul(g, eDt)), cSub(one, g));
-  const logRatio = cLog(ratio);
+    // ---- Heston Schoutens single CF at (u, −1/2) -----------------------
+    // a = ρ·ξ·iu − κ = (0.5·ρξ − κ, ρξ·u)
+    const a_re = 0.5 * rhoXi - kappa;
+    const a_im = rhoXi * u;
+    // a²
+    const aSq_re = a_re * a_re - a_im * a_im;
+    const aSq_im = 2 * a_re * a_im;
+    // ξ²·(iu + u²) is purely real: ξ²·(u² + 1/4)
+    const xi2_iuPlusU2_re = xi2 * (u * u + 0.25);
+    // inside = a² + ξ²·(iu + u²)
+    const inside_re = aSq_re + xi2_iuPlusU2_re;
+    const inside_im = aSq_im;
+    // d = sqrt(inside) — principal branch with sign continuity
+    const inside_mag = Math.sqrt(inside_re * inside_re + inside_im * inside_im);
+    const d_re = Math.sqrt(0.5 * (inside_mag + inside_re));
+    const d_im = Math.sign(inside_im || 1) * Math.sqrt(0.5 * (inside_mag - inside_re));
 
-  // C = (r−q)·iu·T + (κθ/ξ²)·[ (κ − ρ·ξ·iu − d)·T − 2·log(ratio) ]
-  const C = cAdd(
-    cScale(iu, (r - q) * T),
-    cScale(cSub(cScale(num, T), cScale(logRatio, 2)), (kappa * theta) / (xi * xi)),
-  );
-  // D = (κ − ρ·ξ·iu − d)/ξ²  ·  (1 − e^(−dT)) / (1 − g·e^(−dT))
-  const D = cMul(
-    cScale(num, 1 / (xi * xi)),
-    cDiv(cSub(one, eDt), cSub(one, cMul(g, eDt))),
-  );
+    // aMinus = κ − ρ·ξ·iu = (κ − 0.5·ρξ, −ρξ·u)
+    const am_re = kappa - 0.5 * rhoXi;
+    const am_im = -rhoXi * u;
+    // num = aMinus − d, den = aMinus + d
+    const num_re = am_re - d_re;
+    const num_im = am_im - d_im;
+    const den_re = am_re + d_re;
+    const den_im = am_im + d_im;
+    // g = num / den
+    const den_mag2 = den_re * den_re + den_im * den_im;
+    const g_re = (num_re * den_re + num_im * den_im) / den_mag2;
+    const g_im = (num_im * den_re - num_re * den_im) / den_mag2;
 
-  // φ = exp(C + D·v₀ + iu·ln S₀)
-  const exponent = cAdd(cAdd(C, cScale(D, v0)), cScale(iu, Math.log(S0)));
-  return cExp(exponent);
+    // eDt = exp(−d·T)
+    const negDT_re = -d_re * T;
+    const negDT_im = -d_im * T;
+    const expMag1 = Math.exp(negDT_re);
+    const eDt_re = expMag1 * Math.cos(negDT_im);
+    const eDt_im = expMag1 * Math.sin(negDT_im);
+
+    // gEdT = g · eDt — also serves as denominator (1 − gEdT) of D and ratio
+    const gEdT_re = g_re * eDt_re - g_im * eDt_im;
+    const gEdT_im = g_re * eDt_im + g_im * eDt_re;
+
+    // ratio = (1 − gEdT) / (1 − g)
+    const oneMinusGEdT_re = 1 - gEdT_re;
+    const oneMinusGEdT_im = -gEdT_im;
+    const oneMinusG_re = 1 - g_re;
+    const oneMinusG_im = -g_im;
+    const ompg_mag2 = oneMinusG_re * oneMinusG_re + oneMinusG_im * oneMinusG_im;
+    const ratio_re =
+      (oneMinusGEdT_re * oneMinusG_re + oneMinusGEdT_im * oneMinusG_im) / ompg_mag2;
+    const ratio_im =
+      (oneMinusGEdT_im * oneMinusG_re - oneMinusGEdT_re * oneMinusG_im) / ompg_mag2;
+    // logRatio = log(ratio) — principal branch
+    const logRatio_re = 0.5 * Math.log(ratio_re * ratio_re + ratio_im * ratio_im);
+    const logRatio_im = Math.atan2(ratio_im, ratio_re);
+
+    // term = num·T − 2·logRatio
+    const term_re = num_re * T - 2 * logRatio_re;
+    const term_im = num_im * T - 2 * logRatio_im;
+
+    // C = (r−q)·iu·T + (κθ/ξ²)·term. (r−q)·iu·T = (0.5·rmqT, u·rmqT)
+    const C_re = 0.5 * rmqT + term_re * ktxi2;
+    const C_im = u * rmqT + term_im * ktxi2;
+
+    // inner = (1 − eDt) / (1 − gEdT)
+    const oneMinusEDt_re = 1 - eDt_re;
+    const oneMinusEDt_im = -eDt_im;
+    const omgedt_mag2 =
+      oneMinusGEdT_re * oneMinusGEdT_re + oneMinusGEdT_im * oneMinusGEdT_im;
+    const inner_re =
+      (oneMinusEDt_re * oneMinusGEdT_re + oneMinusEDt_im * oneMinusGEdT_im) /
+      omgedt_mag2;
+    const inner_im =
+      (oneMinusEDt_im * oneMinusGEdT_re - oneMinusEDt_re * oneMinusGEdT_im) /
+      omgedt_mag2;
+
+    // D = (num/ξ²) · inner
+    const numXi2_re = num_re / xi2;
+    const numXi2_im = num_im / xi2;
+    const D_re = numXi2_re * inner_re - numXi2_im * inner_im;
+    const D_im = numXi2_re * inner_im + numXi2_im * inner_re;
+
+    // exponent_H = C + D·v0 + iu·log(S0). iu·log(S0) = (0.5·logS0, u·logS0)
+    const expH_re = C_re + D_re * v0 + 0.5 * logS0;
+    const expH_im = C_im + D_im * v0 + u * logS0;
+    const expHMag = Math.exp(expH_re);
+    const phiH_re = expHMag * Math.cos(expH_im);
+    const phiH_im = expHMag * Math.sin(expH_im);
+
+    // ---- Bates jump factor: exp[λT·(e^{iu·μJ − 0.5·σJ²·u²} − 1 − iu·k_j)]
+    // iu·μJ = (0.5·μJ, u·μJ)
+    // 0.5·σJ²·u² = (0.5·σJ²·(u² − 1/4), 0.5·σJ²·(−u))
+    const innerExp_re = 0.5 * muJ - halfSigJ2 * (u * u - 0.25);
+    const innerExp_im = u * muJ - halfSigJ2 * (-u);
+    // eInner = exp(innerExp)
+    const eInnerMag = Math.exp(innerExp_re);
+    const eInner_re = eInnerMag * Math.cos(innerExp_im);
+    const eInner_im = eInnerMag * Math.sin(innerExp_im);
+    // inner_jump = eInner − 1 − iu·k_j; iu·k_j = (0.5·k_j, u·k_j)
+    const innerJump_re = eInner_re - 1 - 0.5 * k_j;
+    const innerJump_im = eInner_im - u * k_j;
+    // jumpExp = λT·inner_jump
+    const jumpExp_re = lambdaT * innerJump_re;
+    const jumpExp_im = lambdaT * innerJump_im;
+    // jumpFactor = exp(jumpExp)
+    const jumpFactorMag = Math.exp(jumpExp_re);
+    const jumpFactor_re = jumpFactorMag * Math.cos(jumpExp_im);
+    const jumpFactor_im = jumpFactorMag * Math.sin(jumpExp_im);
+
+    // φ = phiH · jumpFactor
+    const phi_re = phiH_re * jumpFactor_re - phiH_im * jumpFactor_im;
+    const phi_im = phiH_re * jumpFactor_im + phiH_im * jumpFactor_re;
+    outRe[i] = phi_re;
+    outIm[i] = phi_im;
+  }
 }
 
-// ---- Bates CF: Heston × Merton-jump factor -------------------------------
-function batesCf(uComplex, params, S0, T, r, q) {
-  const { lambda, muJ, sigmaJ } = params;
-  const phiH = hestonCfSingle(uComplex, params, S0, T, r, q);
-  // jump factor: exp[ λT·(e^(iu·μJ − 0.5·u²·σJ²) − 1 − iu·k) ]
-  const k = Math.exp(muJ + 0.5 * sigmaJ * sigmaJ) - 1;
-  const i = [0, 1];
-  const iu = cMul(i, uComplex);
-  const u2 = cMul(uComplex, uComplex);
-  // exponent inside the inner exp: iu·μJ − 0.5·σJ²·u²
-  const innerExp = cSub(cScale(iu, muJ), cScale(u2, 0.5 * sigmaJ * sigmaJ));
-  const eInner = cExp(innerExp);
-  const inner = cSub(cSub(eInner, [1, 0]), cScale(iu, k));
-  const jumpExp = cScale(inner, lambda * T);
-  const jumpFactor = cExp(jumpExp);
-  return cMul(phiH, jumpFactor);
+function precomputeBatesCfGrid(params, S0, T, r, q) {
+  const F_re = new Float64Array(INT_N);
+  const F_im = new Float64Array(INT_N);
+  fillBatesCf(F_re, F_im, params, S0, T, r, q);
+  return { F_re, F_im };
 }
 
 // ---- Lewis call price ----------------------------------------------------
-function batesCall(params, S0, K, T, r, q) {
+function batesCallFromCfGrid(grid, S0, K, T, r, q) {
+  const { F_re, F_im } = grid;
   const k = Math.log(K / S0) - (r - q) * T;
   let acc = 0;
   for (let i = 0; i < INT_N; i++) {
     const u = U_GRID[i];
-    const arg = [u, -0.5];
-    const phi = batesCf(arg, params, S0, T, r, q);
-    const eIuk = [Math.cos(u * k), Math.sin(u * k)];
-    const num = cMul(eIuk, phi);
-    const denom = u * u + 0.25;
-    acc += U_WEIGHTS[i] * num[0] / denom;
+    const c = Math.cos(u * k);
+    const s = Math.sin(u * k);
+    const num_re = c * F_re[i] - s * F_im[i];
+    acc += (U_WEIGHTS[i] * num_re) / (u * u + 0.25);
   }
   const sqrtSK = Math.sqrt(S0 * K);
-  const factor = sqrtSK * Math.exp(-(r + q) * T / 2) / Math.PI;
+  const factor = (sqrtSK * Math.exp((-(r + q) * T) / 2)) / Math.PI;
   const call = S0 * Math.exp(-q * T) - factor * acc;
   return Math.max(call, Math.max(S0 * Math.exp(-q * T) - K * Math.exp(-r * T), 0));
 }
@@ -337,10 +398,12 @@ function calibrateBates(slice, S0, T, r, q, init) {
     const p = unpack(theta);
     if (p.kappa > 50 || p.theta > 1 || p.xi > 3 || p.v0 > 1) return 1e6;
     if (p.lambda > 30 || p.sigmaJ > 1 || p.muJ < -2 || p.muJ > 1) return 1e6;
+    // One CF table per parameter set; every strike on the slice reuses it.
+    const grid = precomputeBatesCfGrid(p, S0, T, r, q);
     let sse = 0;
     let n = 0;
     for (const { strike, iv } of slice) {
-      const c = batesCall(p, S0, strike, T, r, q);
+      const c = batesCallFromCfGrid(grid, S0, strike, T, r, q);
       const modelIv = bsmIv(c, S0, strike, T, r, q);
       if (modelIv == null || !Number.isFinite(modelIv)) return 1e6;
       const d = modelIv - iv;
@@ -486,10 +549,19 @@ export default function SlotC() {
       const nGrid = 50;
       gridK = new Array(nGrid);
       gridIv = new Array(nGrid);
+      // Build the Bates CF table once for the calibrated parameter set,
+      // then sum it against the Lewis kernel for each grid strike.
+      const batesGrid = precomputeBatesCfGrid(
+        calib.params,
+        data.spotPrice,
+        T,
+        RATE_R,
+        RATE_Q
+      );
       for (let i = 0; i < nGrid; i++) {
         const K = K_lo + (i / (nGrid - 1)) * (K_hi - K_lo);
         gridK[i] = K;
-        const c = batesCall(calib.params, data.spotPrice, K, T, RATE_R, RATE_Q);
+        const c = batesCallFromCfGrid(batesGrid, data.spotPrice, K, T, RATE_R, RATE_Q);
         const iv = bsmIv(c, data.spotPrice, K, T, RATE_R, RATE_Q);
         gridIv[i] = iv != null ? iv * 100 : null;
       }
@@ -497,9 +569,16 @@ export default function SlotC() {
       // full Bates curve is the smile contribution from the jump
       // component, exactly the Heston short-skew gap that Bates closes.
       const noJumpParams = { ...calib.params, lambda: 0 };
+      const batesNoJumpGrid = precomputeBatesCfGrid(
+        noJumpParams,
+        data.spotPrice,
+        T,
+        RATE_R,
+        RATE_Q
+      );
       gridIvNoJump = new Array(nGrid);
       for (let i = 0; i < nGrid; i++) {
-        const c = batesCall(noJumpParams, data.spotPrice, gridK[i], T, RATE_R, RATE_Q);
+        const c = batesCallFromCfGrid(batesNoJumpGrid, data.spotPrice, gridK[i], T, RATE_R, RATE_Q);
         const iv = bsmIv(c, data.spotPrice, gridK[i], T, RATE_R, RATE_Q);
         gridIvNoJump[i] = iv != null ? iv * 100 : null;
       }

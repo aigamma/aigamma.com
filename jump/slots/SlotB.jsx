@@ -53,21 +53,7 @@ const INT_N = 200;
 const INT_U_MAX = 150;
 const NM_MAX_ITERS = 240;
 
-// -------- complex arithmetic as [re, im] pairs ---------------------------
-
-function cAdd(a, b) { return [a[0] + b[0], a[1] + b[1]]; }
-function cSub(a, b) { return [a[0] - b[0], a[1] - b[1]]; }
-function cMul(a, b) { return [a[0]*b[0] - a[1]*b[1], a[0]*b[1] + a[1]*b[0]]; }
-function cDiv(a, b) {
-  const denom = b[0]*b[0] + b[1]*b[1];
-  return [(a[0]*b[0] + a[1]*b[1]) / denom, (a[1]*b[0] - a[0]*b[1]) / denom];
-}
-function cExp(a) {
-  const m = Math.exp(a[0]);
-  return [m * Math.cos(a[1]), m * Math.sin(a[1])];
-}
-
-// Pre-computed Simpson weights and u-grid (shared with kouCharFn caller).
+// Pre-computed Simpson weights and u-grid for Lewis (2001) inversion.
 const U_GRID = new Float64Array(INT_N);
 const U_WEIGHTS = new Float64Array(INT_N);
 {
@@ -83,58 +69,103 @@ const U_WEIGHTS = new Float64Array(INT_N);
 }
 
 // ---- Kou characteristic function of log S_T -----------------------------
-
-function kouCf(u_complex, params, S0, T, r, q) {
+//
+// Same precompute-once / per-K-sum factorisation that the Heston pricer on
+// /smile/ and /risk/ uses: the CF is independent of strike, so for one
+// (params, S0, T, r, q) we evaluate the CF once at every u in U_GRID
+// (always at the Lewis argument u − i/2) and store the resulting (re, im)
+// pair into Float64Arrays. Per-K pricing then becomes a tight O(INT_N) sum
+// against the inversion kernel e^(i·u·k)/(u²+1/4) with no fresh CF
+// evaluations and zero array allocations.
+//
+// φ(u; T) = exp[ i·u·(ln S₀ + ω·T) − 0.5σ²·u²·T + λT·ψ_jump(u) ]
+//   ω        = r − q − 0.5σ² − λκ
+//   κ        = p·η₁/(η₁ − 1) + (1−p)·η₂/(η₂ + 1) − 1
+//   ψ_jump   = p·η₁/(η₁ − iu) + (1−p)·η₂/(η₂ + iu) − 1
+//
+// At u = u_real − i/2 the complex parts collapse to:
+//   iu         = (1/2, u_real)
+//   u²         = (u_real² − 1/4, −u_real)
+//   η₁ − iu    = (η₁ − 1/2, −u_real)
+//   η₂ + iu    = (η₂ + 1/2,  u_real)
+function fillKouCf(outRe, outIm, params, S0, T, r, q) {
   const { sigma, lambda, p, eta1, eta2 } = params;
-  // κ = p·η₁/(η₁ − 1) + (1−p)·η₂/(η₂ + 1) − 1
-  const kappa = p * eta1 / (eta1 - 1) + (1 - p) * eta2 / (eta2 + 1) - 1;
+  const kappa = (p * eta1) / (eta1 - 1) + ((1 - p) * eta2) / (eta2 + 1) - 1;
   const omega = r - q - 0.5 * sigma * sigma - lambda * kappa;
-
-  // ψ_jump(u) = p·η₁/(η₁ − iu) + (1−p)·η₂/(η₂ + iu) − 1
-  // η₁ − iu is complex; encode iu = (−u_im, u_re) since u is complex
-  const iu = [-u_complex[1], u_complex[0]];
-  const eta1_minus_iu = cSub([eta1, 0], iu);
-  const eta2_plus_iu = cAdd([eta2, 0], iu);
-  const term1 = cDiv([p * eta1, 0], eta1_minus_iu);
-  const term2 = cDiv([(1 - p) * eta2, 0], eta2_plus_iu);
-  const psi = cSub(cAdd(term1, term2), [1, 0]);
-
-  // exponent = i·u·(ln S₀ + ω·T) − 0.5σ²·u²·T + λT·ψ
-  // u² for complex u: (u_re + i·u_im)² = (u_re² − u_im², 2·u_re·u_im)
-  const uRe = u_complex[0];
-  const uIm = u_complex[1];
-  const u2 = [uRe * uRe - uIm * uIm, 2 * uRe * uIm];
   const drift = Math.log(S0) + omega * T;
-  // i·u·drift = i·u·drift = (−u_im·drift, u_re·drift)
-  const iuDrift = [-uIm * drift, uRe * drift];
   const halfSigma2T = 0.5 * sigma * sigma * T;
-  const sigmaTerm = [-halfSigma2T * u2[0], -halfSigma2T * u2[1]];
-  const jumpTerm = [lambda * T * psi[0], lambda * T * psi[1]];
-  const exponent = [iuDrift[0] + sigmaTerm[0] + jumpTerm[0], iuDrift[1] + sigmaTerm[1] + jumpTerm[1]];
-  return cExp(exponent);
+  const lambdaT = lambda * T;
+  const pEta1 = p * eta1;
+  const oneMinusPEta2 = (1 - p) * eta2;
+
+  for (let i = 0; i < INT_N; i++) {
+    const u = U_GRID[i];
+
+    // u² with u_im = −1/2.
+    const u2_re = u * u - 0.25;
+    const u2_im = -u;
+
+    // term1 = p·η₁ / (η₁ − iu) = p·η₁·conj(η₁ − iu)/|η₁ − iu|²
+    const e1mi_re = eta1 - 0.5;
+    const e1mi_im = -u;
+    const e1mi_mag2 = e1mi_re * e1mi_re + e1mi_im * e1mi_im;
+    const term1_re = (pEta1 * e1mi_re) / e1mi_mag2;
+    const term1_im = -(pEta1 * e1mi_im) / e1mi_mag2;
+
+    // term2 = (1−p)·η₂ / (η₂ + iu)
+    const e2pi_re = eta2 + 0.5;
+    const e2pi_im = u;
+    const e2pi_mag2 = e2pi_re * e2pi_re + e2pi_im * e2pi_im;
+    const term2_re = (oneMinusPEta2 * e2pi_re) / e2pi_mag2;
+    const term2_im = -(oneMinusPEta2 * e2pi_im) / e2pi_mag2;
+
+    // ψ = term1 + term2 − 1
+    const psi_re = term1_re + term2_re - 1;
+    const psi_im = term1_im + term2_im;
+
+    // iu·drift = (0.5·drift, u·drift)
+    const iuDrift_re = 0.5 * drift;
+    const iuDrift_im = u * drift;
+    // −0.5σ²T·u²
+    const sigmaTerm_re = -halfSigma2T * u2_re;
+    const sigmaTerm_im = -halfSigma2T * u2_im;
+    // λT·ψ
+    const jumpTerm_re = lambdaT * psi_re;
+    const jumpTerm_im = lambdaT * psi_im;
+
+    const exp_re = iuDrift_re + sigmaTerm_re + jumpTerm_re;
+    const exp_im = iuDrift_im + sigmaTerm_im + jumpTerm_im;
+    const expMag = Math.exp(exp_re);
+    outRe[i] = expMag * Math.cos(exp_im);
+    outIm[i] = expMag * Math.sin(exp_im);
+  }
+}
+
+function precomputeKouCfGrid(params, S0, T, r, q) {
+  const F_re = new Float64Array(INT_N);
+  const F_im = new Float64Array(INT_N);
+  fillKouCf(F_re, F_im, params, S0, T, r, q);
+  return { F_re, F_im };
 }
 
 // ---- Lewis (2001) single-integral call price ----------------------------
 //
 // C = S₀·e^(−q·T) − √(S₀·K)·e^(−(r+q)·T/2) / π · ∫₀^∞ Re[ e^(i·u·k) · φ(u − i/2) ] / (u² + 1/4) du
 // where k = ln(K/S₀) − (r − q)·T.
-
-function kouCall(params, S0, K, T, r, q) {
+function kouCallFromCfGrid(grid, S0, K, T, r, q) {
+  const { F_re, F_im } = grid;
   const k = Math.log(K / S0) - (r - q) * T;
   let acc = 0;
   for (let i = 0; i < INT_N; i++) {
     const u = U_GRID[i];
-    // u − i/2 as a complex pair
-    const arg = [u, -0.5];
-    const phi = kouCf(arg, params, S0, T, r, q);
-    // e^(i·u·k) = (cos(u·k), sin(u·k))
-    const eIuk = [Math.cos(u * k), Math.sin(u * k)];
-    const num = cMul(eIuk, phi);
-    const denom = u * u + 0.25;
-    acc += U_WEIGHTS[i] * num[0] / denom;
+    const c = Math.cos(u * k);
+    const s = Math.sin(u * k);
+    // Re[e^(i·u·k) · φ] = c·F_re − s·F_im
+    const num_re = c * F_re[i] - s * F_im[i];
+    acc += (U_WEIGHTS[i] * num_re) / (u * u + 0.25);
   }
   const sqrtSK = Math.sqrt(S0 * K);
-  const factor = sqrtSK * Math.exp(-(r + q) * T / 2) / Math.PI;
+  const factor = (sqrtSK * Math.exp((-(r + q) * T) / 2)) / Math.PI;
   const call = S0 * Math.exp(-q * T) - factor * acc;
   return Math.max(call, Math.max(S0 * Math.exp(-q * T) - K * Math.exp(-r * T), 0));
 }
@@ -306,10 +337,12 @@ function calibrateKou(slice, S0, T, r, q, init) {
   const obj = (theta) => {
     const p = unpack(theta);
     if (p.sigma > 1.5 || p.lambda > 30 || p.eta1 > 200 || p.eta2 > 200) return 1e6;
+    // One CF table per parameter set; every strike on the slice reuses it.
+    const grid = precomputeKouCfGrid(p, S0, T, r, q);
     let sse = 0;
     let n = 0;
     for (const { strike, iv } of slice) {
-      const c = kouCall(p, S0, strike, T, r, q);
+      const c = kouCallFromCfGrid(grid, S0, strike, T, r, q);
       const modelIv = bsmIv(c, S0, strike, T, r, q);
       if (modelIv == null || !Number.isFinite(modelIv)) return 1e6;
       const d = modelIv - iv;
@@ -449,10 +482,19 @@ export default function SlotB() {
       const nGrid = 60;
       gridK = new Array(nGrid);
       gridIv = new Array(nGrid);
+      // Build the Kou CF table once for the calibrated parameter set, then
+      // sum it against the Lewis kernel for each grid strike.
+      const kouGrid = precomputeKouCfGrid(
+        calib.params,
+        data.spotPrice,
+        T,
+        RATE_R,
+        RATE_Q
+      );
       for (let i = 0; i < nGrid; i++) {
         const K = K_lo + (i / (nGrid - 1)) * (K_hi - K_lo);
         gridK[i] = K;
-        const c = kouCall(calib.params, data.spotPrice, K, T, RATE_R, RATE_Q);
+        const c = kouCallFromCfGrid(kouGrid, data.spotPrice, K, T, RATE_R, RATE_Q);
         const iv = bsmIv(c, data.spotPrice, K, T, RATE_R, RATE_Q);
         gridIv[i] = iv != null ? iv * 100 : null;
       }
