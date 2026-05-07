@@ -12,6 +12,7 @@ import {
 } from '../lib/plotlyTheme';
 import RangeBrush from './RangeBrush';
 import ResetButton from './ResetButton';
+import { standaloneFreshnessLine } from '../lib/freshness';
 
 const NUM_STRIKE_ROWS_MOBILE = 13;
 const NUM_STRIKE_ROWS_DESKTOP = 15;
@@ -443,6 +444,20 @@ export default function FixedStrikeIvMatrix({ contracts, spotPrice, expirations 
   return (
     <div className="card" style={{ marginBottom: '1rem', position: 'relative' }}>
       <ResetButton visible={colRange != null} onClick={() => setColRange(null)} />
+      {(() => {
+        // Single sub-line above the matrix title summarizing the freshness
+        // and spread context of the chain that feeds the per-strike IV
+        // grid. Renders nothing when neither signal is available so
+        // off-hours and pre-entitlement layouts collapse to the prior
+        // shape.
+        const line = standaloneFreshnessLine(contracts ?? []);
+        if (!line) return null;
+        return (
+          <div style={{ fontSize: '0.75rem', color: 'var(--text-secondary)', marginBottom: '0.5rem', textAlign: 'center' }}>
+            chain inputs · {line}
+          </div>
+        );
+      })()}
       <div
         style={{
           display: 'flex',

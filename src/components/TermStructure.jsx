@@ -9,6 +9,7 @@ import {
   plotlyTitle,
 } from '../lib/plotlyTheme';
 import { addDaysIso, daysBetween, tradingDateFromCapturedAt } from '../lib/dates';
+import { standaloneFreshnessLine } from '../lib/freshness';
 import RangeBrush from './RangeBrush';
 import ResetButton from './ResetButton';
 
@@ -92,7 +93,7 @@ function closedPolygon(xDates, yLower, yUpper, fillcolor) {
 // from the cloud, which would jump on the phase flip.
 const INITIAL_BAND_DTE_CAP = 100;
 
-export default function TermStructure({ expirationMetrics, capturedAt, cloudBands }) {
+export default function TermStructure({ expirationMetrics, capturedAt, cloudBands, contracts }) {
   const chartRef = useRef(null);
   const { plotly: Plotly, error: plotlyError } = usePlotly();
   const mobile = useIsMobile();
@@ -315,6 +316,22 @@ export default function TermStructure({ expirationMetrics, capturedAt, cloudBand
   return (
     <div className="card" style={{ marginBottom: '1rem', position: 'relative' }}>
       <ResetButton visible={timeRange != null} onClick={() => setTimeRange(null)} />
+      {(() => {
+        // Single sub-line above the term-structure chart summarizing the
+        // freshness and spread context of the chain that feeds the per-
+        // expiration ATM IV / 25Δ wing readings the term structure plots.
+        // Renders nothing when neither the Trades-entitlement-driven last-
+        // print signal nor the Quotes-entitlement-driven spread signal are
+        // available, so the line is silently hidden off-hours and pre-
+        // entitlement.
+        const line = standaloneFreshnessLine(contracts ?? []);
+        if (!line) return null;
+        return (
+          <div style={{ fontSize: '0.75rem', color: 'var(--text-secondary)', marginBottom: '0.5rem' }}>
+            chain inputs · {line}
+          </div>
+        );
+      })()}
       <div ref={chartRef} style={{ width: '100%', height: '500px', backgroundColor: 'var(--bg-card)' }} />
       {brushDomain && (
         <RangeBrush

@@ -11,6 +11,7 @@ import {
 } from '../lib/plotlyTheme';
 import RangeBrush from './RangeBrush';
 import ResetButton from './ResetButton';
+import { standaloneFreshnessLine } from '../lib/freshness';
 
 const BASE_LAYOUT = {
   ...PLOTLY_BASE_LAYOUT_2D,
@@ -105,7 +106,7 @@ function isMonthlyExpiration(dateStr, expirationSet) {
   return false;
 }
 
-export default function RiskNeutralDensity({ fits, spotPrice, capturedAt, loading = false }) {
+export default function RiskNeutralDensity({ fits, spotPrice, capturedAt, loading = false, contracts }) {
   const chartRef = useRef(null);
   const { plotly: Plotly, error: plotlyError } = usePlotly();
   const mobile = useIsMobile();
@@ -317,6 +318,20 @@ export default function RiskNeutralDensity({ fits, spotPrice, capturedAt, loadin
   return (
     <div className="card" style={{ marginBottom: '1rem', position: 'relative' }}>
       <ResetButton visible={strikeRange != null} onClick={() => setStrikeRange(null)} />
+      {(() => {
+        // Single sub-line above the RND chart summarizing the freshness
+        // and spread context of the chain that fed the SVI fits, which
+        // are then twice-differentiated to recover the risk-neutral
+        // density via Breeden-Litzenberger. Renders nothing when neither
+        // signal is available.
+        const line = standaloneFreshnessLine(contracts ?? []);
+        if (!line) return null;
+        return (
+          <div style={{ fontSize: '0.75rem', color: 'var(--text-secondary)', marginBottom: '0.5rem' }}>
+            chain inputs · {line}
+          </div>
+        );
+      })()}
       <div ref={chartRef} style={{ width: '100%', height: '480px', backgroundColor: 'var(--bg-card)' }} />
       {brushDomain && activeRange && (
         <RangeBrush
