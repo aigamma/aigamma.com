@@ -219,7 +219,6 @@ export default function App() {
                 expirationMetrics={data.expirationMetrics}
                 capturedAt={data.capturedAt}
                 cloudBands={data.cloudBands}
-                contracts={data.contracts}
               />
             </LazyMount>
           </ErrorBoundary>
@@ -231,7 +230,6 @@ export default function App() {
                 spotPrice={data.spotPrice}
                 capturedAt={data.capturedAt}
                 loading={sviFits.loading}
-                contracts={data.contracts}
               />
             </LazyMount>
           </ErrorBoundary>

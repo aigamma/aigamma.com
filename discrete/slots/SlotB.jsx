@@ -12,7 +12,6 @@ import {
   plotlyTitle,
 } from '../../src/lib/plotlyTheme';
 import { daysToExpiration, pickDefaultExpiration, filterPickerExpirations } from '../../src/lib/dates';
-import { freshnessAndSpreadClause } from '../../src/lib/freshness';
 
 // -----------------------------------------------------------------------------
 // Trinomial Tree (Boyle 1986, Kamrad-Ritchken 1991 stretched form).
@@ -535,7 +534,6 @@ export default function SlotB() {
         <span style={{ fontSize: '0.75rem', color: 'var(--text-secondary)' }}>
           DTE {dte != null ? dte.toFixed(1) : '-'} · K = {contract?.strike_price ?? '-'} ·
           IV = {contract ? formatPct(contract.implied_volatility, 2) : '-'} · λ = √3
-          {freshnessAndSpreadClause(contract ? [contract] : [])}
         </span>
       </div>
 

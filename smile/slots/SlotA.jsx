@@ -417,30 +417,11 @@ function sliceObservations(contracts, expiration, spotPrice) {
   for (const [strike, { call, put }] of byStrike) {
     const src = strike >= spotPrice ? call : put;
     if (!src) continue;
-    // Pull through quote and trade microstructure fields when present so
-    // downstream consumers (the slice info line, future liquidity-weighted
-    // residuals, future fit-quality scalars) can read them without re-
-    // walking the contracts array. spreadPct is null when bid/ask is
-    // not entitled (Options Starter window) or when last_quote was
-    // absent on this snapshot. last_trade_age_ms is null when the
-    // contract has not traded since Massive's history window or
-    // (rarely) when last_trade is absent on the snapshot.
-    const bid = src.bid_price;
-    const ask = src.ask_price;
-    const spreadPct =
-      bid > 0 && ask > 0 && ask >= bid ? (ask - bid) / ((bid + ask) / 2) : null;
     rows.push({
       strike,
       iv: src.implied_volatility,
       delta: src.delta,
       side: strike >= spotPrice ? 'call' : 'put',
-      bid_price: bid,
-      ask_price: ask,
-      bid_size: src.bid_size,
-      ask_size: src.ask_size,
-      spread_pct: spreadPct,
-      last_trade_price: src.last_trade_price,
-      last_trade_ts: src.last_trade_ts,
     });
   }
   rows.sort((a, b) => a.strike - b.strike);
@@ -448,27 +429,6 @@ function sliceObservations(contracts, expiration, spotPrice) {
     (r) => Math.abs(Math.log(r.strike / spotPrice)) <= 0.2
   );
   return { slice: filtered, contracts: keptContracts };
-}
-
-// Median across an array of finite numbers; nullish-tolerant input.
-function median(values) {
-  const finite = values.filter((v) => v != null && Number.isFinite(v));
-  if (finite.length === 0) return null;
-  finite.sort((a, b) => a - b);
-  const n = finite.length;
-  return n % 2 ? finite[(n - 1) / 2] : 0.5 * (finite[n / 2 - 1] + finite[n / 2]);
-}
-
-// Format a millisecond age into the most-readable human unit. Used by the
-// slice info line to surface freshness of the last printed trade across
-// the strikes that fed the fit. Null on null input.
-function formatAge(ms) {
-  if (ms == null || !Number.isFinite(ms) || ms < 0) return null;
-  const sec = ms / 1000;
-  if (sec < 60) return `${sec.toFixed(0)}s`;
-  if (sec < 3600) return `${(sec / 60).toFixed(0)}m`;
-  if (sec < 86400) return `${(sec / 3600).toFixed(1)}h`;
-  return `${(sec / 86400).toFixed(1)}d`;
 }
 
 // --------------------------------------------------------------------------
@@ -853,33 +813,8 @@ export default function SlotA() {
           ))}
         </select>
         <span style={{ fontSize: '0.75rem', color: 'var(--text-secondary)' }}>
-          DTE {dte != null ? dte.toFixed(1) : '-'} · {slice.length} strikes
-          {(() => {
-            // Median last-print age across the slice strikes. Tells the
-            // reader at a glance whether the IV-fit observations are
-            // anchored on fresh trades or on stale prints. Most strikes
-            // post a fresh trade within minutes-to-hours during a live
-            // session; sub-7d slices in particular are densely traded.
-            // Suppressed when no last-trade data is available on any
-            // slice strike (pre-Developer-tier window or pure off-hours).
-            const now = Date.now();
-            const ages = slice
-              .map((r) => (r.last_trade_ts != null ? now - r.last_trade_ts : null))
-              .filter((v) => v != null);
-            const medianAge = median(ages);
-            return medianAge != null ? ` · last print ${formatAge(medianAge)}` : '';
-          })()}
-          {(() => {
-            // Median bid/ask spread across the slice strikes. Null on
-            // every contract until /v3/quotes entitlement propagates;
-            // the moment it does, this lights up automatically with
-            // the slice's quote-tightness reading. Spreads are reported
-            // as a percent of mid because raw dollars do not normalize
-            // across the wide range of mid prices a single slice spans.
-            const medSpread = median(slice.map((r) => r.spread_pct));
-            return medSpread != null ? ` · spread ${(medSpread * 100).toFixed(2)}%` : '';
-          })()}
-          {' '}· r = {(RATE_R * 100).toFixed(2)}%, q = {(RATE_Q * 100).toFixed(2)}%
+          DTE {dte != null ? dte.toFixed(1) : '-'} · {slice.length} strikes ·
+          {' '}r = {(RATE_R * 100).toFixed(2)}%, q = {(RATE_Q * 100).toFixed(2)}%
         </span>
       </div>
 

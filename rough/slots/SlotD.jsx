@@ -3,7 +3,6 @@ import usePlotly from '../../src/hooks/usePlotly';
 import useIsMobile from '../../src/hooks/useIsMobile';
 import useOptionsData from '../../src/hooks/useOptionsData';
 import useSviFits from '../../src/hooks/useSviFits';
-import { standaloneFreshnessLine } from '../../src/lib/freshness';
 import {
   PLOTLY_COLORS,
   PLOTLY_FONTS,
@@ -429,20 +428,6 @@ export default function SlotD() {
         />
       </div>
 
-      {(() => {
-        // Single sub-line above the log-log skew scaling-law fit chart
-        // summarizing the freshness and spread context of the chain that
-        // fed the SVI slice set, which in turn produced the per-T |∂σ/∂k|
-        // points the power law is fit through. Hidden when neither signal
-        // is available.
-        const line = standaloneFreshnessLine(data?.contracts ?? []);
-        if (!line) return null;
-        return (
-          <div style={{ fontSize: '0.75rem', color: 'var(--text-secondary)', marginBottom: '0.5rem' }}>
-            chain inputs · {line}
-          </div>
-        );
-      })()}
       <div ref={chartRef} style={{ width: '100%', height: mobile ? 420 : 480 }} />
 
       <div

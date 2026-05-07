@@ -10,7 +10,6 @@ import {
   plotlyTitle,
 } from '../../src/lib/plotlyTheme';
 import { daysToExpiration, pickDefaultExpiration, filterPickerExpirations } from '../../src/lib/dates';
-import { freshnessAndSpreadClause } from '../../src/lib/freshness';
 import { fitSviSlice, sviTotalVariance } from '../../src/lib/svi';
 
 // -----------------------------------------------------------------------------
@@ -396,9 +395,6 @@ export default function SlotD() {
         <span style={{ fontSize: '0.75rem', color: 'var(--text-secondary)' }}>
           DTE {dte != null ? dte.toFixed(1) : '-'} · T = {fit?.T ? fit.T.toFixed(3) : '-'} ·
           samples {fit?.sampleCount ?? '-'}
-          {freshnessAndSpreadClause(
-            data?.contracts?.filter((c) => c.expiration_date === activeExp) ?? []
-          )}
         </span>
       </div>
 

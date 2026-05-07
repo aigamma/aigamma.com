@@ -10,7 +10,6 @@ import {
   plotlyTitle,
 } from '../../src/lib/plotlyTheme';
 import { daysToExpiration, pickDefaultExpiration, filterPickerExpirations } from '../../src/lib/dates';
-import { freshnessAndSpreadClause } from '../../src/lib/freshness';
 
 // -----------------------------------------------------------------------------
 // Variance Gamma (Madan, Carr, Chang 1998). Pure-jump infinite-activity
@@ -627,11 +626,8 @@ export default function SlotD() {
           ))}
         </select>
         <span style={{ fontSize: '0.75rem', color: 'var(--text-secondary)' }}>
-          DTE {dte != null ? dte.toFixed(1) : '-'} · {slice.length} strikes
-          {freshnessAndSpreadClause(
-            data?.contracts?.filter((c) => c.expiration_date === activeExp) ?? []
-          )}
-          {' '}· r = {(RATE_R * 100).toFixed(2)}%, q = {(RATE_Q * 100).toFixed(2)}%
+          DTE {dte != null ? dte.toFixed(1) : '-'} · {slice.length} strikes ·{' '}
+          r = {(RATE_R * 100).toFixed(2)}%, q = {(RATE_Q * 100).toFixed(2)}%
         </span>
       </div>
 

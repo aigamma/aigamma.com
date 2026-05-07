@@ -12,7 +12,6 @@ import {
   plotlyTitle,
 } from '../../src/lib/plotlyTheme';
 import { daysToExpiration, pickDefaultExpiration, filterPickerExpirations } from '../../src/lib/dates';
-import { freshnessAndSpreadClause } from '../../src/lib/freshness';
 
 // -----------------------------------------------------------------------------
 // Binomial Tree (Cox, Ross, Rubinstein 1979).
@@ -484,7 +483,6 @@ export default function SlotA() {
         <span style={{ fontSize: '0.75rem', color: 'var(--text-secondary)' }}>
           DTE {dte != null ? dte.toFixed(1) : '-'} · K = {contract?.strike_price ?? '-'} ·
           IV = {contract ? formatPct(contract.implied_volatility, 2) : '-'}
-          {freshnessAndSpreadClause(contract ? [contract] : [])}
         </span>
       </div>
 
