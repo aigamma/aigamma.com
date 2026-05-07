@@ -31,6 +31,19 @@
 //   RAG_DRY_RUN           — set to '1' to chunk + hash but not call the
 //                           Edge Function; useful for inspecting chunking
 //
+// CLI flags:
+//   --prune               — after the per-source ingestion pass, fetch the
+//                           distinct set of source_paths in rag_documents,
+//                           diff against the SOURCES allowlist below, and
+//                           DELETE any rows whose source_path is not in the
+//                           allowlist. Useful for cleaning up rows left over
+//                           from retired prompt files (e.g., a /stochastic/
+//                           page deletion leaves stochastic.mjs rows in the
+//                           table forever otherwise, since the per-source
+//                           orphan-deletion only handles "this source got
+//                           shorter," not "this source no longer exists").
+//                           Idempotent: a re-run with no orphans deletes 0.
+//
 // Re-run this script after editing any indexed surface (CLAUDE.md, the
 // per-page system prompts, anything in docs/). The diff is small and the
 // Edge Function will skip unchanged chunks via content_hash dedup.
@@ -46,6 +59,7 @@ const RAG_INGEST_URL = process.env.RAG_INGEST_URL ||
   (SUPABASE_URL ? `${SUPABASE_URL.replace(/\/$/, '')}/functions/v1/rag-ingest` : null);
 const BATCH_SIZE = Math.min(Math.max(Number(process.env.RAG_BATCH_SIZE) || 50, 1), 200);
 const DRY_RUN = process.env.RAG_DRY_RUN === '1';
+const PRUNE = process.argv.includes('--prune');
 
 if (!SUPABASE_URL || !SUPABASE_SERVICE_KEY || !RAG_INGEST_URL) {
   console.error('Missing required env vars: SUPABASE_URL and SUPABASE_SERVICE_KEY (or SUPABASE_SERVICE_ROLE_KEY).');
@@ -274,6 +288,62 @@ async function postBatch(docs) {
   return body;
 }
 
+// Prune rows whose source_path is not in the current SOURCES allowlist.
+// Handles the retirement case the per-source orphan-deletion can't: if a
+// prompt file is deleted from the repo, no per-source pass ever revisits
+// its source_path, so its rows would otherwise stay in rag_documents
+// indefinitely and surface as similarity hits to chat queries on related
+// topics. Run with --prune (or pass the CLI flag through the wrapper .bat).
+async function pruneRetiredSources() {
+  const allowList = new Set(SOURCES.map((s) => s.rel));
+  const url = `${SUPABASE_URL}/rest/v1/rag_documents?select=source_path`;
+  const res = await fetch(url, {
+    headers: {
+      apikey: SUPABASE_SERVICE_KEY,
+      Authorization: `Bearer ${SUPABASE_SERVICE_KEY}`,
+    },
+  });
+  if (!res.ok) {
+    throw new Error(`Failed to fetch source paths: ${res.status} ${await res.text()}`);
+  }
+  const rows = await res.json();
+  const allInTable = new Set(rows.map((r) => r.source_path));
+  const orphans = [...allInTable].filter((p) => !allowList.has(p));
+
+  if (orphans.length === 0) {
+    console.log('  prune: no retired sources, nothing to delete');
+    return { deleted: 0, paths: [] };
+  }
+
+  if (DRY_RUN) {
+    console.log(`  [dry-run] prune: would delete rows for ${orphans.length} retired source(s):`);
+    for (const p of orphans) console.log(`    - ${p}`);
+    return { deleted: 0, paths: orphans };
+  }
+
+  let totalDeleted = 0;
+  for (const orphan of orphans) {
+    const delUrl = `${SUPABASE_URL}/rest/v1/rag_documents?source_path=eq.${encodeURIComponent(orphan)}`;
+    const delRes = await fetch(delUrl, {
+      method: 'DELETE',
+      headers: {
+        apikey: SUPABASE_SERVICE_KEY,
+        Authorization: `Bearer ${SUPABASE_SERVICE_KEY}`,
+        Prefer: 'return=representation',
+      },
+    });
+    if (!delRes.ok) {
+      console.warn(`  prune: failed to delete ${orphan}: ${delRes.status} ${await delRes.text()}`);
+      continue;
+    }
+    const deletedRows = await delRes.json();
+    const count = Array.isArray(deletedRows) ? deletedRows.length : 0;
+    totalDeleted += count;
+    console.log(`  prune: deleted ${count} rows from ${orphan}`);
+  }
+  return { deleted: totalDeleted, paths: orphans };
+}
+
 async function ingestSource(src) {
   const absPath = path.join(REPO_ROOT, src.rel);
   let raw;
@@ -344,10 +414,10 @@ async function ingestSource(src) {
 
 async function main() {
   console.log(`RAG ingestion → ${SUPABASE_URL}`);
-  console.log(`Sources: ${SOURCES.length}, batch size: ${BATCH_SIZE}${DRY_RUN ? ', DRY RUN' : ''}`);
+  console.log(`Sources: ${SOURCES.length}, batch size: ${BATCH_SIZE}${DRY_RUN ? ', DRY RUN' : ''}${PRUNE ? ', PRUNE' : ''}`);
   console.log('');
 
-  const totals = { upserted: 0, unchanged: 0, sources: 0 };
+  const totals = { upserted: 0, unchanged: 0, sources: 0, pruned: 0 };
   const failures = [];
 
   for (const src of SOURCES) {
@@ -362,10 +432,22 @@ async function main() {
     }
   }
 
+  if (PRUNE) {
+    console.log('');
+    try {
+      const r = await pruneRetiredSources();
+      totals.pruned = r.deleted;
+    } catch (e) {
+      console.error(`FAILED prune: ${e.message}`);
+      failures.push({ source: '<prune>', error: e.message });
+    }
+  }
+
   console.log('');
   console.log(`Done. ${totals.sources}/${SOURCES.length} sources processed.`);
   console.log(`  upserted: ${totals.upserted}`);
   console.log(`  unchanged: ${totals.unchanged}`);
+  if (PRUNE) console.log(`  pruned: ${totals.pruned}`);
   if (failures.length > 0) {
     console.log(`  failures: ${failures.length}`);
     for (const f of failures) console.log(`    - ${f.source}: ${f.error}`);
