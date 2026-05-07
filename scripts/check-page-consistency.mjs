@@ -2,51 +2,38 @@
 // scripts/check-page-consistency.mjs
 //
 // Validates that the page list is consistent across the source-of-truth
-// files documented in CLAUDE.md's "Source-of-Truth Map" section. Catches
-// the kind of drift that's only discoverable by manual inspection today
-// (e.g., a new prompt file that wasn't added to scripts/rag/ingest.mjs
-// SOURCES, a Menu entry that wasn't mirrored in MobileNav, a chat-enabled
-// page that wasn't enumerated in src/data/site-index.txt).
+// files documented in CLAUDE.md's "Source-of-Truth Map" section. After the
+// canonical page registry at src/data/pages.js was introduced, most of the
+// per-consumer literals are derived from PAGES at module-load time, so the
+// remaining drift surfaces are: prompt files on disk versus CHAT_PAGES
+// declared in pages.js, and the SYSTEM_PROMPTS map in chat.mjs versus the
+// CHAT_PAGES surface names. This script verifies both. The build entries,
+// menu items, and ingest SOURCES are now structurally consistent because
+// they all dynamic-import pages.js, so they cannot drift unless pages.js
+// itself drifts from the on-disk page directories.
 //
 // Usage:
 //   node scripts/check-page-consistency.mjs
 //
-// Exits 0 if no drift is detected, 1 otherwise. Suitable for a pre-commit
-// hook or a CI step.
-//
-// What gets checked:
-//   1. Prompt files in netlify/functions/prompts/ ↔ SYSTEM_PROMPTS keys in
-//      netlify/functions/chat.mjs (must match exactly, modulo shared modules)
-//   2. Prompt files ↔ scripts/rag/ingest.mjs SOURCES surfaces (same)
-//   3. Every chat-enabled page is mentioned in src/data/site-index.txt
-//   4. Menu.jsx hrefs are a subset of MobileNav.jsx hrefs (Menu's chat-
-//      enabled subset should appear in MobileNav too; the converse can
-//      legitimately differ because TopNav-promoted pages live only in
-//      MobileNav's TOOLS dropdown without a desktop Menu mirror)
-//
-// Pages explicitly excluded from chat (no prompt module, no chat UI):
-//   /alpha/, /beta/, /dev/ — active dev sandboxes
-//   /disclaimer/ — static legal page in Menu's About section
-//   / (homepage) — uses 'main' surface; appears in chat but not in Menu
-//                  (reachable via logo/footer links instead)
+// Exits 0 if no drift, 1 otherwise. Suitable for a pre-commit hook or a
+// CI step.
 
-import { readFile, readdir } from 'node:fs/promises';
+import { readFile, readdir, stat } from 'node:fs/promises';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
+import { PAGES, CHAT_PAGES, VITE_ENTRIES } from '../src/data/pages.js';
 
 const REPO_ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
 
 // Modules in netlify/functions/prompts/ that are shared bits of every
-// system prompt rather than per-page surfaces. These are not in SYSTEM_PROMPTS
-// and not in SOURCES with a per-surface kind, so they should be excluded
-// from the per-page checks below.
+// system prompt rather than per-page surfaces.
 const SHARED_PROMPT_MODULES = new Set(['core_persona.mjs', 'behavior.mjs', 'site_nav.mjs']);
 
 async function read(rel) {
   return readFile(path.join(REPO_ROOT, rel), 'utf8');
 }
 
-async function getPromptFiles() {
+async function getPromptFilesOnDisk() {
   const files = await readdir(path.join(REPO_ROOT, 'netlify/functions/prompts'));
   return files
     .filter((f) => f.endsWith('.mjs') && !SHARED_PROMPT_MODULES.has(f))
@@ -61,54 +48,13 @@ async function getSystemPromptsKeys() {
   return [...m[1].matchAll(/^\s*(\w+)\s*:/gm)].map((x) => x[1]).sort();
 }
 
-async function getIngestPerSurfaceSources() {
-  const raw = await read('scripts/rag/ingest.mjs');
-  const block = raw.match(/const SOURCES\s*=\s*\[([\s\S]+?)\];/);
-  if (!block) return [];
-  // Pull every (surface, kind) pair, then keep only kind: 'system_prompt'
-  // entries. Globally-applied prompts (kind: 'system_prompt_global') have
-  // surface: 'all' and aren't tied to a per-page identity.
-  const entries = [];
-  for (const match of block[1].matchAll(/surface:\s*['"](\w+)['"][^}]*kind:\s*['"](\w+)['"]/g)) {
-    entries.push({ surface: match[1], kind: match[2] });
+async function fileExists(rel) {
+  try {
+    await stat(path.join(REPO_ROOT, rel));
+    return true;
+  } catch {
+    return false;
   }
-  return entries
-    .filter((e) => e.kind === 'system_prompt')
-    .map((e) => e.surface)
-    .sort();
-}
-
-async function getViteEntries() {
-  const raw = await read('vite.config.js');
-  const m = raw.match(/input:\s*\{([\s\S]+?)\n\s{6}\}/);
-  if (!m) return [];
-  return [...m[1].matchAll(/^\s*['"]?([\w-]+)['"]?\s*:\s*fileURLToPath/gm)].map((x) => x[1]).sort();
-}
-
-async function getMenuPaths() {
-  const raw = await read('src/components/Menu.jsx');
-  const m = raw.match(/const MENU_ITEMS\s*=\s*\[([\s\S]+?)\];/);
-  if (!m) return [];
-  return [...m[1].matchAll(/href:\s*['"](\/[\w-]*\/?)['"]/g)].map((x) => x[1]).sort();
-}
-
-async function getMobileNavPaths() {
-  const raw = await read('src/components/MobileNav.jsx');
-  const tools = raw.match(/const TOOLS_ITEMS\s*=\s*\[([\s\S]+?)\];/);
-  const research = raw.match(/const RESEARCH_ITEMS\s*=\s*\[([\s\S]+?)\];/);
-  const blocks = [tools?.[1], research?.[1]].filter(Boolean);
-  const out = [];
-  for (const b of blocks) {
-    out.push(...[...b.matchAll(/href:\s*['"](\/[\w-]*\/?)['"]/g)].map((x) => x[1]));
-  }
-  return out.sort();
-}
-
-async function getSiteIndexPaths() {
-  const raw = await read('src/data/site-index.txt');
-  return [...new Set(
-    [...raw.matchAll(/aigamma\.com(\/[\w-]+)/g)].map((x) => `${x[1]}/`)
-  )].sort();
 }
 
 function diff(a, b) {
@@ -123,51 +69,70 @@ function diff(a, b) {
 async function main() {
   let failed = false;
 
-  const promptFiles = await getPromptFiles();
-  const systemPromptsKeys = await getSystemPromptsKeys();
-  const ingestSurfaces = await getIngestPerSurfaceSources();
-  const viteEntries = await getViteEntries();
-  const menuPaths = await getMenuPaths();
-  const mobileNavPaths = await getMobileNavPaths();
-  const siteIndexPaths = await getSiteIndexPaths();
-
   console.log('Page consistency check');
   console.log('======================');
   console.log('');
 
-  // ---- Check 1: prompt files ↔ SYSTEM_PROMPTS keys in chat.mjs ----
+  const chatSurfacesFromRegistry = CHAT_PAGES.map((p) => p.surface).sort();
+  const promptFilesOnDisk = await getPromptFilesOnDisk();
+  const systemPromptsKeys = await getSystemPromptsKeys();
+
+  // ---- Check 1: CHAT_PAGES (from pages.js) ↔ SYSTEM_PROMPTS keys in chat.mjs
   {
-    const d = diff(promptFiles, systemPromptsKeys);
+    const d = diff(chatSurfacesFromRegistry, systemPromptsKeys);
     if (d.onlyA.length || d.onlyB.length) {
-      console.log('FAIL  prompt files ↔ chat.mjs SYSTEM_PROMPTS keys');
-      if (d.onlyA.length) console.log(`        prompt files not wired into SYSTEM_PROMPTS: ${d.onlyA.join(', ')}`);
-      if (d.onlyB.length) console.log(`        SYSTEM_PROMPTS keys without a prompt file: ${d.onlyB.join(', ')}`);
+      console.log('FAIL  pages.js CHAT_PAGES surfaces ↔ chat.mjs SYSTEM_PROMPTS keys');
+      if (d.onlyA.length) console.log(`        in pages.js but not in SYSTEM_PROMPTS: ${d.onlyA.join(', ')}`);
+      if (d.onlyB.length) console.log(`        in SYSTEM_PROMPTS but not in pages.js: ${d.onlyB.join(', ')}`);
       failed = true;
     } else {
-      console.log(`OK    prompt files ↔ chat.mjs SYSTEM_PROMPTS (${promptFiles.length} entries)`);
+      console.log(`OK    pages.js CHAT_PAGES ↔ chat.mjs SYSTEM_PROMPTS (${chatSurfacesFromRegistry.length} chat surfaces)`);
     }
   }
 
-  // ---- Check 2: prompt files ↔ ingest.mjs SOURCES surfaces ----
+  // ---- Check 2: CHAT_PAGES prompt paths ↔ prompt files on disk
   {
-    const d = diff(promptFiles, ingestSurfaces);
+    const promptsFromRegistry = CHAT_PAGES
+      .map((p) => p.prompt.replace(/^netlify\/functions\/prompts\//, '').replace(/\.mjs$/, ''))
+      .sort();
+    const d = diff(promptsFromRegistry, promptFilesOnDisk);
     if (d.onlyA.length || d.onlyB.length) {
-      console.log('FAIL  prompt files ↔ ingest.mjs SOURCES surfaces');
-      if (d.onlyA.length) console.log(`        prompt files not in SOURCES (won't be embedded): ${d.onlyA.join(', ')}`);
-      if (d.onlyB.length) console.log(`        SOURCES surfaces without a prompt file (stale): ${d.onlyB.join(', ')}`);
+      console.log('FAIL  pages.js prompt paths ↔ prompt files on disk');
+      if (d.onlyA.length) console.log(`        pages.js references missing prompt files: ${d.onlyA.join(', ')}`);
+      if (d.onlyB.length) console.log(`        on-disk prompts not referenced by pages.js: ${d.onlyB.join(', ')}`);
       failed = true;
     } else {
-      console.log(`OK    prompt files ↔ ingest.mjs SOURCES (${promptFiles.length} entries)`);
+      console.log(`OK    pages.js prompt paths ↔ on-disk prompts (${promptsFromRegistry.length} files)`);
     }
   }
 
-  // ---- Check 3: every chat-enabled page is mentioned in site-index.txt ----
+  // ---- Check 3: every page registered in PAGES has its index.html on disk
   {
-    // Each prompt file maps to a path: 'main' is '/', everything else is /<name>/
-    const expectedPaths = promptFiles
-      .filter((f) => f !== 'main')
-      .map((f) => `/${f}/`);
-    const missing = expectedPaths.filter((p) => !siteIndexPaths.includes(p));
+    const missing = [];
+    for (const [page_path, p] of Object.entries(PAGES)) {
+      if (!(await fileExists(p.html))) {
+        missing.push(`${page_path} → ${p.html}`);
+      }
+    }
+    if (missing.length) {
+      console.log('FAIL  PAGES entries missing on-disk index.html');
+      for (const m of missing) console.log(`        ${m}`);
+      failed = true;
+    } else {
+      console.log(`OK    PAGES entries all have on-disk index.html (${Object.keys(PAGES).length} pages)`);
+    }
+  }
+
+  // ---- Check 4: every chat-enabled page is mentioned in site-index.txt
+  {
+    const raw = await read('src/data/site-index.txt');
+    const sitePaths = [...new Set(
+      [...raw.matchAll(/aigamma\.com(\/[\w-]+)/g)].map((x) => `${x[1]}/`)
+    )];
+    const expectedPaths = CHAT_PAGES
+      .filter((p) => p.path !== '/')
+      .map((p) => p.path);
+    const missing = expectedPaths.filter((p) => !sitePaths.includes(p));
     if (missing.length) {
       console.log('FAIL  site-index.txt missing chat-enabled pages');
       console.log(`        ${missing.join(', ')}`);
@@ -177,28 +142,10 @@ async function main() {
     }
   }
 
-  // ---- Check 4: Menu hrefs ⊆ MobileNav hrefs (every Menu entry should
-  //               also appear in mobile, modulo /disclaimer/ which is in
-  //               Menu's About section but in mobile under both dropdowns
-  //               via DISCLAIMER_ITEM rather than the per-section arrays)
-  {
-    const ignore = new Set(['/disclaimer/']);
-    const httpFilter = (p) => p && !p.startsWith('http') && !ignore.has(p);
-    const menuSet = new Set(menuPaths.filter(httpFilter));
-    const mobileSet = new Set(mobileNavPaths.filter(httpFilter));
-    const onlyMenu = [...menuSet].filter((p) => !mobileSet.has(p));
-    if (onlyMenu.length) {
-      console.log('FAIL  Menu has paths not mirrored in MobileNav');
-      console.log(`        ${onlyMenu.join(', ')}`);
-      failed = true;
-    } else {
-      console.log(`OK    Menu ⊆ MobileNav (Menu: ${menuSet.size}, MobileNav: ${mobileSet.size})`);
-    }
-  }
-
-  // ---- Smoke output: enumerate the build entries so a human can eyeball ----
+  // ---- Smoke output: enumerate the build entries so a human can eyeball
   console.log('');
-  console.log(`Vite build entries (${viteEntries.length}): ${viteEntries.join(', ')}`);
+  const viteKeys = Object.keys(VITE_ENTRIES);
+  console.log(`Vite build entries (${viteKeys.length}): ${viteKeys.join(', ')}`);
   console.log('');
 
   if (failed) {

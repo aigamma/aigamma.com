@@ -52,6 +52,7 @@ import { readFile, stat } from 'node:fs/promises';
 import { createHash } from 'node:crypto';
 import path from 'node:path';
 import process from 'node:process';
+import { CHAT_PAGES } from '../../src/data/pages.js';
 
 const SUPABASE_URL = process.env.SUPABASE_URL;
 const SUPABASE_SERVICE_KEY = process.env.SUPABASE_SERVICE_KEY || process.env.SUPABASE_SERVICE_ROLE_KEY;
@@ -74,19 +75,35 @@ const REPO_ROOT = path.resolve(path.dirname(new URL(import.meta.url).pathname.re
 // retrieval routing — system_prompt rows are pulled by get_system_prompts
 // for the active surface, system_prompt_global is always pulled, reference
 // rows are pulled by similarity match.
+//
+// The per-page entries are derived from src/data/pages.js (CHAT_PAGES) so
+// adding a chat-enabled lab is a one-file edit to the registry rather than
+// a parallel update of this list and chat.mjs's SYSTEM_PROMPTS map. The
+// title field is the surface name title-cased plus " lab system prompt"
+// (e.g., 'smile' → 'Smile lab system prompt'), with two special cases for
+// the homepage and tactical-vol surface.
+const TITLE_OVERRIDES = {
+  main: 'Main Dashboard system prompt',
+  tactical: 'Tactical Vol lab system prompt',
+};
+function defaultTitle(surface) {
+  if (TITLE_OVERRIDES[surface]) return TITLE_OVERRIDES[surface];
+  const cap = surface.charAt(0).toUpperCase() + surface.slice(1);
+  return `${cap} lab system prompt`;
+}
+
 const SOURCES = [
-  // Per-page system prompts — these become surface-pinned system_prompt rows
-  { rel: 'netlify/functions/prompts/main.mjs',       surface: 'main',       kind: 'system_prompt', extract: extractTemplateLiteral, title: 'Main Dashboard system prompt' },
-  { rel: 'netlify/functions/prompts/garch.mjs',      surface: 'garch',      kind: 'system_prompt', extract: extractTemplateLiteral, title: 'GARCH lab system prompt' },
-  { rel: 'netlify/functions/prompts/regime.mjs',     surface: 'regime',     kind: 'system_prompt', extract: extractTemplateLiteral, title: 'Regimes lab system prompt' },
-  { rel: 'netlify/functions/prompts/rough.mjs',      surface: 'rough',      kind: 'system_prompt', extract: extractTemplateLiteral, title: 'Rough Volatility lab system prompt' },
-  { rel: 'netlify/functions/prompts/smile.mjs',      surface: 'smile',      kind: 'system_prompt', extract: extractTemplateLiteral, title: 'Volatility Smile lab system prompt' },
-  { rel: 'netlify/functions/prompts/local.mjs',      surface: 'local',      kind: 'system_prompt', extract: extractTemplateLiteral, title: 'Local Volatility lab system prompt' },
-  { rel: 'netlify/functions/prompts/jump.mjs',       surface: 'jump',       kind: 'system_prompt', extract: extractTemplateLiteral, title: 'Jump Processes lab system prompt' },
-  { rel: 'netlify/functions/prompts/risk.mjs',       surface: 'risk',       kind: 'system_prompt', extract: extractTemplateLiteral, title: 'Risk lab system prompt' },
-  { rel: 'netlify/functions/prompts/discrete.mjs',   surface: 'discrete',   kind: 'system_prompt', extract: extractTemplateLiteral, title: 'Discrete lab system prompt' },
-  { rel: 'netlify/functions/prompts/parity.mjs',     surface: 'parity',     kind: 'system_prompt', extract: extractTemplateLiteral, title: 'Put-Call Parity lab system prompt' },
-  { rel: 'netlify/functions/prompts/tactical.mjs',   surface: 'tactical',   kind: 'system_prompt', extract: extractTemplateLiteral, title: 'Tactical Vol lab system prompt' },
+  // Per-page system prompts — these become surface-pinned system_prompt rows.
+  // Derived from src/data/pages.js's CHAT_PAGES list so the SOURCES set
+  // can never drift out of sync with the SYSTEM_PROMPTS map in chat.mjs;
+  // scripts/check-page-consistency.mjs verifies the symmetry.
+  ...CHAT_PAGES.map((p) => ({
+    rel: p.prompt,
+    surface: p.surface,
+    kind: 'system_prompt',
+    extract: extractTemplateLiteral,
+    title: defaultTitle(p.surface),
+  })),
 
   // Globally-included system prompt blocks (always pulled regardless of surface)
   { rel: 'netlify/functions/prompts/core_persona.mjs', surface: 'all', kind: 'system_prompt_global', extract: extractTemplateLiteral, title: 'Core persona' },

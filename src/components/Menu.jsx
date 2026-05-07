@@ -1,5 +1,6 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
 import MobileNav from './MobileNav';
+import { MENU_TOOLS, MENU_RESEARCH, MENU_ABOUT } from '../data/pages.js';
 
 // Shared menu dropdown. Rendered in the main dashboard header and in
 // every lab header so the bookmark-only labs are reachable from any
@@ -61,24 +62,20 @@ import MobileNav from './MobileNav';
 // rows with the menu-section-header class. They are skipped in the
 // keyboard navigation index because only items with `type: 'item'`
 // flow into the focusable ref array.
+// MENU_ITEMS is derived from src/data/pages.js so a page-shape change is a
+// one-file edit rather than a parallel update across this file and
+// MobileNav.jsx. The Tools / Research / About sections are interleaved with
+// header rows so the keyboard-navigation logic below can skip the headers
+// when computing focusable indices. The "About This Page" external link is
+// appended explicitly because it points off-site to about.aigamma.com and
+// has no entry in the page registry.
 const MENU_ITEMS = [
   { type: 'header', label: 'Tools' },
-  { type: 'item', href: '/stocks/',         label: '/stocks/',         desc: 'Top option-liquid names, performance + rotation' },
-  { type: 'item', href: '/heatmap/',        label: '/heatmap/',        desc: 'Equal-size top-250-by-options-volume heatmap' },
-  { type: 'item', href: '/events/',         label: '/events/',         desc: 'US economic event calendar' },
-  { type: 'item', href: '/expiring-gamma/', label: '/expiring-gamma/', desc: 'Gamma scheduled to expire per date' },
+  ...MENU_TOOLS.map((item) => ({ type: 'item', ...item })),
   { type: 'header', label: 'Research' },
-  { type: 'item', href: '/discrete/',       label: '/discrete/',       desc: 'Binomial and trinomial trees, SVI and SSVI' },
-  { type: 'item', href: '/garch/',          label: '/garch/',          desc: 'GARCH ensemble of RV forecasts' },
-  { type: 'item', href: '/jump/',           label: '/jump/',           desc: 'Merton, Kou, Bates, variance gamma' },
-  { type: 'item', href: '/local/',          label: '/local/',          desc: 'Dupire extraction, local vol pricing, slice viewer, forward-smile pathology' },
-  { type: 'item', href: '/parity/',         label: '/parity/',         desc: 'Put-call parity, box-spread rate, implied forward' },
-  { type: 'item', href: '/regime/',         label: '/regime/',         desc: 'Mixture, Markov, Wasserstein' },
-  { type: 'item', href: '/risk/',           label: '/risk/',           desc: 'Vanna-Volga and second-order Greeks' },
-  { type: 'item', href: '/rough/',          label: '/rough/',          desc: 'Rough Bergomi simulator + skew scaling-law fit, RFSV diagnostic, three-estimator Hurst triangulation' },
-  { type: 'item', href: '/smile/',          label: '/smile/',          desc: 'Multi-model Volatility Smile · Heston + Merton + SVI raw concurrent fits' },
+  ...MENU_RESEARCH.map((item) => ({ type: 'item', ...item })),
   { type: 'header', label: 'About' },
-  { type: 'item', href: '/disclaimer/', label: '/disclaimer/', desc: 'As-is mathematics, MIT license, no commercial purpose, standard trading disclaimers' },
+  ...MENU_ABOUT.map((item) => ({ type: 'item', ...item })),
   { type: 'item', href: 'https://about.aigamma.com/', label: 'About This Page', desc: 'Created by Eric Allione' },
 ];
 

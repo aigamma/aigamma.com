@@ -1,3 +1,5 @@
+import { TOPNAV_ITEMS } from '../data/pages.js';
+
 // Promoted top-level navigation. Six lab pages — Vol,
 // Earnings, Scan, Rotations, VIX, Seasonality — are surfaced as
 // their own buttons in every page header so a reader does not
@@ -84,14 +86,10 @@
 // redundant. Pages that aren't one of the six promoted
 // destinations (e.g. /rough/, /risk/, /jump/) omit the prop and
 // see all six buttons.
-const TOP_NAV_ITEMS = [
-  { key: 'tactical',    href: '/tactical/',    label: 'Vol'          },
-  { key: 'earnings',    href: '/earnings/',    label: 'Earnings'     },
-  { key: 'scan',        href: '/scan/',        label: 'Scan'         },
-  { key: 'rotations',   href: '/rotations/',   label: 'Rotations'    },
-  { key: 'vix',         href: '/vix/',         label: 'VIX'          },
-  { key: 'seasonality', href: '/seasonality/', label: 'Seasonality'  },
-];
+// TOP_NAV_ITEMS is derived from src/data/pages.js (imported at top) so
+// promoting / demoting or relabeling a top-nav page is a one-file edit on
+// the registry rather than a parallel update across this file.
+const TOP_NAV_ITEMS = TOPNAV_ITEMS;
 
 export default function TopNav({ current, landing = false } = {}) {
   const items = TOP_NAV_ITEMS.filter((item) => item.key !== current);

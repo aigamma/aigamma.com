@@ -1,4 +1,5 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
+import { MOBILE_TOOLS, MOBILE_RESEARCH } from '../data/pages.js';
 
 // Mobile-only navigation block. Replaces the desktop right-cluster (TopNav's
 // six promoted-lab buttons + the inline Return Home button + the MENU
@@ -107,30 +108,16 @@ import { useCallback, useEffect, useRef, useState } from 'react';
 // detected path is /, so lab pages keep their lean pills-only mobile
 // row chrome and the lab-badge on the left side of the .lab-header.
 
-const TOOLS_ITEMS = [
-  { href: '/tactical/',       label: '/tactical/',       desc: 'VRP, term structure, RND, fixed-strike IV' },
-  { href: '/earnings/',       label: '/earnings/',       desc: 'Earnings calendar by implied move and date' },
-  { href: '/scan/',           label: '/scan/',           desc: '25Δ skew vs ATM IV scanner across single names' },
-  { href: '/rotations/',      label: '/rotations/',      desc: 'Sector rotation chart and 1D/1W/1M bar trio' },
-  { href: '/vix/',            label: '/vix/',            desc: 'VIX term structure, contango, Ornstein-Uhlenbeck, VVIX, SDEX/TDEX, regimes, Cboe strategies' },
-  { href: '/seasonality/',    label: '/seasonality/',    desc: 'SPX intraday and daily seasonality grids' },
-  { href: '/stocks/',         label: '/stocks/',         desc: 'Top option-liquid names, performance + rotation' },
-  { href: '/heatmap/',        label: '/heatmap/',        desc: 'Equal-size top-250-by-options-volume heatmap' },
-  { href: '/events/',         label: '/events/',         desc: 'US economic event calendar' },
-  { href: '/expiring-gamma/', label: '/expiring-gamma/', desc: 'Gamma scheduled to expire per date' },
-];
-
-const RESEARCH_ITEMS = [
-  { href: '/discrete/',   label: '/discrete/',   desc: 'Binomial and trinomial trees, SVI and SSVI' },
-  { href: '/garch/',      label: '/garch/',      desc: 'GARCH ensemble of RV forecasts' },
-  { href: '/jump/',       label: '/jump/',       desc: 'Merton, Kou, Bates, variance gamma' },
-  { href: '/local/',      label: '/local/',      desc: 'Dupire extraction, pricing, slices, forward-smile pathology' },
-  { href: '/parity/',     label: '/parity/',     desc: 'Put-call parity, box-spread rate, implied forward' },
-  { href: '/regime/',     label: '/regime/',     desc: 'Mixture, Markov, Wasserstein' },
-  { href: '/risk/',       label: '/risk/',       desc: 'Vanna-Volga and second-order Greeks' },
-  { href: '/rough/',      label: '/rough/',      desc: 'rBergomi simulator, skew scaling-law fit, RFSV, three-estimator Hurst triangulation' },
-  { href: '/smile/',      label: '/smile/',      desc: 'Multi-model Volatility Smile · Heston + Merton + SVI raw concurrent fits' },
-];
+// TOOLS_ITEMS and RESEARCH_ITEMS are derived from src/data/pages.js so the
+// mobile dropdown content stays aligned with the desktop Menu without
+// parallel maintenance. MOBILE_TOOLS contains the six top-nav-promoted
+// pages plus the four desktop-Menu Tools pages, in that order; MOBILE_
+// RESEARCH mirrors the desktop Menu's Research section. Both helpers honor
+// the per-page `mobile_desc` override where present (lets the mobile copy
+// be tighter than the desktop desc on narrow phone widths — e.g., /local/
+// and /rough/ both ship shorter descriptions on mobile).
+const TOOLS_ITEMS = MOBILE_TOOLS;
+const RESEARCH_ITEMS = MOBILE_RESEARCH;
 
 const ABOUT_ITEM = {
   href: 'https://about.aigamma.com/',

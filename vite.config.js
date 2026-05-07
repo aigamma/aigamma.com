@@ -1,6 +1,7 @@
 import { fileURLToPath } from 'node:url'
 import { defineConfig } from 'vite'
 import react from '@vitejs/plugin-react'
+import { VITE_ENTRIES } from './src/data/pages.js'
 
 // Inject <link rel="modulepreload"> for every dynamic-import chunk reachable
 // from the main entry, so Vite's React.lazy-generated chunks (the ten
@@ -154,32 +155,16 @@ export default defineConfig({
   },
   build: {
     rollupOptions: {
-      input: {
-        main: fileURLToPath(new URL('./index.html', import.meta.url)),
-        beta: fileURLToPath(new URL('./beta/index.html', import.meta.url)),
-        alpha: fileURLToPath(new URL('./alpha/index.html', import.meta.url)),
-        dev: fileURLToPath(new URL('./dev/index.html', import.meta.url)),
-        garch: fileURLToPath(new URL('./garch/index.html', import.meta.url)),
-        regime: fileURLToPath(new URL('./regime/index.html', import.meta.url)),
-        rough: fileURLToPath(new URL('./rough/index.html', import.meta.url)),
-        smile: fileURLToPath(new URL('./smile/index.html', import.meta.url)),
-        local: fileURLToPath(new URL('./local/index.html', import.meta.url)),
-        risk: fileURLToPath(new URL('./risk/index.html', import.meta.url)),
-        jump: fileURLToPath(new URL('./jump/index.html', import.meta.url)),
-        discrete: fileURLToPath(new URL('./discrete/index.html', import.meta.url)),
-        parity: fileURLToPath(new URL('./parity/index.html', import.meta.url)),
-        rotations: fileURLToPath(new URL('./rotations/index.html', import.meta.url)),
-        stocks: fileURLToPath(new URL('./stocks/index.html', import.meta.url)),
-        seasonality: fileURLToPath(new URL('./seasonality/index.html', import.meta.url)),
-        tactical: fileURLToPath(new URL('./tactical/index.html', import.meta.url)),
-        heatmap: fileURLToPath(new URL('./heatmap/index.html', import.meta.url)),
-        scan: fileURLToPath(new URL('./scan/index.html', import.meta.url)),
-        earnings: fileURLToPath(new URL('./earnings/index.html', import.meta.url)),
-        events: fileURLToPath(new URL('./events/index.html', import.meta.url)),
-        'expiring-gamma': fileURLToPath(new URL('./expiring-gamma/index.html', import.meta.url)),
-        vix: fileURLToPath(new URL('./vix/index.html', import.meta.url)),
-        disclaimer: fileURLToPath(new URL('./disclaimer/index.html', import.meta.url)),
-      },
+      // Entries are derived from src/data/pages.js so adding/removing a page
+      // is a one-file edit instead of a parallel update across vite.config.js,
+      // Menu.jsx, MobileNav.jsx, etc. The VITE_ENTRIES helper returns
+      // { entry_name: html_path } in the page-registry insertion order.
+      input: Object.fromEntries(
+        Object.entries(VITE_ENTRIES).map(([entry, html]) => [
+          entry,
+          fileURLToPath(new URL(`./${html}`, import.meta.url)),
+        ])
+      ),
       output: {
         // Pin react / react-dom into a stable `vendor` chunk. Without this,
         // Rolldown auto-names the shared blob after whichever component
