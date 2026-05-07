@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useRef } from 'react';
+import { useEffect, useMemo, useRef, useState } from 'react';
 import usePlotly from '../../src/hooks/usePlotly';
 import useIsMobile from '../../src/hooks/useIsMobile';
 import { useGexHistory } from '../../src/hooks/useHistoricalData';
@@ -219,7 +219,37 @@ export default function SlotA() {
   const { data, loading, error } = useGexHistory();
 
   const proxy = useMemo(() => buildLogAbsReturns(data?.series || []), [data]);
-  const fit = useMemo(() => fitHurstSignature(proxy), [proxy]);
+
+  // Hurst-signature fit on the full-history log-absolute-return proxy is
+  // heavy enough to defer; the chart card paints its chrome and the proxy
+  // arrives first, then the OLS-on-aggregated-blocks fit lands on the next
+  // idle frame.
+  const [fit, setFit] = useState(null);
+  useEffect(() => {
+    if (!proxy?.length) {
+      setFit(null);
+      return undefined;
+    }
+    if (typeof window === 'undefined') {
+      setFit(fitHurstSignature(proxy));
+      return undefined;
+    }
+    let cancelled = false;
+    const idle = window.requestIdleCallback
+      ? (cb) => window.requestIdleCallback(cb, { timeout: 1500 })
+      : (cb) => setTimeout(cb, 0);
+    const cancel = window.cancelIdleCallback || clearTimeout;
+    const handle = idle(() => {
+      if (cancelled) return;
+      const res = fitHurstSignature(proxy);
+      if (cancelled) return;
+      setFit(res);
+    });
+    return () => {
+      cancelled = true;
+      cancel(handle);
+    };
+  }, [proxy]);
 
   useEffect(() => {
     if (!Plotly || !chartRef.current || !fit) return;

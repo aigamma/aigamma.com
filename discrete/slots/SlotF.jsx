@@ -351,78 +351,110 @@ export default function SlotF() {
     return pickTenors(data.expirations, data.capturedAt, maxSlices);
   }, [data, maxSlices]);
 
-  // Per-slice raw SVI fits give us θ_t and a clean set of vega-weighted (k, iv)
-  // samples on the tenor-scaled window. SSVI is then a global reparameterization
-  // that reuses those samples; fitting SSVI against raw SVI's own samples keeps
-  // the tenor coverage and weighting consistent with Slots C/D/E.
-  const perSlice = useMemo(() => {
-    if (!data || !tenors.length || !(data.spotPrice > 0)) return [];
-    const results = [];
-    for (const exp of tenors) {
-      const slice = data.contracts.filter((c) => c.expiration_date === exp);
-      if (slice.length < 8) continue;
-      const fit = fitSviSlice({
-        contracts: slice,
-        spotPrice: data.spotPrice,
-        expirationDate: exp,
-        capturedAt: data.capturedAt,
-      });
-      if (!fit.ok) continue;
-      const theta = sviTotalVariance(fit.params, 0);
-      if (!(theta > 0)) continue;
-      const dte = daysToExpiration(exp, data.capturedAt);
-      results.push({
-        expirationDate: exp,
-        dte,
-        T: fit.T,
-        theta,
-        rawParams: fit.params,
-        rawRmseIv: fit.rmseIv,
-        samples: fit.samples,
-        tenorWindow: fit.tenorWindow,
-      });
+  // Per-slice raw SVI fits + global SSVI calibration are both heavy enough
+  // to need deferral: fitting SVI on up to six tenors via multi-start
+  // Levenberg-Marquardt and then running a 3-parameter Nelder-Mead joint fit
+  // against the resulting samples is the heaviest single computation on
+  // /discrete/. Both stages run inside one requestIdleCallback-deferred
+  // effect so the page mounts and paints its picker / stat-row chrome before
+  // the math runs. The cancellation flag prevents a stale fit from
+  // overwriting fresh state if the reader changes the maxSlices selector
+  // mid-flight.
+  const [fits, setFits] = useState({ perSlice: [], ssvi: null });
+  useEffect(() => {
+    if (!data || !tenors.length || !(data.spotPrice > 0)) {
+      setFits({ perSlice: [], ssvi: null });
+      return undefined;
     }
-    return results.sort((a, b) => a.T - b.T);
-  }, [data, tenors]);
+    const compute = () => {
+      const results = [];
+      for (const exp of tenors) {
+        const slice = data.contracts.filter((c) => c.expiration_date === exp);
+        if (slice.length < 8) continue;
+        const fit = fitSviSlice({
+          contracts: slice,
+          spotPrice: data.spotPrice,
+          expirationDate: exp,
+          capturedAt: data.capturedAt,
+        });
+        if (!fit.ok) continue;
+        const theta = sviTotalVariance(fit.params, 0);
+        if (!(theta > 0)) continue;
+        const dte = daysToExpiration(exp, data.capturedAt);
+        results.push({
+          expirationDate: exp,
+          dte,
+          T: fit.T,
+          theta,
+          rawParams: fit.params,
+          rawRmseIv: fit.rmseIv,
+          samples: fit.samples,
+          tenorWindow: fit.tenorWindow,
+        });
+      }
+      const perSlice = results.sort((a, b) => a.T - b.T);
+      let ssvi = null;
+      if (perSlice.length >= 2) {
+        const { params, mse } = fitSsvi(perSlice);
+        const slicePerf = perSlice.map((slice) => {
+          let sse = 0;
+          let count = 0;
+          for (const s of slice.samples) {
+            const w = ssviTotalVariance(slice.theta, s.k, params);
+            if (!(w > 0)) continue;
+            const ivModel = Math.sqrt(w / slice.T);
+            const diff = ivModel - s.iv;
+            sse += diff * diff;
+            count++;
+          }
+          const ssviRmse = count > 0 ? Math.sqrt(sse / count) : null;
+          return {
+            ...slice,
+            ssviRmse,
+            rawRmseIv: slice.rawRmseIv,
+          };
+        });
+        let globalSse = 0;
+        let globalCount = 0;
+        for (const slice of slicePerf) {
+          for (const s of slice.samples) {
+            const w = ssviTotalVariance(slice.theta, s.k, params);
+            if (!(w > 0)) continue;
+            const ivModel = Math.sqrt(w / slice.T);
+            const diff = ivModel - s.iv;
+            globalSse += diff * diff;
+            globalCount++;
+          }
+        }
+        const globalRmse = globalCount > 0 ? Math.sqrt(globalSse / globalCount) : null;
+        const arb = computeArbDiagnostics(perSlice, params);
+        ssvi = { params, mse, slicePerf, globalRmse, arb };
+      }
+      return { perSlice, ssvi };
+    };
 
-  const ssvi = useMemo(() => {
-    if (perSlice.length < 2) return null;
-    const { params, mse } = fitSsvi(perSlice);
-    // Per-slice IV-RMSE for SSVI fit.
-    const slicePerf = perSlice.map((slice) => {
-      let sse = 0;
-      let count = 0;
-      for (const s of slice.samples) {
-        const w = ssviTotalVariance(slice.theta, s.k, params);
-        if (!(w > 0)) continue;
-        const ivModel = Math.sqrt(w / slice.T);
-        const diff = ivModel - s.iv;
-        sse += diff * diff;
-        count++;
-      }
-      const ssviRmse = count > 0 ? Math.sqrt(sse / count) : null;
-      return {
-        ...slice,
-        ssviRmse,
-        rawRmseIv: slice.rawRmseIv,
-      };
-    });
-    let globalSse = 0;
-    let globalCount = 0;
-    for (const slice of slicePerf) {
-      for (const s of slice.samples) {
-        const w = ssviTotalVariance(slice.theta, s.k, params);
-        if (!(w > 0)) continue;
-        const ivModel = Math.sqrt(w / slice.T);
-        const diff = ivModel - s.iv;
-        globalSse += diff * diff;
-        globalCount++;
-      }
+    if (typeof window === 'undefined') {
+      setFits(compute());
+      return undefined;
     }
-    const globalRmse = globalCount > 0 ? Math.sqrt(globalSse / globalCount) : null;
-    const arb = computeArbDiagnostics(perSlice, params);
-    return { params, mse, slicePerf, globalRmse, arb };
-  }, [perSlice]);
+    let cancelled = false;
+    const idle = window.requestIdleCallback
+      ? (cb) => window.requestIdleCallback(cb, { timeout: 1500 })
+      : (cb) => setTimeout(cb, 0);
+    const cancel = window.cancelIdleCallback || clearTimeout;
+    const handle = idle(() => {
+      if (cancelled) return;
+      const result = compute();
+      if (cancelled) return;
+      setFits(result);
+    });
+    return () => {
+      cancelled = true;
+      cancel(handle);
+    };
+  }, [data, tenors]);
+  const perSlice = fits.perSlice;
+  const ssvi = fits.ssvi;
 
   useEffect(() => {
     if (!Plotly || !chartRef.current || !ssvi || ssvi.slicePerf.length === 0) return;

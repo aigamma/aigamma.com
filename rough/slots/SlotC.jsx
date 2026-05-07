@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useRef } from 'react';
+import { useEffect, useMemo, useRef, useState } from 'react';
 import usePlotly from '../../src/hooks/usePlotly';
 import useIsMobile from '../../src/hooks/useIsMobile';
 import { useGexHistory } from '../../src/hooks/useHistoricalData';
@@ -259,18 +259,47 @@ export default function SlotC() {
   const { data, loading, error } = useGexHistory();
 
   const proxy = useMemo(() => buildLogAbsReturns(data?.series || []), [data]);
-  const variogram = useMemo(
-    () => fitMoment(proxy, 2, 'Variogram (q=2)', PLOTLY_COLORS.primary),
-    [proxy],
-  );
-  const absmom = useMemo(
-    () => fitMoment(proxy, 1, 'Absolute moments (q=1)', PLOTLY_COLORS.highlight),
-    [proxy],
-  );
-  const dfa = useMemo(
-    () => fitDfa(proxy, 'DFA (order 1)', PLOTLY_COLORS.positive),
-    [proxy],
-  );
+
+  // Three Hurst estimators (variogram, absolute-moments, DFA) on the full
+  // SPX log-absolute-return history are heavy enough to defer; the card
+  // paints its chrome first and all three method curves land on the next
+  // idle frame.
+  const [methodsState, setMethodsState] = useState({
+    variogram: null,
+    absmom: null,
+    dfa: null,
+  });
+  useEffect(() => {
+    if (!proxy?.length) {
+      setMethodsState({ variogram: null, absmom: null, dfa: null });
+      return undefined;
+    }
+    const compute = () => ({
+      variogram: fitMoment(proxy, 2, 'Variogram (q=2)', PLOTLY_COLORS.primary),
+      absmom: fitMoment(proxy, 1, 'Absolute moments (q=1)', PLOTLY_COLORS.highlight),
+      dfa: fitDfa(proxy, 'DFA (order 1)', PLOTLY_COLORS.positive),
+    });
+    if (typeof window === 'undefined') {
+      setMethodsState(compute());
+      return undefined;
+    }
+    let cancelled = false;
+    const idle = window.requestIdleCallback
+      ? (cb) => window.requestIdleCallback(cb, { timeout: 1500 })
+      : (cb) => setTimeout(cb, 0);
+    const cancel = window.cancelIdleCallback || clearTimeout;
+    const handle = idle(() => {
+      if (cancelled) return;
+      const result = compute();
+      if (cancelled) return;
+      setMethodsState(result);
+    });
+    return () => {
+      cancelled = true;
+      cancel(handle);
+    };
+  }, [proxy]);
+  const { variogram, absmom, dfa } = methodsState;
 
   const methods = useMemo(
     () => [variogram, absmom, dfa].filter(Boolean),

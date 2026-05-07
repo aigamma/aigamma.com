@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useRef } from 'react';
+import { useEffect, useMemo, useRef, useState } from 'react';
 import usePlotly from '../../src/hooks/usePlotly';
 import useIsMobile from '../../src/hooks/useIsMobile';
 import { useGexHistory } from '../../src/hooks/useHistoricalData';
@@ -255,11 +255,43 @@ export default function SlotA() {
     return rows.map((r) => r.r);
   }, [data]);
 
-  const fit = useMemo(() => fitTwoComponentGmm(returns), [returns]);
-  const single = useMemo(
-    () => (returns.length >= 30 ? singleGaussianLogLik(returns) : null),
-    [returns],
-  );
+  // 2-component Gaussian-mixture EM with up to 300 iterations on the full
+  // SPX log-return history is the heaviest single computation on /regime/;
+  // defer to requestIdleCallback so the chart card paints its chrome before
+  // the EM loop runs. Cancellation flag prevents a stale fit from
+  // overwriting fresh state if the upstream history series refreshes.
+  const [fits, setFits] = useState({ fit: null, single: null });
+  useEffect(() => {
+    if (!returns.length) {
+      setFits({ fit: null, single: null });
+      return undefined;
+    }
+    const compute = () => ({
+      fit: fitTwoComponentGmm(returns),
+      single: returns.length >= 30 ? singleGaussianLogLik(returns) : null,
+    });
+    if (typeof window === 'undefined') {
+      setFits(compute());
+      return undefined;
+    }
+    let cancelled = false;
+    const idle = window.requestIdleCallback
+      ? (cb) => window.requestIdleCallback(cb, { timeout: 1500 })
+      : (cb) => setTimeout(cb, 0);
+    const cancel = window.cancelIdleCallback || clearTimeout;
+    const handle = idle(() => {
+      if (cancelled) return;
+      const result = compute();
+      if (cancelled) return;
+      setFits(result);
+    });
+    return () => {
+      cancelled = true;
+      cancel(handle);
+    };
+  }, [returns]);
+  const fit = fits.fit;
+  const single = fits.single;
 
   useEffect(() => {
     if (!Plotly || !chartRef.current || !fit) return;

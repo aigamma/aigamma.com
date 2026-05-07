@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useRef } from 'react';
+import { useEffect, useMemo, useRef, useState } from 'react';
 import usePlotly from '../../src/hooks/usePlotly';
 import useIsMobile from '../../src/hooks/useIsMobile';
 import useOptionsData from '../../src/hooks/useOptionsData';
@@ -255,8 +255,44 @@ export default function SlotE() {
     return out;
   }, [sviFits]);
 
-  const surface = useMemo(() => buildSurface(sviArray), [sviArray]);
-  const dupire = useMemo(() => (surface ? computeDupire(surface) : null), [surface]);
+  // Building the SVI-implied total-variance surface and computing the
+  // Dupire local-vol grid by finite differences in (k, T) is the heaviest
+  // single computation on /local/. Defer both stages to requestIdleCallback
+  // so the chart card paints its chrome and the upstream SVI worker
+  // callback resolves before the surface math runs.
+  const [surfaceState, setSurfaceState] = useState({ surface: null, dupire: null });
+  useEffect(() => {
+    if (!sviArray?.length) {
+      setSurfaceState({ surface: null, dupire: null });
+      return undefined;
+    }
+    const compute = () => {
+      const surface = buildSurface(sviArray);
+      const dupire = surface ? computeDupire(surface) : null;
+      return { surface, dupire };
+    };
+    if (typeof window === 'undefined') {
+      setSurfaceState(compute());
+      return undefined;
+    }
+    let cancelled = false;
+    const idle = window.requestIdleCallback
+      ? (cb) => window.requestIdleCallback(cb, { timeout: 1500 })
+      : (cb) => setTimeout(cb, 0);
+    const cancel = window.cancelIdleCallback || clearTimeout;
+    const handle = idle(() => {
+      if (cancelled) return;
+      const result = compute();
+      if (cancelled) return;
+      setSurfaceState(result);
+    });
+    return () => {
+      cancelled = true;
+      cancel(handle);
+    };
+  }, [sviArray]);
+  const surface = surfaceState.surface;
+  const dupire = surfaceState.dupire;
 
   const summaryStats = useMemo(() => {
     if (!dupire) return null;

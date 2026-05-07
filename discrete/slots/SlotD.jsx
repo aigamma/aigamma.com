@@ -131,17 +131,49 @@ export default function SlotD() {
     return daysToExpiration(activeExp, data.capturedAt);
   }, [activeExp, data]);
 
-  const fit = useMemo(() => {
-    if (!data || !activeExp || !(data.spotPrice > 0)) return null;
+  // SVI natural fit deferred to requestIdleCallback so the card paints its
+  // chrome before the multi-start LM fit runs.
+  const [fit, setFit] = useState(null);
+  useEffect(() => {
+    if (!data || !activeExp || !(data.spotPrice > 0)) {
+      setFit(null);
+      return undefined;
+    }
     const sliceContracts = data.contracts.filter((c) => c.expiration_date === activeExp);
-    if (sliceContracts.length < 8) return null;
-    const res = fitSviSlice({
-      contracts: sliceContracts,
-      spotPrice: data.spotPrice,
-      expirationDate: activeExp,
-      capturedAt: data.capturedAt,
+    if (sliceContracts.length < 8) {
+      setFit(null);
+      return undefined;
+    }
+    if (typeof window === 'undefined') {
+      const res = fitSviSlice({
+        contracts: sliceContracts,
+        spotPrice: data.spotPrice,
+        expirationDate: activeExp,
+        capturedAt: data.capturedAt,
+      });
+      setFit(res.ok ? res : null);
+      return undefined;
+    }
+    let cancelled = false;
+    const idle = window.requestIdleCallback
+      ? (cb) => window.requestIdleCallback(cb, { timeout: 1500 })
+      : (cb) => setTimeout(cb, 0);
+    const cancel = window.cancelIdleCallback || clearTimeout;
+    const handle = idle(() => {
+      if (cancelled) return;
+      const res = fitSviSlice({
+        contracts: sliceContracts,
+        spotPrice: data.spotPrice,
+        expirationDate: activeExp,
+        capturedAt: data.capturedAt,
+      });
+      if (cancelled) return;
+      setFit(res.ok ? res : null);
     });
-    return res.ok ? res : null;
+    return () => {
+      cancelled = true;
+      cancel(handle);
+    };
   }, [data, activeExp]);
 
   const natural = useMemo(() => (fit ? toNatural(fit.params) : null), [fit]);
