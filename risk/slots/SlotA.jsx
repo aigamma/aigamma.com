@@ -144,58 +144,15 @@ function bachelierGreeks(S, K, T, r, q, sigmaLN, type) {
 }
 
 // ---- Heston pricing (Little-Trap characteristic function) ---------------
+// Same precompute-once / per-K-sum structure as the Volatility Smile card on
+// /smile/: build the 160-point CF table once for one (params, S0, T, r, q),
+// then sum it against the inversion kernel e^{-iu·log(K)} for every K. The
+// CF math is inlined as scalar (re, im) pairs so a Heston calibration plus
+// a 48-strike Greeks pass on this slot is a few hundred thousand floating-
+// point ops with zero array allocations inside the hot loop, instead of
+// the hundreds of millions of [re, im] tuple allocations the original
+// helper-driven shape produced.
 
-function cAdd(a, b) { return [a[0] + b[0], a[1] + b[1]]; }
-function cSub(a, b) { return [a[0] - b[0], a[1] - b[1]]; }
-function cMul(a, b) { return [a[0]*b[0] - a[1]*b[1], a[0]*b[1] + a[1]*b[0]]; }
-function cDiv(a, b) {
-  const denom = b[0]*b[0] + b[1]*b[1];
-  return [(a[0]*b[0] + a[1]*b[1]) / denom, (a[1]*b[0] - a[0]*b[1]) / denom];
-}
-function cScale(a, s) { return [a[0]*s, a[1]*s]; }
-function cExp(a) {
-  const m = Math.exp(a[0]);
-  return [m * Math.cos(a[1]), m * Math.sin(a[1])];
-}
-function cLog(a) {
-  return [0.5 * Math.log(a[0]*a[0] + a[1]*a[1]), Math.atan2(a[1], a[0])];
-}
-function cSqrt(a) {
-  const r = Math.sqrt(a[0]*a[0] + a[1]*a[1]);
-  const re = Math.sqrt(0.5 * (r + a[0]));
-  const im = Math.sign(a[1] || 1) * Math.sqrt(0.5 * (r - a[0]));
-  return [re, im];
-}
-function hestonCf(u, j, params, S0, T, r, q) {
-  const { kappa, theta, xi, rho, v0 } = params;
-  const bj = j === 1 ? kappa - rho * xi : kappa;
-  const uj = j === 1 ? 0.5 : -0.5;
-  const iu = [0, u];
-  const rhoXi = rho * xi;
-  const a = [-bj, rhoXi * u];
-  const aSquared = cMul(a, a);
-  const disc = cSub(aSquared, [-xi*xi * u*u, 2*xi*xi * uj * u]);
-  const d = cSqrt(disc);
-  const bMinusA = [bj, -rhoXi * u];
-  const num = cSub(bMinusA, d);
-  const den = cAdd(bMinusA, d);
-  const g = cDiv(num, den);
-  const edT = cExp(cScale(d, -T));
-  const one = [1, 0];
-  const n1 = cSub(one, cMul(g, edT));
-  const n2 = cSub(one, g);
-  const ratio = cDiv(n1, n2);
-  const logRatio = cLog(ratio);
-  const rmq_iu_T = cScale(iu, (r - q) * T);
-  const term = cSub(cScale(num, T), cScale(logRatio, 2));
-  const Cj = cAdd(rmq_iu_T, cScale(term, (kappa * theta) / (xi * xi)));
-  const numer = cSub(one, edT);
-  const denom = cSub(one, cMul(g, edT));
-  const Dj = cMul(cScale(num, 1 / (xi * xi)), cDiv(numer, denom));
-  const iuLogS = cScale(iu, Math.log(S0));
-  const exponent = cAdd(cAdd(Cj, cScale(Dj, v0)), iuLogS);
-  return cExp(exponent);
-}
 const U_GRID = new Float64Array(INT_N);
 const U_WEIGHTS = new Float64Array(INT_N);
 {
@@ -209,46 +166,127 @@ const U_WEIGHTS = new Float64Array(INT_N);
     U_WEIGHTS[i] = (w * h) / 3;
   }
 }
-function hestonProb(j, params, S0, K, T, r, q) {
-  const logK = Math.log(K);
-  let acc = 0;
+
+// Fill (re, im) buffers with the Heston "Little Trap" characteristic function
+// at every u in U_GRID for the chosen j ∈ {1, 2}. All complex arithmetic is
+// inlined as scalar (re, im) pairs — no allocations inside the loop.
+//
+//   d   = sqrt((b_j - ρξ·iu)² - ξ²(2 u_j iu - u²))
+//   g   = (b_j - ρξ·iu - d) / (b_j - ρξ·iu + d)
+//   C_j = (r-q)·iu·T + (κθ/ξ²)·[(b_j - ρξ·iu - d)·T - 2·log((1 - g·e^{-dT})/(1 - g))]
+//   D_j = ((b_j - ρξ·iu - d)/ξ²) · (1 - e^{-dT})/(1 - g·e^{-dT})
+//   φ   = exp(C_j + D_j·v₀ + iu·log(S₀))
+function fillHestonCf(outRe, outIm, j, params, S0, T, r, q) {
+  const { kappa, theta, xi, rho, v0 } = params;
+  const bj = j === 1 ? kappa - rho * xi : kappa;
+  const uj = j === 1 ? 0.5 : -0.5;
+  const rhoXi = rho * xi;
+  const xi2 = xi * xi;
+  const ktxi2 = (kappa * theta) / xi2;
+  const rmqT = (r - q) * T;
+  const logS0 = Math.log(S0);
+
   for (let i = 0; i < INT_N; i++) {
     const u = U_GRID[i];
-    const f = hestonCf(u, j, params, S0, T, r, q);
-    const eNegIu = [Math.cos(u * logK), -Math.sin(u * logK)];
-    const num = cMul(eNegIu, f);
-    const re = num[1] / u;
-    acc += U_WEIGHTS[i] * re;
+
+    const a_re = -bj;
+    const a_im = rhoXi * u;
+    const aSq_re = a_re * a_re - a_im * a_im;
+    const aSq_im = 2 * a_re * a_im;
+    const disc_re = aSq_re + xi2 * u * u;
+    const disc_im = aSq_im - 2 * xi2 * uj * u;
+    const disc_mag = Math.sqrt(disc_re * disc_re + disc_im * disc_im);
+    const d_re = Math.sqrt(0.5 * (disc_mag + disc_re));
+    const d_im = Math.sign(disc_im || 1) * Math.sqrt(0.5 * (disc_mag - disc_re));
+
+    const bma_re = bj;
+    const bma_im = -rhoXi * u;
+    const num_re = bma_re - d_re;
+    const num_im = bma_im - d_im;
+    const den_re = bma_re + d_re;
+    const den_im = bma_im + d_im;
+    const den_mag2 = den_re * den_re + den_im * den_im;
+    const g_re = (num_re * den_re + num_im * den_im) / den_mag2;
+    const g_im = (num_im * den_re - num_re * den_im) / den_mag2;
+
+    const negDT_re = -d_re * T;
+    const negDT_im = -d_im * T;
+    const expMag1 = Math.exp(negDT_re);
+    const edT_re = expMag1 * Math.cos(negDT_im);
+    const edT_im = expMag1 * Math.sin(negDT_im);
+
+    const gEdT_re = g_re * edT_re - g_im * edT_im;
+    const gEdT_im = g_re * edT_im + g_im * edT_re;
+
+    const n1_re = 1 - gEdT_re;
+    const n1_im = -gEdT_im;
+    const n2_re = 1 - g_re;
+    const n2_im = -g_im;
+    const n2_mag2 = n2_re * n2_re + n2_im * n2_im;
+    const ratio_re = (n1_re * n2_re + n1_im * n2_im) / n2_mag2;
+    const ratio_im = (n1_im * n2_re - n1_re * n2_im) / n2_mag2;
+    const logRatio_re = 0.5 * Math.log(ratio_re * ratio_re + ratio_im * ratio_im);
+    const logRatio_im = Math.atan2(ratio_im, ratio_re);
+
+    const term_re = num_re * T - 2 * logRatio_re;
+    const term_im = num_im * T - 2 * logRatio_im;
+
+    const Cj_re = term_re * ktxi2;
+    const Cj_im = u * rmqT + term_im * ktxi2;
+
+    const numer_re = 1 - edT_re;
+    const numer_im = -edT_im;
+    const n1_mag2 = n1_re * n1_re + n1_im * n1_im;
+    const inner_re = (numer_re * n1_re + numer_im * n1_im) / n1_mag2;
+    const inner_im = (numer_im * n1_re - numer_re * n1_im) / n1_mag2;
+
+    const numXi2_re = num_re / xi2;
+    const numXi2_im = num_im / xi2;
+    const Dj_re = numXi2_re * inner_re - numXi2_im * inner_im;
+    const Dj_im = numXi2_re * inner_im + numXi2_im * inner_re;
+
+    const exp_re = Cj_re + Dj_re * v0;
+    const exp_im = Cj_im + Dj_im * v0 + u * logS0;
+    const expMag = Math.exp(exp_re);
+    outRe[i] = expMag * Math.cos(exp_im);
+    outIm[i] = expMag * Math.sin(exp_im);
   }
-  return 0.5 + acc / Math.PI;
 }
-function hestonCall(params, S0, K, T, r, q) {
-  const P1 = hestonProb(1, params, S0, K, T, r, q);
-  const P2 = hestonProb(2, params, S0, K, T, r, q);
+
+// Build the (j=1, j=2) CF tables for one parameter tuple. The Greeks pass
+// below precomputes five of these — base, S+h, S-h, v+h, v-h — outside the
+// per-K loop so the FD bumps share the same per-K sum machinery.
+function precomputeHestonCfGrid(params, S0, T, r, q) {
+  const F1_re = new Float64Array(INT_N);
+  const F1_im = new Float64Array(INT_N);
+  const F2_re = new Float64Array(INT_N);
+  const F2_im = new Float64Array(INT_N);
+  fillHestonCf(F1_re, F1_im, 1, params, S0, T, r, q);
+  fillHestonCf(F2_re, F2_im, 2, params, S0, T, r, q);
+  return { F1_re, F1_im, F2_re, F2_im };
+}
+
+// Strike-dependent Heston call price from a precomputed CF grid. Sums each
+// CF table against the inversion kernel e^{-iu·log(K)}; only the imaginary
+// part of the product is needed per Gil-Pelaez / Heston (1993).
+function hestonCallFromCfGrid(grid, S0, K, T, r, q) {
+  const { F1_re, F1_im, F2_re, F2_im } = grid;
+  const logK = Math.log(K);
+  let acc1 = 0;
+  let acc2 = 0;
+  for (let i = 0; i < INT_N; i++) {
+    const u = U_GRID[i];
+    const c = Math.cos(u * logK);
+    const s = Math.sin(u * logK);
+    const im1 = c * F1_im[i] - s * F1_re[i];
+    const im2 = c * F2_im[i] - s * F2_re[i];
+    const w = U_WEIGHTS[i];
+    acc1 += (w * im1) / u;
+    acc2 += (w * im2) / u;
+  }
+  const P1 = 0.5 + acc1 / Math.PI;
+  const P2 = 0.5 + acc2 / Math.PI;
   return S0 * Math.exp(-q * T) * P1 - K * Math.exp(-r * T) * P2;
-}
-// Heston Greeks by finite difference. The characteristic-function call is
-// smooth in S, v0, and T, and the integrand truncation is far enough out
-// (INT_U_MAX = 120) that the numerical noise floor is well below the FD
-// bump-induced error at typical SPX spot / vol scales.
-function hestonGreeks(params, S0, K, T, r, q, type) {
-  const hS = FD_BUMP_S;
-  const hSig = FD_BUMP_SIGMA;
-  const c0 = hestonCall(params, S0, K, T, r, q);
-  const cUp = hestonCall(params, S0 + hS, K, T, r, q);
-  const cDn = hestonCall(params, S0 - hS, K, T, r, q);
-  const callDelta = (cUp - cDn) / (2 * hS);
-  const gamma = (cUp - 2 * c0 + cDn) / (hS * hS);
-  // Vega: bump √v0 so the derivative is ∂C/∂σ where σ = √v0 (match the BSM
-  // scale). dV0 ≈ 2·σ·hSig; use chain rule.
-  const sigma0 = Math.sqrt(params.v0);
-  const vPlus = (sigma0 + hSig) ** 2;
-  const vMinus = Math.max((sigma0 - hSig) ** 2, 1e-8);
-  const cvPlus = hestonCall({ ...params, v0: vPlus }, S0, K, T, r, q);
-  const cvMinus = hestonCall({ ...params, v0: vMinus }, S0, K, T, r, q);
-  const vega = (cvPlus - cvMinus) / (2 * hSig);
-  const delta = type === 'put' ? callDelta - Math.exp(-q * T) : callDelta;
-  return { delta, gamma, vega };
 }
 
 // ---- Heston calibration (same machinery as the stochastic lab) -----------
@@ -350,10 +388,12 @@ function calibrateHeston(slice, S0, T, r, q, init) {
   const obj = (theta) => {
     const p = unpack(theta);
     if (p.kappa > 50 || p.theta > 1 || p.xi > 3 || p.v0 > 1) return 1e6;
+    // One CF table per parameter set; every strike on the slice reuses it.
+    const grid = precomputeHestonCfGrid(p, S0, T, r, q);
     let sse = 0;
     let n = 0;
     for (const { strike, iv } of slice) {
-      const c = hestonCall(p, S0, strike, T, r, q);
+      const c = hestonCallFromCfGrid(grid, S0, strike, T, r, q);
       const modelIv = bsmIv(c, S0, strike, T, r, q);
       if (modelIv == null || !Number.isFinite(modelIv)) return 1e6;
       const diff = modelIv - iv;
@@ -367,6 +407,79 @@ function calibrateHeston(slice, S0, T, r, q, init) {
   return { params: unpack(res.x), rmse: Math.sqrt(res.value) };
 }
 const INIT_PARAMS = { kappa: 2.0, theta: 0.04, xi: 0.4, rho: -0.7, v0: 0.04 };
+
+// Build the 48-strike Greeks grid for the chart. BSM and Bachelier Greeks
+// are analytic and per-K. Heston Greeks are computed by central finite
+// differences against five precomputed CF grids (base, S±h, v0±h) so each
+// per-K Greek call is five lightweight O(INT_N) sums against cached tables
+// rather than five full CF rebuilds. The IV used for BSM and Bachelier is
+// piecewise-linear in log-moneyness across the observed slice — fine for
+// Greek visualisation; the wings do not need the arbitrage-free structure
+// an SVI fit would add.
+function buildCurves(calib, slice, data, T) {
+  if (!calib || !slice.length || !data) return null;
+  const S0 = data.spotPrice;
+
+  const obs = slice.map((r) => ({ k: Math.log(r.strike / S0), iv: r.iv }));
+  obs.sort((a, b) => a.k - b.k);
+  function ivAt(K) {
+    const k = Math.log(K / S0);
+    if (k <= obs[0].k) return obs[0].iv;
+    if (k >= obs[obs.length - 1].k) return obs[obs.length - 1].iv;
+    for (let i = 0; i < obs.length - 1; i++) {
+      if (k >= obs[i].k && k <= obs[i + 1].k) {
+        const span = obs[i + 1].k - obs[i].k;
+        const wt = span > 0 ? (k - obs[i].k) / span : 0;
+        return obs[i].iv * (1 - wt) + obs[i + 1].iv * wt;
+      }
+    }
+    return obs[0].iv;
+  }
+
+  // Five Heston CF tables for the FD bumps. The base grid is reused for the
+  // c0 term in gamma; the four bumped grids cover spot delta / spot gamma /
+  // vol vega.
+  const hS = FD_BUMP_S;
+  const hSig = FD_BUMP_SIGMA;
+  const sigma0 = Math.sqrt(calib.params.v0);
+  const vPlus = (sigma0 + hSig) ** 2;
+  const vMinus = Math.max((sigma0 - hSig) ** 2, 1e-8);
+  const gridBase = precomputeHestonCfGrid(calib.params, S0, T, RATE_R, RATE_Q);
+  const gridSpotUp = precomputeHestonCfGrid(calib.params, S0 + hS, T, RATE_R, RATE_Q);
+  const gridSpotDn = precomputeHestonCfGrid(calib.params, S0 - hS, T, RATE_R, RATE_Q);
+  const gridVolUp = precomputeHestonCfGrid({ ...calib.params, v0: vPlus }, S0, T, RATE_R, RATE_Q);
+  const gridVolDn = precomputeHestonCfGrid({ ...calib.params, v0: vMinus }, S0, T, RATE_R, RATE_Q);
+
+  const Ks = slice.map((r) => r.strike);
+  const Klo = Math.min(...Ks);
+  const Khi = Math.max(...Ks);
+  const nGrid = 48;
+  const strikes = new Array(nGrid);
+  const bsm = new Array(nGrid);
+  const bach = new Array(nGrid);
+  const hest = new Array(nGrid);
+  const eqT = Math.exp(-RATE_Q * T);
+  for (let i = 0; i < nGrid; i++) {
+    const K = Klo + (i / (nGrid - 1)) * (Khi - Klo);
+    strikes[i] = K;
+    const type = K >= S0 ? 'call' : 'put';
+    const sigma = ivAt(K);
+    bsm[i] = bsmGreeks(S0, K, T, RATE_R, RATE_Q, sigma, type);
+    bach[i] = bachelierGreeks(S0, K, T, RATE_R, RATE_Q, sigma, type);
+
+    const c0 = hestonCallFromCfGrid(gridBase, S0, K, T, RATE_R, RATE_Q);
+    const cUp = hestonCallFromCfGrid(gridSpotUp, S0 + hS, K, T, RATE_R, RATE_Q);
+    const cDn = hestonCallFromCfGrid(gridSpotDn, S0 - hS, K, T, RATE_R, RATE_Q);
+    const cvPlus = hestonCallFromCfGrid(gridVolUp, S0, K, T, RATE_R, RATE_Q);
+    const cvMinus = hestonCallFromCfGrid(gridVolDn, S0, K, T, RATE_R, RATE_Q);
+    const callDelta = (cUp - cDn) / (2 * hS);
+    const gamma = (cUp - 2 * c0 + cDn) / (hS * hS);
+    const vega = (cvPlus - cvMinus) / (2 * hSig);
+    const delta = type === 'put' ? callDelta - eqT : callDelta;
+    hest[i] = { delta, gamma, vega };
+  }
+  return { strikes, bsm, bach, hest };
+}
 
 // ---- UI ------------------------------------------------------------------
 
@@ -447,52 +560,56 @@ export default function SlotA() {
   }, [activeExp, data]);
   const T = dte != null ? dte / 365 : null;
 
-  const calib = useMemo(() => {
-    if (!data || !activeExp || slice.length < 6 || !T || T <= 0) return null;
-    return calibrateHeston(slice, data.spotPrice, T, RATE_R, RATE_Q, INIT_PARAMS);
+  // Calibration plus the 48-strike Greeks grid both run inside one
+  // requestIdleCallback-deferred effect so the page can mount and paint its
+  // header / picker / stat-row chrome without the Heston math blocking the
+  // main thread. Mirrors the deferral pattern on /smile/. The cancellation
+  // flag prevents a stale calibration from a now-superseded expiration or
+  // greek dropdown overwriting fresh state if the reader changes the
+  // selection mid-flight.
+  //
+  // The Greeks block precomputes five Heston CF tables — base (params, S0),
+  // spot-up (params, S0+h), spot-down (params, S0-h), vol-up (params with
+  // bumped v0, S0), vol-down (params with bumped v0, S0) — once outside the
+  // 48-strike loop. Each per-K finite-difference Greek then resolves to five
+  // cheap O(INT_N) sums against the cached grids instead of five full
+  // characteristic-function rebuilds. Without that factorisation each strike
+  // would do 5 × 2 × 160 ≈ 1,600 CF evaluations; with it, 5 × 320 = 1,600 CF
+  // evaluations are paid once for the whole grid and the per-strike work is
+  // five sums of 160 reals each.
+  const [fits, setFits] = useState(null);
+  useEffect(() => {
+    if (!data || !activeExp || slice.length < 6 || !T || T <= 0) {
+      setFits(null);
+      return undefined;
+    }
+    if (typeof window === 'undefined') {
+      const calib = calibrateHeston(slice, data.spotPrice, T, RATE_R, RATE_Q, INIT_PARAMS);
+      const curves = buildCurves(calib, slice, data, T);
+      setFits({ calib, curves });
+      return undefined;
+    }
+    let cancelled = false;
+    const idle = window.requestIdleCallback
+      ? (cb) => window.requestIdleCallback(cb, { timeout: 1500 })
+      : (cb) => setTimeout(cb, 0);
+    const cancel = window.cancelIdleCallback || clearTimeout;
+    const handle = idle(() => {
+      if (cancelled) return;
+      const calib = calibrateHeston(slice, data.spotPrice, T, RATE_R, RATE_Q, INIT_PARAMS);
+      if (cancelled) return;
+      const curves = buildCurves(calib, slice, data, T);
+      if (cancelled) return;
+      setFits({ calib, curves });
+    });
+    return () => {
+      cancelled = true;
+      cancel(handle);
+    };
   }, [data, activeExp, slice, T]);
 
-  const curves = useMemo(() => {
-    if (!data || !slice.length || !T || !calib) return null;
-    const S0 = data.spotPrice;
-    // Interpolate IV across observed strikes so BSM / Bachelier Greeks can
-    // evaluate on the same grid as the Heston Greeks. Piecewise linear in
-    // log-moneyness is plenty for Greek visualisation; the wings do not
-    // need the arbitrage-free structure an SVI would add.
-    const obs = slice.map((r) => ({ k: Math.log(r.strike / S0), iv: r.iv }));
-    obs.sort((a, b) => a.k - b.k);
-    function ivAt(K) {
-      const k = Math.log(K / S0);
-      if (k <= obs[0].k) return obs[0].iv;
-      if (k >= obs[obs.length - 1].k) return obs[obs.length - 1].iv;
-      for (let i = 0; i < obs.length - 1; i++) {
-        if (k >= obs[i].k && k <= obs[i + 1].k) {
-          const span = obs[i + 1].k - obs[i].k;
-          const wt = span > 0 ? (k - obs[i].k) / span : 0;
-          return obs[i].iv * (1 - wt) + obs[i + 1].iv * wt;
-        }
-      }
-      return obs[0].iv;
-    }
-    const Ks = slice.map((r) => r.strike);
-    const Klo = Math.min(...Ks);
-    const Khi = Math.max(...Ks);
-    const nGrid = 48;
-    const strikes = new Array(nGrid);
-    const bsm = new Array(nGrid);
-    const bach = new Array(nGrid);
-    const hest = new Array(nGrid);
-    for (let i = 0; i < nGrid; i++) {
-      const K = Klo + (i / (nGrid - 1)) * (Khi - Klo);
-      strikes[i] = K;
-      const type = K >= S0 ? 'call' : 'put';
-      const sigma = ivAt(K);
-      bsm[i] = bsmGreeks(S0, K, T, RATE_R, RATE_Q, sigma, type);
-      bach[i] = bachelierGreeks(S0, K, T, RATE_R, RATE_Q, sigma, type);
-      hest[i] = hestonGreeks(calib.params, S0, K, T, RATE_R, RATE_Q, type);
-    }
-    return { strikes, bsm, bach, hest };
-  }, [data, slice, T, calib]);
+  const calib = fits?.calib ?? null;
+  const curves = fits?.curves ?? null;
 
   useEffect(() => {
     if (!Plotly || !chartRef.current || !curves || !data) return;
