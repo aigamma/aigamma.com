@@ -197,20 +197,55 @@ export default function SlotD() {
     return out;
   }, [sviFits]);
 
-  const surface = useMemo(() => buildSurface(sviArray), [sviArray]);
-  const grid = useMemo(() => (surface ? computeDupire(surface) : null), [surface]);
   const spot = data?.spotPrice ?? null;
-
   const Tstar = tStarDays / 365;
 
-  const result = useMemo(() => {
-    if (!grid || !spot) return null;
-    // Guard against T* + τ running past the end of the surface — if so,
-    // we clip by not simulating at all and surfacing the reason.
-    const tMax = surface[surface.length - 1].T;
-    if (Tstar + TAU_YEARS > tMax) return { error: 'T* + τ exceeds surface horizon' };
-    return simulateForwardSmile({ grid, spot, Tstar, tau: TAU_YEARS, seed });
-  }, [grid, spot, surface, Tstar, seed]);
+  // Surface build + Dupire grid + forward-smile MC simulation deferred to
+  // requestIdleCallback so the chart card paints its chrome and remains
+  // responsive to the T* slider before the math runs.
+  const [stage, setStage] = useState({ surface: null, grid: null, result: null });
+  useEffect(() => {
+    if (!sviArray.length || !spot) {
+      setStage({ surface: null, grid: null, result: null });
+      return undefined;
+    }
+    const compute = () => {
+      const surface = buildSurface(sviArray);
+      const grid = surface ? computeDupire(surface) : null;
+      let result = null;
+      if (grid && surface && spot) {
+        const tMax = surface[surface.length - 1].T;
+        if (Tstar + TAU_YEARS > tMax) {
+          result = { error: 'T* + τ exceeds surface horizon' };
+        } else {
+          result = simulateForwardSmile({ grid, spot, Tstar, tau: TAU_YEARS, seed });
+        }
+      }
+      return { surface, grid, result };
+    };
+    if (typeof window === 'undefined') {
+      setStage(compute());
+      return undefined;
+    }
+    let cancelled = false;
+    const idle = window.requestIdleCallback
+      ? (cb) => window.requestIdleCallback(cb, { timeout: 1500 })
+      : (cb) => setTimeout(cb, 0);
+    const cancel = window.cancelIdleCallback || clearTimeout;
+    const handle = idle(() => {
+      if (cancelled) return;
+      const out = compute();
+      if (cancelled) return;
+      setStage(out);
+    });
+    return () => {
+      cancelled = true;
+      cancel(handle);
+    };
+  }, [sviArray, spot, Tstar, seed]);
+  const surface = stage.surface;
+  const grid = stage.grid;
+  const result = stage.result;
 
   const comparison = useMemo(() => {
     if (!result || result.error || !surface || !spot) return null;

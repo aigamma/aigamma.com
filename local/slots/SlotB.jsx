@@ -222,19 +222,54 @@ export default function SlotB() {
     return out;
   }, [sviFits]);
 
-  const surface = useMemo(() => buildSurface(sviArray), [sviArray]);
-  const grid = useMemo(() => (surface ? computeDupire(surface) : null), [surface]);
   const spot = data?.spotPrice ?? null;
 
-  const targetT = useMemo(
-    () => (surface && surface.length >= 2 ? pickTargetExpirations(surface, 4) : null),
-    [surface]
-  );
-
-  const mc = useMemo(() => {
-    if (!grid || !spot || !targetT) return null;
-    return simulateLV({ grid, spot, targetT, nPaths: N_PATHS, seed });
-  }, [grid, spot, targetT, seed]);
+  // Surface build + Dupire local-vol grid + 200-path Monte Carlo simulation
+  // are heavy enough to defer; all three run inside one
+  // requestIdleCallback-deferred effect so the chart card paints its chrome
+  // before the math runs. Cancellation flag prevents a stale simulation from
+  // a now-superseded seed change overwriting fresh state.
+  const [stage, setStage] = useState({ surface: null, grid: null, targetT: null, mc: null });
+  useEffect(() => {
+    if (!sviArray.length || !spot) {
+      setStage({ surface: null, grid: null, targetT: null, mc: null });
+      return undefined;
+    }
+    const compute = () => {
+      const surface = buildSurface(sviArray);
+      const grid = surface ? computeDupire(surface) : null;
+      const targetT =
+        surface && surface.length >= 2 ? pickTargetExpirations(surface, 4) : null;
+      const mc =
+        grid && spot && targetT
+          ? simulateLV({ grid, spot, targetT, nPaths: N_PATHS, seed })
+          : null;
+      return { surface, grid, targetT, mc };
+    };
+    if (typeof window === 'undefined') {
+      setStage(compute());
+      return undefined;
+    }
+    let cancelled = false;
+    const idle = window.requestIdleCallback
+      ? (cb) => window.requestIdleCallback(cb, { timeout: 1500 })
+      : (cb) => setTimeout(cb, 0);
+    const cancel = window.cancelIdleCallback || clearTimeout;
+    const handle = idle(() => {
+      if (cancelled) return;
+      const result = compute();
+      if (cancelled) return;
+      setStage(result);
+    });
+    return () => {
+      cancelled = true;
+      cancel(handle);
+    };
+  }, [sviArray, spot, seed]);
+  const surface = stage.surface;
+  const grid = stage.grid;
+  const targetT = stage.targetT;
+  const mc = stage.mc;
 
   const comparison = useMemo(() => {
     if (!mc || !surface || !targetT || !spot) return null;

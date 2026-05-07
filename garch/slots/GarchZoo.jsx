@@ -211,9 +211,20 @@ export default function GarchZoo() {
   }, [data]);
 
   useEffect(() => {
-    if (!returnsWithDate || returnsWithDate.length < 200) return;
+    if (!returnsWithDate || returnsWithDate.length < 200) return undefined;
     let cancelled = false;
-    const handle = setTimeout(() => {
+    // Schedule the multi-family GARCH fit on the next idle frame rather than
+    // the next macrotask: idle deferral lets a user-initiated interaction
+    // (scroll, hover, picker change) preempt the fit, which is the right
+    // priority for a heavy compute that the reader is not waiting on.
+    const idle = (typeof window !== 'undefined' && window.requestIdleCallback)
+      ? (cb) => window.requestIdleCallback(cb, { timeout: 1500 })
+      : (cb) => setTimeout(cb, 0);
+    const cancel = (typeof window !== 'undefined' && window.cancelIdleCallback)
+      ? window.cancelIdleCallback
+      : clearTimeout;
+    const handle = idle(() => {
+      if (cancelled) return;
       try {
         const returns = returnsWithDate.map((r) => r.r);
         const fit = fitAll(returns);
@@ -222,10 +233,10 @@ export default function GarchZoo() {
       } catch (err) {
         if (!cancelled) setFitState({ fit: null, forecast: null, error: err.message });
       }
-    }, 0);
+    });
     return () => {
       cancelled = true;
-      clearTimeout(handle);
+      cancel(handle);
     };
   }, [returnsWithDate]);
 

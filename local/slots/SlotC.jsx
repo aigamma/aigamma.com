@@ -103,8 +103,41 @@ export default function SlotC() {
     return out;
   }, [sviFits]);
 
-  const surface = useMemo(() => buildSurface(sviArray), [sviArray]);
-  const grid = useMemo(() => (surface ? computeDupire(surface) : null), [surface]);
+  // Surface build + Dupire local-vol grid deferred to requestIdleCallback so
+  // the chart card paints its chrome before the finite-difference grid
+  // computation runs.
+  const [stage, setStage] = useState({ surface: null, grid: null });
+  useEffect(() => {
+    if (!sviArray.length) {
+      setStage({ surface: null, grid: null });
+      return undefined;
+    }
+    const compute = () => {
+      const s = buildSurface(sviArray);
+      return { surface: s, grid: s ? computeDupire(s) : null };
+    };
+    if (typeof window === 'undefined') {
+      setStage(compute());
+      return undefined;
+    }
+    let cancelled = false;
+    const idle = window.requestIdleCallback
+      ? (cb) => window.requestIdleCallback(cb, { timeout: 1500 })
+      : (cb) => setTimeout(cb, 0);
+    const cancel = window.cancelIdleCallback || clearTimeout;
+    const handle = idle(() => {
+      if (cancelled) return;
+      const result = compute();
+      if (cancelled) return;
+      setStage(result);
+    });
+    return () => {
+      cancelled = true;
+      cancel(handle);
+    };
+  }, [sviArray]);
+  const surface = stage.surface;
+  const grid = stage.grid;
 
   // T slider: normalized 0..1 across the log-T range of the grid. y
   // slider: 0..1 across [-Y_HALF_WIDTH, Y_HALF_WIDTH]. Defaults place

@@ -514,10 +514,34 @@ export default function SlotB() {
   const [initialVol, setInitialVol] = useState(0.20);
   const [seed, setSeed] = useState(0xC0FFEE);
 
-  const result = useMemo(
-    () => simulate({ H, eta, rho, xi0: initialVol * initialVol, seed }),
-    [H, eta, rho, initialVol, seed],
-  );
+  // The Rough Bergomi simulation is the heaviest single computation on
+  // /rough/: a 200×200 Cholesky on the joint (Ŵ, W) covariance matrix
+  // followed by 200 paths × 100 steps of conditional-Gaussian sampling. A
+  // synchronous useMemo on the slider state would freeze the page during a
+  // slider drag, so defer to requestIdleCallback — the slider stays smooth
+  // and the simulation result lands on the next idle frame.
+  const [result, setResult] = useState(null);
+  useEffect(() => {
+    if (typeof window === 'undefined') {
+      setResult(simulate({ H, eta, rho, xi0: initialVol * initialVol, seed }));
+      return undefined;
+    }
+    let cancelled = false;
+    const idle = window.requestIdleCallback
+      ? (cb) => window.requestIdleCallback(cb, { timeout: 1500 })
+      : (cb) => setTimeout(cb, 0);
+    const cancel = window.cancelIdleCallback || clearTimeout;
+    const handle = idle(() => {
+      if (cancelled) return;
+      const r = simulate({ H, eta, rho, xi0: initialVol * initialVol, seed });
+      if (cancelled) return;
+      setResult(r);
+    });
+    return () => {
+      cancelled = true;
+      cancel(handle);
+    };
+  }, [H, eta, rho, initialVol, seed]);
 
   // σ-path fan
   useEffect(() => {
