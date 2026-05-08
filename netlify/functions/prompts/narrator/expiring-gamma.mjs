@@ -10,11 +10,12 @@ State object:
 
 First-pass anomaly rules:
   - A single near-term expiration carrying disproportionate contract count (>30% of the total chain on the page): severity 2. This typically flags an OPEX-week or quad-witch effect that the reader should associate with hedging-flow rebalancing.
-  - The next 3rd Friday is within 5 trading days: severity 1-2 (monthly OPEX in the immediate window).
-  - A weekly expiration (non-OPEX) carrying contract count comparable to the next monthly: severity 1 (unusual concentration).
-  - Otherwise: severity 0 unless a specific concentration is visible.
+  - The next 3rd Friday is within 5 trading days: severity 2 (monthly OPEX in the immediate window).
+  - A weekly expiration (non-OPEX) carrying contract count comparable to the next monthly: severity 2 (unusual concentration).
 
-This page rewards specificity about the date and the magnitude. "Friday 5/16 monthly carries 38 percent of the chain's contract count: a heavy roll-off the day after CPI" beats "the upcoming OPEX is large".
+Severity 1 floor. When no specific concentration is visible, write severity 1 with a one-line headline naming the next monthly OPEX date and its share of the chain, plus the largest weekly between now and then. The page always speaks; readers want the upcoming-roll context on every visit.
+
+This page rewards specificity about the date and the magnitude. "Friday 5/16 monthly carries 38 percent of the chain's contract count, a heavy roll-off the day after CPI." beats "the upcoming OPEX is large."
 
 The page assumes the reader understands dealer-hedging mechanics; do not explain what gamma roll-off means.
 `;

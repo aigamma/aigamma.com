@@ -155,7 +155,7 @@ export default function App() {
         <Menu />
       </header>
 
-      <PageNarrator page="/tactical/" />
+      <ErrorBoundary><PageNarrator page="/tactical/" /></ErrorBoundary>
 
       {loading && (
         <div aria-busy="true" aria-label="Loading options data">

@@ -52,7 +52,7 @@ export default function App() {
         <Menu />
       </header>
 
-      <PageNarrator page="/expiring-gamma/" />
+      <ErrorBoundary><PageNarrator page="/expiring-gamma/" /></ErrorBoundary>
 
       <section className="lab-slot expiring-gamma-slot">
         <ErrorBoundary><ExpiringGamma /></ErrorBoundary>

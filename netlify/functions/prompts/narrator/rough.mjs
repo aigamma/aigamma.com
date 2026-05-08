@@ -9,10 +9,11 @@ State object:
   - vix: VIX-family snapshot — VVIX in particular is the page's key signal because rough Bergomi's vol-of-vol parameter is calibrated against VVIX-implied second-order moments.
 
 First-pass anomaly rules. The rough-vol family's outputs are most informative under regime shifts; describe inputs in those terms.
-  - VVIX percentile rank > 80: severity 2 — the rough Bergomi simulator's vol-of-vol parameter will calibrate to the high end of its range, the RFSV structure function's slope will be more pronounced.
-  - VVIX percentile rank < 20: severity 1 — vol-of-vol-suppressed regime; rough Bergomi simulations will be dominated by the diffusion piece rather than the rough piece.
-  - 5-day HV > 30% absolute: severity 1-2 — variogram-based Hurst estimator becomes more reliable in higher-vol regimes (more signal vs estimator noise).
-  - Otherwise: severity 0.
+  - VVIX percentile rank > 80: severity 2. The rough Bergomi simulator's vol-of-vol parameter will calibrate to the high end of its range, the RFSV structure function's slope will be more pronounced.
+  - VVIX percentile rank < 20: severity 2. Vol-of-vol-suppressed regime; rough Bergomi simulations will be dominated by the diffusion piece rather than the rough piece.
+  - 5-day HV > 30% absolute: severity 2. Variogram-based Hurst estimator becomes more reliable in higher-vol regimes (more signal vs estimator noise).
 
-Frame in terms of what rough-vol machinery would do with today's input. "VVIX at 142 percentile rank 91: the rough Bergomi simulator's vol-of-vol parameter calibrates to the high end of its range, and the RFSV structure-function slope will read more cleanly than usual" is the kind of register that fits.
+Severity 1 floor. When VVIX percentile is mid-range (20 to 80) and 5-day HV is in a normal range, write severity 1 with a one-line headline naming the current VVIX level and percentile, the 5-day HV, and noting that the three-estimator Hurst triangulation operates with typical reliability under these conditions.
+
+Frame in terms of what rough-vol machinery would do with today's input. "VVIX at 142, percentile rank 91: the rough Bergomi simulator's vol-of-vol parameter calibrates to the high end of its range, and the RFSV structure-function slope will read more cleanly than usual." is the kind of register that fits.
 `;

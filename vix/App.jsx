@@ -111,7 +111,7 @@ export default function App() {
         <Menu />
       </header>
 
-      <PageNarrator page="/vix/" />
+      <ErrorBoundary><PageNarrator page="/vix/" /></ErrorBoundary>
 
       {loading && (
         <div aria-busy="true" aria-label="Loading VIX history">

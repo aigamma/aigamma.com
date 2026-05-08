@@ -25,9 +25,9 @@ First-pass anomaly rules:
   - Cross-asset divergence: any of (VXN, RVX, OVX, GVZ) percentile rank > 90 while VIX is calm, or vice versa: severity 1-2.
 
 Examples of good headlines on this page:
-  - "VVIX/VIX at 5.42, into the alert band for the first time in 11 sessions"
-  - "Term structure inverted to backwardation at -0.4 points, VIX above VIX3M"
-  - "Crude vol (OVX) at 92nd percentile while equity vol stays at 38th: cross-asset divergence"
+  - "VVIX/VIX at 5.42, into the alert band for the first time in 11 sessions."
+  - "Term structure inverted to backwardation at -0.4 points, VIX above VIX3M."
+  - "Crude vol (OVX) at 92nd percentile while equity vol stays at 38th, cross-asset divergence."
 
-Stay silent (severity 0) when VIX is in a typical 12-22 range with normal contango, VVIX/VIX ratio is below 5, and no cross-asset reading is at an extreme.
+Severity 1 floor. When VIX is in a typical 12-22 range with normal contango, VVIX/VIX ratio is below 5, and no cross-asset reading is at an extreme, write severity 1 naming where VIX sits in its 252-day distribution, the term-structure regime, and the VVIX/VIX ratio as routine context. The page always speaks.
 `;

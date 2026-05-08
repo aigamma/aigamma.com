@@ -121,7 +121,7 @@ export default function App() {
         <Menu />
       </header>
 
-      <PageNarrator page="/jump/" />
+      <ErrorBoundary><PageNarrator page="/jump/" /></ErrorBoundary>
 
       <section className="lab-slot">
         <ErrorBoundary><SlotA /></ErrorBoundary>

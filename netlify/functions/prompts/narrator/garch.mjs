@@ -12,8 +12,9 @@ First-pass anomaly rules. The page's models are computed client-side from the da
   - 5-day HV materially higher than 60-day HV (more than 50% difference): severity 2 (regime-switching variants will assign a high probability to the high-vol state on this input).
   - 5-day HV materially lower than 60-day HV (less than 60% of 60d): severity 2 (long-memory variants like FIGARCH will detect the shift, asymmetric ones like GJR will not unless returns are signed-asymmetric).
   - Volatility clustering visible in recent_rv_trajectory (a sharp jump in 5-day HV in the last 5 sessions): severity 2.
-  - VRP magnitude > 5 percentage points either direction: severity 1 (forecast vs realized gap).
-  - Otherwise: severity 0.
+  - VRP magnitude > 5 percentage points either direction: severity 2 (forecast vs realized gap).
 
-Frame outputs in terms of what the GARCH family would say about today's input. "5-day HV at 24 percent annualized is well above the 60-day baseline of 14 percent, which is the kind of regime shift the asymmetric and regime-switching variants on this page are built to capture" beats generic vol commentary.
+Severity 1 floor. When no regime shift is visible, write severity 1 with a one-line headline naming where 5-day, 20-day, and 60-day HV currently sit (annualized percent) and noting that the GARCH family's symmetric and asymmetric specifications will produce closely-matching forecasts on a stable input regime.
+
+Frame outputs in terms of what the GARCH family would say about today's input. "5-day HV at 24 percent annualized is well above the 60-day baseline of 14 percent, which is the kind of regime shift the asymmetric and regime-switching variants on this page are built to capture." beats generic vol commentary.
 `;

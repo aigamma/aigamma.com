@@ -112,7 +112,7 @@ export default function App() {
         <Menu />
       </header>
 
-      <PageNarrator page="/risk/" />
+      <ErrorBoundary><PageNarrator page="/risk/" /></ErrorBoundary>
 
       <section className="lab-slot">
         <ErrorBoundary><SlotC /></ErrorBoundary>

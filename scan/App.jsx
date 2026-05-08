@@ -62,7 +62,7 @@ export default function App() {
         <Menu />
       </header>
 
-      <PageNarrator page="/scan/" />
+      <ErrorBoundary><PageNarrator page="/scan/" /></ErrorBoundary>
 
       <section className="lab-slot scan-slot">
         <ErrorBoundary><SkewScanner /></ErrorBoundary>

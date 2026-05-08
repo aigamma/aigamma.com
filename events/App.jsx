@@ -68,7 +68,7 @@ export default function App() {
         <Menu />
       </header>
 
-      <PageNarrator page="/events/" />
+      <ErrorBoundary><PageNarrator page="/events/" /></ErrorBoundary>
 
       <section className="lab-slot">
         <ErrorBoundary><SlotB /></ErrorBoundary>

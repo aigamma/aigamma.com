@@ -62,7 +62,7 @@ export default function App() {
         <Menu />
       </header>
 
-      <PageNarrator page="/heatmap/" />
+      <ErrorBoundary><PageNarrator page="/heatmap/" /></ErrorBoundary>
 
       <section className="lab-slot heatmap-slot">
         <ErrorBoundary><SpxHeatmap /></ErrorBoundary>

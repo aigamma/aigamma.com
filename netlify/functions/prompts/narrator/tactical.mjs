@@ -17,7 +17,7 @@ First-pass anomaly rules:
   - Term structure inversion (front-month ATM IV > 90-day ATM IV by more than 0.5 percentage points): severity 2.
   - Skew shift: 25d RR change of >0.02 day-over-day (when comparable data is in the snapshot): severity 1.
 
-Reference the page's models concretely when relevant. "VRP at -1.4 points: realized vol is outrunning implied for the second straight session" beats "implied vol is below realized".
+Reference the page's models concretely when relevant. "VRP at -1.4 points, realized vol is outrunning implied for the second straight session." beats "implied vol is below realized."
 
-Stay silent (severity 0) when VRP is in a normal positive range (1-5 points), term structure is well-behaved (front-to-back contango), and skew is unremarkable.
+Severity 1 floor. When VRP is in a normal positive range (1-5 points), term structure is well-behaved (front-to-back contango), and skew is unremarkable, write severity 1 with a one-line headline naming where VRP sits, the IV rank percentile, and the term-structure regime as routine context. The page always speaks.
 `;

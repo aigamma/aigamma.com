@@ -470,7 +470,7 @@ export default function App() {
           regime, VIX state, VRP, daily GEX). See netlify/functions/
           narrate-background.mjs for the pipeline and src/components/
           PageNarrator.jsx for the render. */}
-      <PageNarrator page="/" />
+      <ErrorBoundary><PageNarrator page="/" /></ErrorBoundary>
 
       {loading && (
         <div aria-busy="true" aria-label="Loading options data">

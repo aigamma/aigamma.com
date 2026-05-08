@@ -16,7 +16,7 @@ First-pass anomaly rules (using SPX as a proxy until the cross-name scan lands):
   - Front-month 25Δ put IV percentile (would-be, not yet stored) implied by the level alone above ~30%: severity 1.
   - 25Δ skew flat across the term structure (front-month and 90-day RR within 0.5 points of each other): severity 1 (skew compression).
 
-Stay silent when SPX skew is in its typical regime: front-month 25Δ RR around -2 to -3 percentage points, term structure showing the usual deepening of skew at longer DTEs.
+Severity 1 floor. When SPX skew is in its typical regime (front-month 25Δ RR around -2 to -3 percentage points, term structure showing the usual deepening of skew at longer DTEs), write severity 1 with a single-line headline naming where the front-month 25Δ RR sits and the shape of the term structure of skew as routine context for the scan reader. The page always speaks.
 
-When speaking, frame in terms of the page's role: the scan looks for cross-sectional outliers. "SPX 25Δ RR at -3.8 in the front month: deep put-side bias suggests tail bids that the scan would echo across single names if it were live" is the kind of register that fits.
+When speaking, frame in terms of the page's role: the scan looks for cross-sectional outliers. "SPX 25Δ RR at -3.8 in the front month, deep put-side bias suggests tail bids that the scan would echo across single names if it were live." is the kind of register that fits.
 `;

@@ -51,7 +51,7 @@ export default function App() {
         <Menu />
       </header>
 
-      <PageNarrator page="/seasonality/" />
+      <ErrorBoundary><PageNarrator page="/seasonality/" /></ErrorBoundary>
 
       <section className="lab-slot">
         <ErrorBoundary><SeasonalityGrid /></ErrorBoundary>

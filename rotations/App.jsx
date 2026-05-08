@@ -79,7 +79,7 @@ export default function App() {
         <Menu />
       </header>
 
-      <PageNarrator page="/rotations/" />
+      <ErrorBoundary><PageNarrator page="/rotations/" /></ErrorBoundary>
 
       <section className="lab-slot">
         <ErrorBoundary><SectorPerformanceBars /></ErrorBoundary>

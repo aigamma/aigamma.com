@@ -104,11 +104,18 @@ export default function PageNarrator({ page }) {
   // when the row resolves.
   if (!loaded) return null;
   if (!narrative) return null;
-  const severity = narrative.severity ?? 0;
-  if (severity < 1) return null;
-  if (!narrative.headline) return null;
+  // Render whenever a non-empty headline is present, regardless of severity.
+  // The narrator persona instructs every page to produce at least a severity-1
+  // observational headline; if the agent goes off-script and emits severity 0
+  // alongside a non-empty headline, surface it anyway rather than discard a
+  // produced narrative. The only condition that hides the slot is an empty
+  // headline string, which is the persona's defined "state object unusable"
+  // case. Severity still drives the visual accent (border color, auto-expand
+  // on 3) so the reader can tell which tier the agent assigned.
+  if (!narrative.headline || !narrative.headline.trim()) return null;
+  const severity = Number.isFinite(+narrative.severity) ? +narrative.severity : 1;
 
-  const styles = SEVERITY_STYLES[severity] || SEVERITY_STYLES[1];
+  const styles = SEVERITY_STYLES[Math.max(1, severity)] || SEVERITY_STYLES[1];
   const hasBody = Boolean(narrative.body && narrative.body.trim().length > 0);
   const showBody = expanded && hasBody;
   const ageLabel = formatRelativeTime(narrative.created_at);

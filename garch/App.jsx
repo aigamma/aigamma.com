@@ -79,7 +79,7 @@ export default function App() {
         <Menu />
       </header>
 
-      <PageNarrator page="/garch/" />
+      <ErrorBoundary><PageNarrator page="/garch/" /></ErrorBoundary>
 
       <section className="lab-slot">
         <ErrorBoundary><GarchZoo /></ErrorBoundary>

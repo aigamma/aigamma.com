@@ -90,7 +90,7 @@ export default function App() {
         <Menu />
       </header>
 
-      <PageNarrator page="/stocks/" />
+      <ErrorBoundary><PageNarrator page="/stocks/" /></ErrorBoundary>
 
       <section className="lab-slot">
         <ErrorBoundary>

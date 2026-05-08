@@ -22,9 +22,9 @@ First-pass anomaly rules:
   - Recent quadrant transition (a sector that was Leading last week now in Weakening, etc.): severity 1.
 
 Examples of good headlines on this page:
-  - "Only XLK and XLY out of the bad quadrants today: sector breadth is narrow"
-  - "Defensive rotation: XLP and XLU into Leading while XLE and XLF drift into Lagging"
-  - "Tech leadership unbroken: XLK at ratio 104, momentum 102, fourth straight session in the Leading quadrant"
+  - "Only XLK and XLY out of the bad quadrants today, sector breadth is narrow."
+  - "Defensive rotation: XLP and XLU into Leading while XLE and XLF drift into Lagging."
+  - "Tech leadership unbroken: XLK at ratio 104, momentum 102, fourth straight session in Leading."
 
-When the rotation plane is balanced (3-5 sectors in Leading, others spread reasonably across the other quadrants), stay silent.
+Severity 1 floor. When the rotation plane is balanced (3-5 sectors in Leading, others spread reasonably across the other quadrants), write severity 1 with a one-line headline naming the count of sectors in each quadrant and the single-name leader (highest ratio + momentum) as routine context. The page always speaks.
 `;

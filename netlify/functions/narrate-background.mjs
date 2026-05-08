@@ -75,7 +75,7 @@ const INGEST_SECRET = process.env.INGEST_SECRET;
 // Bumped whenever a per-page prompt changes shape in a way that should
 // segment historical narratives. The chat_logs / page_narratives iteration
 // loop joins on this column to compare cohorts.
-const PROMPT_VERSION = 'v1-2026-05-08';
+const PROMPT_VERSION = 'v2-2026-05-08';
 
 // Model selection. Haiku 4.5 for the 18 feeder narratives (fast, cheap,
 // well-suited for terse pattern-recognition + JSON output). Sonnet 4.6 for
@@ -214,7 +214,10 @@ async function narrateOne(page) {
       );
       return { page, ok: false, reason: 'parse_failed', duration_ms: Date.now() - startedAt };
     }
-    await writeNarrative(page, parsed, await gatherPageState(page), model, llm);
+    // Reuse the same state object that fed the LLM call. State doesn't move
+    // between gather and write inside one cycle, and re-fetching doubled the
+    // Supabase round-trips per page for no information gain.
+    await writeNarrative(page, parsed, state, model, llm);
     return {
       page,
       ok: true,
