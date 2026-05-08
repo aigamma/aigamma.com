@@ -131,8 +131,8 @@ export default function VixContangoHistory({ data }) {
     ];
 
     const titleText = isMobile
-      ? 'Term Structure<br><span style="color:#2ecc71">Contango</span> / <span style="color:#e74c3c">Backwardation</span>'
-      : 'Term Structure <span style="color:#2ecc71">Contango</span> / <span style="color:#e74c3c">Backwardation</span>';
+      ? 'Term Structure:<br><span style="color:#2ecc71">Contango</span> / <span style="color:#e74c3c">Backwardation</span>'
+      : 'Term Structure: <span style="color:#2ecc71">Contango</span> / <span style="color:#e74c3c">Backwardation</span>';
 
     const layout = plotly2DChartLayout({
       title: plotlyTitle(titleText),
