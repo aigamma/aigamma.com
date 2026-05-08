@@ -147,15 +147,10 @@ export default function VixContangoHistory({ data }) {
       showlegend: false,
       annotations: [
         {
-          x: 0.01, xref: 'paper', y: 1, yref: 'y',
-          text: 'Contango', showarrow: false,
-          font: { color: '#2ecc71', family: "Calibri, 'Segoe UI', system-ui, sans-serif", size: 11 },
-          align: 'left', xanchor: 'left', yanchor: 'bottom',
-        },
-        {
-          x: 0.01, xref: 'paper', y: 1, yref: 'y',
-          text: 'Backwardation', showarrow: false,
-          font: { color: '#e74c3c', family: "Calibri, 'Segoe UI', system-ui, sans-serif", size: 11 },
+          x: 0.01, xref: 'paper', y: 1, yref: 'paper',
+          text: '<span style="color:#2ecc71">Contango</span> / <span style="color:#e74c3c">Backwardation</span>',
+          showarrow: false,
+          font: { family: "Calibri, 'Segoe UI', system-ui, sans-serif", size: 11 },
           align: 'left', xanchor: 'left', yanchor: 'top',
         },
       ],
