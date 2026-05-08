@@ -1,52 +1,121 @@
-import { useEffect, useState, useCallback, useMemo } from 'react';
+import { useEffect, useState, useCallback } from 'react';
 
 // PageNarrator — AI-generated narration slot rendered at the top of every
 // dedicated aigamma.com page. Pulls /api/narrative?page=<key>, shows the
-// narrator's current take if any, and stays out of the layout entirely when
-// there is nothing material to say.
+// narrator's current take, and stays out of the layout entirely when there
+// is nothing material to say.
+//
+// Inline markup. The narrator persona instructs the agent to use a small
+// shorthand vocabulary that the renderer below resolves into styled spans:
+//   **text**  -> bold (default text color, weight 600)
+//   *text*    -> italic (slightly muted)
+//   __text__  -> accent blue (used for tickers, model names, defined terms)
+//   ++text++  -> accent green (positive moves, easing, contango, calm)
+//   --text--  -> accent coral (negative moves, alert levels, escalating)
+//   ~~text~~  -> accent amber (threshold trips, watch alerts, near-flip)
+// Markup is flat (does not nest) and the regex below tries the longer
+// delimiter alternatives first so **bold** beats *italic* on overlap.
 //
 // Render rules:
-//   - severity 0 OR no row OR fetch failure: render null (zero-height slot;
-//     no layout placeholder, no spinner, no error message visible to readers).
+//   - no narrative or empty headline: render null (zero-height slot).
 //   - severity 1: headline only, always-visible single line.
-//   - severity 2: headline visible + body collapsed behind a chevron the
-//     reader can expand.
-//   - severity 3: headline visible + body auto-expanded.
+//   - severity 2: headline visible + body collapsed behind a chevron.
+//   - severity 3: headline visible + body auto-expanded + coral accent.
 //
-// The AI disclaimer is a small inline link in the slot's right edge so the
-// reader can always tell the prose is model-written and click through to a
-// short explainer; the link points to /disclaimer/ where the site's
-// methodology statement already lives.
-//
-// Polling. The component refreshes every 60 seconds while mounted so a slot
-// already on the reader's screen picks up newly-written narratives without
-// requiring a page reload. The /api/narrative endpoint sets a 60 s s-maxage
-// with a 240 s SWR tail, so the polling cost is dominated by edge hits, not
-// origin reads.
+// Polling every 60 seconds so a slot already on screen picks up new
+// narratives without a page reload. The /api/narrative endpoint sets a 60 s
+// s-maxage with a 240 s SWR tail, so the polling cost is dominated by edge
+// hits, not origin reads.
 
 const POLL_INTERVAL_MS = 60 * 1000;
 
-// Severity color tokens. Intentionally subtle for severities 1 and 2 so the
-// slot doesn't dominate the page chrome on every-day moves. Severity 3
-// reaches for accent-coral so genuine state changes catch the eye on
-// landing.
 const SEVERITY_STYLES = {
   1: {
-    border: '1px solid var(--bg-card-border)',
-    headlineColor: 'var(--text-primary)',
     accentBorder: 'var(--text-secondary)',
+    chipBg: 'rgba(138, 143, 156, 0.12)',
+    chipColor: 'var(--text-secondary)',
+    chipLabel: 'CONTEXT',
+    backgroundTint: 'transparent',
   },
   2: {
-    border: '1px solid var(--bg-card-border)',
-    headlineColor: 'var(--text-primary)',
     accentBorder: 'var(--accent-amber)',
+    chipBg: 'rgba(241, 196, 15, 0.15)',
+    chipColor: 'var(--accent-amber)',
+    chipLabel: 'NOTABLE',
+    backgroundTint: 'linear-gradient(90deg, rgba(241,196,15,0.04) 0%, transparent 60%)',
   },
   3: {
-    border: '1px solid var(--bg-card-border)',
-    headlineColor: 'var(--text-primary)',
     accentBorder: 'var(--accent-coral)',
+    chipBg: 'rgba(231, 76, 60, 0.15)',
+    chipColor: 'var(--accent-coral)',
+    chipLabel: 'SIGNIFICANT',
+    backgroundTint: 'linear-gradient(90deg, rgba(231,76,60,0.06) 0%, transparent 70%)',
   },
 };
+
+// Inline markup regex. Order matters — longer delimiter alternatives come
+// first so **bold** is recognized before *italic* on overlapping text. Each
+// alternative's content uses [^X]+? (non-greedy, exclude the delimiter
+// character) so the regex can't run past the closing pair.
+const MARKUP_RE = /(\*\*[^*]+?\*\*)|(\*[^*]+?\*)|(__[^_]+?__)|(\+\+[^+]+?\+\+)|(--[^-]+?--)|(~~[^~]+?~~)/g;
+
+function renderInlineMarkup(text) {
+  if (!text || typeof text !== 'string') return text;
+  const tokens = [];
+  let lastIndex = 0;
+  let key = 0;
+  let m;
+  // Reset lastIndex on each call since the regex is module-level.
+  MARKUP_RE.lastIndex = 0;
+  while ((m = MARKUP_RE.exec(text)) !== null) {
+    if (m.index > lastIndex) {
+      tokens.push(text.slice(lastIndex, m.index));
+    }
+    const raw = m[0];
+    if (raw.startsWith('**')) {
+      tokens.push(
+        <strong key={key++} style={{ fontWeight: 600, color: 'var(--text-primary)' }}>
+          {raw.slice(2, -2)}
+        </strong>
+      );
+    } else if (raw.startsWith('__')) {
+      tokens.push(
+        <span key={key++} style={{ color: 'var(--accent-blue)', fontWeight: 500 }}>
+          {raw.slice(2, -2)}
+        </span>
+      );
+    } else if (raw.startsWith('++')) {
+      tokens.push(
+        <span key={key++} style={{ color: 'var(--accent-green)', fontWeight: 500 }}>
+          {raw.slice(2, -2)}
+        </span>
+      );
+    } else if (raw.startsWith('--')) {
+      tokens.push(
+        <span key={key++} style={{ color: 'var(--accent-coral)', fontWeight: 500 }}>
+          {raw.slice(2, -2)}
+        </span>
+      );
+    } else if (raw.startsWith('~~')) {
+      tokens.push(
+        <span key={key++} style={{ color: 'var(--accent-amber)', fontWeight: 500 }}>
+          {raw.slice(2, -2)}
+        </span>
+      );
+    } else if (raw.startsWith('*')) {
+      tokens.push(
+        <em key={key++} style={{ fontStyle: 'italic', color: 'var(--text-secondary)' }}>
+          {raw.slice(1, -1)}
+        </em>
+      );
+    }
+    lastIndex = m.index + raw.length;
+  }
+  if (lastIndex < text.length) {
+    tokens.push(text.slice(lastIndex));
+  }
+  return tokens;
+}
 
 function formatRelativeTime(iso) {
   if (!iso) return '';
@@ -78,9 +147,6 @@ export default function PageNarrator({ page }) {
       const incoming = json?.narrative || null;
       setNarrative(incoming);
       setLoaded(true);
-      // Auto-expand on severity 3 every time a new severity-3 lands; collapse
-      // back on lower severity. Reader's manual expand on a sev-2 row sticks
-      // until the next refresh.
       if (incoming?.severity === 3) {
         setExpanded(true);
       } else if (incoming?.severity != null && incoming.severity < 2) {
@@ -98,24 +164,11 @@ export default function PageNarrator({ page }) {
     return () => clearInterval(id);
   }, [fetchNarrative]);
 
-  // Until first load completes we render nothing — no spinner, no
-  // placeholder. The slot's "natural state" is empty, and a brief flash of
-  // empty space during the initial fetch is preferable to a layout shift
-  // when the row resolves.
   if (!loaded) return null;
   if (!narrative) return null;
-  // Render whenever a non-empty headline is present, regardless of severity.
-  // The narrator persona instructs every page to produce at least a severity-1
-  // observational headline; if the agent goes off-script and emits severity 0
-  // alongside a non-empty headline, surface it anyway rather than discard a
-  // produced narrative. The only condition that hides the slot is an empty
-  // headline string, which is the persona's defined "state object unusable"
-  // case. Severity still drives the visual accent (border color, auto-expand
-  // on 3) so the reader can tell which tier the agent assigned.
   if (!narrative.headline || !narrative.headline.trim()) return null;
   const severity = Number.isFinite(+narrative.severity) ? +narrative.severity : 1;
-
-  const styles = SEVERITY_STYLES[Math.max(1, severity)] || SEVERITY_STYLES[1];
+  const styles = SEVERITY_STYLES[Math.max(1, Math.min(3, severity))] || SEVERITY_STYLES[1];
   const hasBody = Boolean(narrative.body && narrative.body.trim().length > 0);
   const showBody = expanded && hasBody;
   const ageLabel = formatRelativeTime(narrative.created_at);
@@ -125,13 +178,13 @@ export default function PageNarrator({ page }) {
       className="page-narrator"
       style={{
         marginBottom: '0.85rem',
-        padding: '0.75rem 1rem',
-        background: 'var(--bg-card)',
-        border: styles.border,
-        borderLeft: `3px solid ${styles.accentBorder}`,
+        padding: '0.85rem 1.1rem 0.85rem 1.15rem',
+        background: `${styles.backgroundTint}, var(--bg-card)`,
+        backgroundColor: 'var(--bg-card)',
+        border: '1px solid var(--bg-card-border)',
+        borderLeft: `4px solid ${styles.accentBorder}`,
         borderRadius: '4px',
         fontFamily: 'var(--font-base)',
-        fontSize: '0.95rem',
         lineHeight: 1.5,
       }}
     >
@@ -146,24 +199,51 @@ export default function PageNarrator({ page }) {
         <div style={{ flex: 1, minWidth: 0 }}>
           <div
             style={{
-              color: styles.headlineColor,
-              fontWeight: 500,
-              letterSpacing: '0.005em',
+              display: 'flex',
+              alignItems: 'baseline',
+              flexWrap: 'wrap',
+              gap: '0.55rem',
             }}
           >
-            {narrative.headline}
+            <span
+              style={{
+                display: 'inline-block',
+                padding: '0.1rem 0.45rem',
+                background: styles.chipBg,
+                color: styles.chipColor,
+                fontSize: '0.62rem',
+                fontWeight: 600,
+                letterSpacing: '0.09em',
+                textTransform: 'uppercase',
+                borderRadius: '2px',
+                lineHeight: 1.4,
+                flexShrink: 0,
+              }}
+            >
+              {styles.chipLabel}
+            </span>
+            <span
+              style={{
+                color: 'var(--text-primary)',
+                fontWeight: 500,
+                fontSize: '1.02rem',
+                letterSpacing: '0.005em',
+              }}
+            >
+              {renderInlineMarkup(narrative.headline)}
+            </span>
           </div>
           {showBody && (
             <div
               style={{
-                marginTop: '0.5rem',
+                marginTop: '0.55rem',
                 color: 'var(--text-secondary)',
-                fontSize: '0.92rem',
-                lineHeight: 1.55,
+                fontSize: '0.93rem',
+                lineHeight: 1.6,
                 whiteSpace: 'pre-wrap',
               }}
             >
-              {narrative.body}
+              {renderInlineMarkup(narrative.body)}
             </div>
           )}
         </div>
@@ -177,12 +257,13 @@ export default function PageNarrator({ page }) {
             fontSize: '0.78rem',
             letterSpacing: '0.04em',
             textTransform: 'uppercase',
+            paddingTop: '0.1rem',
           }}
         >
           {ageLabel && <span title={narrative.created_at}>{ageLabel}</span>}
           <a
             href="/disclaimer/"
-            title="AI-generated narrative — methodology and limitations"
+            title="AI-generated narrative; methodology and limitations on the disclaimer page"
             style={{
               color: 'var(--text-secondary)',
               textDecoration: 'none',
