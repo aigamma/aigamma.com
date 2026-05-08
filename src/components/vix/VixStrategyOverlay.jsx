@@ -216,6 +216,24 @@ export default function VixStrategyOverlay({ data }) {
           </tbody>
         </table>
       )}
+      <div className="vix-card-description">
+        <p>
+          Four Cboe option-strategy benchmark indices that monetize vol
+          exposure in distinct ways:{' '}
+          <strong style={{ color: 'var(--text-primary)' }}>BXM</strong>{' '}
+          (buy-write at-the-money calls),{' '}
+          <strong style={{ color: 'var(--text-primary)' }}>BXMD</strong>{' '}
+          (buy-write 30-delta calls),{' '}
+          <strong style={{ color: 'var(--text-primary)' }}>BFLY</strong>{' '}
+          (iron butterfly),{' '}
+          <strong style={{ color: 'var(--text-primary)' }}>CNDR</strong>{' '}
+          (iron condor). Plotted as{' '}
+          <strong style={{ color: 'var(--text-primary)' }}>growth-of-1 cumulative returns</strong>{' '}
+          indexed to the start of the window; SPX cash overlaid as the
+          buy-and-hold benchmark. Annualized return, vol, Sharpe, and maximum
+          drawdown for each strategy in the table above.
+        </p>
+      </div>
     </div>
   );
 }

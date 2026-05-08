@@ -89,7 +89,7 @@ function fmtPct(n, dp = 1) {
 
 function fmtRank(rank) {
   if (rank == null) return '—';
-  return `${rank.toFixed(0)}p 1y`;
+  return `${rank.toFixed(0)}th pct (1y)`;
 }
 
 export default function VixHeaderProfile({ data }) {
@@ -212,6 +212,28 @@ export default function VixHeaderProfile({ data }) {
             : 'neutral'}
           title="VIX3M ÷ VIX. Above 1.0 = contango (curve sloping up, calm regime). Below 1.0 = backwardation (curve sloping down, urgent near-term vol). The percent reads as |ratio − 1| × 100%."
         />
+      </div>
+      <div className="vix-card-description">
+        <p>
+          Friday-close levels for the six-point Cboe vol term structure
+          (<strong style={{ color: 'var(--text-primary)' }}>VIX1D</strong> /{' '}
+          <strong style={{ color: 'var(--text-primary)' }}>VIX9D</strong> /{' '}
+          <strong style={{ color: 'var(--text-primary)' }}>VIX</strong> /{' '}
+          <strong style={{ color: 'var(--text-primary)' }}>VIX3M</strong> /{' '}
+          <strong style={{ color: 'var(--text-primary)' }}>VIX6M</strong> /{' '}
+          <strong style={{ color: 'var(--text-primary)' }}>VIX1Y</strong>),{' '}
+          <strong style={{ color: 'var(--text-primary)' }}>VVIX</strong>{' '}
+          (option-implied vol of VIX), the Nations skew/tail-cost pair{' '}
+          (<strong style={{ color: 'var(--text-primary)' }}>SDEX</strong>{' '}
+          and{' '}
+          <strong style={{ color: 'var(--text-primary)' }}>TDEX</strong>),
+          and a derived term-structure scalar{' '}
+          (<strong style={{ color: 'var(--text-primary)' }}>contango ratio = VIX3M ÷ VIX</strong>).
+          Each cell carries a{' '}
+          <strong style={{ color: 'var(--text-primary)' }}>1-year percentile rank</strong>{' '}
+          against its own trailing 252-day distribution as the color cue. Hover
+          a cell for the full definition.
+        </p>
       </div>
     </div>
   );

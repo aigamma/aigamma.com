@@ -184,6 +184,19 @@ export default function VixVolOfVol({ data }) {
           onChange={handleBrushChange}
         />
       )}
+      <div className="vix-card-description">
+        <p>
+          <strong style={{ color: 'var(--text-primary)' }}>VVIX</strong>{' '}
+          is the option-implied 30-day vol on VIX itself;{' '}
+          <strong style={{ color: 'var(--text-primary)' }}>realized vol-of-VIX</strong>{' '}
+          is the 30-day annualized standard deviation of log changes in the VIX
+          level. Plotted on the same scale they form a{' '}
+          <strong style={{ color: 'var(--text-primary)' }}>second-order VRP</strong>:
+          when VVIX persistently exceeds realized vol-of-VIX the option market
+          is over-pricing future VIX fluctuation. The bottom strip shows the
+          implied-minus-realized gap as a bar series.
+        </p>
+      </div>
     </div>
   );
 }

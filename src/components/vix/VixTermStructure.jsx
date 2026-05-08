@@ -73,7 +73,7 @@ export default function VixTermStructure({ data }) {
   // where the legend wraps a third row. Desktop unchanged at 380 / 80 /
   // -0.18 since the wider card width fits the four-entry legend on a
   // single ~24px row that lands inside the existing 80px bottom margin.
-  const containerHeight = isMobile ? 420 : 380;
+  const containerHeight = isMobile ? 560 : 505;
   const bottomMargin = isMobile ? 130 : 80;
   const legendY = isMobile ? -0.30 : PLOTLY_BASE_LAYOUT_2D.legend.y;
 
@@ -183,6 +183,29 @@ export default function VixTermStructure({ data }) {
           Chart failed to load: {plotlyError}
         </div>
       )}
+      <div className="vix-card-description">
+        <p>
+          Six points plotted in{' '}
+          <strong style={{ color: 'var(--text-primary)' }}>days-to-expiration on a log scale</strong>{' '}
+          so the front of the curve (1D, 9D, 30D) spaces out. Three overlays read
+          together as a flow sequence:{' '}
+          <strong style={{ color: 'var(--text-primary)' }}>today</strong>,{' '}
+          <strong style={{ color: 'var(--text-primary)' }}>one week ago</strong>, and{' '}
+          <strong style={{ color: 'var(--text-primary)' }}>one month ago</strong>. The
+          dotted line is the per-tenor long-run median.
+        </p>
+        <p>
+          An{' '}
+          <strong style={{ color: 'var(--accent-green)' }}>upward-sloping curve</strong>{' '}
+          is{' '}
+          <strong style={{ color: 'var(--accent-green)' }}>contango</strong>, the
+          empirically typical state in calm regimes. A{' '}
+          <strong style={{ color: 'var(--accent-coral)' }}>downward slope</strong> is{' '}
+          <strong style={{ color: 'var(--accent-coral)' }}>backwardation</strong>:
+          urgent near-term vol that historically precedes the bulk of meaningful
+          drawdowns.
+        </p>
+      </div>
     </div>
   );
 }

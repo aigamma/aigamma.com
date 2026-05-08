@@ -258,6 +258,27 @@ export default function VixOuMeanReversion({ data }) {
           onChange={handleBrushChange}
         />
       )}
+      <div className="vix-card-description">
+        <p>
+          Log-VIX has empirically well-behaved Ornstein-Uhlenbeck dynamics:{' '}
+          <strong style={{ color: 'var(--text-primary)' }}>d log(VIX) = κ(θ − log(VIX)) dt + σ dW</strong>.
+          The card shows the OLS calibration of{' '}
+          <strong style={{ color: 'var(--text-primary)' }}>κ</strong>{' '}
+          (mean-reversion speed),{' '}
+          <strong style={{ color: 'var(--text-primary)' }}>θ</strong>{' '}
+          (long-term mean),{' '}
+          <strong style={{ color: 'var(--text-primary)' }}>σ</strong>{' '}
+          (vol of log-VIX), and the implied{' '}
+          <strong style={{ color: 'var(--text-primary)' }}>half-life ln(2)/κ</strong>.
+        </p>
+        <p>
+          The dashed forward line projects the OU expectation{' '}
+          <strong style={{ color: 'var(--text-primary)' }}>60 trading days ahead</strong>:{' '}
+          <strong style={{ color: 'var(--text-primary)' }}>E[log VIX_T | log VIX_0] = θ + (log VIX_0 − θ) · exp(−κ T)</strong>.
+          Read it as how quickly current levels are expected to drift back to θ
+          under the model.
+        </p>
+      </div>
     </div>
   );
 }

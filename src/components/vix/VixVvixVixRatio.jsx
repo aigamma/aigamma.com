@@ -24,13 +24,14 @@ import ResetButton from '../ResetButton';
 //
 // Threshold colors:
 //   ratio <  5     — neutral, no shading
-//   5 ≤ ratio < 6  — amber alert band, complacency forming
-//   ratio ≥ 6      — coral major-alert band, sustained extremes
+//   5 ≤ ratio < 6  — yellow alert band, complacency forming
+//   6 ≤ ratio < 7  — orange escalated band, regime stretching past typical
+//   ratio ≥ 7      — red extreme band, vol-suppression past historical norm
 //
-// The two threshold zones render as background rectangles via Plotly
+// The three threshold zones render as background rectangles via Plotly
 // shapes at layer:'below' so the line trace draws on top. Dashed
-// threshold lines at y=5 and y=6 sharpen the boundary so the reader can
-// pick out exactly where the ratio crosses each zone.
+// threshold lines at y=5, y=6, y=7 sharpen the boundary so the reader
+// can pick out exactly where the ratio crosses each zone.
 //
 // External RangeBrush below the card matches the landing-page pattern;
 // see VixSkewIndices.jsx for the rationale on why Plotly's built-in
@@ -45,9 +46,11 @@ function msToIso(ms) {
 }
 
 const ALERT_THRESHOLD = 5;
-const MAJOR_ALERT_THRESHOLD = 6;
-const AMBER = '#f0a030';
-const CORAL = '#d85a30';
+const ESCALATED_THRESHOLD = 6;
+const EXTREME_THRESHOLD = 7;
+const YELLOW = '#f1c40f';
+const ORANGE = '#f0a030';
+const RED = '#e74c3c';
 
 export default function VixVvixVixRatio({ data }) {
   const { plotly, error: plotlyError } = usePlotly();
@@ -93,12 +96,12 @@ export default function VixVvixVixRatio({ data }) {
     const ratios = series.map((p) => p.ratio);
     const [windowStart, windowEnd] = activeRange;
 
-    // Y-axis range with headroom above the major-alert threshold so the
-    // coral band is always visible even when the ratio runs entirely
-    // calm. Floor pinned below the alert threshold for the same reason.
+    // Y-axis range with headroom above the extreme threshold so the red
+    // band is always visible even when the ratio runs entirely calm.
+    // Floor pinned below the alert threshold for the same reason.
     const ratioMax = Math.max(...ratios);
     const ratioMin = Math.min(...ratios);
-    const yMax = Math.max(ratioMax * 1.05, MAJOR_ALERT_THRESHOLD + 1);
+    const yMax = Math.max(ratioMax * 1.05, EXTREME_THRESHOLD + 1);
     const yMin = Math.max(0, Math.min(ratioMin - 0.5, ALERT_THRESHOLD - 1));
 
     const traces = [
@@ -113,15 +116,18 @@ export default function VixVvixVixRatio({ data }) {
       },
     ];
 
-    // Title accent reflects the latest reading: amber if in the alert
-    // band, coral if past the major threshold, default off-white otherwise.
+    // Title accent reflects the latest reading: yellow in the alert
+    // band [5, 6), orange in the escalated band [6, 7), red past the
+    // extreme threshold, default off-white otherwise.
     const titleColor = latestRatio == null
       ? PLOTLY_COLORS.titleText
-      : latestRatio >= MAJOR_ALERT_THRESHOLD
-        ? CORAL
-        : latestRatio >= ALERT_THRESHOLD
-          ? AMBER
-          : PLOTLY_COLORS.titleText;
+      : latestRatio >= EXTREME_THRESHOLD
+        ? RED
+        : latestRatio >= ESCALATED_THRESHOLD
+          ? ORANGE
+          : latestRatio >= ALERT_THRESHOLD
+            ? YELLOW
+            : PLOTLY_COLORS.titleText;
     const valueSuffix = latestRatio != null ? `  ${latestRatio.toFixed(2)}` : '';
     const titleText = isMobile
       ? `VVIX / VIX:<br>Vol-of-Vol Complacency${valueSuffix}`
@@ -140,22 +146,30 @@ export default function VixVvixVixRatio({ data }) {
         autorange: false,
       }),
       margin: { t: isMobile ? 75 : 50, r: 30, b: 50, l: 70 },
-      height: 320,
+      height: 425,
       showlegend: false,
       shapes: [
         {
           type: 'rect',
           xref: 'paper', x0: 0, x1: 1,
-          yref: 'y', y0: ALERT_THRESHOLD, y1: MAJOR_ALERT_THRESHOLD,
-          fillcolor: 'rgba(240, 160, 48, 0.18)',
+          yref: 'y', y0: ALERT_THRESHOLD, y1: ESCALATED_THRESHOLD,
+          fillcolor: 'rgba(241, 196, 15, 0.18)',
           line: { width: 0 },
           layer: 'below',
         },
         {
           type: 'rect',
           xref: 'paper', x0: 0, x1: 1,
-          yref: 'y', y0: MAJOR_ALERT_THRESHOLD, y1: yMax,
-          fillcolor: 'rgba(216, 90, 48, 0.22)',
+          yref: 'y', y0: ESCALATED_THRESHOLD, y1: EXTREME_THRESHOLD,
+          fillcolor: 'rgba(240, 160, 48, 0.22)',
+          line: { width: 0 },
+          layer: 'below',
+        },
+        {
+          type: 'rect',
+          xref: 'paper', x0: 0, x1: 1,
+          yref: 'y', y0: EXTREME_THRESHOLD, y1: yMax,
+          fillcolor: 'rgba(231, 76, 60, 0.24)',
           line: { width: 0 },
           layer: 'below',
         },
@@ -163,14 +177,21 @@ export default function VixVvixVixRatio({ data }) {
           type: 'line',
           xref: 'paper', x0: 0, x1: 1,
           yref: 'y', y0: ALERT_THRESHOLD, y1: ALERT_THRESHOLD,
-          line: { color: AMBER, width: 1, dash: 'dash' },
+          line: { color: YELLOW, width: 1, dash: 'dash' },
           layer: 'below',
         },
         {
           type: 'line',
           xref: 'paper', x0: 0, x1: 1,
-          yref: 'y', y0: MAJOR_ALERT_THRESHOLD, y1: MAJOR_ALERT_THRESHOLD,
-          line: { color: CORAL, width: 1, dash: 'dash' },
+          yref: 'y', y0: ESCALATED_THRESHOLD, y1: ESCALATED_THRESHOLD,
+          line: { color: ORANGE, width: 1, dash: 'dash' },
+          layer: 'below',
+        },
+        {
+          type: 'line',
+          xref: 'paper', x0: 0, x1: 1,
+          yref: 'y', y0: EXTREME_THRESHOLD, y1: EXTREME_THRESHOLD,
+          line: { color: RED, width: 1, dash: 'dash' },
           layer: 'below',
         },
       ],
@@ -178,13 +199,19 @@ export default function VixVvixVixRatio({ data }) {
         {
           x: 0.99, xref: 'paper', y: ALERT_THRESHOLD, yref: 'y',
           text: 'Alert (5)', showarrow: false,
-          font: { color: AMBER, family: "Calibri, 'Segoe UI', system-ui, sans-serif", size: 11 },
+          font: { color: YELLOW, family: "Calibri, 'Segoe UI', system-ui, sans-serif", size: 11 },
           xanchor: 'right', yanchor: 'bottom',
         },
         {
-          x: 0.99, xref: 'paper', y: MAJOR_ALERT_THRESHOLD, yref: 'y',
-          text: 'Major (6)', showarrow: false,
-          font: { color: CORAL, family: "Calibri, 'Segoe UI', system-ui, sans-serif", size: 11 },
+          x: 0.99, xref: 'paper', y: ESCALATED_THRESHOLD, yref: 'y',
+          text: 'Escalated (6)', showarrow: false,
+          font: { color: ORANGE, family: "Calibri, 'Segoe UI', system-ui, sans-serif", size: 11 },
+          xanchor: 'right', yanchor: 'bottom',
+        },
+        {
+          x: 0.99, xref: 'paper', y: EXTREME_THRESHOLD, yref: 'y',
+          text: 'Extreme (7)', showarrow: false,
+          font: { color: RED, family: "Calibri, 'Segoe UI', system-ui, sans-serif", size: 11 },
           xanchor: 'right', yanchor: 'bottom',
         },
       ],
@@ -210,7 +237,7 @@ export default function VixVvixVixRatio({ data }) {
   return (
     <div className="card" style={{ position: 'relative' }}>
       <ResetButton visible={timeRange != null} onClick={() => setTimeRange(null)} />
-      <div ref={ref} style={{ width: '100%', height: 320 }} />
+      <div ref={ref} style={{ width: '100%', height: 425 }} />
       {plotlyError && (
         <div style={{ padding: '1rem', color: 'var(--accent-coral)' }}>
           Chart failed to load: {plotlyError}
@@ -225,6 +252,31 @@ export default function VixVvixVixRatio({ data }) {
           onChange={handleBrushChange}
         />
       )}
+      <div className="vix-card-description">
+        <p>
+          <strong style={{ color: 'var(--text-primary)' }}>VVIX</strong>{' '}
+          (the Cboe-published 30-day implied vol of VIX itself, the option-market
+          &ldquo;vol of vol&rdquo;) divided by the spot{' '}
+          <strong style={{ color: 'var(--text-primary)' }}>VIX</strong>{' '}
+          measures how richly priced future VIX fluctuation is relative to the VIX
+          level. The ratio compresses during stress regimes (VIX rises faster than
+          VVIX) and stretches during calm ones (VIX gets suppressed while VVIX
+          stays normal), so an unusually high reading is a vol-of-vol complacency
+          signal: the option market is paying for VIX fluctuation at a multiple
+          that the spot-VIX level is no longer earning.
+        </p>
+        <p>
+          Three threshold zones flag the regime severity.{' '}
+          <strong style={{ color: YELLOW }}>Yellow above 5</strong>{' '}
+          (complacency forming),{' '}
+          <strong style={{ color: ORANGE }}>orange above 6</strong>{' '}
+          (regime stretching past typical), and{' '}
+          <strong style={{ color: RED }}>red above 7</strong>{' '}
+          (vol-suppression past historical norm). The August 2024 carry-trade
+          unwind and the April 2025 tariff move both ran up from elevated VVIX/VIX
+          regimes immediately preceding the spike.
+        </p>
+      </div>
     </div>
   );
 }

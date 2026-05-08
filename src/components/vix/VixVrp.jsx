@@ -273,6 +273,17 @@ export default function VixVrp({ data }) {
           onChange={handleBrushChange}
         />
       )}
+      <div className="vix-card-description">
+        <p>
+          VIX overlaid against the{' '}
+          <strong style={{ color: 'var(--text-primary)' }}>20-day Yang-Zhang realized vol of SPX</strong>{' '}
+          on a shared axis. The gap between the two lines is the VIX-style VRP:{' '}
+          <strong style={{ color: 'var(--accent-green)' }}>green where VIX exceeds RV</strong>{' '}
+          (typical),{' '}
+          <strong style={{ color: 'var(--accent-coral)' }}>coral where RV exceeds VIX</strong>{' '}
+          (rare stress regime where realized has overshot option-market expectations).
+        </p>
+      </div>
     </div>
   );
 }

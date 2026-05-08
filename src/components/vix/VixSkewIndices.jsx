@@ -200,7 +200,7 @@ export default function VixSkewIndices({ data }) {
         tickfont: { color: PLOTLY_COLORS.highlight, family: "Calibri, 'Segoe UI', system-ui, sans-serif", size: 12 },
       }),
       margin: { t: isMobile ? 75 : 50, r: 70, b: 80, l: 70 },
-      height: 380,
+      height: 505,
       showlegend: true,
       legend: { orientation: 'h', y: -0.18, x: 0.5, xanchor: 'center' },
     });
@@ -225,7 +225,7 @@ export default function VixSkewIndices({ data }) {
   return (
     <div className="card" style={{ position: 'relative' }}>
       <ResetButton visible={timeRange != null} onClick={() => setTimeRange(null)} />
-      <div ref={ref} style={{ width: '100%', height: 380 }} />
+      <div ref={ref} style={{ width: '100%', height: 505 }} />
       {plotlyError && (
         <div style={{ padding: '1rem', color: 'var(--accent-coral)' }}>
           Chart failed to load: {plotlyError}
@@ -240,6 +240,40 @@ export default function VixSkewIndices({ data }) {
           onChange={handleBrushChange}
         />
       )}
+      <div className="vix-card-description">
+        <p>
+          Two complementary readings of SPY tail-pricing pressure built on the
+          same option surface but separating shape from price.{' '}
+          <strong style={{ color: 'var(--text-primary)' }}>SDEX</strong>{' '}
+          (Nations SkewDex) is the normalized 30 DTE smile slope:{' '}
+          <strong style={{ color: 'var(--text-primary)' }}>(1σ SPY put IV − ATM SPY IV) / ATM SPY IV</strong>.
+          Higher values mean OTM puts price a steeper IV premium relative to
+          ATM, scaled out of the ATM-vol level so it stays comparable across
+          vol regimes.{' '}
+          <strong style={{ color: 'var(--text-primary)' }}>TDEX</strong>{' '}
+          (Nations TailDex) is the running 30 DTE cost of a 3σ SPY put: an
+          absolute tail-protection price that moves on either rising ATM IV or
+          steepening skew (or both).
+        </p>
+        <p>
+          Plotted on dual axes, divergence between the two reads is informative.{' '}
+          <strong style={{ color: 'var(--text-primary)' }}>SDEX up while TDEX flat</strong>{' '}
+          means the smile is steepening but ATM IV is rising in lockstep, so
+          the relative tail premium is unchanged in absolute dollar terms.{' '}
+          <strong style={{ color: 'var(--text-primary)' }}>TDEX up while SDEX flat</strong>{' '}
+          means ATM IV is broadly re-pricing without the smile getting any
+          steeper, a level shock rather than a tail-specific one.{' '}
+          <strong style={{ color: 'var(--text-primary)' }}>Both up together</strong>{' '}
+          is the textbook risk-off pattern: the curve is steepening and the
+          dollar cost of out-of-money protection is rising at the same time.
+          The dotted entries in the legend below the chart{' '}
+          (<strong style={{ color: 'var(--text-primary)' }}>SDEX mean</strong>{' '}
+          and{' '}
+          <strong style={{ color: 'var(--text-primary)' }}>TDEX mean</strong>)
+          carry each series&apos; long-run mean over the displayed window as
+          the &ldquo;current vs history&rdquo; anchor.
+        </p>
+      </div>
     </div>
   );
 }

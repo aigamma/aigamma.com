@@ -143,7 +143,7 @@ export default function VixContangoHistory({ data }) {
       }),
       yaxis: plotlyAxis('VIX3M / VIX'),
       margin: { t: isMobile ? 75 : 50, r: 30, b: 50, l: 70 },
-      height: 320,
+      height: 425,
       showlegend: false,
     });
 
@@ -167,7 +167,7 @@ export default function VixContangoHistory({ data }) {
   return (
     <div className="card" style={{ position: 'relative' }}>
       <ResetButton visible={timeRange != null} onClick={() => setTimeRange(null)} />
-      <div ref={ref} style={{ width: '100%', height: 320 }} />
+      <div ref={ref} style={{ width: '100%', height: 425 }} />
       {plotlyError && (
         <div style={{ padding: '1rem', color: 'var(--accent-coral)' }}>
           Chart failed to load: {plotlyError}
@@ -182,6 +182,18 @@ export default function VixContangoHistory({ data }) {
           onChange={handleBrushChange}
         />
       )}
+      <div className="vix-card-description">
+        <p>
+          <strong style={{ color: 'var(--text-primary)' }}>VIX3M ÷ VIX</strong>{' '}
+          over the full history, with conditional fills anchoring on the{' '}
+          <strong style={{ color: 'var(--text-primary)' }}>1.0 line</strong>.{' '}
+          <strong style={{ color: 'var(--accent-green)' }}>Green band</strong>{' '}
+          is contango (curve up, calm);{' '}
+          <strong style={{ color: 'var(--accent-coral)' }}>coral band</strong>{' '}
+          is backwardation (curve down, warning). Durable regime episodes are
+          visible at a glance without parsing the underlying VIX level.
+        </p>
+      </div>
     </div>
   );
 }

@@ -42,10 +42,10 @@ function prefetchBelowFoldChunks() {
     : (cb) => setTimeout(cb, 200);
   idle(() => {
     import('../src/components/vix/VixContangoHistory');
+    import('../src/components/vix/VixVvixVixRatio');
     import('../src/components/vix/VixVrp');
     import('../src/components/vix/VixOuMeanReversion');
     import('../src/components/vix/VixVolOfVol');
-    import('../src/components/vix/VixVvixVixRatio');
     import('../src/components/vix/VixCrossAsset');
     import('../src/components/vix/VixSkewIndices');
     import('../src/components/vix/VixRegimeMatrix');
@@ -67,10 +67,10 @@ function prefetchBelowFoldChunks() {
 //   1. VixHeaderProfile     — current Friday-close pill grid with 1y ranks
 //   2. VixTermStructure     — 5-point curve + 1wk / 1mo / median overlays
 //   3. VixContangoHistory   — historical VIX3M/VIX ratio with regime fills
-//   4. VixVrp               — VIX vs SPX 20d realized vol (the VRP picture)
-//   5. VixOuMeanReversion   — Ornstein-Uhlenbeck calibration + 60d forward
-//   6. VixVolOfVol          — VVIX vs realized vol-of-VIX (vol-of-vol VRP)
-//   7. VixVvixVixRatio      — VVIX/VIX ratio with 5/6 alert thresholds
+//   4. VixVvixVixRatio      — VVIX/VIX ratio with 5/6/7 yellow/orange/red bands
+//   5. VixVrp               — VIX vs SPX 20d realized vol (the VRP picture)
+//   6. VixOuMeanReversion   — Ornstein-Uhlenbeck calibration + 60d forward
+//   7. VixVolOfVol          — VVIX vs realized vol-of-VIX (vol-of-vol VRP)
 //   8. VixCrossAsset        — VIX/VXN/RVX/OVX/GVZ on shared axis + 1y ranks
 //   9. VixSkewIndices       — Nations SDEX vs Nations TDEX overlay
 //  10. VixRegimeMatrix      — 4-state classification + N-day transitions
@@ -112,17 +112,17 @@ export default function App() {
 
       {loading && (
         <div aria-busy="true" aria-label="Loading VIX history">
-          <div className="skeleton-card" style={{ height: '180px' }} />
-          <div className="skeleton-card" style={{ height: '380px' }} />
-          <div className="skeleton-card" style={{ height: '360px' }} />
-          <div className="skeleton-card" style={{ height: '500px' }} />
-          <div className="skeleton-card" style={{ height: '540px' }} />
-          <div className="skeleton-card" style={{ height: '500px' }} />
-          <div className="skeleton-card" style={{ height: '360px' }} />
-          <div className="skeleton-card" style={{ height: '500px' }} />
-          <div className="skeleton-card" style={{ height: '420px' }} />
+          <div className="skeleton-card" style={{ height: '220px' }} />
+          <div className="skeleton-card" style={{ height: '620px' }} />
           <div className="skeleton-card" style={{ height: '600px' }} />
-          <div className="skeleton-card" style={{ height: '660px' }} />
+          <div className="skeleton-card" style={{ height: '640px' }} />
+          <div className="skeleton-card" style={{ height: '580px' }} />
+          <div className="skeleton-card" style={{ height: '640px' }} />
+          <div className="skeleton-card" style={{ height: '580px' }} />
+          <div className="skeleton-card" style={{ height: '700px' }} />
+          <div className="skeleton-card" style={{ height: '700px' }} />
+          <div className="skeleton-card" style={{ height: '620px' }} />
+          <div className="skeleton-card" style={{ height: '780px' }} />
         </div>
       )}
 
@@ -145,215 +145,34 @@ export default function App() {
           <ErrorBoundary><VixHeaderProfile data={data} /></ErrorBoundary>
           <ErrorBoundary><VixTermStructure data={data} /></ErrorBoundary>
           <ErrorBoundary>
-            <LazyMount height="360px" margin="300px"><VixContangoHistory data={data} /></LazyMount>
+            <LazyMount height="600px" margin="300px"><VixContangoHistory data={data} /></LazyMount>
           </ErrorBoundary>
           <ErrorBoundary>
-            <LazyMount height="500px" margin="300px"><VixVrp data={data} /></LazyMount>
+            <LazyMount height="640px" margin="300px"><VixVvixVixRatio data={data} /></LazyMount>
           </ErrorBoundary>
           <ErrorBoundary>
-            <LazyMount height="540px" margin="300px"><VixOuMeanReversion data={data} /></LazyMount>
+            <LazyMount height="580px" margin="300px"><VixVrp data={data} /></LazyMount>
           </ErrorBoundary>
           <ErrorBoundary>
-            <LazyMount height="500px" margin="300px"><VixVolOfVol data={data} /></LazyMount>
+            <LazyMount height="640px" margin="300px"><VixOuMeanReversion data={data} /></LazyMount>
           </ErrorBoundary>
           <ErrorBoundary>
-            <LazyMount height="360px" margin="300px"><VixVvixVixRatio data={data} /></LazyMount>
+            <LazyMount height="580px" margin="300px"><VixVolOfVol data={data} /></LazyMount>
           </ErrorBoundary>
           <ErrorBoundary>
-            <LazyMount height="500px" margin="300px"><VixCrossAsset data={data} /></LazyMount>
+            <LazyMount height="700px" margin="300px"><VixCrossAsset data={data} /></LazyMount>
           </ErrorBoundary>
           <ErrorBoundary>
-            <LazyMount height="420px" margin="300px"><VixSkewIndices data={data} /></LazyMount>
+            <LazyMount height="700px" margin="300px"><VixSkewIndices data={data} /></LazyMount>
           </ErrorBoundary>
           <ErrorBoundary>
-            <LazyMount height="500px" margin="300px"><VixRegimeMatrix data={data} /></LazyMount>
+            <LazyMount height="620px" margin="300px"><VixRegimeMatrix data={data} /></LazyMount>
           </ErrorBoundary>
           <ErrorBoundary>
-            <LazyMount height="660px" margin="300px"><VixStrategyOverlay data={data} /></LazyMount>
+            <LazyMount height="780px" margin="300px"><VixStrategyOverlay data={data} /></LazyMount>
           </ErrorBoundary>
         </>
       )}
-
-      <div className="card" style={{ padding: '1.1rem 1.25rem', margin: '1.25rem 0' }}>
-        <div
-          style={{
-            fontFamily: "Calibri, 'Segoe UI', system-ui, sans-serif",
-            fontSize: '0.7rem',
-            letterSpacing: '0.14em',
-            textTransform: 'uppercase',
-            color: 'var(--text-secondary)',
-            marginBottom: '0.45rem',
-          }}
-        >
-          What this page measures
-        </div>
-        <div style={{ color: 'var(--text-secondary)', lineHeight: 1.65, fontSize: '0.95rem' }}>
-          <p style={{ margin: '0 0 0.7rem' }}>
-            <strong style={{ color: 'var(--text-primary)' }}>Snapshot.</strong>{' '}
-            Friday-close levels for the six-point Cboe vol term structure
-            (<strong style={{ color: 'var(--text-primary)' }}>VIX1D</strong> /{' '}
-            <strong style={{ color: 'var(--text-primary)' }}>VIX9D</strong> /{' '}
-            <strong style={{ color: 'var(--text-primary)' }}>VIX</strong> /{' '}
-            <strong style={{ color: 'var(--text-primary)' }}>VIX3M</strong> /{' '}
-            <strong style={{ color: 'var(--text-primary)' }}>VIX6M</strong> /{' '}
-            <strong style={{ color: 'var(--text-primary)' }}>VIX1Y</strong>),{' '}
-            <strong style={{ color: 'var(--text-primary)' }}>VVIX</strong> (option-implied vol of
-            VIX), the Nations skew/tail-cost pair (<strong style={{ color: 'var(--text-primary)' }}>SDEX</strong>{' '}
-            and <strong style={{ color: 'var(--text-primary)' }}>TDEX</strong>), and a
-            derived term-structure scalar (<strong style={{ color: 'var(--text-primary)' }}>contango
-            ratio = VIX3M ÷ VIX</strong>). Each cell carries a{' '}
-            <strong style={{ color: 'var(--text-primary)' }}>1-year percentile rank</strong>{' '}
-            against its own trailing 252-day distribution as the color cue.
-          </p>
-          <p style={{ margin: '0 0 0.7rem' }}>
-            <strong style={{ color: 'var(--text-primary)' }}>Term Structure.</strong>{' '}
-            Six points plotted in <strong style={{ color: 'var(--text-primary)' }}>days-to-expiration
-            on a log scale</strong> so the front of the curve (1D, 9D, 30D) spaces out. Three
-            overlays read together as a flow sequence:{' '}
-            <strong style={{ color: 'var(--text-primary)' }}>today</strong>,{' '}
-            <strong style={{ color: 'var(--text-primary)' }}>one week ago</strong>, and{' '}
-            <strong style={{ color: 'var(--text-primary)' }}>one month ago</strong>. The dotted
-            line is the per-tenor long-run median.
-          </p>
-          <p style={{ margin: '0 0 0.7rem' }}>
-            An <strong style={{ color: 'var(--accent-green)' }}>upward-sloping curve</strong> is{' '}
-            <strong style={{ color: 'var(--accent-green)' }}>contango</strong>, the empirically
-            typical state in calm regimes. A{' '}
-            <strong style={{ color: 'var(--accent-coral)' }}>downward slope</strong> is{' '}
-            <strong style={{ color: 'var(--accent-coral)' }}>backwardation</strong>: urgent
-            near-term vol that historically precedes the bulk of meaningful drawdowns.
-          </p>
-          <p style={{ margin: '0 0 0.7rem' }}>
-            <strong style={{ color: 'var(--text-primary)' }}>Contango History.</strong>{' '}
-            <strong style={{ color: 'var(--text-primary)' }}>VIX3M ÷ VIX</strong> over the full
-            history, with conditional fills anchoring on the{' '}
-            <strong style={{ color: 'var(--text-primary)' }}>1.0 line</strong>.{' '}
-            <strong style={{ color: 'var(--accent-green)' }}>Green band</strong> is contango (curve
-            up, calm); <strong style={{ color: 'var(--accent-coral)' }}>coral band</strong> is
-            backwardation (curve down, warning). Durable regime episodes visible at a glance
-            without parsing the underlying VIX level.
-          </p>
-          <p style={{ margin: '0 0 0.7rem' }}>
-            <strong style={{ color: 'var(--text-primary)' }}>VRP for VIX.</strong>{' '}
-            VIX overlaid against the <strong style={{ color: 'var(--text-primary)' }}>20-day
-            Yang-Zhang realized vol of SPX</strong> on a shared axis. The gap between the two
-            lines is the VIX-style VRP:{' '}
-            <strong style={{ color: 'var(--accent-green)' }}>green where VIX exceeds RV</strong>{' '}
-            (typical), <strong style={{ color: 'var(--accent-coral)' }}>coral where RV exceeds
-            VIX</strong> (rare stress regime where realized has overshot option-market
-            expectations).
-          </p>
-          <p style={{ margin: '0 0 0.7rem' }}>
-            <strong style={{ color: 'var(--text-primary)' }}>Mean Reversion.</strong>{' '}
-            Log-VIX has empirically well-behaved Ornstein-Uhlenbeck dynamics:{' '}
-            <strong style={{ color: 'var(--text-primary)' }}>d log(VIX) = κ(θ − log(VIX)) dt + σ dW</strong>.
-            The card shows the OLS calibration of{' '}
-            <strong style={{ color: 'var(--text-primary)' }}>κ</strong> (mean-reversion speed),{' '}
-            <strong style={{ color: 'var(--text-primary)' }}>θ</strong> (long-term mean),{' '}
-            <strong style={{ color: 'var(--text-primary)' }}>σ</strong> (vol of log-VIX), and the
-            implied <strong style={{ color: 'var(--text-primary)' }}>half-life ln(2)/κ</strong>.
-          </p>
-          <p style={{ margin: '0 0 0.7rem' }}>
-            The dashed forward line projects the OU expectation{' '}
-            <strong style={{ color: 'var(--text-primary)' }}>60 trading days ahead</strong>:{' '}
-            <strong style={{ color: 'var(--text-primary)' }}>E[log VIX_T | log VIX_0] = θ + (log
-            VIX_0 − θ) · exp(−κ T)</strong>. Read it as how quickly current levels are expected to
-            drift back to θ under the model.
-          </p>
-          <p style={{ margin: '0 0 0.7rem' }}>
-            <strong style={{ color: 'var(--text-primary)' }}>Vol of Vol.</strong>{' '}
-            <strong style={{ color: 'var(--text-primary)' }}>VVIX</strong> is the option-implied
-            30-day vol on VIX itself; <strong style={{ color: 'var(--text-primary)' }}>realized
-            vol-of-VIX</strong> is the 30-day annualized standard deviation of log changes in the
-            VIX level. Plotted on the same scale they form a{' '}
-            <strong style={{ color: 'var(--text-primary)' }}>second-order VRP</strong>: when VVIX
-            persistently exceeds realized vol-of-VIX the option market is over-pricing future VIX
-            fluctuation. The bottom strip shows the implied-minus-realized gap as a bar series.
-          </p>
-          <p style={{ margin: '0 0 0.7rem' }}>
-            <strong style={{ color: 'var(--text-primary)' }}>Vol-of-Vol Complacency.</strong>{' '}
-            The <strong style={{ color: 'var(--text-primary)' }}>VVIX / VIX ratio</strong>{' '}
-            measures how richly priced future VIX fluctuation is relative to the VIX level.
-            The ratio compresses during stress regimes (VIX rises faster than VVIX) and
-            stretches during calm ones (VIX gets suppressed while VVIX stays normal), so an
-            unusually high ratio reads as a vol-of-vol complacency signal: the option market
-            is paying for VIX fluctuation at a multiple that the spot-VIX level is no longer
-            earning. Two threshold zones flag the regime:{' '}
-            <strong style={{ color: 'var(--accent-amber)' }}>amber above 5</strong>{' '}
-            (complacency forming) and{' '}
-            <strong style={{ color: 'var(--accent-coral)' }}>coral above 6</strong>{' '}
-            (sustained extremes). The August 2024 carry-trade unwind and the April 2025
-            tariff move both ran up from elevated VVIX/VIX regimes immediately preceding
-            the spike.
-          </p>
-          <p style={{ margin: '0 0 0.7rem' }}>
-            <strong style={{ color: 'var(--text-primary)' }}>Cross-Asset Vol.</strong>{' '}
-            Five Cboe-published implied vol indices on shared axes,{' '}
-            <strong style={{ color: 'var(--text-primary)' }}>indexed to 100</strong> at the start
-            of the window so the reader sees relative regime motion rather than absolute level.
-            The 1-year percentile rank table surfaces divergences. Equity vol low while crude vol
-            elevated implies single-asset stress, not a broad risk-on / risk-off shift.
-          </p>
-          <p style={{ margin: '0 0 0.7rem' }}>
-            <strong style={{ color: 'var(--text-primary)' }}>Skew Indices.</strong>{' '}
-            Two complementary readings of SPY tail-pricing pressure built on
-            the same option surface but separating shape from price.{' '}
-            <strong style={{ color: 'var(--text-primary)' }}>SDEX</strong> (Nations SkewDex) is the
-            normalized 30 DTE smile slope:{' '}
-            <strong style={{ color: 'var(--text-primary)' }}>(1σ SPY put IV − ATM SPY IV) / ATM
-            SPY IV</strong>. Higher values mean OTM puts price a steeper IV premium relative to
-            ATM, scaled out of the ATM-vol level so it stays comparable across vol regimes.{' '}
-            <strong style={{ color: 'var(--text-primary)' }}>TDEX</strong> (Nations TailDex) is the
-            running 30 DTE cost of a 3σ SPY put: an absolute tail-protection price that moves on
-            either rising ATM IV or steepening skew (or both).
-          </p>
-          <p style={{ margin: '0 0 0.7rem' }}>
-            Plotted on dual axes, divergence between the two reads is informative.{' '}
-            <strong style={{ color: 'var(--text-primary)' }}>SDEX up while TDEX flat</strong> means
-            the smile is steepening but ATM IV is rising in lockstep, so the relative tail premium
-            is unchanged in absolute dollar terms.{' '}
-            <strong style={{ color: 'var(--text-primary)' }}>TDEX up while SDEX flat</strong> means
-            ATM IV is broadly re-pricing without the smile getting any steeper, a level shock
-            rather than a tail-specific one.{' '}
-            <strong style={{ color: 'var(--text-primary)' }}>Both up together</strong> is the
-            textbook risk-off pattern: the curve is steepening and the dollar cost of out-of-money
-            protection is rising at the same time. The dotted entries in the legend below the chart
-            (<strong style={{ color: 'var(--text-primary)' }}>SDEX mean</strong> and{' '}
-            <strong style={{ color: 'var(--text-primary)' }}>TDEX mean</strong>) carry each
-            series' long-run mean over the displayed window as the "current vs history" anchor.
-          </p>
-          <p style={{ margin: '0 0 0.7rem' }}>
-            <strong style={{ color: 'var(--text-primary)' }}>Regime Matrix.</strong>{' '}
-            Discrete VIX regime classifier with thresholds at{' '}
-            <strong style={{ color: 'var(--accent-green)' }}>12</strong> /{' '}
-            <strong style={{ color: 'var(--accent-amber)' }}>18</strong> /{' '}
-            <strong style={{ color: 'var(--accent-coral)' }}>30</strong>, roughly the 30 / 60 /
-            90th percentiles of the 1990-onward distribution. Four states:{' '}
-            <strong style={{ color: 'var(--accent-green)' }}>calm</strong> /{' '}
-            <strong style={{ color: 'var(--accent-blue)' }}>normal</strong> /{' '}
-            <strong style={{ color: 'var(--accent-amber)' }}>elevated</strong> /{' '}
-            <strong style={{ color: 'var(--accent-coral)' }}>stressed</strong>.
-          </p>
-          <p style={{ margin: '0 0 0.7rem' }}>
-            The card shows the current state, time spent in each over the full history, and the
-            empirical <strong style={{ color: 'var(--text-primary)' }}>1-day / 5-day /
-            21-day-ahead transition matrices</strong>. The diagonal is regime persistence;
-            off-diagonal cells visualize how regimes flow into each other.
-          </p>
-          <p style={{ margin: 0 }}>
-            <strong style={{ color: 'var(--text-primary)' }}>Strategy Benchmarks.</strong>{' '}
-            Four Cboe option-strategy benchmark indices that monetize vol exposure in distinct
-            ways: <strong style={{ color: 'var(--text-primary)' }}>BXM</strong> (buy-write
-            at-the-money calls), <strong style={{ color: 'var(--text-primary)' }}>BXMD</strong>{' '}
-            (buy-write 30-delta calls), <strong style={{ color: 'var(--text-primary)' }}>BFLY</strong>{' '}
-            (iron butterfly), <strong style={{ color: 'var(--text-primary)' }}>CNDR</strong> (iron
-            condor). Plotted as <strong style={{ color: 'var(--text-primary)' }}>growth-of-1
-            cumulative returns</strong> indexed to the start of the window; SPX cash overlaid as the
-            buy-and-hold benchmark. Annualized return, vol, Sharpe, and maximum drawdown for each
-            strategy in the table below.
-          </p>
-        </div>
-      </div>
 
       <ErrorBoundary>
         <LazyMount height="320px" margin="200px">

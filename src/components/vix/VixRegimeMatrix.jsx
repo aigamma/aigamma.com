@@ -154,6 +154,27 @@ export default function VixRegimeMatrix({ data }) {
           </table>
         </div>
       ))}
+      <div className="vix-card-description">
+        <p>
+          Discrete VIX regime classifier with thresholds at{' '}
+          <strong style={{ color: 'var(--accent-green)' }}>12</strong> /{' '}
+          <strong style={{ color: 'var(--accent-amber)' }}>18</strong> /{' '}
+          <strong style={{ color: 'var(--accent-coral)' }}>30</strong>,
+          roughly the 30 / 60 / 90th percentiles of the 1990-onward
+          distribution. Four states:{' '}
+          <strong style={{ color: 'var(--accent-green)' }}>calm</strong> /{' '}
+          <strong style={{ color: 'var(--accent-blue)' }}>normal</strong> /{' '}
+          <strong style={{ color: 'var(--accent-amber)' }}>elevated</strong> /{' '}
+          <strong style={{ color: 'var(--accent-coral)' }}>stressed</strong>.
+        </p>
+        <p>
+          The card shows the current state, time spent in each over the full
+          history, and the empirical{' '}
+          <strong style={{ color: 'var(--text-primary)' }}>1-day / 5-day / 21-day-ahead transition matrices</strong>.
+          The diagonal is regime persistence; off-diagonal cells visualize how
+          regimes flow into each other.
+        </p>
+      </div>
     </div>
   );
 }
