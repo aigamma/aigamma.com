@@ -511,6 +511,21 @@ export default function App() {
 
       {data && (
         <>
+          {/* Catalyst banner — three time-bucketed pills (red 0-24h /
+              orange 24-48h / yellow 48-72h) for upcoming earnings (Top
+              100 OV via /api/earnings) and macro events (USD-only High+
+              Medium impact via /api/events-calendar). Sits as the second
+              row container of the home page: PageNarrator at the very
+              top, this alerts strip second, then LevelsPanel key metrics
+              third. Statically imported (not lazy + LazyMount-gated)
+              because it sits above the fold where the IntersectionObserver
+              gate fires immediately anyway. Component returns null when
+              both buckets are empty so the page draws as if it weren't
+              there during quiet periods. */}
+          <ErrorBoundary>
+            <CatalystBanner />
+          </ErrorBoundary>
+
           <ErrorBoundary>
             <LevelsPanel
               levels={correctedLevels}
@@ -528,23 +543,6 @@ export default function App() {
               regimeIndicator={regimeIndicatorObj}
               termStructure={data.termStructure}
             />
-          </ErrorBoundary>
-
-          {/* Catalyst banner — three time-bucketed pills sitting directly
-              under the LevelsPanel's three rows of key metrics. Red pill
-              (left) for catalysts firing in the next 0-24 hours, orange
-              (middle) for 24-48 hours, yellow (right) for 48-72 hours.
-              Pulls Top 100 OV earnings from /api/earnings and macro
-              events from /api/events-calendar (USD-only, High+Medium
-              impact tiers). Statically imported (not lazy + LazyMount-
-              gated) because it sits above the fold where the
-              IntersectionObserver gate fires immediately anyway and a
-              deferred chunk fetch would only add a round-trip without
-              saving any bytes from the critical path. The component
-              renders null when both buckets are empty so the page
-              draws as if it weren't there during quiet periods. */}
-          <ErrorBoundary>
-            <CatalystBanner />
           </ErrorBoundary>
 
           {/* Below-fold dealer-positioning charts are wrapped in LazyMount
