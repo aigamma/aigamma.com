@@ -130,12 +130,12 @@ export default function VixContangoHistory({ data }) {
       },
     ];
 
+    const titleText = isMobile
+      ? 'Term Structure<br><span style="color:#2ecc71">Contango</span> / <span style="color:#e74c3c">Backwardation</span>'
+      : 'Term Structure <span style="color:#2ecc71">Contango</span> / <span style="color:#e74c3c">Backwardation</span>';
+
     const layout = plotly2DChartLayout({
-      title: plotlyTitle(
-        isMobile
-          ? 'Term Structure<br>Contango / Backwardation'
-          : 'Term Structure Contango / Backwardation'
-      ),
+      title: plotlyTitle(titleText),
       xaxis: plotlyAxis('', {
         type: 'date',
         range: [windowStart, windowEnd],
@@ -145,15 +145,6 @@ export default function VixContangoHistory({ data }) {
       margin: { t: isMobile ? 75 : 50, r: 30, b: 50, l: 70 },
       height: 320,
       showlegend: false,
-      annotations: [
-        {
-          x: 0.01, xref: 'paper', y: 1, yref: 'paper',
-          text: '<span style="color:#2ecc71">Contango</span> / <span style="color:#e74c3c">Backwardation</span>',
-          showarrow: false,
-          font: { family: "Calibri, 'Segoe UI', system-ui, sans-serif", size: 11 },
-          align: 'left', xanchor: 'left', yanchor: 'top',
-        },
-      ],
     });
 
     plotly.newPlot(ref.current, traces, layout, {
