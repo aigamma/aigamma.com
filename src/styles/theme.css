@@ -136,6 +136,24 @@ body {
   text-transform: uppercase;
 }
 
+.page-narrator__meta-left {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.6rem;
+  min-width: 0;
+}
+
+.page-narrator__chip {
+  display: inline-block;
+  padding: 0.1rem 0.5rem;
+  font-size: 0.62rem;
+  font-weight: 600;
+  letter-spacing: 0.1em;
+  border-radius: 2px;
+  line-height: 1.5;
+  flex-shrink: 0;
+}
+
 .page-narrator__age {
   white-space: nowrap;
 }

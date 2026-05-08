@@ -43,6 +43,29 @@ const SEVERITY_BG_IMAGE = {
   3: 'linear-gradient(90deg, rgba(231,76,60,0.07) 0%, transparent 72%)',
 };
 
+// Severity-tier label rendered in the meta row at the top of the card. The
+// agent's persona uses CONTEXT / NOTABLE / SIGNIFICANT internally for the
+// chip-tier vocabulary; we expose that label inline next to the timestamp
+// so the reader has an explicit tag rather than having to read the accent
+// stripe color.
+const SEVERITY_LABEL = {
+  1: 'CONTEXT',
+  2: 'NOTABLE',
+  3: 'SIGNIFICANT',
+};
+
+const SEVERITY_CHIP_BG = {
+  1: 'rgba(138, 143, 156, 0.14)',
+  2: 'rgba(241, 196, 15, 0.16)',
+  3: 'rgba(231, 76, 60, 0.18)',
+};
+
+const SEVERITY_CHIP_COLOR = {
+  1: 'var(--text-secondary)',
+  2: 'var(--accent-amber)',
+  3: 'var(--accent-coral)',
+};
+
 // Inline markup regex. Order matters — longer delimiter alternatives come
 // first so **bold** is recognized before *italic* on overlapping text. The
 // double-character delimiters use a negative lookahead / lookbehind pair so
@@ -188,11 +211,22 @@ export default function PageNarrator({ page }) {
       }}
     >
       <div className="page-narrator__meta-row">
-        {ageLabel && (
-          <span className="page-narrator__age" title={narrative.created_at}>
-            {ageLabel}
+        <span className="page-narrator__meta-left">
+          <span
+            className="page-narrator__chip"
+            style={{
+              background: SEVERITY_CHIP_BG[tier] || SEVERITY_CHIP_BG[1],
+              color: SEVERITY_CHIP_COLOR[tier] || SEVERITY_CHIP_COLOR[1],
+            }}
+          >
+            {SEVERITY_LABEL[tier] || SEVERITY_LABEL[1]}
           </span>
-        )}
+          {ageLabel && (
+            <span className="page-narrator__age" title={narrative.created_at}>
+              {ageLabel}
+            </span>
+          )}
+        </span>
         <a
           href="/disclaimer/"
           title="AI-generated narrative; methodology and limitations on the disclaimer page"
