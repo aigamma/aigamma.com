@@ -177,6 +177,8 @@ export default function PageNarrator({ page }) {
   const showBody = expanded && hasBody;
   const ageLabel = formatRelativeTime(narrative.created_at);
 
+  const toggle = () => hasBody && setExpanded((v) => !v);
+
   return (
     <div
       className="page-narrator"
@@ -200,7 +202,23 @@ export default function PageNarrator({ page }) {
           gap: '1rem',
         }}
       >
-        <div style={{ flex: 1, minWidth: 0 }}>
+        <div
+          style={{
+            flex: 1,
+            minWidth: 0,
+            cursor: hasBody ? 'pointer' : 'default',
+          }}
+          onClick={toggle}
+          role={hasBody ? 'button' : undefined}
+          tabIndex={hasBody ? 0 : undefined}
+          onKeyDown={hasBody ? (e) => {
+            if (e.key === 'Enter' || e.key === ' ') {
+              e.preventDefault();
+              toggle();
+            }
+          } : undefined}
+          aria-expanded={hasBody ? showBody : undefined}
+        >
           <div
             style={{
               display: 'flex',
@@ -280,7 +298,10 @@ export default function PageNarrator({ page }) {
           {hasBody && (
             <button
               type="button"
-              onClick={() => setExpanded((v) => !v)}
+              onClick={(e) => {
+                e.stopPropagation();
+                setExpanded((v) => !v);
+              }}
               aria-expanded={showBody}
               aria-label={showBody ? 'Collapse narrative' : 'Expand narrative'}
               style={{
