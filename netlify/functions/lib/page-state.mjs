@@ -358,6 +358,35 @@ function rotationQuadrants(eod, benchmark = 'SPY', smoothWindow = 4, slowWindow 
   return result;
 }
 
+// Roll up rotationQuadrants() output into per-quadrant counts and member lists
+// so prompts can read "leading: [XLK]" / "improving: [XLY]" / "lagging: [...]"
+// directly without re-counting 11 sectors. Returns null when the upstream
+// quadrant map is null or empty.
+function countQuadrants(quadrants) {
+  if (!quadrants || typeof quadrants !== 'object') return null;
+  const buckets = { leading: [], improving: [], weakening: [], lagging: [] };
+  for (const [sym, q] of Object.entries(quadrants)) {
+    if (!q?.quadrant) continue;
+    if (buckets[q.quadrant]) buckets[q.quadrant].push(sym);
+  }
+  return {
+    leading: buckets.leading,
+    improving: buckets.improving,
+    weakening: buckets.weakening,
+    lagging: buckets.lagging,
+    leading_count: buckets.leading.length,
+    improving_count: buckets.improving.length,
+    weakening_count: buckets.weakening.length,
+    lagging_count: buckets.lagging.length,
+    healthy_count: buckets.leading.length + buckets.improving.length,
+    total_count:
+      buckets.leading.length +
+      buckets.improving.length +
+      buckets.weakening.length +
+      buckets.lagging.length,
+  };
+}
+
 // SPDR sector universe used by /rotations + /heatmap-band sector aggregation.
 const SECTOR_ETFS = ['SPY', 'XLK', 'XLY', 'XLV', 'XLF', 'XLI', 'XLE', 'XLU', 'XLP', 'XLB', 'XLRE', 'XLC'];
 
@@ -461,12 +490,24 @@ const ASSEMBLERS = {
   },
 
   '/rotations/': async () => {
+    // Daily quadrants only. The page exposes a Day / Week toggle, but the
+    // weekly variant requires ~31 weeks of trailing data per symbol (slow
+    // EMA 26 weeks + fast EMA 5 weeks) which exceeds the 1000-row
+    // PostgREST page cap when joined across the 12-symbol universe; the
+    // daily variant fits comfortably in one page and produces accurate
+    // quadrant assignments that match the page's Day-mode default.
+    // Reader-toggle to Week is rendered by the page itself; the narrator
+    // describes the Day quadrants only and the prompt is responsible for
+    // wording the headline so it doesn't claim a timeframe it isn't
+    // sourcing. Quadrant counts are pre-rolled-up so the agent reads
+    // bucket sizes and member lists directly without recounting symbols.
     const eod = await getRecentDailyEod(SECTOR_ETFS, 90);
-    const quadrants = rotationQuadrants(eod);
-    // Daily quadrants ALSO across the weekly toggle (resample to weekly closes).
+    const daily = rotationQuadrants(eod, 'SPY', 4, 63, 13);
+    const dailyCounts = countQuadrants(daily);
     return {
       kind: 'sector_rotation',
-      daily: quadrants,
+      daily,
+      daily_counts: dailyCounts,
       universe: SECTOR_ETFS,
     };
   },

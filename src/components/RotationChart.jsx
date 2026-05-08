@@ -72,16 +72,15 @@ function formatDateLabel(iso) {
 
 // Three-position lookback toggle that drives the API's ?step= param. The
 // labels mirror the convention financial charts use elsewhere on the
-// dashboard: short alpha codes for the period (1H = one hour per tail
-// step, 1D = one trading day, 1W = one ISO-trading-week). Hour mode is
-// surfaced even though it currently returns 503 from /api/rotations
-// because the chart's job is to make the user's intended granularity
-// reachable via UI; the error path then explains the data prerequisite
-// when the user clicks it, which is more honest than hiding the option
-// entirely. Day stays the default to preserve the chart's behavior for
-// readers who don't touch the toggle.
+// dashboard: short alpha codes for the period (1D = one trading day,
+// 1W = one ISO-trading-week). Hour mode was previously surfaced as a
+// third option but always returned 503 because no etf_intraday_bars
+// table exists in Supabase (only spx_intraday_bars is ingested). The
+// option was removed on 2026-05-08 since it had no working path; if
+// ETF intraday OHLC ever lands in Supabase, restore the entry as
+// { id: 'hour', short: '1H', long: 'Hour' } and the rest of the
+// component handles it without further changes.
 const STEP_OPTIONS = [
-  { id: 'hour', short: '1H', long: 'Hour' },
   { id: 'day',  short: '1D', long: 'Day' },
   { id: 'week', short: '1W', long: 'Week' },
 ];
@@ -281,10 +280,11 @@ function RotationChart({
           : `tail=${tail}&step=${step}`;
         const res = await fetch(`/api/rotations?${qs}`);
         if (!res.ok) {
-          // The 503 path for hour mode returns a JSON {error: '...'}
-          // payload that's much more useful than a generic status code,
-          // so try to surface it directly. Fall back to the status code
-          // for non-JSON failures (network, html error page, etc.).
+          // The endpoint returns JSON {error: '...'} on a known failure
+          // path (e.g. when the requested step has no matching data tier
+          // available); try to surface that message directly, falling back
+          // to the status code for non-JSON failures (network, html error
+          // page, etc.).
           let msg = `rotations fetch failed: ${res.status}`;
           try {
             const j = await res.json();
@@ -552,11 +552,10 @@ function RotationChart({
 
   // The card chrome (meta band + step toggle) renders in every state so
   // the lookback control stays reachable even when the current step is
-  // erroring out — most importantly, when the user picks Hour and the
-  // API returns 503, we want them to be able to click Day or Week to get
-  // back to a working chart without reloading the page. The chart slot
-  // below the meta band swaps between loading / error / chart depending
-  // on the fetch state for the current step.
+  // erroring out, letting the reader switch between Day and Week without
+  // reloading the page. The chart slot below the meta band swaps
+  // between loading / error / chart depending on the fetch state for
+  // the current step.
   //
   // The .rotation-ticker title comes from the title prop (defaults to
   // "Relative Sector Rotations"; the /stocks page passes "Relative
