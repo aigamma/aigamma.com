@@ -187,13 +187,20 @@ export default function PageNarrator({ page }) {
         '--narrator-bg-image': SEVERITY_BG_IMAGE[tier] || SEVERITY_BG_IMAGE[1],
       }}
     >
-      <a
-        href="/disclaimer/"
-        title="AI-generated narrative; methodology and limitations on the disclaimer page"
-        className="page-narrator__corner"
-      >
-        {ageLabel ? `${ageLabel} · AI` : 'AI'}
-      </a>
+      <div className="page-narrator__meta-row">
+        {ageLabel && (
+          <span className="page-narrator__age" title={narrative.created_at}>
+            {ageLabel}
+          </span>
+        )}
+        <a
+          href="/disclaimer/"
+          title="AI-generated narrative; methodology and limitations on the disclaimer page"
+          className="page-narrator__disclaimer"
+        >
+          AI-generated · disclaimer
+        </a>
+      </div>
       <div className="page-narrator__headline">
         {renderInlineMarkup(narrative.headline)}
       </div>
