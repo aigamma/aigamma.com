@@ -35,21 +35,21 @@ const SEVERITY_STYLES = {
     chipBg: 'rgba(138, 143, 156, 0.12)',
     chipColor: 'var(--text-secondary)',
     chipLabel: 'CONTEXT',
-    backgroundTint: 'transparent',
+    backgroundImage: 'none',
   },
   2: {
     accentBorder: 'var(--accent-amber)',
     chipBg: 'rgba(241, 196, 15, 0.15)',
     chipColor: 'var(--accent-amber)',
     chipLabel: 'NOTABLE',
-    backgroundTint: 'linear-gradient(90deg, rgba(241,196,15,0.04) 0%, transparent 60%)',
+    backgroundImage: 'linear-gradient(90deg, rgba(241,196,15,0.05) 0%, transparent 65%)',
   },
   3: {
     accentBorder: 'var(--accent-coral)',
-    chipBg: 'rgba(231, 76, 60, 0.15)',
+    chipBg: 'rgba(231, 76, 60, 0.18)',
     chipColor: 'var(--accent-coral)',
     chipLabel: 'SIGNIFICANT',
-    backgroundTint: 'linear-gradient(90deg, rgba(231,76,60,0.06) 0%, transparent 70%)',
+    backgroundImage: 'linear-gradient(90deg, rgba(231,76,60,0.07) 0%, transparent 72%)',
   },
 };
 
@@ -179,8 +179,8 @@ export default function PageNarrator({ page }) {
       style={{
         marginBottom: '0.85rem',
         padding: '0.85rem 1.1rem 0.85rem 1.15rem',
-        background: `${styles.backgroundTint}, var(--bg-card)`,
         backgroundColor: 'var(--bg-card)',
+        backgroundImage: styles.backgroundImage,
         border: '1px solid var(--bg-card-border)',
         borderLeft: `4px solid ${styles.accentBorder}`,
         borderRadius: '4px',
