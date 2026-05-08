@@ -96,24 +96,25 @@ body {
   display: block;
   width: 100%;
   box-sizing: border-box;
-  /* Explicit top margin so the narrator's accent stripe + severity chip
-     don't visually crowd the header row above it. The .site-header /
-     .lab-header above already has margin-bottom: 1rem, but on narrow
-     viewports those headers wrap to two rows and the wrap-row spacing
-     plus the chip's coral / amber background read as visually adjacent
-     to the dropdown pills (TOOLS / RESEARCH) on the right when only the
-     1rem margin separates them. The 1.4rem margin-top here adds an
-     extra ~0.4rem of breathing room on every viewport so the chip
-     never lands on the same visual line as a wrapped header pill. The
-     mobile breakpoint below tightens this slightly because phone-class
-     viewports already have less vertical space to spare. Position is
-     static (default block) so the narrator sits below the header in
-     normal document flow with no stacking-context interaction. */
+  /* Aggressive margin-top so the narrator has actual visible breathing
+     room from the header above. Adjacent block siblings collapse their
+     vertical margins (effective gap = max of the two), so the header's
+     margin-bottom: 1rem combined with anything <= 1rem on the narrator
+     produces a 1rem gap and any change is invisible to the reader. The
+     prior 1.4rem only added 0.4rem of visible space which Eric reported
+     was indistinguishable from the unfixed state. 3rem desktop +
+     2.2rem mobile pushes the gap well past the collapse floor and
+     produces a clear visual separation between the wrapped nav rows
+     above and the severity chip + accent stripe below.
+
+     Also adds visual breathing room INSIDE the card via increased
+     padding so the chip and headline aren't crammed against the
+     accent stripe on the left edge. */
   position: relative;
   z-index: 0;
-  margin-top: 1.4rem;
+  margin-top: 3rem;
   margin-bottom: 0.85rem;
-  padding: 0.85rem 1.1rem 0.85rem 1.15rem;
+  padding: 0.95rem 1.25rem 0.95rem 1.3rem;
   background-color: var(--bg-card);
   background-image: var(--narrator-bg-image, none);
   border: 1px solid var(--bg-card-border);
@@ -217,8 +218,8 @@ body {
 
 @media (max-width: 768px) {
   .page-narrator {
-    margin-top: 1.1rem;
-    padding: 0.7rem 0.85rem 0.7rem 0.95rem;
+    margin-top: 2.2rem;
+    padding: 0.8rem 1rem 0.8rem 1.1rem;
   }
   .page-narrator__headline {
     font-size: 1rem;
