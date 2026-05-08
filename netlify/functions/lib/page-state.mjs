@@ -92,10 +92,15 @@ async function getLatestSpxRun() {
   };
 }
 
-// Latest daily_volatility_stats (IV 30d CM, RV 20d YZ, etc.) + 60-day tail.
+// Latest daily_volatility_stats (IV 30d CM, RV 20d YZ) + N-day tail. The
+// table only carries one realized-vol column (hv_20d_yz); short and long
+// rolling windows are not stored separately, so prompts that want a 5-day
+// or 60-day vol regime read fall back to comparing the latest hv_20d_yz to
+// rolling means computed from the tail. Schema: trading_date, spx_open/
+// high/low/close, hv_20d_yz, iv_30d_cm, vrp_spread, sample_count.
 async function getRecentDailyVolStats(limit = 60) {
   const rows = await tFetch(
-    `${SUPABASE_URL}/rest/v1/daily_volatility_stats?order=trading_date.desc&limit=${limit}&select=trading_date,spx_close,iv_30d_cm,hv_20d_yz,hv_5d_yz,hv_60d_yz,iv_atm_front,iv_atm_60d,iv_atm_90d`,
+    `${SUPABASE_URL}/rest/v1/daily_volatility_stats?order=trading_date.desc&limit=${limit}&select=trading_date,spx_close,iv_30d_cm,hv_20d_yz,vrp_spread`,
     'daily_volatility_stats'
   );
   if (!Array.isArray(rows) || rows.length === 0) return null;
@@ -121,12 +126,13 @@ async function getRecentVixFamily(limit = 252) {
   return bySymbol;
 }
 
-// Daily EOD for a list of stock/ETF symbols.
+// Daily EOD for a list of stock/ETF symbols. Schema: symbol, trading_date,
+// open, high, low, close, source, ingested_at (no volume column).
 async function getRecentDailyEod(symbols, days = 90) {
   if (!Array.isArray(symbols) || symbols.length === 0) return null;
   const symList = symbols.map((s) => `"${s}"`).join(',');
   const rows = await tFetch(
-    `${SUPABASE_URL}/rest/v1/daily_eod?symbol=in.(${symList})&order=trading_date.desc&limit=${symbols.length * days}&select=trading_date,symbol,open,high,low,close,volume`,
+    `${SUPABASE_URL}/rest/v1/daily_eod?symbol=in.(${symList})&order=trading_date.desc&limit=${symbols.length * days}&select=trading_date,symbol,open,high,low,close`,
     'daily_eod'
   );
   if (!Array.isArray(rows) || rows.length === 0) return null;
@@ -141,10 +147,13 @@ async function getRecentDailyEod(symbols, days = 90) {
   return bySymbol;
 }
 
-// Latest daily GEX stats (overnight EOD positioning).
+// Latest daily GEX stats (overnight EOD positioning). Schema: trading_date,
+// spx_close, net_gex, call_gex, put_gex, vol_flip_strike, contract_count,
+// expiration_count, atm_call_gex, atm_put_gex, atm_contract_count,
+// call_wall_strike, put_wall_strike.
 async function getLatestDailyGex() {
   const rows = await tFetch(
-    `${SUPABASE_URL}/rest/v1/daily_gex_stats?order=trading_date.desc&limit=5&select=trading_date,call_gex,put_gex,atm_call_gex,atm_put_gex,atm_contract_count,contract_count,call_wall,put_wall,abs_gamma,volatility_flip`,
+    `${SUPABASE_URL}/rest/v1/daily_gex_stats?order=trading_date.desc&limit=5&select=trading_date,spx_close,net_gex,call_gex,put_gex,vol_flip_strike,call_wall_strike,put_wall_strike,atm_call_gex,atm_put_gex,atm_contract_count,contract_count,expiration_count`,
     'daily_gex_stats'
   );
   if (!Array.isArray(rows) || rows.length === 0) return null;
@@ -250,21 +259,33 @@ function vrpSummary(volStats) {
   if (!Array.isArray(volStats) || volStats.length === 0) return null;
   const latest = volStats[volStats.length - 1];
   const ivs = volStats.map((r) => r.iv_30d_cm).filter((v) => v != null);
-  const vrpSeries = volStats
-    .map((row) => row.iv_30d_cm != null && row.hv_20d_yz != null ? row.iv_30d_cm - row.hv_20d_yz : null)
-    .filter((v) => v != null);
+  const hvs = volStats.map((r) => r.hv_20d_yz).filter((v) => v != null);
   const latestVrp = latest?.iv_30d_cm != null && latest?.hv_20d_yz != null
     ? latest.iv_30d_cm - latest.hv_20d_yz
+    : null;
+  // Compute rolling 30-day mean of hv_20d_yz so the prompt can compare the
+  // latest realized vol against its recent baseline. The page-state library
+  // doesn't have separate 5d / 60d HV columns to read off (the underlying
+  // table only stores the 20-day Yang-Zhang figure), so the regime read is
+  // derived from the 20-day series's own time variation.
+  const hv20Recent = hvs.slice(-30);
+  const hv20Mean30 = hv20Recent.length > 0
+    ? hv20Recent.reduce((a, b) => a + b, 0) / hv20Recent.length
+    : null;
+  const hv20Latest = latest?.hv_20d_yz;
+  const hv20VsMean30 = (hv20Latest != null && hv20Mean30 != null && hv20Mean30 > 0)
+    ? hv20Latest / hv20Mean30
     : null;
   return {
     trading_date: latest?.trading_date,
     iv_30d_cm: pct(latest?.iv_30d_cm),
-    hv_20d_yz: pct(latest?.hv_20d_yz),
-    hv_5d_yz: pct(latest?.hv_5d_yz),
-    hv_60d_yz: pct(latest?.hv_60d_yz),
+    hv_20d_yz: pct(hv20Latest),
+    hv_20d_mean_30d: pct(hv20Mean30),
+    hv_20d_vs_30d_mean_ratio: r(hv20VsMean30, 3),
     vrp_pct: pct(latestVrp),
     vrp_sign: latestVrp == null ? null : (latestVrp >= 0 ? 'positive' : 'negative'),
     iv_rank_252d: percentileRank(ivs.slice(-252), latest?.iv_30d_cm),
+    hv_20d_pct_rank_252d: percentileRank(hvs.slice(-252), hv20Latest),
     spx_close: r(latest?.spx_close, 2),
     samples: volStats.length,
   };
@@ -406,10 +427,11 @@ const ASSEMBLERS = {
     return {
       kind: 'seasonality',
       vrp: vrpSummary(volStats),
-      recent_5d: last5 ? last5.map((r) => ({
-        trading_date: r.trading_date,
-        spx_close: r2(r.spx_close, 2),
-        hv_5d_yz: pct(r.hv_5d_yz),
+      recent_5d: last5 ? last5.map((row) => ({
+        trading_date: row.trading_date,
+        spx_close: r(row.spx_close, 2),
+        hv_20d_yz: pct(row.hv_20d_yz),
+        iv_30d_cm: pct(row.iv_30d_cm),
       })) : null,
     };
   },
@@ -480,7 +502,7 @@ const ASSEMBLERS = {
     // approximate here by reading the top-N most-recently-updated symbols
     // and computing breadth on whatever lands.
     const allRows = await tFetch(
-      `${SUPABASE_URL}/rest/v1/daily_eod?order=trading_date.desc&limit=600&select=trading_date,symbol,open,close,volume`,
+      `${SUPABASE_URL}/rest/v1/daily_eod?order=trading_date.desc&limit=600&select=trading_date,symbol,open,close`,
       'heatmap_daily_eod'
     );
     if (!Array.isArray(allRows) || allRows.length === 0) {
@@ -566,11 +588,11 @@ const ASSEMBLERS = {
     return {
       kind: 'garch_ensemble',
       vrp: vrpSummary(volStats),
-      recent_rv_trajectory: Array.isArray(volStats) ? volStats.slice(-30).map((r) => ({
-        trading_date: r.trading_date,
-        hv_5d_yz: pct(r.hv_5d_yz),
-        hv_20d_yz: pct(r.hv_20d_yz),
-        hv_60d_yz: pct(r.hv_60d_yz),
+      recent_rv_trajectory: Array.isArray(volStats) ? volStats.slice(-30).map((row) => ({
+        trading_date: row.trading_date,
+        spx_close: r(row.spx_close, 2),
+        hv_20d_yz: pct(row.hv_20d_yz),
+        iv_30d_cm: pct(row.iv_30d_cm),
       })) : null,
     };
   },
@@ -600,11 +622,11 @@ const ASSEMBLERS = {
     return {
       kind: 'regime_detection',
       vrp: vrpSummary(volStats),
-      recent_rv_trajectory: Array.isArray(volStats) ? volStats.slice(-30).map((r) => ({
-        trading_date: r.trading_date,
-        spx_close: r2(r.spx_close, 2),
-        hv_5d_yz: pct(r.hv_5d_yz),
-        hv_20d_yz: pct(r.hv_20d_yz),
+      recent_rv_trajectory: Array.isArray(volStats) ? volStats.slice(-30).map((row) => ({
+        trading_date: row.trading_date,
+        spx_close: r(row.spx_close, 2),
+        hv_20d_yz: pct(row.hv_20d_yz),
+        iv_30d_cm: pct(row.iv_30d_cm),
       })) : null,
     };
   },
@@ -639,10 +661,6 @@ const ASSEMBLERS = {
     };
   },
 };
-
-// Compatibility helper to silence the linter on r2 references — round to N
-// decimal places, treat null as null.
-function r2(value, decimals) { return r(value, decimals); }
 
 // --- Public API -------------------------------------------------------------
 
