@@ -3,6 +3,7 @@ import '../src/styles/theme.css';
 import '../src/styles/lab.css';
 import ErrorBoundary from '../src/ErrorBoundary';
 import Menu from '../src/components/Menu';
+import PageNarrator from '../src/components/PageNarrator';
 import TopNav from '../src/components/TopNav';
 import LazyMount from '../src/components/LazyMount';
 import GarchZoo from './slots/GarchZoo';
@@ -77,6 +78,8 @@ export default function App() {
         </a>
         <Menu />
       </header>
+
+      <PageNarrator page="/garch/" />
 
       <section className="lab-slot">
         <ErrorBoundary><GarchZoo /></ErrorBoundary>

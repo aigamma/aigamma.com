@@ -2,6 +2,7 @@ import '../src/styles/theme.css';
 import '../src/styles/lab.css';
 import ErrorBoundary from '../src/ErrorBoundary';
 import Menu from '../src/components/Menu';
+import PageNarrator from '../src/components/PageNarrator';
 import TopNav from '../src/components/TopNav';
 import SlotB from './slots/SlotB';
 
@@ -66,6 +67,8 @@ export default function App() {
         </a>
         <Menu />
       </header>
+
+      <PageNarrator page="/events/" />
 
       <section className="lab-slot">
         <ErrorBoundary><SlotB /></ErrorBoundary>

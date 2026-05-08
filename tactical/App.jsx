@@ -3,6 +3,7 @@ import '../src/styles/theme.css';
 import '../src/styles/lab.css';
 import ErrorBoundary from '../src/ErrorBoundary';
 import Menu from '../src/components/Menu';
+import PageNarrator from '../src/components/PageNarrator';
 import TopNav from '../src/components/TopNav';
 import LazyMount from '../src/components/LazyMount';
 import VolatilityRiskPremium from '../src/components/VolatilityRiskPremium';
@@ -153,6 +154,8 @@ export default function App() {
         </a>
         <Menu />
       </header>
+
+      <PageNarrator page="/tactical/" />
 
       {loading && (
         <div aria-busy="true" aria-label="Loading options data">

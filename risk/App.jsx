@@ -3,6 +3,7 @@ import '../src/styles/theme.css';
 import '../src/styles/lab.css';
 import ErrorBoundary from '../src/ErrorBoundary';
 import Menu from '../src/components/Menu';
+import PageNarrator from '../src/components/PageNarrator';
 import TopNav from '../src/components/TopNav';
 import LazyMount from '../src/components/LazyMount';
 import SlotC from './slots/SlotC';
@@ -110,6 +111,8 @@ export default function App() {
         </a>
         <Menu />
       </header>
+
+      <PageNarrator page="/risk/" />
 
       <section className="lab-slot">
         <ErrorBoundary><SlotC /></ErrorBoundary>

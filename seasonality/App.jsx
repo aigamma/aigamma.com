@@ -2,6 +2,7 @@ import '../src/styles/theme.css';
 import '../src/styles/lab.css';
 import ErrorBoundary from '../src/ErrorBoundary';
 import Menu from '../src/components/Menu';
+import PageNarrator from '../src/components/PageNarrator';
 import TopNav from '../src/components/TopNav';
 import SeasonalityGrid from '../src/components/SeasonalityGrid';
 
@@ -49,6 +50,8 @@ export default function App() {
         </a>
         <Menu />
       </header>
+
+      <PageNarrator page="/seasonality/" />
 
       <section className="lab-slot">
         <ErrorBoundary><SeasonalityGrid /></ErrorBoundary>

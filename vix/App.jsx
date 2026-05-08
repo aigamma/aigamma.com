@@ -6,6 +6,7 @@ import ErrorBoundary from '../src/ErrorBoundary';
 import Menu from '../src/components/Menu';
 import TopNav from '../src/components/TopNav';
 import LazyMount from '../src/components/LazyMount';
+import PageNarrator from '../src/components/PageNarrator';
 import useVixData from '../src/hooks/useVixData';
 import VixHeaderProfile from '../src/components/vix/VixHeaderProfile';
 import VixTermStructure from '../src/components/vix/VixTermStructure';
@@ -109,6 +110,8 @@ export default function App() {
         </a>
         <Menu />
       </header>
+
+      <PageNarrator page="/vix/" />
 
       {loading && (
         <div aria-busy="true" aria-label="Loading VIX history">

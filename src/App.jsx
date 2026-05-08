@@ -6,6 +6,7 @@ import CatalystBanner from './components/CatalystBanner';
 import Menu from './components/Menu';
 import TopNav from './components/TopNav';
 import LazyMount from './components/LazyMount';
+import PageNarrator from './components/PageNarrator';
 // Below-the-fold charts are code-split via React.lazy so their source bytes
 // do not land in the main chunk. Each becomes its own Vite chunk that the
 // browser fetches on demand when the LazyMount viewport gate fires and the
@@ -457,6 +458,19 @@ export default function App() {
         <TopNav landing />
         <Menu regimeIndicator={regimeIndicatorObj} />
       </header>
+
+      {/* AI page-narrator slot — sits above the LevelsPanel "key metrics"
+          card and the CatalystBanner events/earnings strip below it. The
+          slot polls /api/narrative every minute and renders nothing when
+          the narrator's most recent severity is 0; on severity 1+ it shows
+          a single-line headline that the reader can chevron-expand for
+          additional sentences. The landing page narrator runs as the
+          federation layer — its input is the just-written per-page
+          narratives plus a few cross-cutting site signals (SPX dealer-
+          regime, VIX state, VRP, daily GEX). See netlify/functions/
+          narrate-background.mjs for the pipeline and src/components/
+          PageNarrator.jsx for the render. */}
+      <PageNarrator page="/" />
 
       {loading && (
         <div aria-busy="true" aria-label="Loading options data">

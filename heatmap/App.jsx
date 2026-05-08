@@ -2,6 +2,7 @@ import '../src/styles/theme.css';
 import '../src/styles/lab.css';
 import ErrorBoundary from '../src/ErrorBoundary';
 import Menu from '../src/components/Menu';
+import PageNarrator from '../src/components/PageNarrator';
 import TopNav from '../src/components/TopNav';
 import SpxHeatmap from '../src/components/SpxHeatmap';
 
@@ -60,6 +61,8 @@ export default function App() {
         </a>
         <Menu />
       </header>
+
+      <PageNarrator page="/heatmap/" />
 
       <section className="lab-slot heatmap-slot">
         <ErrorBoundary><SpxHeatmap /></ErrorBoundary>

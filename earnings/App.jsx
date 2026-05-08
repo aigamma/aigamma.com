@@ -2,6 +2,7 @@ import '../src/styles/theme.css';
 import '../src/styles/lab.css';
 import ErrorBoundary from '../src/ErrorBoundary';
 import Menu from '../src/components/Menu';
+import PageNarrator from '../src/components/PageNarrator';
 import TopNav from '../src/components/TopNav';
 import EarningsCalendar from '../src/components/EarningsCalendar';
 
@@ -77,6 +78,8 @@ export default function App() {
         </a>
         <Menu />
       </header>
+
+      <PageNarrator page="/earnings/" />
 
       <section className="lab-slot earnings-slot">
         <ErrorBoundary><EarningsCalendar /></ErrorBoundary>

@@ -2,6 +2,7 @@ import '../src/styles/theme.css';
 import '../src/styles/lab.css';
 import ErrorBoundary from '../src/ErrorBoundary';
 import Menu from '../src/components/Menu';
+import PageNarrator from '../src/components/PageNarrator';
 import TopNav from '../src/components/TopNav';
 import ExpiringGamma from '../src/components/ExpiringGamma';
 
@@ -50,6 +51,8 @@ export default function App() {
         </a>
         <Menu />
       </header>
+
+      <PageNarrator page="/expiring-gamma/" />
 
       <section className="lab-slot expiring-gamma-slot">
         <ErrorBoundary><ExpiringGamma /></ErrorBoundary>
