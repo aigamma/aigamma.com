@@ -75,7 +75,7 @@ const INGEST_SECRET = process.env.INGEST_SECRET;
 // Bumped whenever a per-page prompt changes shape in a way that should
 // segment historical narratives. The chat_logs / page_narratives iteration
 // loop joins on this column to compare cohorts.
-const PROMPT_VERSION = 'v3-2026-05-08';
+const PROMPT_VERSION = 'v4-2026-05-08';
 
 // Model selection. Haiku 4.5 for the 18 feeder narratives (fast, cheap,
 // well-suited for terse pattern-recognition + JSON output). Sonnet 4.6 for
@@ -138,15 +138,17 @@ async function callAnthropic(model, systemPrompt, userMessage) {
 // here so the rule holds at the data layer regardless of agent compliance.
 // U+2014 → ", " (em dash typically separates clauses; comma reads naturally
 // in the same role). U+2013 → "-" (en dash is the closer ASCII hyphen).
-// Also collapses any double-period emitted by the join (". .") into a single
-// period so the punctuation rule's terminal-period requirement doesn't doubly
-// apply when the headline already ends with one.
+// Also collapses runs of horizontal whitespace (spaces, tabs) into a single
+// space so the leading whitespace from the em-dash substitution doesn't
+// double up. Newlines are preserved deliberately because the body uses
+// '\\n\\n' as paragraph breaks; collapsing all whitespace runs would destroy
+// those breaks and turn the body back into a single wall of text.
 function sanitizeNarratorString(s) {
   if (typeof s !== 'string') return s;
   return s
     .replace(/—/g, ', ')
     .replace(/–/g, '-')
-    .replace(/\s{2,}/g, ' ')
+    .replace(/[ \t]{2,}/g, ' ')
     .trim();
 }
 

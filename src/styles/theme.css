@@ -62,6 +62,166 @@ body {
   line-height: 1.5;
 }
 
+/* ---------------------------------------------------------------------------
+ * AI Page Narrator slot. Rendered at the top of every dedicated page on
+ * aigamma.com (home + 18 lab/tool pages). The slot prints a one-line
+ * narrative headline plus a chevron-expandable body, with severity-driven
+ * accent colors (CSS custom properties set by the React component) and
+ * inline markup tokens for ticker / percentile / direction emphasis.
+ *
+ * Layout strategy. The head row is a single flex container with chip +
+ * headline + meta as sibling flex items, all using flex-wrap: wrap so that
+ * narrow viewports gracefully break the row into multiple lines without
+ * losing readability. The headline carries flex: 1 1 200px so it grows to
+ * fill remaining horizontal space on desktop AND falls back to a 200px
+ * minimum basis on mobile (which forces it onto its own row when chip+meta
+ * would otherwise crowd it). The meta cluster (timestamp + AI link +
+ * chevron) carries margin-left: auto so it always pins to the right edge
+ * of whichever line it lands on. Together this produces:
+ *   - desktop  >= 768px: chip [headline grows] meta — single row.
+ *   - tablet  ~480-768px: chip [headline grows] meta — typically still one
+ *     row; falls to two rows if the headline content is exceptionally long.
+ *   - phone   <  480px: chip + headline on row one (headline gets full
+ *     remaining width), meta wraps to its own row aligned right.
+ *
+ * Prior implementation used inline flex with justify-content: space-between
+ * and a span-based headline that took only its content width, leaving a
+ * visible empty band between the headline text and the right-rail meta. On
+ * mobile the right rail consumed ~50% of the viewport, halving the
+ * headline column and roughly doubling vertical scrolling. The flex: 1 1
+ * 200px + margin-left: auto pattern below replaces that with a
+ * full-width headline on every viewport. */
+
+.page-narrator {
+  display: block;
+  width: 100%;
+  box-sizing: border-box;
+  margin-bottom: 0.85rem;
+  padding: 0.85rem 1.1rem 0.85rem 1.15rem;
+  background-color: var(--bg-card);
+  background-image: var(--narrator-bg-image, none);
+  border: 1px solid var(--bg-card-border);
+  border-left: 4px solid var(--narrator-accent, var(--text-secondary));
+  border-radius: 4px;
+  font-family: var(--font-base);
+  line-height: 1.5;
+}
+
+.page-narrator__main {
+  display: block;
+  width: 100%;
+}
+
+.page-narrator__head {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 0.6rem;
+  row-gap: 0.45rem;
+}
+
+.page-narrator__chip {
+  display: inline-block;
+  padding: 0.1rem 0.45rem;
+  background: var(--narrator-chip-bg, rgba(138, 143, 156, 0.12));
+  color: var(--narrator-chip-color, var(--text-secondary));
+  font-size: 0.62rem;
+  font-weight: 600;
+  letter-spacing: 0.09em;
+  text-transform: uppercase;
+  border-radius: 2px;
+  line-height: 1.5;
+  flex-shrink: 0;
+}
+
+.page-narrator__headline {
+  flex: 1 1 200px;
+  min-width: 0;
+  color: var(--text-primary);
+  font-weight: 500;
+  font-size: 1.02rem;
+  letter-spacing: 0.005em;
+}
+
+.page-narrator__meta {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.65rem;
+  flex-shrink: 0;
+  margin-left: auto;
+  color: var(--text-secondary);
+  font-size: 0.78rem;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+}
+
+.page-narrator__age {
+  white-space: nowrap;
+}
+
+.page-narrator__ai-link {
+  color: var(--text-secondary);
+  text-decoration: none;
+  border-bottom: 1px dotted var(--text-secondary);
+  font-size: 0.72rem;
+}
+
+.page-narrator__chevron {
+  background: transparent;
+  border: 1px solid var(--bg-card-border);
+  color: var(--text-secondary);
+  padding: 0.15rem 0.45rem;
+  border-radius: 3px;
+  cursor: pointer;
+  font-family: var(--font-base);
+  font-size: 0.85rem;
+  line-height: 1;
+}
+
+.page-narrator__chevron:hover {
+  border-color: var(--text-secondary);
+  color: var(--text-primary);
+}
+
+.page-narrator__body {
+  margin-top: 0.6rem;
+  color: var(--text-secondary);
+  font-size: 0.93rem;
+  line-height: 1.65;
+  white-space: pre-wrap;
+}
+
+.page-narrator__body p {
+  margin: 0 0 0.55rem 0;
+}
+
+.page-narrator__body p:last-child {
+  margin-bottom: 0;
+}
+
+@media (max-width: 768px) {
+  .page-narrator {
+    padding: 0.7rem 0.85rem 0.7rem 0.95rem;
+  }
+  .page-narrator__headline {
+    font-size: 1rem;
+    flex-basis: 100%;
+  }
+  .page-narrator__meta {
+    margin-left: 0;
+  }
+}
+
+@media (max-width: 480px) {
+  .page-narrator__age {
+    display: none;
+  }
+  .page-narrator__body {
+    font-size: 0.92rem;
+  }
+}
+
+
 .card {
   background-color: var(--bg-card);
   border: 1px solid var(--bg-card-border);

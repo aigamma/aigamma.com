@@ -63,6 +63,30 @@ const SEVERITY_STYLES = {
 // asterisks rarely appear inside ordinary text.
 const MARKUP_RE = /(\*\*(?!\*)(?:(?!\*\*).)+?(?<!\*)\*\*)|(\*[^*]+?\*)|(__(?!_)(?:(?!__).)+?(?<!_)__)|(\+\+(?!\+)(?:(?!\+\+).)+?(?<!\+)\+\+)|(--(?!-)(?:(?!--).)+?(?<!-)--)|(~~(?!~)(?:(?!~~).)+?(?<!~)~~)/g;
 
+// Split body text into paragraphs on blank lines so multi-sentence narratives
+// don't render as a wall of text. Each non-empty paragraph becomes its own <p>
+// with the inline-markup renderer applied to its content. A body without any
+// blank lines renders as a single span so we don't add a stray <p> wrapper to
+// short single-line bodies.
+function renderBodyParagraphs(text) {
+  if (!text || typeof text !== 'string') return text;
+  const paragraphs = text
+    .split(/\n\s*\n+/)
+    .map((p) => p.trim())
+    .filter((p) => p.length > 0);
+  if (paragraphs.length <= 1) {
+    return renderInlineMarkup(text);
+  }
+  return paragraphs.map((para, i) => (
+    <p
+      key={`p-${i}`}
+      style={{ margin: i === 0 ? '0' : '0.6rem 0 0 0' }}
+    >
+      {renderInlineMarkup(para)}
+    </p>
+  ));
+}
+
 function renderInlineMarkup(text) {
   if (!text || typeof text !== 'string') return text;
   const tokens = [];
@@ -181,145 +205,68 @@ export default function PageNarrator({ page }) {
 
   return (
     <div
-      className="page-narrator"
+      className={`page-narrator page-narrator--sev-${Math.max(1, Math.min(3, severity))}`}
       style={{
-        marginBottom: '0.85rem',
-        padding: '0.85rem 1.1rem 0.85rem 1.15rem',
-        backgroundColor: 'var(--bg-card)',
-        backgroundImage: styles.backgroundImage,
-        border: '1px solid var(--bg-card-border)',
-        borderLeft: `4px solid ${styles.accentBorder}`,
-        borderRadius: '4px',
-        fontFamily: 'var(--font-base)',
-        lineHeight: 1.5,
+        '--narrator-accent': styles.accentBorder,
+        '--narrator-bg-image': styles.backgroundImage,
+        '--narrator-chip-bg': styles.chipBg,
+        '--narrator-chip-color': styles.chipColor,
       }}
     >
       <div
-        style={{
-          display: 'flex',
-          alignItems: 'flex-start',
-          justifyContent: 'space-between',
-          gap: '1rem',
-        }}
+        className="page-narrator__main"
+        onClick={toggle}
+        role={hasBody ? 'button' : undefined}
+        tabIndex={hasBody ? 0 : undefined}
+        onKeyDown={hasBody ? (e) => {
+          if (e.key === 'Enter' || e.key === ' ') {
+            e.preventDefault();
+            toggle();
+          }
+        } : undefined}
+        aria-expanded={hasBody ? showBody : undefined}
+        style={{ cursor: hasBody ? 'pointer' : 'default' }}
       >
-        <div
-          style={{
-            flex: 1,
-            minWidth: 0,
-            cursor: hasBody ? 'pointer' : 'default',
-          }}
-          onClick={toggle}
-          role={hasBody ? 'button' : undefined}
-          tabIndex={hasBody ? 0 : undefined}
-          onKeyDown={hasBody ? (e) => {
-            if (e.key === 'Enter' || e.key === ' ') {
-              e.preventDefault();
-              toggle();
-            }
-          } : undefined}
-          aria-expanded={hasBody ? showBody : undefined}
-        >
-          <div
-            style={{
-              display: 'flex',
-              alignItems: 'baseline',
-              flexWrap: 'wrap',
-              gap: '0.55rem',
-            }}
-          >
-            <span
-              style={{
-                display: 'inline-block',
-                padding: '0.1rem 0.45rem',
-                background: styles.chipBg,
-                color: styles.chipColor,
-                fontSize: '0.62rem',
-                fontWeight: 600,
-                letterSpacing: '0.09em',
-                textTransform: 'uppercase',
-                borderRadius: '2px',
-                lineHeight: 1.4,
-                flexShrink: 0,
-              }}
+        <div className="page-narrator__head">
+          <span className="page-narrator__chip">{styles.chipLabel}</span>
+          <span className="page-narrator__headline">
+            {renderInlineMarkup(narrative.headline)}
+          </span>
+          <span className="page-narrator__meta">
+            {ageLabel && (
+              <span title={narrative.created_at} className="page-narrator__age">
+                {ageLabel}
+              </span>
+            )}
+            <a
+              href="/disclaimer/"
+              title="AI-generated narrative; methodology and limitations on the disclaimer page"
+              className="page-narrator__ai-link"
+              onClick={(e) => e.stopPropagation()}
             >
-              {styles.chipLabel}
-            </span>
-            <span
-              style={{
-                color: 'var(--text-primary)',
-                fontWeight: 500,
-                fontSize: '1.02rem',
-                letterSpacing: '0.005em',
-              }}
-            >
-              {renderInlineMarkup(narrative.headline)}
-            </span>
+              AI
+            </a>
+            {hasBody && (
+              <button
+                type="button"
+                onClick={(e) => {
+                  e.stopPropagation();
+                  setExpanded((v) => !v);
+                }}
+                aria-expanded={showBody}
+                aria-label={showBody ? 'Collapse narrative' : 'Expand narrative'}
+                className="page-narrator__chevron"
+              >
+                {showBody ? '∧' : '∨'}
+              </button>
+            )}
+          </span>
+        </div>
+        {showBody && (
+          <div className="page-narrator__body">
+            {renderBodyParagraphs(narrative.body)}
           </div>
-          {showBody && (
-            <div
-              style={{
-                marginTop: '0.55rem',
-                color: 'var(--text-secondary)',
-                fontSize: '0.93rem',
-                lineHeight: 1.6,
-                whiteSpace: 'pre-wrap',
-              }}
-            >
-              {renderInlineMarkup(narrative.body)}
-            </div>
-          )}
-        </div>
-        <div
-          style={{
-            display: 'flex',
-            alignItems: 'center',
-            gap: '0.65rem',
-            flexShrink: 0,
-            color: 'var(--text-secondary)',
-            fontSize: '0.78rem',
-            letterSpacing: '0.04em',
-            textTransform: 'uppercase',
-            paddingTop: '0.1rem',
-          }}
-        >
-          {ageLabel && <span title={narrative.created_at}>{ageLabel}</span>}
-          <a
-            href="/disclaimer/"
-            title="AI-generated narrative; methodology and limitations on the disclaimer page"
-            style={{
-              color: 'var(--text-secondary)',
-              textDecoration: 'none',
-              borderBottom: '1px dotted var(--text-secondary)',
-              fontSize: '0.72rem',
-            }}
-          >
-            AI
-          </a>
-          {hasBody && (
-            <button
-              type="button"
-              onClick={(e) => {
-                e.stopPropagation();
-                setExpanded((v) => !v);
-              }}
-              aria-expanded={showBody}
-              aria-label={showBody ? 'Collapse narrative' : 'Expand narrative'}
-              style={{
-                background: 'transparent',
-                border: '1px solid var(--bg-card-border)',
-                color: 'var(--text-secondary)',
-                padding: '0.15rem 0.45rem',
-                borderRadius: '3px',
-                cursor: 'pointer',
-                fontFamily: 'var(--font-base)',
-                fontSize: '0.85rem',
-                lineHeight: 1,
-              }}
-            >
-              {showBody ? '∧' : '∨'}
-            </button>
-          )}
-        </div>
+        )}
       </div>
     </div>
   );
