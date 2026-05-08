@@ -75,7 +75,7 @@ const INGEST_SECRET = process.env.INGEST_SECRET;
 // Bumped whenever a per-page prompt changes shape in a way that should
 // segment historical narratives. The chat_logs / page_narratives iteration
 // loop joins on this column to compare cohorts.
-const PROMPT_VERSION = 'v4-2026-05-08';
+const PROMPT_VERSION = 'v5-2026-05-08';
 
 // Model selection. Haiku 4.5 for the 18 feeder narratives (fast, cheap,
 // well-suited for terse pattern-recognition + JSON output). Sonnet 4.6 for
