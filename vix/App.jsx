@@ -26,6 +26,7 @@ const VixContangoHistory = lazy(() => import('../src/components/vix/VixContangoH
 const VixVrp = lazy(() => import('../src/components/vix/VixVrp'));
 const VixOuMeanReversion = lazy(() => import('../src/components/vix/VixOuMeanReversion'));
 const VixVolOfVol = lazy(() => import('../src/components/vix/VixVolOfVol'));
+const VixVvixVixRatio = lazy(() => import('../src/components/vix/VixVvixVixRatio'));
 const VixCrossAsset = lazy(() => import('../src/components/vix/VixCrossAsset'));
 const VixSkewIndices = lazy(() => import('../src/components/vix/VixSkewIndices'));
 const VixRegimeMatrix = lazy(() => import('../src/components/vix/VixRegimeMatrix'));
@@ -44,6 +45,7 @@ function prefetchBelowFoldChunks() {
     import('../src/components/vix/VixVrp');
     import('../src/components/vix/VixOuMeanReversion');
     import('../src/components/vix/VixVolOfVol');
+    import('../src/components/vix/VixVvixVixRatio');
     import('../src/components/vix/VixCrossAsset');
     import('../src/components/vix/VixSkewIndices');
     import('../src/components/vix/VixRegimeMatrix');
@@ -68,10 +70,11 @@ function prefetchBelowFoldChunks() {
 //   4. VixVrp               — VIX vs SPX 20d realized vol (the VRP picture)
 //   5. VixOuMeanReversion   — Ornstein-Uhlenbeck calibration + 60d forward
 //   6. VixVolOfVol          — VVIX vs realized vol-of-VIX (vol-of-vol VRP)
-//   7. VixCrossAsset        — VIX/VXN/RVX/OVX/GVZ on shared axis + 1y ranks
-//   8. VixSkewIndices       — Nations SDEX vs Nations TDEX overlay
-//   9. VixRegimeMatrix      — 4-state classification + N-day transitions
-//  10. VixStrategyOverlay   — Cboe option-strategy benchmarks vs SPX
+//   7. VixVvixVixRatio      — VVIX/VIX ratio with 5/6 alert thresholds
+//   8. VixCrossAsset        — VIX/VXN/RVX/OVX/GVZ on shared axis + 1y ranks
+//   9. VixSkewIndices       — Nations SDEX vs Nations TDEX overlay
+//  10. VixRegimeMatrix      — 4-state classification + N-day transitions
+//  11. VixStrategyOverlay   — Cboe option-strategy benchmarks vs SPX
 //
 // Each section is a separate ErrorBoundary so a render failure in one
 // model card never blanks the rest of the page.
@@ -115,6 +118,7 @@ export default function App() {
           <div className="skeleton-card" style={{ height: '500px' }} />
           <div className="skeleton-card" style={{ height: '540px' }} />
           <div className="skeleton-card" style={{ height: '500px' }} />
+          <div className="skeleton-card" style={{ height: '360px' }} />
           <div className="skeleton-card" style={{ height: '500px' }} />
           <div className="skeleton-card" style={{ height: '420px' }} />
           <div className="skeleton-card" style={{ height: '600px' }} />
@@ -151,6 +155,9 @@ export default function App() {
           </ErrorBoundary>
           <ErrorBoundary>
             <LazyMount height="500px" margin="300px"><VixVolOfVol data={data} /></LazyMount>
+          </ErrorBoundary>
+          <ErrorBoundary>
+            <LazyMount height="360px" margin="300px"><VixVvixVixRatio data={data} /></LazyMount>
           </ErrorBoundary>
           <ErrorBoundary>
             <LazyMount height="500px" margin="300px"><VixCrossAsset data={data} /></LazyMount>
@@ -262,6 +269,22 @@ export default function App() {
             <strong style={{ color: 'var(--text-primary)' }}>second-order VRP</strong>: when VVIX
             persistently exceeds realized vol-of-VIX the option market is over-pricing future VIX
             fluctuation. The bottom strip shows the implied-minus-realized gap as a bar series.
+          </p>
+          <p style={{ margin: '0 0 0.7rem' }}>
+            <strong style={{ color: 'var(--text-primary)' }}>Vol-of-Vol Complacency.</strong>{' '}
+            The <strong style={{ color: 'var(--text-primary)' }}>VVIX / VIX ratio</strong>{' '}
+            measures how richly priced future VIX fluctuation is relative to the VIX level.
+            The ratio compresses during stress regimes (VIX rises faster than VVIX) and
+            stretches during calm ones (VIX gets suppressed while VVIX stays normal), so an
+            unusually high ratio reads as a vol-of-vol complacency signal: the option market
+            is paying for VIX fluctuation at a multiple that the spot-VIX level is no longer
+            earning. Two threshold zones flag the regime:{' '}
+            <strong style={{ color: 'var(--accent-amber)' }}>amber above 5</strong>{' '}
+            (complacency forming) and{' '}
+            <strong style={{ color: 'var(--accent-coral)' }}>coral above 6</strong>{' '}
+            (sustained extremes). The August 2024 carry-trade unwind and the April 2025
+            tariff move both ran up from elevated VVIX/VIX regimes immediately preceding
+            the spike.
           </p>
           <p style={{ margin: '0 0 0.7rem' }}>
             <strong style={{ color: 'var(--text-primary)' }}>Cross-Asset Vol.</strong>{' '}
