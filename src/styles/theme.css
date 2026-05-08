@@ -124,80 +124,31 @@ body {
   line-height: 1.5;
 }
 
-.page-narrator__main {
-  display: block;
-  width: 100%;
-}
-
-.page-narrator__head {
-  display: flex;
-  align-items: center;
-  flex-wrap: wrap;
-  gap: 0.6rem;
-  row-gap: 0.45rem;
-}
-
-.page-narrator__chip {
-  display: inline-block;
-  padding: 0.1rem 0.45rem;
-  background: var(--narrator-chip-bg, rgba(138, 143, 156, 0.12));
-  color: var(--narrator-chip-color, var(--text-secondary));
-  font-size: 0.62rem;
-  font-weight: 600;
-  letter-spacing: 0.09em;
+.page-narrator__corner {
+  float: right;
+  margin: 0 0 0.25rem 0.85rem;
+  color: var(--text-secondary);
+  text-decoration: none;
+  font-size: 0.72rem;
+  letter-spacing: 0.04em;
   text-transform: uppercase;
-  border-radius: 2px;
-  line-height: 1.5;
+  white-space: nowrap;
+  border-bottom: 1px dotted var(--text-secondary);
+  padding-bottom: 1px;
   flex-shrink: 0;
+}
+
+.page-narrator__corner:hover {
+  color: var(--text-primary);
+  border-bottom-color: var(--text-primary);
 }
 
 .page-narrator__headline {
-  flex: 1 1 200px;
-  min-width: 0;
   color: var(--text-primary);
   font-weight: 500;
-  font-size: 1.02rem;
+  font-size: 1.04rem;
   letter-spacing: 0.005em;
-}
-
-.page-narrator__meta {
-  display: inline-flex;
-  align-items: center;
-  gap: 0.65rem;
-  flex-shrink: 0;
-  margin-left: auto;
-  color: var(--text-secondary);
-  font-size: 0.78rem;
-  letter-spacing: 0.04em;
-  text-transform: uppercase;
-}
-
-.page-narrator__age {
-  white-space: nowrap;
-}
-
-.page-narrator__ai-link {
-  color: var(--text-secondary);
-  text-decoration: none;
-  border-bottom: 1px dotted var(--text-secondary);
-  font-size: 0.72rem;
-}
-
-.page-narrator__chevron {
-  background: transparent;
-  border: 1px solid var(--bg-card-border);
-  color: var(--text-secondary);
-  padding: 0.15rem 0.45rem;
-  border-radius: 3px;
-  cursor: pointer;
-  font-family: var(--font-base);
-  font-size: 0.85rem;
-  line-height: 1;
-}
-
-.page-narrator__chevron:hover {
-  border-color: var(--text-secondary);
-  color: var(--text-primary);
+  line-height: 1.5;
 }
 
 .page-narrator__body {
@@ -206,14 +157,7 @@ body {
   font-size: 0.93rem;
   line-height: 1.65;
   white-space: pre-wrap;
-}
-
-.page-narrator__body p {
-  margin: 0 0 0.55rem 0;
-}
-
-.page-narrator__body p:last-child {
-  margin-bottom: 0;
+  clear: both;
 }
 
 @media (max-width: 768px) {
@@ -223,19 +167,13 @@ body {
   }
   .page-narrator__headline {
     font-size: 1rem;
-    /* flex-basis stays at 200px so chip + headline keep sharing row 1 with
-       headline grow-filling the remaining width; meta wraps to row 2 with
-       margin-left: auto pinning it to the right edge. Forcing
-       flex-basis: 100% here would push headline to its own row and leave
-       chip alone on row 1 with empty space, which looked worse than the
-       two-row chip+headline / meta split. */
+  }
+  .page-narrator__corner {
+    font-size: 0.68rem;
   }
 }
 
 @media (max-width: 480px) {
-  .page-narrator__age {
-    display: none;
-  }
   .page-narrator__body {
     font-size: 0.92rem;
   }

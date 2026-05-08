@@ -5,6 +5,14 @@ import { useEffect, useState, useCallback } from 'react';
 // narrator's current take, and stays out of the layout entirely when there
 // is nothing material to say.
 //
+// Layout. The slot is a single block of prose: headline first, body below
+// when present, with a subtle timestamp + AI link in the top-right corner.
+// Severity is signaled by the left-border accent color (text-secondary on
+// 1, accent-amber on 2, accent-coral on 3) plus a faint background gradient
+// on 2 / 3. There is no chip badge in the corner and no expand-collapse
+// chevron — every body is short enough to read in place, and the corner
+// chip was eating horizontal space that the headline could use instead.
+//
 // Inline markup. The narrator persona instructs the agent to use a small
 // shorthand vocabulary that the renderer below resolves into styled spans:
 //   **text**  -> bold (default text color, weight 600)
@@ -16,12 +24,6 @@ import { useEffect, useState, useCallback } from 'react';
 // Markup is flat (does not nest) and the regex below tries the longer
 // delimiter alternatives first so **bold** beats *italic* on overlap.
 //
-// Render rules:
-//   - no narrative or empty headline: render null (zero-height slot).
-//   - severity 1: headline only, always-visible single line.
-//   - severity 2: headline visible + body collapsed behind a chevron.
-//   - severity 3: headline visible + body auto-expanded + coral accent.
-//
 // Polling every 60 seconds so a slot already on screen picks up new
 // narratives without a page reload. The /api/narrative endpoint sets a 60 s
 // s-maxage with a 240 s SWR tail, so the polling cost is dominated by edge
@@ -29,63 +31,25 @@ import { useEffect, useState, useCallback } from 'react';
 
 const POLL_INTERVAL_MS = 60 * 1000;
 
-const SEVERITY_STYLES = {
-  1: {
-    accentBorder: 'var(--text-secondary)',
-    chipBg: 'rgba(138, 143, 156, 0.12)',
-    chipColor: 'var(--text-secondary)',
-    chipLabel: 'CONTEXT',
-    backgroundImage: 'none',
-  },
-  2: {
-    accentBorder: 'var(--accent-amber)',
-    chipBg: 'rgba(241, 196, 15, 0.15)',
-    chipColor: 'var(--accent-amber)',
-    chipLabel: 'NOTABLE',
-    backgroundImage: 'linear-gradient(90deg, rgba(241,196,15,0.05) 0%, transparent 65%)',
-  },
-  3: {
-    accentBorder: 'var(--accent-coral)',
-    chipBg: 'rgba(231, 76, 60, 0.18)',
-    chipColor: 'var(--accent-coral)',
-    chipLabel: 'SIGNIFICANT',
-    backgroundImage: 'linear-gradient(90deg, rgba(231,76,60,0.07) 0%, transparent 72%)',
-  },
+const SEVERITY_BORDER = {
+  1: 'var(--text-secondary)',
+  2: 'var(--accent-amber)',
+  3: 'var(--accent-coral)',
+};
+
+const SEVERITY_BG_IMAGE = {
+  1: 'none',
+  2: 'linear-gradient(90deg, rgba(241,196,15,0.05) 0%, transparent 65%)',
+  3: 'linear-gradient(90deg, rgba(231,76,60,0.07) 0%, transparent 72%)',
 };
 
 // Inline markup regex. Order matters — longer delimiter alternatives come
 // first so **bold** is recognized before *italic* on overlapping text. The
-// double-character delimiters (**, __, ++, --, ~~) use a negative lookahead
-// /lookbehind pair so a triple character ('***' / '---') doesn't match as
-// delimiter, and the content portion permits inner instances of the single
-// character so phrases like "--put-side bias--" (hyphen inside a coral wrap)
-// render correctly. Single-asterisk italic stays strict (no embedded *) since
-// asterisks rarely appear inside ordinary text.
+// double-character delimiters use a negative lookahead / lookbehind pair so
+// triple-character sequences ('---') don't open a span, and the content
+// portion permits inner instances of the single character so phrases like
+// "--put-side bias--" (hyphen inside a coral wrap) render correctly.
 const MARKUP_RE = /(\*\*(?!\*)(?:(?!\*\*).)+?(?<!\*)\*\*)|(\*[^*]+?\*)|(__(?!_)(?:(?!__).)+?(?<!_)__)|(\+\+(?!\+)(?:(?!\+\+).)+?(?<!\+)\+\+)|(--(?!-)(?:(?!--).)+?(?<!-)--)|(~~(?!~)(?:(?!~~).)+?(?<!~)~~)/g;
-
-// Split body text into paragraphs on blank lines so multi-sentence narratives
-// don't render as a wall of text. Each non-empty paragraph becomes its own <p>
-// with the inline-markup renderer applied to its content. A body without any
-// blank lines renders as a single span so we don't add a stray <p> wrapper to
-// short single-line bodies.
-function renderBodyParagraphs(text) {
-  if (!text || typeof text !== 'string') return text;
-  const paragraphs = text
-    .split(/\n\s*\n+/)
-    .map((p) => p.trim())
-    .filter((p) => p.length > 0);
-  if (paragraphs.length <= 1) {
-    return renderInlineMarkup(text);
-  }
-  return paragraphs.map((para, i) => (
-    <p
-      key={`p-${i}`}
-      style={{ margin: i === 0 ? '0' : '0.6rem 0 0 0' }}
-    >
-      {renderInlineMarkup(para)}
-    </p>
-  ));
-}
 
 function renderInlineMarkup(text) {
   if (!text || typeof text !== 'string') return text;
@@ -93,7 +57,6 @@ function renderInlineMarkup(text) {
   let lastIndex = 0;
   let key = 0;
   let m;
-  // Reset lastIndex on each call since the regex is module-level.
   MARKUP_RE.lastIndex = 0;
   while ((m = MARKUP_RE.exec(text)) !== null) {
     if (m.index > lastIndex) {
@@ -145,6 +108,29 @@ function renderInlineMarkup(text) {
   return tokens;
 }
 
+// Split body text into paragraphs on blank lines so multi-sentence narratives
+// don't render as a wall of text. Each non-empty paragraph becomes its own <p>
+// with the inline-markup renderer applied to its content. A body without any
+// blank lines renders as a single span so we don't add a stray <p> wrapper.
+function renderBodyParagraphs(text) {
+  if (!text || typeof text !== 'string') return text;
+  const paragraphs = text
+    .split(/\n\s*\n+/)
+    .map((p) => p.trim())
+    .filter((p) => p.length > 0);
+  if (paragraphs.length <= 1) {
+    return renderInlineMarkup(text);
+  }
+  return paragraphs.map((para, i) => (
+    <p
+      key={`p-${i}`}
+      style={{ margin: i === 0 ? '0' : '0.65rem 0 0 0' }}
+    >
+      {renderInlineMarkup(para)}
+    </p>
+  ));
+}
+
 function formatRelativeTime(iso) {
   if (!iso) return '';
   const ts = new Date(iso).getTime();
@@ -159,7 +145,6 @@ function formatRelativeTime(iso) {
 
 export default function PageNarrator({ page }) {
   const [narrative, setNarrative] = useState(null);
-  const [expanded, setExpanded] = useState(false);
   const [loaded, setLoaded] = useState(false);
 
   const fetchNarrative = useCallback(async () => {
@@ -172,14 +157,8 @@ export default function PageNarrator({ page }) {
         return;
       }
       const json = await res.json();
-      const incoming = json?.narrative || null;
-      setNarrative(incoming);
+      setNarrative(json?.narrative || null);
       setLoaded(true);
-      if (incoming?.severity === 3) {
-        setExpanded(true);
-      } else if (incoming?.severity != null && incoming.severity < 2) {
-        setExpanded(false);
-      }
     } catch {
       setNarrative(null);
       setLoaded(true);
@@ -196,78 +175,33 @@ export default function PageNarrator({ page }) {
   if (!narrative) return null;
   if (!narrative.headline || !narrative.headline.trim()) return null;
   const severity = Number.isFinite(+narrative.severity) ? +narrative.severity : 1;
-  const styles = SEVERITY_STYLES[Math.max(1, Math.min(3, severity))] || SEVERITY_STYLES[1];
+  const tier = Math.max(1, Math.min(3, severity));
   const hasBody = Boolean(narrative.body && narrative.body.trim().length > 0);
-  const showBody = expanded && hasBody;
   const ageLabel = formatRelativeTime(narrative.created_at);
-
-  const toggle = () => hasBody && setExpanded((v) => !v);
 
   return (
     <div
-      className={`page-narrator page-narrator--sev-${Math.max(1, Math.min(3, severity))}`}
+      className={`page-narrator page-narrator--sev-${tier}`}
       style={{
-        '--narrator-accent': styles.accentBorder,
-        '--narrator-bg-image': styles.backgroundImage,
-        '--narrator-chip-bg': styles.chipBg,
-        '--narrator-chip-color': styles.chipColor,
+        '--narrator-accent': SEVERITY_BORDER[tier] || SEVERITY_BORDER[1],
+        '--narrator-bg-image': SEVERITY_BG_IMAGE[tier] || SEVERITY_BG_IMAGE[1],
       }}
     >
-      <div
-        className="page-narrator__main"
-        onClick={toggle}
-        role={hasBody ? 'button' : undefined}
-        tabIndex={hasBody ? 0 : undefined}
-        onKeyDown={hasBody ? (e) => {
-          if (e.key === 'Enter' || e.key === ' ') {
-            e.preventDefault();
-            toggle();
-          }
-        } : undefined}
-        aria-expanded={hasBody ? showBody : undefined}
-        style={{ cursor: hasBody ? 'pointer' : 'default' }}
+      <a
+        href="/disclaimer/"
+        title="AI-generated narrative; methodology and limitations on the disclaimer page"
+        className="page-narrator__corner"
       >
-        <div className="page-narrator__head">
-          <span className="page-narrator__chip">{styles.chipLabel}</span>
-          <span className="page-narrator__headline">
-            {renderInlineMarkup(narrative.headline)}
-          </span>
-          <span className="page-narrator__meta">
-            {ageLabel && (
-              <span title={narrative.created_at} className="page-narrator__age">
-                {ageLabel}
-              </span>
-            )}
-            <a
-              href="/disclaimer/"
-              title="AI-generated narrative; methodology and limitations on the disclaimer page"
-              className="page-narrator__ai-link"
-              onClick={(e) => e.stopPropagation()}
-            >
-              AI
-            </a>
-            {hasBody && (
-              <button
-                type="button"
-                onClick={(e) => {
-                  e.stopPropagation();
-                  setExpanded((v) => !v);
-                }}
-                aria-expanded={showBody}
-                aria-label={showBody ? 'Collapse narrative' : 'Expand narrative'}
-                className="page-narrator__chevron"
-              >
-                {showBody ? '∧' : '∨'}
-              </button>
-            )}
-          </span>
-        </div>
-        {showBody && (
-          <div className="page-narrator__body">
-            {renderBodyParagraphs(narrative.body)}
-          </div>
-        )}
+        {ageLabel ? `${ageLabel} · AI` : 'AI'}
+      </a>
+      <div className="page-narrator__headline">
+        {renderInlineMarkup(narrative.headline)}
       </div>
+      {hasBody && (
+        <div className="page-narrator__body">
+          {renderBodyParagraphs(narrative.body)}
+        </div>
+      )}
     </div>
   );
 }
