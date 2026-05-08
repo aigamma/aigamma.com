@@ -205,10 +205,12 @@ body {
   }
   .page-narrator__headline {
     font-size: 1rem;
-    flex-basis: 100%;
-  }
-  .page-narrator__meta {
-    margin-left: 0;
+    /* flex-basis stays at 200px so chip + headline keep sharing row 1 with
+       headline grow-filling the remaining width; meta wraps to row 2 with
+       margin-left: auto pinning it to the right edge. Forcing
+       flex-basis: 100% here would push headline to its own row and leave
+       chip alone on row 1 with empty space, which looked worse than the
+       two-row chip+headline / meta split. */
   }
 }
 
