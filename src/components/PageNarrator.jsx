@@ -54,10 +54,14 @@ const SEVERITY_STYLES = {
 };
 
 // Inline markup regex. Order matters — longer delimiter alternatives come
-// first so **bold** is recognized before *italic* on overlapping text. Each
-// alternative's content uses [^X]+? (non-greedy, exclude the delimiter
-// character) so the regex can't run past the closing pair.
-const MARKUP_RE = /(\*\*[^*]+?\*\*)|(\*[^*]+?\*)|(__[^_]+?__)|(\+\+[^+]+?\+\+)|(--[^-]+?--)|(~~[^~]+?~~)/g;
+// first so **bold** is recognized before *italic* on overlapping text. The
+// double-character delimiters (**, __, ++, --, ~~) use a negative lookahead
+// /lookbehind pair so a triple character ('***' / '---') doesn't match as
+// delimiter, and the content portion permits inner instances of the single
+// character so phrases like "--put-side bias--" (hyphen inside a coral wrap)
+// render correctly. Single-asterisk italic stays strict (no embedded *) since
+// asterisks rarely appear inside ordinary text.
+const MARKUP_RE = /(\*\*(?!\*)(?:(?!\*\*).)+?(?<!\*)\*\*)|(\*[^*]+?\*)|(__(?!_)(?:(?!__).)+?(?<!_)__)|(\+\+(?!\+)(?:(?!\+\+).)+?(?<!\+)\+\+)|(--(?!-)(?:(?!--).)+?(?<!-)--)|(~~(?!~)(?:(?!~~).)+?(?<!~)~~)/g;
 
 function renderInlineMarkup(text) {
   if (!text || typeof text !== 'string') return text;
