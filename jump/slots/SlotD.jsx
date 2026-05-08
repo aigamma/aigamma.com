@@ -53,36 +53,42 @@ import { daysToExpiration, pickDefaultExpiration, filterPickerExpirations } from
 
 const RATE_R = 0.045;
 const RATE_Q = 0.013;
-const INT_N = 220;
-const INT_U_MAX = 180;
+const INT_N = 601;
 const NM_MAX_ITERS = 240;
 
-// Pre-computed Simpson weights and u-grid for Lewis (2001) inversion.
+// Pre-computed quadrature for Lewis (2001) inversion. See the Kou slot
+// for the substitution rationale: v = atan(2u), u = tan(v)/2, the
+// 1/(u²+1/4) singularity dissolves into the dv measure, and Simpson on
+// [0, π/2] converges at its full O(h⁴) rate.
 const U_GRID = new Float64Array(INT_N);
 const U_WEIGHTS = new Float64Array(INT_N);
 {
-  const h = INT_U_MAX / (INT_N - 1);
-  for (let i = 0; i < INT_N; i++) U_GRID[i] = Math.max(1e-6, i * h);
+  const v_max = Math.PI / 2 - 1e-6;
+  const h = v_max / (INT_N - 1);
+  for (let i = 0; i < INT_N; i++) U_GRID[i] = Math.tan(i * h) / 2;
   for (let i = 0; i < INT_N; i++) {
     let w;
     if (i === 0 || i === INT_N - 1) w = 1;
     else if (i % 2 === 1) w = 4;
     else w = 2;
-    U_WEIGHTS[i] = (w * h) / 3;
+    U_WEIGHTS[i] = (2 * w * h) / 3;
   }
 }
 
-// ---- VG characteristic function of log S_T ------------------------------
+// ---- VG characteristic function of X = ln(S_T/S₀) -----------------------
 //
-// Same precompute-once / per-K-sum factorisation that the Heston pricer on
-// /smile/ and /risk/ uses. The CF is independent of strike, so for one
+// Centered CF (around S₀): the ln S₀ shift is absorbed into the Lewis k
+// outside this loop so the integrand has O(1) magnitude rather than the
+// O(√S₀) values produced by the un-centered ln S_T form. Same precompute-
+// once / per-K-sum factorisation that the Heston pricer on /smile/ and
+// /risk/ uses. The CF is independent of strike, so for one
 // (params, S0, T, r, q) we evaluate φ(u − i/2) once at every u in U_GRID
 // and store the (re, im) pair into Float64Arrays. Per-K pricing then
 // reduces to a tight O(INT_N) sum against the Lewis kernel
 // e^(i·u·k)/(u²+1/4).
 //
-//   φ_X(u; T)   = (1 − i·u·θ·ν + 0.5·σ²·ν·u²)^(−T/ν)
-//   φ_lnS(u; T) = exp[i·u·(ln S₀ + (r − q + ω)·T)] · φ_X(u; T)
+//   φ_VG(u; T)  = (1 − i·u·θ·ν + 0.5·σ²·ν·u²)^(−T/ν)
+//   φ_X(u; T)   = exp[i·u·(r − q + ω)·T] · φ_VG(u; T)
 //   ω           = (1/ν)·ln(1 − θ·ν − 0.5·σ²·ν)
 //
 // At u = u_real − i/2 the complex parts collapse to:
@@ -103,7 +109,7 @@ function fillVgCf(outRe, outIm, params, S0, T, r, q) {
     return false;
   }
   const omega = Math.log(innerOmega) / nu;
-  const drift = Math.log(S0) + (r - q + omega) * T;
+  const drift = (r - q + omega) * T;
   const power = -T / nu;
   const halfSigma2Nu = 0.5 * sigma * sigma * nu;
   const thetaNu = theta * nu;
@@ -147,20 +153,23 @@ function precomputeVgCfGrid(params, S0, T, r, q) {
 }
 
 // ---- Lewis call price ----------------------------------------------------
+//
+// C = S₀·e^(−q·T) − √(S₀·K)·e^(−r·T) / π · ∫₀^∞ Re[ e^(i·u·k) · φ_X(u − i/2) ] / (u² + 1/4) du
+// where k = ln(S₀/K) and φ_X is the CF of X = ln(S_T/S₀) (centered).
 function vgCallFromCfGrid(grid, S0, K, T, r, q) {
   if (!grid.ok) return Number.NaN;
   const { F_re, F_im } = grid;
-  const k = Math.log(K / S0) - (r - q) * T;
+  const k = Math.log(S0 / K);
   let acc = 0;
   for (let i = 0; i < INT_N; i++) {
     const u = U_GRID[i];
     const c = Math.cos(u * k);
     const s = Math.sin(u * k);
+    // 1/(u²+1/4) kernel absorbed into U_WEIGHTS via atan substitution.
     const num_re = c * F_re[i] - s * F_im[i];
-    acc += (U_WEIGHTS[i] * num_re) / (u * u + 0.25);
+    acc += U_WEIGHTS[i] * num_re;
   }
-  const sqrtSK = Math.sqrt(S0 * K);
-  const factor = (sqrtSK * Math.exp((-(r + q) * T) / 2)) / Math.PI;
+  const factor = (Math.sqrt(S0 * K) * Math.exp(-r * T)) / Math.PI;
   const call = S0 * Math.exp(-q * T) - factor * acc;
   return Math.max(call, Math.max(S0 * Math.exp(-q * T) - K * Math.exp(-r * T), 0));
 }

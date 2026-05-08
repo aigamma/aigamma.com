@@ -38,34 +38,40 @@ import { daysToExpiration, pickDefaultExpiration, filterPickerExpirations } from
 
 const RATE_R = 0.045;
 const RATE_Q = 0.013;
-const INT_N = 200;
-const INT_U_MAX = 130;
+const INT_N = 601;
 const NM_MAX_ITERS = 280;
 
-// Pre-computed Simpson weights and u-grid for Lewis (2001) inversion.
+// Pre-computed quadrature for Lewis (2001) inversion. See the Kou slot
+// for the substitution rationale: v = atan(2u), u = tan(v)/2, the
+// 1/(u²+1/4) singularity dissolves into the dv measure, and Simpson on
+// [0, π/2] converges at its full O(h⁴) rate.
 const U_GRID = new Float64Array(INT_N);
 const U_WEIGHTS = new Float64Array(INT_N);
 {
-  const h = INT_U_MAX / (INT_N - 1);
-  for (let i = 0; i < INT_N; i++) U_GRID[i] = Math.max(1e-6, i * h);
+  const v_max = Math.PI / 2 - 1e-6;
+  const h = v_max / (INT_N - 1);
+  for (let i = 0; i < INT_N; i++) U_GRID[i] = Math.tan(i * h) / 2;
   for (let i = 0; i < INT_N; i++) {
     let w;
     if (i === 0 || i === INT_N - 1) w = 1;
     else if (i % 2 === 1) w = 4;
     else w = 2;
-    U_WEIGHTS[i] = (w * h) / 3;
+    U_WEIGHTS[i] = (2 * w * h) / 3;
   }
 }
 
 // ---- Bates CF: Heston (Schoutens single-CF form) × Merton jump factor ---
 //
-// Same precompute-once / per-K-sum factorisation that the Heston pricer on
-// /smile/ and /risk/ uses, applied to the Schoutens single-CF form that
-// Lewis (2001) pricing wants. The CF is independent of strike, so for one
-// (params, S0, T, r, q) we evaluate φ(u − i/2) once at every u in U_GRID
-// and store the (re, im) pair into Float64Arrays. Per-K pricing then
-// reduces to a tight O(INT_N) sum against the Lewis kernel
-// e^(i·u·k)/(u²+1/4) with no fresh CF evaluations and zero array
+// Centered CF (around S₀, i.e. CF of X = ln(S_T/S₀)): the ln S₀ shift is
+// absorbed into the Lewis k outside this loop so the integrand has O(1)
+// magnitude rather than the O(√S₀) values the un-centered ln S_T form
+// would produce. Same precompute-once / per-K-sum factorisation that the
+// Heston pricer on /smile/ and /risk/ uses, applied to the Schoutens
+// single-CF form that Lewis (2001) pricing wants. The CF is independent
+// of strike, so for one (params, S0, T, r, q) we evaluate φ(u − i/2) once
+// at every u in U_GRID and store the (re, im) pair into Float64Arrays.
+// Per-K pricing then reduces to a tight O(INT_N) sum against the Lewis
+// kernel e^(i·u·k)/(u²+1/4) with no fresh CF evaluations and zero array
 // allocations.
 //
 // At u = u_real − i/2 the complex parts collapse to:
@@ -79,7 +85,6 @@ function fillBatesCf(outRe, outIm, params, S0, T, r, q) {
   const rhoXi = rho * xi;
   const ktxi2 = (kappa * theta) / xi2;
   const rmqT = (r - q) * T;
-  const logS0 = Math.log(S0);
   const k_j = Math.exp(muJ + 0.5 * sigmaJ * sigmaJ) - 1;
   const halfSigJ2 = 0.5 * sigmaJ * sigmaJ;
   const lambdaT = lambda * T;
@@ -168,9 +173,9 @@ function fillBatesCf(outRe, outIm, params, S0, T, r, q) {
     const D_re = numXi2_re * inner_re - numXi2_im * inner_im;
     const D_im = numXi2_re * inner_im + numXi2_im * inner_re;
 
-    // exponent_H = C + D·v0 + iu·log(S0). iu·log(S0) = (0.5·logS0, u·logS0)
-    const expH_re = C_re + D_re * v0 + 0.5 * logS0;
-    const expH_im = C_im + D_im * v0 + u * logS0;
+    // exponent_H = C + D·v0  (no iu·log S₀ term — centered CF)
+    const expH_re = C_re + D_re * v0;
+    const expH_im = C_im + D_im * v0;
     const expHMag = Math.exp(expH_re);
     const phiH_re = expHMag * Math.cos(expH_im);
     const phiH_im = expHMag * Math.sin(expH_im);
@@ -211,19 +216,22 @@ function precomputeBatesCfGrid(params, S0, T, r, q) {
 }
 
 // ---- Lewis call price ----------------------------------------------------
+//
+// C = S₀·e^(−q·T) − √(S₀·K)·e^(−r·T) / π · ∫₀^∞ Re[ e^(i·u·k) · φ_X(u − i/2) ] / (u² + 1/4) du
+// where k = ln(S₀/K) and φ_X is the centered CF of X = ln(S_T/S₀).
 function batesCallFromCfGrid(grid, S0, K, T, r, q) {
   const { F_re, F_im } = grid;
-  const k = Math.log(K / S0) - (r - q) * T;
+  const k = Math.log(S0 / K);
   let acc = 0;
   for (let i = 0; i < INT_N; i++) {
     const u = U_GRID[i];
     const c = Math.cos(u * k);
     const s = Math.sin(u * k);
+    // 1/(u²+1/4) kernel absorbed into U_WEIGHTS via atan substitution.
     const num_re = c * F_re[i] - s * F_im[i];
-    acc += (U_WEIGHTS[i] * num_re) / (u * u + 0.25);
+    acc += U_WEIGHTS[i] * num_re;
   }
-  const sqrtSK = Math.sqrt(S0 * K);
-  const factor = (sqrtSK * Math.exp((-(r + q) * T) / 2)) / Math.PI;
+  const factor = (Math.sqrt(S0 * K) * Math.exp(-r * T)) / Math.PI;
   const call = S0 * Math.exp(-q * T) - factor * acc;
   return Math.max(call, Math.max(S0 * Math.exp(-q * T) - K * Math.exp(-r * T), 0));
 }
