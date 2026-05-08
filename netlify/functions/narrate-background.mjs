@@ -132,6 +132,24 @@ async function callAnthropic(model, systemPrompt, userMessage) {
   };
 }
 
+// Defensive sanitization for narrator output strings. The persona forbids em
+// dashes (U+2014) and en dashes (U+2013) per a site-wide style rule, but
+// agents occasionally slip and emit them despite the instruction. Strip them
+// here so the rule holds at the data layer regardless of agent compliance.
+// U+2014 → ", " (em dash typically separates clauses; comma reads naturally
+// in the same role). U+2013 → "-" (en dash is the closer ASCII hyphen).
+// Also collapses any double-period emitted by the join (". .") into a single
+// period so the punctuation rule's terminal-period requirement doesn't doubly
+// apply when the headline already ends with one.
+function sanitizeNarratorString(s) {
+  if (typeof s !== 'string') return s;
+  return s
+    .replace(/—/g, ', ')
+    .replace(/–/g, '-')
+    .replace(/\s{2,}/g, ' ')
+    .trim();
+}
+
 // The narrator is told to return a single JSON object. Models occasionally
 // wrap the JSON in a fenced code block or add a preamble despite the
 // instruction. Strip those defensively before parsing.
@@ -151,8 +169,8 @@ function parseNarratorOutput(text) {
     const obj = JSON.parse(candidate);
     if (typeof obj !== 'object' || obj == null) return null;
     const severity = Number(obj.severity);
-    const headline = typeof obj.headline === 'string' ? obj.headline.trim() : '';
-    const body = typeof obj.body === 'string' ? obj.body.trim() : '';
+    const headline = sanitizeNarratorString(typeof obj.headline === 'string' ? obj.headline : '');
+    const body = sanitizeNarratorString(typeof obj.body === 'string' ? obj.body : '');
     if (!Number.isFinite(severity) || severity < 0 || severity > 3) return null;
     return { severity: Math.round(severity), headline, body };
   } catch (e) {
