@@ -229,10 +229,10 @@ export default function SlotB() {
   // requestIdleCallback-deferred effect so the chart card paints its chrome
   // before the math runs. Cancellation flag prevents a stale simulation from
   // a now-superseded seed change overwriting fresh state.
-  const [stage, setStage] = useState({ surface: null, grid: null, targetT: null, mc: null });
+  const [stage, setStage] = useState({ surface: null, targetT: null, mc: null });
   useEffect(() => {
     if (!sviArray.length || !spot) {
-      setStage({ surface: null, grid: null, targetT: null, mc: null });
+      setStage({ surface: null, targetT: null, mc: null });
       return undefined;
     }
     const compute = () => {
@@ -244,7 +244,7 @@ export default function SlotB() {
         grid && spot && targetT
           ? simulateLV({ grid, spot, targetT, nPaths: N_PATHS, seed })
           : null;
-      return { surface, grid, targetT, mc };
+      return { surface, targetT, mc };
     };
     if (typeof window === 'undefined') {
       setStage(compute());
@@ -267,7 +267,6 @@ export default function SlotB() {
     };
   }, [sviArray, spot, seed]);
   const surface = stage.surface;
-  const grid = stage.grid;
   const targetT = stage.targetT;
   const mc = stage.mc;
 

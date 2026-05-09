@@ -203,10 +203,10 @@ export default function SlotD() {
   // Surface build + Dupire grid + forward-smile MC simulation deferred to
   // requestIdleCallback so the chart card paints its chrome and remains
   // responsive to the T* slider before the math runs.
-  const [stage, setStage] = useState({ surface: null, grid: null, result: null });
+  const [stage, setStage] = useState({ surface: null, result: null });
   useEffect(() => {
     if (!sviArray.length || !spot) {
-      setStage({ surface: null, grid: null, result: null });
+      setStage({ surface: null, result: null });
       return undefined;
     }
     const compute = () => {
@@ -221,7 +221,7 @@ export default function SlotD() {
           result = simulateForwardSmile({ grid, spot, Tstar, tau: TAU_YEARS, seed });
         }
       }
-      return { surface, grid, result };
+      return { surface, result };
     };
     if (typeof window === 'undefined') {
       setStage(compute());
@@ -244,7 +244,6 @@ export default function SlotD() {
     };
   }, [sviArray, spot, Tstar, seed]);
   const surface = stage.surface;
-  const grid = stage.grid;
   const result = stage.result;
 
   const comparison = useMemo(() => {
