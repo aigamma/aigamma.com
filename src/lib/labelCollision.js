@@ -17,7 +17,7 @@
 // call: the walls occupy the visually dominant label row on both charts and
 // the merged label belongs up there with its peer walls.
 
-export const COLLISION_THRESHOLD_PX = 40;
+const COLLISION_THRESHOLD_PX = 40;
 
 function formatValue(v) {
   return Number(v).toLocaleString('en-US', { maximumFractionDigits: 0 });

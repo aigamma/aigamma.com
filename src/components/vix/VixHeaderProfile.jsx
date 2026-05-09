@@ -82,11 +82,6 @@ function fmt(n, dp = 2) {
   return n.toFixed(dp);
 }
 
-function fmtPct(n, dp = 1) {
-  if (n == null || !Number.isFinite(n)) return '—';
-  return `${(n * 100).toFixed(dp)}%`;
-}
-
 function fmtRank(rank) {
   if (rank == null) return '—';
   return `${rank.toFixed(0)}th pct (1y)`;
