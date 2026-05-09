@@ -152,7 +152,7 @@ export default function VixHeaderProfile({ data }) {
           value={fmt(cells.VIX.value)}
           sub={fmtRank(cells.VIX.rank)}
           tone={pctTone(cells.VIX.rank)}
-          title="Cboe Volatility Index — 30-day implied vol on SPX from option mid prices. Color reflects 1-year percentile rank."
+          title="Cboe Volatility Index: 30-day implied vol on SPX from option mid prices. Color reflects 1-year percentile rank."
         />
         <PillCell
           label="VIX1D"
