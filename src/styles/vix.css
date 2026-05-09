@@ -177,11 +177,12 @@
 /* ---- Per-card description prose ----------------------------------------- */
 /* Each VIX model card carries its own narrative description directly below
    the chart, mirroring the convention on the eight RESEARCH lab pages
-   (/discrete/, /local/, /smile/, etc) where each slot's prose lives inside
-   the same card as the chart. The previous /vix/ layout collected every
-   model description into a single 'What this page measures' card pinned to
-   the bottom of the page; that broke spatial association between each
-   chart and its explanation and made the prose feel orphaned. */
+   (/discrete/, /jump/, /local/, /regime/, /risk/, /rough/, /garch/, /vix/)
+   where each slot's prose lives inside the same card as the chart. The
+   previous /vix/ layout collected every model description into a single
+   'What this page measures' card pinned to the bottom of the page; that
+   broke spatial association between each chart and its explanation and
+   made the prose feel orphaned. */
 .vix-card-description {
   margin-top: 0.85rem;
   padding-top: 0.85rem;
