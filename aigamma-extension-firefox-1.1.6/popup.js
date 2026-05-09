@@ -1,5 +1,15 @@
 // AI Gamma popup — schemaVersion 2 of the snapshot wire contract, plus
-// the v1.1.4 AI narration block injection plus the v1.1.5 wall-row swap (Call Wall above Put Wall).
+// the v1.1.4 AI narration block injection, the v1.1.5 wall-row swap
+// (Call Wall above Put Wall), and the v1.1.6 metric-row regrouping plus
+// the user-facing "Vol Flip" -> "Volatility Flip" label rename. The
+// v1.1.6 row order groups the strike-level cells (Volatility Flip,
+// Call Wall, Put Wall) immediately below Dist from Risk Off, and pushes
+// the implied-vol cells (Term Structure, VRP, IV Rank, ATM IV%) below
+// the wall pair. JS variable / element-ID names like volFlip stay
+// unchanged because popup.js looks rows up by getElementById and the
+// public snapshot.json wire field is also still volFlip; only the
+// label text in popup.html and the user-visible tooltip mentions of
+// "Vol Flip" were changed to "Volatility Flip" in v1.1.6.
 //
 // Three parallel fetches on open:
 //   1. /api/snapshot.json — scalar regime + level + vol metrics from the

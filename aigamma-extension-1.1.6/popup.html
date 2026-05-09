@@ -48,7 +48,7 @@
       </span>
     </div>
 
-    <div class="row" title="Overnight directional score. Today's Put Wall, Vol Flip, and Call Wall compared against yesterday's closing values. Each level contributes +1 if it rose overnight, -1 if it fell, 0 if flat. Net sum in [-3, +3]. Arrows read put wall · vol flip · call wall.">
+    <div class="row" title="Overnight directional score. Today's Put Wall, Volatility Flip, and Call Wall compared against yesterday's closing values. Each level contributes +1 if it rose overnight, -1 if it fell, 0 if flat. Net sum in [-3, +3]. Arrows read put wall · volatility flip · call wall.">
       <span class="label">Overnight Align</span>
       <span class="value">
         <span id="overnightScore" class="num">...</span>
@@ -63,7 +63,7 @@
       </span>
     </div>
 
-    <div class="row" title="SPX Reference minus Vol Flip. Positive (above Vol Flip) = dealers long gamma (dampening), gamma-green; negative (below Vol Flip) = dealers short gamma (amplifying), red.">
+    <div class="row" title="SPX Reference minus Volatility Flip. Positive (above Volatility Flip) = dealers long gamma (dampening), gamma-green; negative (below Volatility Flip) = dealers short gamma (amplifying), red.">
       <span class="label">Dist from Risk Off</span>
       <span class="value">
         <span id="distRiskOff" class="num">...</span>
@@ -71,9 +71,23 @@
     </div>
 
     <div class="row" title="Strike where the signed dealer gamma profile crosses zero. Above = positive-gamma regime; below = negative-gamma regime. Delta vs prior trading day in parentheses, colored bullish-green / yellow / red for moved-up / flat / moved-down.">
-      <span class="label">Vol Flip</span>
+      <span class="label">Volatility Flip</span>
       <span class="value">
         <span id="volFlip" class="num">...</span><span id="volFlipDelta" class="delta"></span>
+      </span>
+    </div>
+
+    <div class="row" title="Strike with the largest concentration of call-side open-interest gamma. Often acts as upside resistance. Delta vs prior trading day in parentheses, colored bullish-green / yellow / red for moved-up / flat / moved-down.">
+      <span class="label">Call Wall</span>
+      <span class="value">
+        <span id="callWall" class="num">...</span><span id="callWallDelta" class="delta"></span>
+      </span>
+    </div>
+
+    <div class="row" title="Strike with the largest concentration of put-side open-interest gamma. Often acts as downside support. Delta vs prior trading day in parentheses, colored bullish-green / yellow / red for moved-up / flat / moved-down.">
+      <span class="label">Put Wall</span>
+      <span class="value">
+        <span id="putWall" class="num">...</span><span id="putWallDelta" class="delta"></span>
       </span>
     </div>
 
@@ -95,20 +109,6 @@
       <span class="label">IV Rank</span>
       <span class="value">
         <span id="ivRank" class="num">...</span><span id="ivRankDelta" class="delta"></span>
-      </span>
-    </div>
-
-    <div class="row" title="Strike with the largest concentration of call-side open-interest gamma. Often acts as upside resistance. Delta vs prior trading day in parentheses, colored bullish-green / yellow / red for moved-up / flat / moved-down.">
-      <span class="label">Call Wall</span>
-      <span class="value">
-        <span id="callWall" class="num">...</span><span id="callWallDelta" class="delta"></span>
-      </span>
-    </div>
-
-    <div class="row" title="Strike with the largest concentration of put-side open-interest gamma. Often acts as downside support. Delta vs prior trading day in parentheses, colored bullish-green / yellow / red for moved-up / flat / moved-down.">
-      <span class="label">Put Wall</span>
-      <span class="value">
-        <span id="putWall" class="num">...</span><span id="putWallDelta" class="delta"></span>
       </span>
     </div>
 

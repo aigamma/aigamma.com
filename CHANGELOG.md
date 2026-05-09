@@ -1,5 +1,50 @@
 # Changelog
 
+## 1.1.6 — 2026-05-09 — Browser extension metric reorder + Volatility Flip rename
+
+The browser extension popup metric ladder was regrouped so the
+strike-level cells (Volatility Flip, Call Wall, Put Wall) now sit
+contiguous as a block immediately below Dist from Risk Off, and the
+implied-vol cells (Term Structure, VRP, IV Rank, ATM IV%) drop below
+the wall pair. The full v1.1.6 row order from top to bottom is: SPX
+(15min delayed), Overnight Align, Gamma Index, Dist from Risk Off,
+Volatility Flip, Call Wall, Put Wall, Term Structure, VRP, IV Rank,
+ATM IV%, P/C (Volume), P/C (OI). Eric specified the regrouping
+explicitly: keeping the three SPX strike-level metrics adjacent makes
+the ladder read as two semantic groups (price-level cells, then
+volatility-surface cells) rather than the prior interleaving where the
+walls sat below the IV metrics.
+
+The "Vol Flip" label was renamed to "Volatility Flip" in the popup,
+matching the more-readable noun-phrase form. The change is purely a
+display-string rename: the JS variable name `volFlip`, the snapshot.json
+wire field name `volFlip`, the element ID `volFlip`, and the JS
+variable references in `popup.js`'s applyDeltas function are all
+unchanged so the rename does not affect the
+schemaVersion-2-compatibility guarantee or the IDs that
+`getElementById` relies on. The user-visible places that absorbed the
+rename are the popup row label itself and the two tooltips that
+reference the metric by name (the Overnight Align row's title attribute
+which describes the directional score's components, and the Dist from
+Risk Off row's title which describes the differential's reference
+level). Internal popup.js comments that mention "Vol Flip" alongside
+the JS variable name were left as the abbreviated form for symmetry
+with the variable, with a header-comment note explaining the asymmetry.
+
+The change is purely an ordering and label change in `popup.html` (the
+`<div class="row">` blocks for Term Structure, VRP, and IV Rank were
+moved as a group from immediately after Volatility Flip down to
+immediately after Put Wall, and the Volatility Flip row's label text
+plus two tooltip mentions of "Vol Flip" were rewritten). No CSS, no
+JavaScript logic, and no manifest behavioral changes ship with this
+version. Both extension manifests now declare `"version": "1.1.6"`,
+both popup.js header comments name the v1.1.6 regrouping + rename,
+both READMEs reflect the new row ordering and the rename in the "Popup
+contents" section, `package.json` and `package-lock.json` mirror the
+bump, and both submission-ready zips at the repo root were rebuilt
+against the new directory names (`aigamma-extension-1.1.6/` and
+`aigamma-extension-firefox-1.1.6/`).
+
 ## 1.1.5 — 2026-05-09 — Browser extension Call Wall promoted above Put Wall
 
 The Call Wall row in the popup metric ladder was promoted above the Put
