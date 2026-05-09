@@ -23,7 +23,19 @@ export default defineConfig([
       },
     },
     rules: {
-      'no-unused-vars': ['error', { varsIgnorePattern: '^[A-Z_]' }],
+      'no-unused-vars': [
+        'error',
+        {
+          varsIgnorePattern: '^[A-Z_]',
+          // Allow leading-underscore names (especially `_`) inside array
+          // destructuring patterns. Without this, `[_, p] => p.topnav`-style
+          // index-discarding patterns trip no-unused-vars even though `_` is
+          // the universal name for "destructured but intentionally ignored."
+          // varsIgnorePattern alone does not apply to destructured array
+          // elements; eslint v9+ requires this separate option.
+          destructuredArrayIgnorePattern: '^_',
+        },
+      ],
     },
   },
   {
