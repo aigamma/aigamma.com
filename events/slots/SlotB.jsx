@@ -324,7 +324,6 @@ export default function SlotB() {
   );
 
   const upcoming = useMemo(() => scoped.filter((e) => e._ms >= now), [scoped, now]);
-  const past = useMemo(() => scoped.filter((e) => e._ms < now), [scoped, now]);
   const scheduleEvents = scoped;
 
   const heroGroup = useMemo(() => {
@@ -902,13 +901,6 @@ function TimelineStrip({ events, now }) {
   const ROW_HEIGHT = 44;
 
   const todayIso = isoDateLocal(new Date(now));
-
-  // Per-event color: macro events use their impact tier color (High
-  // = coral, Medium = amber, Low = gray, Holiday = purple); earnings
-  // events use the EARNINGS_HEX (purple) and render as a hollow ring
-  // so they visually distinguish from filled-purple Holiday tier
-  // events even when the two share the same hex.
-  const colorFor = (e) => (e._kind === 'earnings' ? EARNINGS_HEX : impactHex(e.impact));
 
   // Macro and earnings counts for the meta strip below the title.
   const macroCount = windowEvents.filter((e) => e._kind !== 'earnings').length;
@@ -1529,13 +1521,13 @@ function EventRow({ event: e, past, expanded, onToggle }) {
         <span className="econ-events__row-toggle" aria-hidden="true">{expanded ? '▾' : '▸'}</span>
       </button>
       {expanded && (
-        <EventRowDetail event={e} past={past} />
+        <EventRowDetail event={e} />
       )}
     </div>
   );
 }
 
-function EventRowDetail({ event: e, past }) {
+function EventRowDetail({ event: e }) {
   const googleHref = useMemo(() => googleCalendarUrl(e), [e]);
   const outlookHref = useMemo(() => outlookCalendarUrl(e), [e]);
   const [news, setNews] = useState({ status: 'loading', items: [] });
