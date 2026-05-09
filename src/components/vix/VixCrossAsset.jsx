@@ -141,16 +141,17 @@ export default function VixCrossAsset({ data }) {
       showlegend: false,
     });
 
-    plotly.newPlot(ref.current, traces, layout, {
+    const node = ref.current;
+    plotly.newPlot(node, traces, layout, {
       displayModeBar: false,
       responsive: true,
     });
 
-    const onResize = () => plotly.Plots.resize(ref.current);
+    const onResize = () => plotly.Plots.resize(node);
     window.addEventListener('resize', onResize);
     return () => {
       window.removeEventListener('resize', onResize);
-      if (ref.current) plotly.purge(ref.current);
+      plotly.purge(node);
     };
   }, [plotly, traces, isMobile, activeRange]);
 

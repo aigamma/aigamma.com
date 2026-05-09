@@ -149,16 +149,17 @@ export default function VixVolOfVol({ data }) {
       legend: { orientation: 'h', y: -0.18, x: 0.5, xanchor: 'center' },
     });
 
-    plotly.newPlot(ref.current, traces, layout, {
+    const node = ref.current;
+    plotly.newPlot(node, traces, layout, {
       displayModeBar: false,
       responsive: true,
     });
 
-    const onResize = () => plotly.Plots.resize(ref.current);
+    const onResize = () => plotly.Plots.resize(node);
     window.addEventListener('resize', onResize);
     return () => {
       window.removeEventListener('resize', onResize);
-      if (ref.current) plotly.purge(ref.current);
+      plotly.purge(node);
     };
   }, [plotly, series, isMobile, activeRange]);
 
