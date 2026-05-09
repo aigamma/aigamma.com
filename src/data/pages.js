@@ -18,10 +18,15 @@
 // the helpers below preserve it so the on-page menu order matches what
 // the registry declares. Order is:
 //   1. Homepage (/)
-//   2. TopNav six in their left-to-right order (curated by importance)
+//   2. TopNav five in their left-to-right order (curated by importance)
 //   3. Menu Tools in curated order (importance, not alphabetical)
 //   4. Menu Research in alphabetical order (so URL discovery is linear)
-//   5. Menu About (/disclaimer/)
+//   5. /disclaimer/ entry (page exists but is not exposed in any
+//      Menu / TOOLS / RESEARCH dropdown — the disclaimer is reachable
+//      from the right-corner chat-header chip and from every page's
+//      footer, both of which already make it unmistakable, so a
+//      duplicate dropdown link added redundancy with no discovery
+//      benefit and was removed on 2026-05-08)
 //   6. Sandboxes (/alpha/, /beta/, /dev/) — vite-only, no nav, no chat
 //
 // Field reference:
@@ -52,7 +57,7 @@ export const PAGES = {
     chat: { surface: 'main', prompt: 'netlify/functions/prompts/main.mjs' },
   },
 
-  // ---- TopNav six (left-to-right by importance) ------------------------
+  // ---- TopNav five (left-to-right by importance) -----------------------
   '/tactical/': {
     vite: 'tactical',
     html: 'tactical/index.html',
@@ -81,13 +86,6 @@ export const PAGES = {
     title: 'Rotations',
     topnav: { key: 'rotations', label: 'Rotations' },
     mobile_desc: 'Sector rotation chart and 1D/1W/1M bar trio',
-  },
-  '/vix/': {
-    vite: 'vix',
-    html: 'vix/index.html',
-    title: 'VIX',
-    topnav: { key: 'vix', label: 'VIX' },
-    mobile_desc: 'VIX term structure, contango, Ornstein-Uhlenbeck, VVIX, SDEX/TDEX, regimes, Cboe strategies',
   },
   '/seasonality/': {
     vite: 'seasonality',
@@ -175,12 +173,20 @@ export const PAGES = {
     menu: { section: 'research', desc: 'Rough Bergomi simulator + skew scaling-law fit, RFSV diagnostic, three-estimator Hurst triangulation' },
     mobile_desc: 'rBergomi simulator, skew scaling-law fit, RFSV, three-estimator Hurst triangulation',
   },
-  // ---- Menu About ------------------------------------------------------
+  '/vix/': {
+    vite: 'vix',
+    html: 'vix/index.html',
+    title: 'VIX',
+    menu: { section: 'research', desc: 'VIX family term structure, OU mean reversion, VVIX/VIX complacency, SDEX/TDEX, regime classifier, Cboe strategy benchmarks' },
+    mobile_desc: 'VIX term structure, contango, Ornstein-Uhlenbeck, VVIX, SDEX/TDEX, regimes, Cboe strategies',
+  },
+  // ---- Disclaimer page (intentionally not exposed in any nav dropdown;
+  //      the right-corner chat-header chip and the lab-footer link both
+  //      already surface it on every page) -----------------------------
   '/disclaimer/': {
     vite: 'disclaimer',
     html: 'disclaimer/index.html',
     title: 'Disclaimer',
-    menu: { section: 'about', desc: 'As-is mathematics, MIT license, no commercial purpose, standard trading disclaimers' },
   },
 
   // ---- Dev sandboxes (vite-only, no nav, no chat) ----------------------
@@ -214,22 +220,24 @@ export const VITE_ENTRIES = Object.fromEntries(
   Object.values(PAGES).map((p) => [p.vite, p.html])
 );
 
-// Top nav buttons (the six promoted lab pages)
+// Top nav buttons (the five promoted lab pages)
 export const TOPNAV_ITEMS = Object.entries(PAGES)
   .filter(([_, p]) => p.topnav)
   .map(([href, p]) => ({ key: p.topnav.key, href, label: p.topnav.label }));
 
-// Desktop Menu items, split by section
+// Desktop Menu items, split by section. There is no longer an `about`
+// section: /disclaimer/ used to live there but was removed from the
+// dropdown on 2026-05-08 (already surfaced via the right-corner chat-
+// header chip and the lab-footer link on every page), and the off-site
+// "About This Page" exit link is hardcoded directly in Menu.jsx because
+// it points off-domain to about.aigamma.com and never had a registry
+// entry.
 export const MENU_TOOLS = Object.entries(PAGES)
   .filter(([_, p]) => p.menu?.section === 'tools')
   .map(([href, p]) => ({ href, label: href, desc: p.menu.desc }));
 
 export const MENU_RESEARCH = Object.entries(PAGES)
   .filter(([_, p]) => p.menu?.section === 'research')
-  .map(([href, p]) => ({ href, label: href, desc: p.menu.desc }));
-
-export const MENU_ABOUT = Object.entries(PAGES)
-  .filter(([_, p]) => p.menu?.section === 'about')
   .map(([href, p]) => ({ href, label: href, desc: p.menu.desc }));
 
 // Mobile dropdown items. TOOLS dropdown holds (a) all top-nav promoted

@@ -1,17 +1,22 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
 import MobileNav from './MobileNav';
-import { MENU_TOOLS, MENU_RESEARCH, MENU_ABOUT } from '../data/pages.js';
+import { MENU_TOOLS, MENU_RESEARCH } from '../data/pages.js';
 
 // Shared menu dropdown. Rendered in the main dashboard header and in
 // every lab header so the bookmark-only labs are reachable from any
 // page without touching the URL bar. Items are organized into three
 // sections separated by inline section headers — Tools (operational
-// surfaces and diagnostics), Research (model-family zoos), About
-// (off-site exit to about.aigamma.com plus the on-site /disclaimer
-// page that carries the as-is mathematics framing, the MIT-license
-// attribution, the no-commercial-purpose statement, and the standard
-// trading disclaimers). Research stays alphabetized by path so a
-// reader who knows the URL can find it in linear time.
+// surfaces and diagnostics), Research (model-family zoos), and About
+// (a single off-site exit to about.aigamma.com). Research stays
+// alphabetized by path so a reader who knows the URL can find it in
+// linear time. The /disclaimer page used to sit under the About
+// header alongside the off-site About This Page link, but the
+// dropdown entry was removed on 2026-05-08 — the disclaimer is
+// already surfaced as the coral DISCLAIMER chip in the right corner
+// of the chat header on every page and as the lab-footer-disclaimer
+// link in the footer of every lab page, so the dropdown row was
+// adding redundancy without discovery benefit. The /disclaimer/
+// page itself is unchanged.
 //
 // Renders TWO navigation surfaces side-by-side as a fragment so a
 // single <Menu /> mount in any page header carries both the desktop
@@ -32,27 +37,29 @@ import { MENU_TOOLS, MENU_RESEARCH, MENU_ABOUT } from '../data/pages.js';
 // which understated the centrality of the single-names and sector
 // views to the daily read. The /parity lab that previously sat in
 // Research between /local/ and /regime/ was retired on 2026-05-07
-// and the URL 301-redirects to /; the section now collapses to the
-// nine remaining research zoos.
+// and the URL 301-redirects to /; /vix/ joined the Research section
+// on 2026-05-08 after being demoted from the TopNav.
 //
-// Six lab pages — /tactical/, /earnings/, /scan/, /rotations/,
-// /vix/, /seasonality/ — live in the TopNav component (see
+// Five lab pages — /tactical/, /earnings/, /scan/, /rotations/,
+// /seasonality/ — live in the TopNav component (see
 // src/components/TopNav.jsx) and render as standalone buttons in
 // the header alongside the Menu trigger. Their entries are not
 // duplicated here; opening Menu exposes only the labs that did
 // not get promoted to the top nav.
 //
-// Why the Research section: the seven model-family zoos
-// (/garch/, /regime/, /rough/, /local/, /risk/, /jump/,
-// /discrete/) are intellectually distinct from the
+// Why the Research section: the eight model-family / VIX-family
+// zoos (/discrete/, /garch/, /jump/, /local/, /regime/, /risk/,
+// /rough/, /vix/) are intellectually distinct from the
 // operational tools — they are calibrated-in-browser model libraries
-// rather than dashboards, and a reader scanning Menu in a flat
-// alphabetized list had no way to tell which entries were "live
-// data tools I might use today" versus "research surfaces I'd visit
-// to read about a vol model." Grouping them under a Research header
-// signals the difference at a glance without removing them from the
-// dropdown — TopNav stays at six items per its deliberate design,
-// and the bookmark-only labs remain bookmark-discoverable.
+// (or, in the VIX case, a multi-card analytics surface organized as
+// model cards) rather than live dashboards, and a reader scanning
+// Menu in a flat alphabetized list had no way to tell which entries
+// were "live data tools I might use today" versus "research surfaces
+// I'd visit to read about a vol model." Grouping them under a
+// Research header signals the difference at a glance without
+// removing them from the dropdown — TopNav stays at five items per
+// its deliberate design, and the bookmark-only labs remain
+// bookmark-discoverable.
 //
 // Section headers are rendered as non-interactive `role="presentation"`
 // rows with the menu-section-header class. They are skipped in the
@@ -64,14 +71,14 @@ import { MENU_TOOLS, MENU_RESEARCH, MENU_ABOUT } from '../data/pages.js';
 // header rows so the keyboard-navigation logic below can skip the headers
 // when computing focusable indices. The "About This Page" external link is
 // appended explicitly because it points off-site to about.aigamma.com and
-// has no entry in the page registry.
+// has no entry in the page registry; it is the only row under the About
+// header now that /disclaimer/ has been removed from the dropdown.
 const MENU_ITEMS = [
   { type: 'header', label: 'Tools' },
   ...MENU_TOOLS.map((item) => ({ type: 'item', ...item })),
   { type: 'header', label: 'Research' },
   ...MENU_RESEARCH.map((item) => ({ type: 'item', ...item })),
   { type: 'header', label: 'About' },
-  ...MENU_ABOUT.map((item) => ({ type: 'item', ...item })),
   { type: 'item', href: 'https://about.aigamma.com/', label: 'About This Page', desc: 'Created by Eric Allione' },
 ];
 
@@ -93,7 +100,7 @@ export default function Menu({ regimeIndicator } = {}) {
 
   // Wrap-detection. When the surrounding header (.site-header on the
   // main dashboard, .lab-header on every lab page) is too narrow to
-  // fit the lab badge + the six TopNav buttons + the optional Return
+  // fit the lab badge + the five TopNav buttons + the optional Return
   // Home button + this Menu trigger on one row, flex-wrap reflows the
   // overflowing children onto a second row. With the existing desktop
   // layout (justify-content: space-between + display: contents on

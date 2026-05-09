@@ -25,12 +25,12 @@
    clusters tightly on the right. The desktop @media (min-width: 769px)
    block below cancels both the auto margin and lab-header's flex-start
    distribution and switches in justify-content: space-between with
-   display: contents on .top-nav, so the six TopNav buttons become
+   display: contents on .top-nav, so the five TopNav buttons become
    direct flex items of .lab-header alongside the brand, the Return
    Home button, and the Menu trigger and the whole row distributes
    evenly across the desktop viewport instead of clustering tightly
    on the right after a single big gap. The mobile cluster relies on
-   flex-wrap as a fallback: with six top-nav buttons plus the
+   flex-wrap as a fallback: with five top-nav buttons plus the
    Return Home button, the Menu trigger, and the lab badge it will
    spill onto a second line at the narrower phone widths. */
 .lab-brand {

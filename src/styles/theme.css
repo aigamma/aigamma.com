@@ -416,7 +416,7 @@ body {
 }
 
 /* ===== MOBILE NAV =====
-   Mobile-only replacement for the desktop right-cluster (TopNav six
+   Mobile-only replacement for the desktop right-cluster (TopNav five
    buttons + inline Return Home + MENU dropdown trigger). Renders three
    pills laid out left-to-right in a single right-aligned row at ≤768px:
 
@@ -675,9 +675,9 @@ body {
    Main dashboard header chrome. The header has no left-side brand
    cluster anymore — the aigamma wordmark and the dealer-gamma
    regime indicator both moved into the LevelsPanel card directly
-   below — so the row is just the right-side nav cluster: the six
-   TopNav buttons (Vol, Earnings, Scan, Rotations, VIX,
-   Seasonality) plus the Menu trigger.
+   below — so the row is just the right-side nav cluster: the five
+   TopNav buttons (Vol, Earnings, Scan, Rotations, Seasonality)
+   plus the Menu trigger.
 
    Mobile-first uses justify-content: flex-end so the cluster
    sits flush against the right edge of the row (with no brand
@@ -685,12 +685,12 @@ body {
    no longer has anything to push against). At desktop widths
    (≥769px) the layout switches to space-between and the
    companion .top-nav { display: contents } rule dissolves the
-   TopNav wrapper so its six buttons become direct flex items of
-   .site-header alongside the Menu trigger — seven children that
+   TopNav wrapper so its five buttons become direct flex items of
+   .site-header alongside the Menu trigger — six children that
    space-between distributes as a single evenly spaced row across
    the desktop viewport. With flex-wrap: wrap as the always-on
    fallback, the cluster degrades to a second line at the
-   narrowest phone widths where six buttons + a Menu trigger
+   narrowest phone widths where five buttons + a Menu trigger
    cannot share one row even with the compact mobile labels. */
 .site-header {
   display: flex;
@@ -1257,7 +1257,7 @@ body {
     display: block;
   }
 
-  /* Mobile-nav swap. The desktop right-cluster (six TopNav buttons +
+  /* Mobile-nav swap. The desktop right-cluster (five TopNav buttons +
      inline Return Home + MENU dropdown trigger) collapses into the
      three-pill MobileNav at ≤768px. Hiding .top-nav, .menu, and
      .lab-home-button--inline (the last lives in lab.css and gets its
