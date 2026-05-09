@@ -211,3 +211,20 @@
   for = "/logo.webp"
   [headers.values]
     Cache-Control = "public, max-age=604800"
+
+# Local Netlify Build Plugin that pushes the site's URL list to Bing's
+# IndexNow API after every successful production deploy. The plugin lives
+# at netlify/plugins/indexnow and reads dist/sitemap.xml (emitted by the
+# sitemapPlugin in vite.config.js), then POSTs the <loc> entries to
+# https://api.indexnow.org/indexnow in batches of up to 10000 URLs as the
+# protocol allows. Two env vars must be set in the Netlify UI under Site
+# settings -> Environment variables for the plugin to run: INDEXNOW_API_KEY
+# (the 32-character lowercase-hex key matching the verification file at
+# https://aigamma.com/<key>.txt) and SITE_HOST (the bare host, e.g.,
+# aigamma.com). Both are deliberately kept out of code and netlify.toml so
+# the secret never lands in git history. Disable the plugin by commenting
+# out this block; the deploy completes normally with no IndexNow side
+# effects. See docs/indexnow.md for the verification flow and Bing
+# Webmaster Tools IndexNow Insights monitoring procedure.
+[[plugins]]
+  package = "/netlify/plugins/indexnow"
