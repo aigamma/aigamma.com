@@ -1,7 +1,7 @@
 import { fileURLToPath } from 'node:url'
 import { defineConfig } from 'vite'
 import react from '@vitejs/plugin-react'
-import { VITE_ENTRIES } from './src/data/pages.js'
+import { PAGES, VITE_ENTRIES } from './src/data/pages.js'
 
 // Inject <link rel="modulepreload"> for every dynamic-import chunk reachable
 // from the main entry, so Vite's React.lazy-generated chunks (the ten
@@ -59,6 +59,38 @@ function lazyChunkPreloadPlugin() {
       },
     },
   };
+}
+
+// Emit dist/sitemap.xml at build time from the canonical PAGES registry. The
+// sitemap is the URL discovery surface that the Netlify IndexNow build plugin
+// (netlify/plugins/indexnow) parses on every successful deploy to push the
+// site's page list to Bing's IndexNow API. Producing it from PAGES rather
+// than hand-maintaining a separate sitemap.xml means a new page added to
+// pages.js automatically becomes both navigable and search-discoverable on
+// the next deploy without any extra coordination. Sandboxes (/alpha/, /beta/,
+// /dev/) are explicitly excluded — they're noindex bookmark-only dev surfaces
+// already disallowed in robots.txt and have no business in search indices.
+// See docs/indexnow.md for the wider integration.
+const SITEMAP_HOST = 'https://aigamma.com'
+const SITEMAP_EXCLUDE = new Set(['/alpha/', '/beta/', '/dev/'])
+function sitemapPlugin() {
+  return {
+    name: 'sitemap-generator',
+    apply: 'build',
+    generateBundle() {
+      const urls = Object.keys(PAGES)
+        .filter((path) => !SITEMAP_EXCLUDE.has(path))
+        .map((path) => `${SITEMAP_HOST}${path}`)
+      const xml = [
+        '<?xml version="1.0" encoding="UTF-8"?>',
+        '<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">',
+        ...urls.map((url) => `  <url><loc>${url}</loc></url>`),
+        '</urlset>',
+        '',
+      ].join('\n')
+      this.emitFile({ type: 'asset', fileName: 'sitemap.xml', source: xml })
+    },
+  }
 }
 
 // Multi-page build. Thirteen entries: the main dashboard at `index.html`
@@ -133,7 +165,7 @@ function lazyChunkPreloadPlugin() {
 // Heston slot that was previously its own /smile/ lab), and
 // discrete/App.jsx for the rationale.
 export default defineConfig({
-  plugins: [react(), lazyChunkPreloadPlugin()],
+  plugins: [react(), lazyChunkPreloadPlugin(), sitemapPlugin()],
   server: {
     proxy: {
       '/api': {

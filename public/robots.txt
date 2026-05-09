@@ -3,3 +3,7 @@ Disallow: /alpha/
 Disallow: /alpha
 Disallow: /beta/
 Disallow: /beta
+Disallow: /dev/
+Disallow: /dev
+
+Sitemap: https://aigamma.com/sitemap.xml
