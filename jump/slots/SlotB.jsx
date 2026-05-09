@@ -12,66 +12,215 @@ import {
 import { daysToExpiration, pickDefaultExpiration, filterPickerExpirations } from '../../src/lib/dates';
 
 // -----------------------------------------------------------------------------
-// Merton (1976) Jump Diffusion. The original "Black-Scholes plus jumps"
-// model. The spot follows geometric Brownian motion with a compound
-// Poisson overlay of log-normally distributed jumps:
+// Heston (1993) Stochastic Variance. The benchmark stochastic-vol model
+// against which the rest of the lineage on this page is measured. The
+// spot follows GBM with a CIR-driven instantaneous variance:
 //
-//   dS/S = (r − q − λ·k)·dt + σ·dW + (Y − 1)·dN
+//   dS/S = (r − q)·dt + √v·dW₁
+//   dv   = κ·(θ − v)·dt + ξ·√v·dW₂
+//   d⟨W₁,W₂⟩ = ρ·dt
 //
-// where N is a Poisson process with intensity λ per year, log Y ~
-// N(μ_J, σ_J²) is the log jump size, and k = E[Y − 1] = exp(μ_J +
-// σ_J²/2) − 1 is the compensator that keeps the discounted price a
-// martingale under the risk-neutral measure.
+// Five risk-neutral parameters: κ (variance mean-reversion speed), θ
+// (long-run variance, so √θ is the long-run volatility), ξ (vol-of-vol,
+// the diffusion coefficient on variance), ρ (instantaneous correlation
+// between spot and variance shocks; strongly negative on equities,
+// driving the leverage skew), and v₀ (current instantaneous variance).
 //
-// The European call price is a Poisson-weighted infinite series of
-// Black-Scholes prices, each priced with a per-n adjusted spot and
-// per-n adjusted variance:
+// Heston is the no-jumps baseline that every other slot on this page
+// extends or contrasts with. Merton, Kou, and VG all add or replace the
+// continuous-diffusion piece with discrete jumps; Bates SVJ literally
+// embeds Heston and tacks Merton-style log-normal jumps on top of the
+// spot SDE. The headline limitation that motivates the rest of the
+// page is that pure Heston cannot match the short-tenor smile that the
+// SPX surface actually exhibits. Heston produces skew via the
+// diffusive correlation ρ, but ρ-skew flattens to a flat line as T
+// approaches zero because every diffusion path is locally Gaussian.
+// The Bates extension below restores the short-tenor skew by adding a
+// finite-activity jump component.
 //
-//   C = Σ_{n=0}^∞  e^(-λ'·T) · (λ'·T)^n / n!  ·  BSM(S_n, K, T, r_n, σ_n)
-//
-//   λ' = λ·(1 + k)
-//   r_n = r − λ·k + n·(μ_J + σ_J²/2) / T
-//   σ_n² = σ² + n·σ_J² / T
-//
-// Series converges fast in practice. n up to 60 is more than enough
-// for any sensible λ·T on equity-index time scales (λ·T < 5 here).
-//
-// Five free parameters (σ, λ, μ_J, σ_J, [r,q fixed]). Calibrated by
-// Nelder-Mead on IV-space residuals against a single SPX expiration
-// slice, identical observation set to the Heston slot above.
+// Pricing uses the same Lewis (2001) single-integral inversion of the
+// Schoutens single-CF form that the Bates slot uses, with the jump
+// factor switched off. Same atan-substituted u-grid, same per-K sum
+// against the inversion kernel, same spot-centered CF of X = ln(S_T/S₀).
+// 5 free parameters, calibrated by Nelder-Mead on IV-space residuals
+// against the same SPX expiration slice the other four slots use.
 // -----------------------------------------------------------------------------
 
 const RATE_R = 0.045;
 const RATE_Q = 0.013;
-const N_TERMS = 60;
-const NM_MAX_ITERS = 220;
+const INT_N = 601;
+const NM_MAX_ITERS = 240;
 
-// Pre-computed log factorials: log(n!) for n = 0..N_TERMS-1.
-const LOG_FACT = (() => {
-  const out = new Float64Array(N_TERMS);
-  let acc = 0;
-  out[0] = 0;
-  for (let n = 1; n < N_TERMS; n++) {
-    acc += Math.log(n);
-    out[n] = acc;
+// Pre-computed quadrature for Lewis (2001) inversion. v = atan(2u),
+// u = tan(v)/2, the 1/(u²+1/4) singularity dissolves into the dv
+// measure, and Simpson on [0, π/2] converges at its full O(h⁴) rate.
+const U_GRID = new Float64Array(INT_N);
+const U_WEIGHTS = new Float64Array(INT_N);
+{
+  const v_max = Math.PI / 2 - 1e-6;
+  const h = v_max / (INT_N - 1);
+  for (let i = 0; i < INT_N; i++) U_GRID[i] = Math.tan(i * h) / 2;
+  for (let i = 0; i < INT_N; i++) {
+    let w;
+    if (i === 0 || i === INT_N - 1) w = 1;
+    else if (i % 2 === 1) w = 4;
+    else w = 2;
+    U_WEIGHTS[i] = (2 * w * h) / 3;
   }
-  return out;
-})();
+}
 
-// ------- BSM pricer + Newton inversion for IV -----------------------------
+// ---- Heston CF (Schoutens single-CF form, X = ln(S_T/S₀)) --------------
+//
+// Centered CF (around S₀): the ln S₀ shift is absorbed into the Lewis k
+// outside this loop so the integrand has O(1) magnitude. Identical to
+// the Heston piece inside the Bates SVJ slot's fillBatesCf, with the
+// jump factor exp[λT·(...)] omitted because λ ≡ 0 on this slot.
+//
+// At u = u_real − i/2 the complex parts collapse to:
+//   iu        = (1/2, u_real)
+//   u²        = (u_real² − 1/4, −u_real)
+//   iu + u²   = (u_real² + 1/4, 0)        ← purely real
+//   ξ²·(iu+u²) = (ξ²·(u_real²+1/4), 0)
+function fillHestonCf(outRe, outIm, params, S0, T, r, q) {
+  const { kappa, theta, xi, rho, v0 } = params;
+  const xi2 = xi * xi;
+  const rhoXi = rho * xi;
+  const ktxi2 = (kappa * theta) / xi2;
+  const rmqT = (r - q) * T;
 
-function phi(x) {
+  for (let i = 0; i < INT_N; i++) {
+    const u = U_GRID[i];
+
+    // a = ρ·ξ·iu − κ = (0.5·ρξ − κ, ρξ·u)
+    const a_re = 0.5 * rhoXi - kappa;
+    const a_im = rhoXi * u;
+    // a²
+    const aSq_re = a_re * a_re - a_im * a_im;
+    const aSq_im = 2 * a_re * a_im;
+    // ξ²·(iu + u²) is purely real: ξ²·(u² + 1/4)
+    const xi2_iuPlusU2_re = xi2 * (u * u + 0.25);
+    // inside = a² + ξ²·(iu + u²)
+    const inside_re = aSq_re + xi2_iuPlusU2_re;
+    const inside_im = aSq_im;
+    // d = sqrt(inside) — principal branch with sign continuity
+    const inside_mag = Math.sqrt(inside_re * inside_re + inside_im * inside_im);
+    const d_re = Math.sqrt(0.5 * (inside_mag + inside_re));
+    const d_im = Math.sign(inside_im || 1) * Math.sqrt(0.5 * (inside_mag - inside_re));
+
+    // aMinus = κ − ρ·ξ·iu = (κ − 0.5·ρξ, −ρξ·u)
+    const am_re = kappa - 0.5 * rhoXi;
+    const am_im = -rhoXi * u;
+    // num = aMinus − d, den = aMinus + d
+    const num_re = am_re - d_re;
+    const num_im = am_im - d_im;
+    const den_re = am_re + d_re;
+    const den_im = am_im + d_im;
+    // g = num / den
+    const den_mag2 = den_re * den_re + den_im * den_im;
+    const g_re = (num_re * den_re + num_im * den_im) / den_mag2;
+    const g_im = (num_im * den_re - num_re * den_im) / den_mag2;
+
+    // eDt = exp(−d·T)
+    const negDT_re = -d_re * T;
+    const negDT_im = -d_im * T;
+    const expMag1 = Math.exp(negDT_re);
+    const eDt_re = expMag1 * Math.cos(negDT_im);
+    const eDt_im = expMag1 * Math.sin(negDT_im);
+
+    // gEdT = g · eDt — also serves as denominator (1 − gEdT) of D and ratio
+    const gEdT_re = g_re * eDt_re - g_im * eDt_im;
+    const gEdT_im = g_re * eDt_im + g_im * eDt_re;
+
+    // ratio = (1 − gEdT) / (1 − g)
+    const oneMinusGEdT_re = 1 - gEdT_re;
+    const oneMinusGEdT_im = -gEdT_im;
+    const oneMinusG_re = 1 - g_re;
+    const oneMinusG_im = -g_im;
+    const ompg_mag2 = oneMinusG_re * oneMinusG_re + oneMinusG_im * oneMinusG_im;
+    const ratio_re =
+      (oneMinusGEdT_re * oneMinusG_re + oneMinusGEdT_im * oneMinusG_im) / ompg_mag2;
+    const ratio_im =
+      (oneMinusGEdT_im * oneMinusG_re - oneMinusGEdT_re * oneMinusG_im) / ompg_mag2;
+    // logRatio = log(ratio) — principal branch
+    const logRatio_re = 0.5 * Math.log(ratio_re * ratio_re + ratio_im * ratio_im);
+    const logRatio_im = Math.atan2(ratio_im, ratio_re);
+
+    // term = num·T − 2·logRatio
+    const term_re = num_re * T - 2 * logRatio_re;
+    const term_im = num_im * T - 2 * logRatio_im;
+
+    // C = (r−q)·iu·T + (κθ/ξ²)·term. (r−q)·iu·T = (0.5·rmqT, u·rmqT)
+    const C_re = 0.5 * rmqT + term_re * ktxi2;
+    const C_im = u * rmqT + term_im * ktxi2;
+
+    // inner = (1 − eDt) / (1 − gEdT)
+    const oneMinusEDt_re = 1 - eDt_re;
+    const oneMinusEDt_im = -eDt_im;
+    const omgedt_mag2 =
+      oneMinusGEdT_re * oneMinusGEdT_re + oneMinusGEdT_im * oneMinusGEdT_im;
+    const inner_re =
+      (oneMinusEDt_re * oneMinusGEdT_re + oneMinusEDt_im * oneMinusGEdT_im) /
+      omgedt_mag2;
+    const inner_im =
+      (oneMinusEDt_im * oneMinusGEdT_re - oneMinusEDt_re * oneMinusGEdT_im) /
+      omgedt_mag2;
+
+    // D = (num/ξ²) · inner
+    const numXi2_re = num_re / xi2;
+    const numXi2_im = num_im / xi2;
+    const D_re = numXi2_re * inner_re - numXi2_im * inner_im;
+    const D_im = numXi2_re * inner_im + numXi2_im * inner_re;
+
+    // exponent = C + D·v0  (centered CF, no iu·log S₀ term)
+    const exp_re = C_re + D_re * v0;
+    const exp_im = C_im + D_im * v0;
+    const expMag = Math.exp(exp_re);
+    outRe[i] = expMag * Math.cos(exp_im);
+    outIm[i] = expMag * Math.sin(exp_im);
+  }
+}
+
+function precomputeHestonCfGrid(params, S0, T, r, q) {
+  const F_re = new Float64Array(INT_N);
+  const F_im = new Float64Array(INT_N);
+  fillHestonCf(F_re, F_im, params, S0, T, r, q);
+  return { F_re, F_im };
+}
+
+// ---- Lewis call price ----------------------------------------------------
+//
+// C = S₀·e^(−q·T) − √(S₀·K)·e^(−r·T) / π · ∫₀^∞ Re[ e^(i·u·k) · φ_X(u − i/2) ] / (u² + 1/4) du
+// where k = ln(S₀/K) and φ_X is the centered CF of X = ln(S_T/S₀).
+function hestonCallFromCfGrid(grid, S0, K, T, r, q) {
+  const { F_re, F_im } = grid;
+  const k = Math.log(S0 / K);
+  let acc = 0;
+  for (let i = 0; i < INT_N; i++) {
+    const u = U_GRID[i];
+    const c = Math.cos(u * k);
+    const s = Math.sin(u * k);
+    // 1/(u²+1/4) kernel absorbed into U_WEIGHTS via atan substitution.
+    const num_re = c * F_re[i] - s * F_im[i];
+    acc += U_WEIGHTS[i] * num_re;
+  }
+  const factor = (Math.sqrt(S0 * K) * Math.exp(-r * T)) / Math.PI;
+  const call = S0 * Math.exp(-q * T) - factor * acc;
+  return Math.max(call, Math.max(S0 * Math.exp(-q * T) - K * Math.exp(-r * T), 0));
+}
+
+// ------- BSM ------------------------------------------------------------
+
+function phiPdf(x) {
   return Math.exp(-0.5 * x * x) / Math.sqrt(2 * Math.PI);
 }
 function Phi(x) {
-  // Abramowitz-Stegun 26.2.17. ~7-digit accuracy, fast and stable.
   const a1 = 0.31938153;
   const a2 = -0.356563782;
   const a3 = 1.781477937;
   const a4 = -1.821255978;
   const a5 = 1.330274429;
   const k = 1 / (1 + 0.2316419 * Math.abs(x));
-  const w = 1 - phi(x) * (a1*k + a2*k*k + a3*k*k*k + a4*k*k*k*k + a5*k*k*k*k*k);
+  const w = 1 - phiPdf(x) * (a1*k + a2*k*k + a3*k*k*k + a4*k*k*k*k + a5*k*k*k*k*k);
   return x >= 0 ? w : 1 - w;
 }
 function bsmCall(S, K, T, r, q, sigma) {
@@ -87,7 +236,7 @@ function bsmVega(S, K, T, r, q, sigma) {
   const vsT = sigma * Math.sqrt(T);
   if (!(vsT > 0)) return 0;
   const d1 = (Math.log(S / K) + (r - q + 0.5 * sigma * sigma) * T) / vsT;
-  return S * Math.exp(-q * T) * phi(d1) * Math.sqrt(T);
+  return S * Math.exp(-q * T) * phiPdf(d1) * Math.sqrt(T);
 }
 function bsmIv(price, S, K, T, r, q) {
   const intrinsic = Math.max(S * Math.exp(-q * T) - K * Math.exp(-r * T), 0);
@@ -106,48 +255,30 @@ function bsmIv(price, S, K, T, r, q) {
   return sigma > 0 && sigma < 5 ? sigma : null;
 }
 
-// ------- Merton call price -----------------------------------------------
-
-function mertonCall(params, S0, K, T, r, q) {
-  const { sigma, lambda, muJ, sigmaJ } = params;
-  // k = E[Y − 1] = exp(μ_J + σ_J²/2) − 1
-  const k = Math.exp(muJ + 0.5 * sigmaJ * sigmaJ) - 1;
-  const lambdaT = lambda * T;
-  let price = 0;
-  // Truncate when the Poisson tail is negligibly small.
-  for (let n = 0; n < N_TERMS; n++) {
-    // log(p_n) = -λT + n·log(λT) - log(n!)
-    const logP = -lambdaT + n * Math.log(Math.max(lambdaT, 1e-300)) - LOG_FACT[n];
-    if (logP < -32 && n > 5) break;
-    const weight = Math.exp(logP);
-    const sigmaN = Math.sqrt(sigma * sigma + (n * sigmaJ * sigmaJ) / T);
-    const rN = r - lambda * k + (n * (muJ + 0.5 * sigmaJ * sigmaJ)) / T;
-    price += weight * bsmCall(S0, K, T, rN, q, sigmaN);
-  }
-  return price;
-}
-
-// ------- Reparameterization (unconstrained <-> constrained) ---------------
+// ------- Reparameterization ---------------------------------------------
+//
+// theta = [log κ, log θ, log ξ, atanh ρ, log v₀]
 
 function unpack(theta) {
-  // theta = [log σ, log λ, μ_J (free real), log σ_J]
   return {
-    sigma: Math.exp(theta[0]),
-    lambda: Math.exp(theta[1]),
-    muJ: theta[2],
-    sigmaJ: Math.exp(theta[3]),
+    kappa: Math.exp(theta[0]),
+    theta: Math.exp(theta[1]),
+    xi: Math.exp(theta[2]),
+    rho: Math.tanh(theta[3]),
+    v0: Math.exp(theta[4]),
   };
 }
 function pack(p) {
   return [
-    Math.log(Math.max(p.sigma, 1e-4)),
-    Math.log(Math.max(p.lambda, 1e-4)),
-    p.muJ,
-    Math.log(Math.max(p.sigmaJ, 1e-4)),
+    Math.log(Math.max(p.kappa, 1e-4)),
+    Math.log(Math.max(p.theta, 1e-6)),
+    Math.log(Math.max(p.xi, 1e-4)),
+    Math.atanh(Math.max(-0.999, Math.min(0.999, p.rho))),
+    Math.log(Math.max(p.v0, 1e-6)),
   ];
 }
 
-// ------- Nelder-Mead simplex (Gao-Han 2012 adaptive coefficients) --------
+// ------- Nelder-Mead ----------------------------------------------------
 
 function nelderMead(f, x0, { maxIters = 200, tol = 1e-8, step = 0.15 } = {}) {
   const n = x0.length;
@@ -208,7 +339,7 @@ function nelderMead(f, x0, { maxIters = 200, tol = 1e-8, step = 0.15 } = {}) {
   return { x: simplex[bestIdx], value: values[bestIdx] };
 }
 
-// ------- Slice extraction -------------------------------------------------
+// ------- Slice ----------------------------------------------------------
 
 function sliceObservations(contracts, expiration, spotPrice) {
   if (!contracts || !expiration || !(spotPrice > 0)) return [];
@@ -234,17 +365,17 @@ function sliceObservations(contracts, expiration, spotPrice) {
   return rows.filter((r) => Math.abs(Math.log(r.strike / spotPrice)) <= 0.2);
 }
 
-// ------- Calibration objective -------------------------------------------
+// ------- Calibration ---------------------------------------------------
 
-function calibrateMerton(slice, S0, T, r, q, init) {
+function calibrateHeston(slice, S0, T, r, q, init) {
   const obj = (theta) => {
     const p = unpack(theta);
-    if (p.sigma > 1.5 || p.lambda > 30 || p.sigmaJ > 1) return 1e6;
-    if (p.muJ < -2 || p.muJ > 1) return 1e6;
+    if (p.kappa > 50 || p.theta > 1 || p.xi > 3 || p.v0 > 1) return 1e6;
+    const grid = precomputeHestonCfGrid(p, S0, T, r, q);
     let sse = 0;
     let n = 0;
     for (const { strike, iv } of slice) {
-      const c = mertonCall(p, S0, strike, T, r, q);
+      const c = hestonCallFromCfGrid(grid, S0, strike, T, r, q);
       const modelIv = bsmIv(c, S0, strike, T, r, q);
       if (modelIv == null || !Number.isFinite(modelIv)) return 1e6;
       const d = modelIv - iv;
@@ -254,21 +385,23 @@ function calibrateMerton(slice, S0, T, r, q, init) {
     return n > 0 ? sse / n : 1e6;
   };
   const x0 = pack(init);
-  const res = nelderMead(obj, x0, { maxIters: NM_MAX_ITERS, tol: 1e-9, step: 0.2 });
+  const res = nelderMead(obj, x0, { maxIters: NM_MAX_ITERS, tol: 1e-9, step: 0.18 });
   return { params: unpack(res.x), rmse: Math.sqrt(res.value) };
 }
 
-// Warm start. SPX-style negative jump mean, moderate jump sd, ~1 jump
-// per year with diffusion vol around the historical norm. The simplex
-// reaches the basin from this seed for almost any monthly slice.
+// Warm start. SPX-typical: ~20% long-run vol (θ ≈ 0.04), strong negative
+// correlation (ρ ≈ −0.7) for the leverage skew, moderate vol-of-vol, fast
+// mean-reversion. The simplex reaches the basin from this seed for almost
+// any monthly slice on the SPX surface.
 const INIT_PARAMS = {
-  sigma: 0.15,
-  lambda: 1.0,
-  muJ: -0.10,
-  sigmaJ: 0.15,
+  kappa: 2.0,
+  theta: 0.04,
+  xi: 0.4,
+  rho: -0.7,
+  v0: 0.04,
 };
 
-// ------- UI ---------------------------------------------------------------
+// ------- UI -------------------------------------------------------------
 
 function formatPct(v, d = 2) {
   if (v == null || !Number.isFinite(v)) return '-';
@@ -340,18 +473,17 @@ export default function SlotB() {
   }, [activeExp, data]);
   const T = dte != null ? dte / 365 : null;
 
-  // Merton calibration (4-parameter Nelder-Mead on Poisson-weighted BSM)
-  // moved from synchronous useMemo into a state-set-in-effect that fires
-  // inside requestIdleCallback so the chart paints observation dots
-  // before the simplex runs. Same pattern as the Heston slot above.
+  // Heston calibration deferred to idle callback so chart paints
+  // observation dots before the simplex runs. Same pattern as the
+  // sibling jump-process slots on this page.
   const [calib, setCalib] = useState(null);
   useEffect(() => {
-    if (!data || !activeExp || slice.length < 6 || !T || T <= 0) {
+    if (!data || !activeExp || slice.length < 5 || !T || T <= 0) {
       setCalib(null);
       return undefined;
     }
     if (typeof window === 'undefined') {
-      setCalib(calibrateMerton(slice, data.spotPrice, T, RATE_R, RATE_Q, INIT_PARAMS));
+      setCalib(calibrateHeston(slice, data.spotPrice, T, RATE_R, RATE_Q, INIT_PARAMS));
       return undefined;
     }
     let cancelled = false;
@@ -361,7 +493,7 @@ export default function SlotB() {
     const cancel = window.cancelIdleCallback || clearTimeout;
     const handle = idle(() => {
       if (cancelled) return;
-      const res = calibrateMerton(slice, data.spotPrice, T, RATE_R, RATE_Q, INIT_PARAMS);
+      const res = calibrateHeston(slice, data.spotPrice, T, RATE_R, RATE_Q, INIT_PARAMS);
       if (cancelled) return;
       setCalib(res);
     });
@@ -381,32 +513,27 @@ export default function SlotB() {
 
     let gridK = null;
     let gridIv = null;
-    let gridIvNoJump = null;
     if (calib) {
-      const nGrid = 80;
+      const nGrid = 60;
       gridK = new Array(nGrid);
       gridIv = new Array(nGrid);
+      const hestonGrid = precomputeHestonCfGrid(
+        calib.params,
+        data.spotPrice,
+        T,
+        RATE_R,
+        RATE_Q
+      );
       for (let i = 0; i < nGrid; i++) {
         const K = K_lo + (i / (nGrid - 1)) * (K_hi - K_lo);
         gridK[i] = K;
-        const c = mertonCall(calib.params, data.spotPrice, K, T, RATE_R, RATE_Q);
+        const c = hestonCallFromCfGrid(hestonGrid, data.spotPrice, K, T, RATE_R, RATE_Q);
         const iv = bsmIv(c, data.spotPrice, K, T, RATE_R, RATE_Q);
         gridIv[i] = iv != null ? iv * 100 : null;
       }
-      // Diffusion-only counterfactual. Same calibrated diffusion vol σ but
-      // λ = 0. Lets the reader see exactly how much smile is jump-driven.
-      const noJumpParams = { ...calib.params, lambda: 0 };
-      gridIvNoJump = new Array(nGrid);
-      for (let i = 0; i < nGrid; i++) {
-        const c = mertonCall(noJumpParams, data.spotPrice, gridK[i], T, RATE_R, RATE_Q);
-        const iv = bsmIv(c, data.spotPrice, gridK[i], T, RATE_R, RATE_Q);
-        gridIvNoJump[i] = iv != null ? iv * 100 : null;
-      }
     }
 
-    const allIv = calib
-      ? [...ivs, ...gridIv.filter((v) => v != null), ...gridIvNoJump.filter((v) => v != null)]
-      : ivs;
+    const allIv = gridIv ? [...ivs, ...gridIv.filter((v) => v != null)] : ivs;
     const yMin = Math.min(...allIv);
     const yMax = Math.max(...allIv);
     const pad = (yMax - yMin) * 0.12 || 1;
@@ -424,17 +551,8 @@ export default function SlotB() {
         x: gridK,
         y: gridIv,
         mode: 'lines',
-        name: 'Merton fit',
+        name: 'Heston fit',
         line: { color: PLOTLY_COLORS.highlight, width: 2 },
-        hoverinfo: 'skip',
-        connectgaps: false,
-      }] : []),
-      ...(calib ? [{
-        x: gridK,
-        y: gridIvNoJump,
-        mode: 'lines',
-        name: 'diffusion-only · λ = 0',
-        line: { color: PLOTLY_COLORS.axisText, width: 1, dash: 'dash' },
         hoverinfo: 'skip',
         connectgaps: false,
       }] : []),
@@ -451,7 +569,7 @@ export default function SlotB() {
 
     const layout = plotly2DChartLayout({
       title: {
-        ...plotlyTitle('Merton Jump Fit'),
+        ...plotlyTitle('Heston Stochastic Vol Fit'),
         y: 0.97,
         yref: 'container',
         yanchor: 'top',
@@ -519,10 +637,6 @@ export default function SlotB() {
     ? filterPickerExpirations(data.expirations, data.capturedAt)
     : [];
 
-  // Expected jump per year: λ · k where k = e^(μ_J + σ_J²/2) − 1.
-  const k = calib ? Math.exp(calib.params.muJ + 0.5 * calib.params.sigmaJ ** 2) - 1 : null;
-  const jumpDrag = calib ? calib.params.lambda * k : null;
-
   return (
     <div className="card" style={{ padding: '1.25rem 1.25rem 1rem' }}>
       <div
@@ -535,7 +649,7 @@ export default function SlotB() {
           marginBottom: '0.85rem',
         }}
       >
-        merton · diffusion plus log-normal jumps · 4 free parameters
+        heston · stochastic variance · 5 parameters
       </div>
 
       <div
@@ -591,32 +705,32 @@ export default function SlotB() {
         }}
       >
         <StatCell
-          label="σ · diffusion"
-          value={calib ? formatPct(calib.params.sigma, 2) : '-'}
-          sub="ann. Brownian vol"
+          label="√v₀ · spot σ"
+          value={calib ? formatPct(Math.sqrt(calib.params.v0), 1) : '-'}
+          sub="instantaneous"
           accent={PLOTLY_COLORS.primary}
         />
         <StatCell
-          label="λ · intensity"
-          value={calib ? formatFixed(calib.params.lambda, 2) : '-'}
-          sub="jumps per year"
+          label="√θ · long-run σ"
+          value={calib ? formatPct(Math.sqrt(calib.params.theta), 1) : '-'}
+          sub="mean-revert target"
           accent={PLOTLY_COLORS.highlight}
         />
         <StatCell
-          label="μ_J · log mean"
-          value={calib ? formatFixed(calib.params.muJ, 3) : '-'}
-          sub="avg log jump size"
-          accent={calib && calib.params.muJ < -0.05 ? PLOTLY_COLORS.secondary : undefined}
+          label="κ · mean revert"
+          value={calib ? formatFixed(calib.params.kappa, 2) : '-'}
+          sub="speed (1/yr)"
         />
         <StatCell
-          label="σ_J · log sd"
-          value={calib ? formatFixed(calib.params.sigmaJ, 3) : '-'}
-          sub="jump dispersion"
+          label="ξ · vol of vol"
+          value={calib ? formatFixed(calib.params.xi, 3) : '-'}
+          sub="diffusion of v"
         />
         <StatCell
-          label="λ·k · drift drag"
-          value={jumpDrag != null ? formatPct(jumpDrag, 2) : '-'}
-          sub="jump compensator"
+          label="ρ · correlation"
+          value={calib ? formatFixed(calib.params.rho, 3) : '-'}
+          sub="leverage skew"
+          accent={calib && calib.params.rho < -0.5 ? PLOTLY_COLORS.secondary : undefined}
         />
         <StatCell
           label="Fit RMSE (IV)"
@@ -637,67 +751,64 @@ export default function SlotB() {
         }}
       >
         <p style={{ margin: '0 0 0.75rem' }}>
-          Merton (1976) is the original answer to a problem Black-Scholes
-          could not solve. Constant-vol diffusion is too smooth. Real index
-          returns have heavy tails and an obvious left skew that no
-          single-σ lognormal can produce. Merton overlays a{' '}
-          <strong style={{ color: PLOTLY_COLORS.highlight }}>compound Poisson process</strong>{' '}
-          on top of GBM, so the spot occasionally takes a discrete jump
-          sized log-normally.
+          Heston (1993) is the benchmark stochastic-variance model. The
+          spot follows GBM, but the instantaneous variance{' '}
+          <strong style={{ color: PLOTLY_COLORS.primary }}>v</strong>{' '}
+          itself follows a CIR process with mean-reversion speed{' '}
+          <strong style={{ color: 'var(--text-primary)' }}>κ</strong>,
+          long-run level{' '}
+          <strong style={{ color: PLOTLY_COLORS.highlight }}>θ</strong>,
+          and vol-of-vol{' '}
+          <strong style={{ color: 'var(--text-primary)' }}>ξ</strong>.
+          The two Brownian motions are correlated with parameter{' '}
+          <strong style={{ color: PLOTLY_COLORS.secondary }}>ρ</strong>,
+          which is the lever that produces smile through diffusive
+          leverage. On equity surfaces ρ comes back strongly negative
+          because down-moves are accompanied by vol expansions.
         </p>
         <p style={{ margin: '0 0 0.75rem' }}>
-          Four free parameters do the work. The diffusion volatility{' '}
-          <strong style={{ color: PLOTLY_COLORS.primary }}>σ</strong>{' '}
-          sets the day-to-day Brownian noise. The jump intensity{' '}
-          <strong style={{ color: PLOTLY_COLORS.highlight }}>λ</strong>{' '}
-          counts expected jumps per year. The jump-size distribution is
-          log-normal with{' '}
-          <strong style={{ color: PLOTLY_COLORS.secondary }}>mean μ_J</strong>{' '}
-          and{' '}
-          <strong style={{ color: PLOTLY_COLORS.secondary }}>standard deviation σ_J</strong>{' '}
-          in log space. A negative μ_J means jumps are crashes on average.
-        </p>
-        <p style={{ margin: '0 0 0.75rem' }}>
-          The European call price is a Poisson-weighted infinite series of
-          Black-Scholes calls, each priced with a per-jump-count adjusted
-          spot drift and variance. The series converges fast. Calibration
-          is a 4-parameter Nelder-Mead in IV-space against the same SPX
-          slice the Stochastic Vol Lab uses, so the smiles can be compared
-          side by side across labs.
+          Five parameters and a closed-form characteristic function. We
+          price by Lewis (2001) single-integral inversion of the
+          Schoutens single-CF form, the same machinery the Bates SVJ
+          slot uses with the jump factor switched on; here the jump
+          factor is identically one. Calibration is a five-parameter
+          Nelder-Mead in IV-space against the same SPX expiration slice
+          the other four slots on this page use, so the five fits
+          describe the same observations through five different process
+          assumptions.
         </p>
         <p style={{ margin: '0 0 0.75rem' }}>
           <strong style={{ color: 'var(--text-primary)' }}>Reading.</strong>{' '}
           The{' '}
           <strong style={{ color: PLOTLY_COLORS.primary }}>blue dots</strong>{' '}
-          are the chain&apos;s observed IVs, OTM puts below spot and OTM
-          calls above. The{' '}
+          are the chain&apos;s observed IVs. The{' '}
           <strong style={{ color: PLOTLY_COLORS.highlight }}>amber curve</strong>{' '}
-          is the Merton fit. The{' '}
-          <strong style={{ color: 'var(--text-secondary)' }}>dashed grey</strong>{' '}
-          line is the same calibrated σ but with the jump component switched
-          off, so the visible gap between amber and grey is precisely the
-          smile that the jump component contributes.
+          is the Heston fit. The headline read is{' '}
+          <strong style={{ color: PLOTLY_COLORS.secondary }}>ρ</strong>:
+          a value substantially below zero confirms the leverage-skew
+          mechanism by which Heston produces a downside-tilted smile from
+          purely continuous dynamics.
         </p>
         <p style={{ margin: '0 0 0.75rem' }}>
-          A strongly negative μ_J means the market is pricing in
-          asymmetric crash risk. The combination of a sizeable λ and a
-          negative μ_J is what generates the steep left wing on a single
-          slice without needing stochastic vol.
-        </p>
-        <p style={{ margin: '0 0 0.75rem' }}>
-          Where Merton struggles is the term structure. A constant λ
-          and constant σ cannot bend the smile at one tenor without
-          flattening it at another. That motivates the Bates SVJ model
-          below, which adds Heston-style stochastic variance underneath
-          the same Merton jump overlay.
+          Heston&apos;s structural limitation is what motivates the rest
+          of the page. Because every diffusion path is locally Gaussian,
+          the ρ-driven skew flattens to zero as the tenor T approaches
+          zero. In practice this means pure Heston cannot match the
+          short-tenor SPX smile, which empirically stays steep and
+          asymmetric all the way down to expiry. The Bates SVJ model
+          embeds this same Heston piece and adds Merton-style log-normal
+          jumps in the spot to restore short-tenor skew, and that is the
+          extension the rest of this page makes explicit.
         </p>
         <p style={{ margin: 0 }}>
-          The drift drag column reports λ·k, the risk-neutral
-          compensator that subtracts itself from the GBM drift to keep
-          the discounted spot a martingale under the jump-augmented
-          measure. It is the part of the expected return that exists
-          purely to offset the jump component, not a real predicted
-          return.
+          The dashed amber line on the Bates slot below is the same
+          Heston pricer with the calibrated Bates parameters and λ = 0.
+          It is not the same fit as this slot — Bates and Heston-alone
+          fit different (κ, θ, ξ, ρ, v₀) values to the chain because
+          Bates can split the smile between diffusion and jumps while
+          Heston-alone has to inflate ξ and ρ to match the deep wings.
+          Reading them side by side is the cleanest way to see what the
+          jump component contributes.
         </p>
       </div>
     </div>

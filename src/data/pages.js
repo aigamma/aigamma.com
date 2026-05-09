@@ -143,7 +143,7 @@ export const PAGES = {
     html: 'jump/index.html',
     title: 'Jump',
     chat: { surface: 'jump', prompt: 'netlify/functions/prompts/jump.mjs' },
-    menu: { section: 'research', desc: 'Heston, Merton, Kou, Bates, variance gamma' },
+    menu: { section: 'research', desc: 'Variance gamma, Heston, Bates SVJ, Kou, Merton' },
   },
   '/local/': {
     vite: 'local',

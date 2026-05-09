@@ -106,15 +106,16 @@ function lazyChunkPreloadPlugin() {
 // definitions including Hull-White minimum-variance; a Vanna-Volga
 // three-anchor smile reconstruction; and the second-order Greeks
 // (vanna, volga, charm) across the smile. The jump lab is a five-slot
-// lineage of the canonical smile-fitting models — Heston (1993)
-// stochastic variance as the no-jumps benchmark; Merton (1976)
-// finite-activity Gaussian jumps; Kou (2002) asymmetric double-
-// exponential jumps; Bates (1996) SVJ that combines Heston with
-// Merton jumps; and Variance Gamma (Madan-Carr-Chang 1998) as a
-// pure-jump infinite-activity Levy process — all calibrated in-browser
-// against the live SPX chain. The page absorbed the prior /smile/
-// lab on 2026-05-08 by adding Heston as its new first slot; /smile/
-// is now retired and 301-redirects here. The
+// lineage of the canonical smile-fitting models, in this reading
+// order — Variance Gamma (Madan-Carr-Chang 1998) pure-jump infinite-
+// activity Levy at the top; Heston (1993) stochastic variance as the
+// no-jumps benchmark; Bates (1996) SVJ that combines Heston with
+// Merton jumps; Kou (2002) asymmetric double-exponential jumps; and
+// Merton (1976) finite-activity Gaussian jumps as the historical
+// anchor — all calibrated in-browser against the live SPX chain.
+// The page absorbed the prior /smile/ lab on 2026-05-08 by adding
+// Heston as a dedicated slot; /smile/ is now retired and
+// 301-redirects here. The
 // discrete lab is a six-slot zoo pairing two discrete pricing engines
 // (Cox-Ross-Rubinstein binomial tree, Kamrad-Ritchken trinomial tree)
 // against the four-parameterization SVI family (raw, natural, JW, SSVI)

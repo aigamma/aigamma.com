@@ -23,7 +23,7 @@ MENU DROPDOWN (the remaining labs; opens from the MENU trigger):
 - Expiring Gamma (/expiring-gamma/): Gamma scheduled to expire per date.
 - GARCH (/garch/): Univariate and multivariate GARCH family and ensemble forecasts.
 - Heatmap (/heatmap/): Equal-size top-250-by-options-volume heatmap of US single names, organized by sector.
-- Jump Processes (/jump/): Heston stochastic-variance, Merton, Kou, Bates SVJ, and Variance Gamma. Five-slot smile-fitting lineage from no-jumps stochastic vol through diffusion-plus-jumps to pure-jump infinite-activity Levy. Heston was added on 2026-05-08 by absorbing the prior /smile/ lab; the /smile/ URL 301-redirects here, and the /stochastic/ URL likewise 301-redirects here for older bookmarks.
+- Jump Processes (/jump/): Variance Gamma, Heston stochastic-variance, Bates SVJ, Kou, and Merton. Five-slot smile-fitting lineage opening with the most extreme departures from BSM (pure jumps, then pure stoch vol) and walking through the conventional jump-augmented diffusions. Heston was added on 2026-05-08 by absorbing the prior /smile/ lab; the /smile/ URL 301-redirects here, and the /stochastic/ URL likewise 301-redirects here for older bookmarks.
 - Local Volatility (/local/): Dupire extraction, Monte Carlo pricing self-check, smile/term-structure slice navigation, forward-smile pathology, and the whole-surface Dupire local-volatility heatmap as the closing model.
 - Regimes (/regime/): Mixture Lognormal, Markov Regime Switching, and Wasserstein K-Means regimes.
 - Risk (/risk/): Cross-model Greeks, Vanna-Volga, and second-order risk.

@@ -23,9 +23,9 @@ import useSviFits from '../src/hooks/useSviFits';
 // frame on a typical mid-tier laptop. The Volatility Smile multi-model card
 // was migrated off this page on 2026-05-06 and now lives on /jump/ (which
 // absorbed it via a brief intermediate /smile/ lab on 2026-05-08) as the
-// canonical five-model smile-fitting lineage (Heston, Merton, Kou, Bates
-// SVJ, Variance Gamma); a reader looking for the multi-model smile read
-// should follow the /jump/ link in the Menu dropdown.
+// canonical five-model smile-fitting lineage (Variance Gamma, Heston,
+// Bates SVJ, Kou, Merton); a reader looking for the multi-model smile
+// read should follow the /jump/ link in the Menu dropdown.
 const TermStructure = lazy(() => import('../src/components/TermStructure'));
 const RiskNeutralDensity = lazy(() => import('../src/components/RiskNeutralDensity'));
 const FixedStrikeIvMatrix = lazy(() => import('../src/components/FixedStrikeIvMatrix'));
@@ -73,7 +73,7 @@ function prefetchBelowFoldChunks() {
 // latency on this page (five concurrent Plotly.newPlot calls firing on
 // first paint was the slowest page on the site), and on 2026-05-08 the
 // /smile/ lab itself was absorbed by /jump/ once the canonical
-// smile-fitting lineage (Heston, Merton, Kou, Bates SVJ, Variance Gamma)
+// smile-fitting lineage (Variance Gamma, Heston, Bates SVJ, Kou, Merton)
 // landed on /jump/ as five reading surfaces sharing one calibration slice.
 //
 // Data layer mirrors the main dashboard: useOptionsData drains the
@@ -322,7 +322,7 @@ export default function App() {
             context="tactical"
             welcome={{
               quick:
-                'Ask about VRP, the term structure, the Breeden-Litzenberger density, or how to read day-over-day moves on the fixed-strike matrix. The multi-model Volatility Smile (Heston, Merton, Kou, Bates SVJ, Variance Gamma) moved to /jump/.',
+                'Ask about VRP, the term structure, the Breeden-Litzenberger density, or how to read day-over-day moves on the fixed-strike matrix. The multi-model Volatility Smile (Variance Gamma, Heston, Bates SVJ, Kou, Merton) moved to /jump/.',
               deep:
                 'Deep Analysis mode: longer and more structurally detailed responses on the volatility risk premium, term-structure cloud-band construction, the analytical Breeden-Litzenberger derivation from SVI fits, and how the IV surface decomposes into tenor and strike effects.',
             }}

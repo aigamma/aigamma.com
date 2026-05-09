@@ -40,39 +40,35 @@ function prefetchBelowFoldChunks() {
 }
 
 // Jump Lab. Five-slot scratch pad dedicated to the canonical smile-
-// fitting models for SPX. The lineage is conceptual: pure stochastic
-// vol baseline → diffusion plus jumps → stochastic vol plus jumps →
-// pure jumps without diffusion. Each model on the page removes or
-// relaxes a structural constraint of the ones before it.
+// fitting models for SPX. Reading order opens with the most extreme
+// departures from BSM (pure jumps, then pure stoch vol) and walks
+// toward the more conventional hybrids that combine diffusion with
+// jumps. Each fit calibrates against the same live SPX expiration
+// slice so the five overlays describe the same point-in-time chain
+// through five different process assumptions.
 //
-//   SLOT A. Heston (1993) Stochastic Variance. The benchmark no-jumps
-//           model. GBM spot with a CIR-driven instantaneous variance.
-//           Five parameters (κ, θ, ξ, ρ, v₀). Smile is produced by the
-//           leverage correlation ρ, which on equities calibrates
-//           strongly negative. The structural punchline is that pure
-//           Heston cannot match the short-tenor smile because every
-//           diffusion path is locally Gaussian; this is what the rest
-//           of the page is built to address.
+//   SLOT A. Variance Gamma (Madan, Carr, Chang 1998). Pure-jump
+//           infinite-activity Levy process built by time-changing a
+//           Brownian motion with a gamma subordinator. No diffusive
+//           component at all. Three parameters: σ (Brownian vol of
+//           the time-changed motion), ν (variance rate of the gamma
+//           clock, controls kurtosis), θ (drift of the time-changed
+//           motion, controls skew). Closed-form characteristic
+//           function. The most extreme departure from BSM on the
+//           page — demonstrates that an "all jumps, no diffusion"
+//           process can fit the SPX smile competitively.
 //
-//   SLOT B. Merton (1976) Jump Diffusion. Geometric Brownian motion
-//           with a compound Poisson overlay of log-normally distributed
-//           jumps. Five parameters: σ (diffusion vol), λ (jump
-//           intensity per year), μ_J and σ_J (mean and stdev of the log
-//           jump size), plus the risk-free / dividend pair carried as
-//           inputs. Closed-form call price as a Poisson-weighted sum of
-//           Black-Scholes calls. Calibrated in IV-space against the
-//           same SPX expiration slice the Heston fit uses.
+//   SLOT B. Heston (1993) Stochastic Variance. The benchmark no-jumps
+//           stochastic-vol model. GBM spot with a CIR-driven
+//           instantaneous variance. Five parameters (κ, θ, ξ, ρ, v₀).
+//           Smile is produced by the leverage correlation ρ, which on
+//           equities calibrates strongly negative. The structural
+//           punchline is that pure Heston cannot match the short-tenor
+//           smile because every diffusion path is locally Gaussian;
+//           this is precisely the gap that the Bates SVJ slot below
+//           closes.
 //
-//   SLOT C. Kou (2002) Double Exponential. Same compound-Poisson
-//           overlay, but jump sizes drawn from an asymmetric double
-//           exponential rather than a normal: probability p of an
-//           upward jump with rate η₁, probability 1-p of a downward
-//           jump with rate η₂. The asymmetry directly captures the
-//           equity stylized fact that crash jumps are larger than
-//           rally jumps. Closed-form characteristic function;
-//           Lewis-style integral inversion for the call price.
-//
-//   SLOT D. Bates (1996) SVJ. The synthesis. Heston stochastic
+//   SLOT C. Bates (1996) SVJ. The synthesis. Heston stochastic
 //           variance plus Merton-style jumps in the spot. Eight
 //           parameters. The short-tenor skew that pure Heston cannot
 //           deliver is supplied by the jump component, and the chart
@@ -83,17 +79,24 @@ function prefetchBelowFoldChunks() {
 //           trader how much of the skew is being priced as a tail-risk
 //           premium versus diffusive vol.
 //
-//   SLOT E. Variance Gamma (Madan, Carr, Chang 1998). Pure-jump
-//           infinite-activity Levy process built by time-changing a
-//           Brownian motion with a gamma subordinator. No diffusive
-//           component at all. Three parameters: σ (Brownian vol of
-//           the time-changed motion), ν (variance rate of the gamma
-//           clock, controls kurtosis), θ (drift of the time-changed
-//           motion, controls skew). Closed-form characteristic
-//           function. Demonstrates that an "all jumps, no diffusion"
-//           process can fit the SPX smile competitively, which is the
-//           cleanest possible contrast to the Heston baseline at the
-//           top of the page.
+//   SLOT D. Kou (2002) Double Exponential. Compound Poisson overlay
+//           on geometric Brownian motion, but jump sizes drawn from
+//           an asymmetric double exponential rather than a normal:
+//           probability p of an upward jump with rate η₁, probability
+//           1-p of a downward jump with rate η₂. The asymmetry
+//           directly captures the equity stylized fact that crash
+//           jumps are larger than rally jumps. Closed-form
+//           characteristic function; Lewis-style integral inversion
+//           for the call price.
+//
+//   SLOT E. Merton (1976) Jump Diffusion. The historical anchor of
+//           the family. Geometric Brownian motion with a compound
+//           Poisson overlay of log-normally distributed jumps. Four
+//           free parameters: σ (diffusion vol), λ (jump intensity
+//           per year), μ_J and σ_J (mean and stdev of the log jump
+//           size). Closed-form call price as a Poisson-weighted sum
+//           of Black-Scholes calls. The original 1976 model that
+//           every other slot on the page extends or contrasts with.
 //
 // All five consume the same live /api/data snapshot so the five fits
 // describe the same point-in-time chain through different process
@@ -117,7 +120,7 @@ export default function App() {
         <div className="lab-brand">
           <span
             className="lab-badge"
-            title="Smile Models · Heston, Merton, Kou, Bates SVJ, Variance Gamma"
+            title="Smile Models · Variance Gamma, Heston, Bates SVJ, Kou, Merton"
           >
             <span className="lab-badge__desktop-text">Jump</span>
             <span className="lab-badge__mobile-text">Jump</span>
@@ -171,9 +174,9 @@ export default function App() {
             context="jump"
             welcome={{
               quick:
-                'Ask about smile-fitting option pricing, the five models above, or how the Heston, Merton, Kou, Bates, and Variance Gamma lineage relates to the local-vol and rough-vol lineages on the sibling labs.',
+                'Ask about smile-fitting option pricing, the five models above (Variance Gamma, Heston, Bates SVJ, Kou, Merton), or how this lineage relates to the local-vol and rough-vol lineages on the sibling labs.',
               deep:
-                'Deep Analysis mode: longer and more structurally detailed responses on stochastic variance and the Heston CIR dynamics, compound Poisson and double-exponential jump measures, affine jump-diffusion transform analysis, Levy processes and the Levy-Khintchine decomposition, Variance Gamma as a time-changed Brownian motion, and the philosophy of pricing a jump-augmented market that is formally incomplete.',
+                'Deep Analysis mode: longer and more structurally detailed responses on Variance Gamma as a time-changed Brownian motion, stochastic variance and the Heston CIR dynamics, compound Poisson and double-exponential jump measures, affine jump-diffusion transform analysis, Levy processes and the Levy-Khintchine decomposition, and the philosophy of pricing a jump-augmented market that is formally incomplete.',
             }}
           />
         </LazyMount>
