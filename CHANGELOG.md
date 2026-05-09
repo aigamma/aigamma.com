@@ -1,5 +1,35 @@
 # Changelog
 
+## 1.1.5 — 2026-05-09 — Browser extension Call Wall promoted above Put Wall
+
+The Call Wall row in the popup metric ladder was promoted above the Put
+Wall row, so the row order across the two strike-concentration cells
+now reads Call Wall (item 12) then Put Wall (item 13) rather than the
+prior Put Wall (item 12) then Call Wall (item 13). The change was
+prompted by Eric stating the Call Wall is the more important of the two
+levels and should not be the row that falls below the popup's
+~600px-cap scroll fold when the AI narration card is rendered above
+the metric ladder. The popup's scrollable max-height is unchanged from
+v1.1.4 (still 600px with overflow-y: auto and a dark webkit
+scrollbar), but the cut now lands one row earlier so the priority Call
+Wall stays visible without scrolling and the lower-priority Put Wall
+slips below the fold instead.
+
+The swap is purely an ordering change in `popup.html` (the two
+`<div class="row">` blocks for `id="callWall"` and `id="putWall"` were
+exchanged in their textual position; ID selectors and JavaScript render
+hooks are unchanged because `popup.js` looks rows up by element ID, not
+by document order). No CSS, no JavaScript, and no manifest behavioral
+changes ship with this version. Both extension manifests now declare
+`"version": "1.1.5"`, both READMEs reflect the new row ordering in the
+"Popup contents" section (Call Wall description moves to item 12 with a
+note about the v1.1.5 promotion, Put Wall description drops to item 13
+with "same convention as Call Wall" replacing "same convention as Put
+Wall"), `package.json` and `package-lock.json` mirror the bump, and
+both submission-ready zips at the repo root were rebuilt against the
+new directory names (`aigamma-extension-1.1.5/` and
+`aigamma-extension-firefox-1.1.5/`).
+
 ## 1.1.4 — 2026-05-09 — Browser extension AI narration card + popup overflow scrolling
 
 The browser extension popup now leads with a federated AI narration card

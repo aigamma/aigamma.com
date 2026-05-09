@@ -10,7 +10,7 @@ no third-party runtime dependencies.
 
 ## Layout
 
-    aigamma-extension-1.1.4/
+    aigamma-extension-1.1.5/
       manifest.json
       background.js        service worker: polls snapshot, swaps icon
       popup.html
@@ -31,7 +31,7 @@ no third-party runtime dependencies.
           icon16.png
           icon32.png
 
-The Firefox build at `../aigamma-extension-firefox-1.1.4/` is byte-identical
+The Firefox build at `../aigamma-extension-firefox-1.1.5/` is byte-identical
 to this folder except for the `browser_specific_settings.gecko` block in
 the manifest (extension id `aigamma@aigamma.com`, `strict_min_version`
 `115.0`, `data_collection_permissions: { required: ["none"] }`).
@@ -63,9 +63,11 @@ Top to bottom in order:
     negative
 11. IV Rank + (delta in pp) &ndash; value colored gamma-green below 50,
     red at or above 50; delta uses inverted tone (rising IV rank = red)
-12. Put Wall + (delta vs prev day) &ndash; delta colored bullish-green up,
-    yellow flat, red down
-13. Call Wall + (delta vs prev day) &ndash; same convention as Put Wall
+12. Call Wall + (delta vs prev day) &ndash; delta colored bullish-green up,
+    yellow flat, red down. Promoted above Put Wall in v1.1.5 to keep the
+    higher-priority upside-resistance level above the typical
+    scroll-fold cut.
+13. Put Wall + (delta vs prev day) &ndash; same convention as Call Wall
 14. ATM IV% + (delta in pp) &ndash; value AND delta both colored by
     inverted tone (lower than yesterday = gamma-green, flat = yellow,
     higher = red)
@@ -129,7 +131,7 @@ hides the narration card.
 
 1. Open `chrome://extensions`.
 2. Toggle Developer mode on (top right).
-3. Click Load unpacked and select the `aigamma-extension-1.1.4` folder.
+3. Click Load unpacked and select the `aigamma-extension-1.1.5` folder.
 4. Pin the extension from the toolbar puzzle icon.
 5. Click the icon. The popup opens and fetches from
    `aigamma.com/api/snapshot.json`, `aigamma.com/api/events-calendar`,
@@ -158,7 +160,7 @@ all routed via `netlify.toml` redirects:
   aggregator with USD-only server-side default.
 - `netlify/functions/narrative.mjs` &ndash; reads
   `public.page_narratives` for a single page key. Added
-  `Access-Control-Allow-Origin: *` in v1.1.4 so the popup's third
+  `Access-Control-Allow-Origin: *` in v1.1.4 (the narration card and the CORS fix) so the popup's third
   parallel fetch resolves under the same CORS posture as the other two.
 
 `schemaVersion: 2` (snapshot.json) adds:
@@ -189,11 +191,11 @@ Each response should be `200 OK` with `Access-Control-Allow-Origin: *`.
    Source content lives in `PRIVACY.md` and the public HTML render lives
    at `public/extension-privacy.html`.
 4. Zip the *contents* of this folder (not the folder itself). On Windows
-   PowerShell, from inside `aigamma-extension-1.1.4/`:
+   PowerShell, from inside `aigamma-extension-1.1.5/`:
 
-        Compress-Archive -Path * -DestinationPath ..\aigamma-extension-1.1.4.zip
+        Compress-Archive -Path * -DestinationPath ..\aigamma-extension-1.1.5.zip
 
-   The repo root also contains a pre-built `aigamma-extension-1.1.4.zip`
+   The repo root also contains a pre-built `aigamma-extension-1.1.5.zip`
    ready for upload.
 5. In the developer console, click New Version and upload the zip.
 6. Submit. Review is typically one to three business days for low-permission
@@ -202,9 +204,9 @@ Each response should be `200 OK` with `Access-Control-Allow-Origin: *`.
 
 ### Firefox (addons.mozilla.org)
 
-The Firefox build at `../aigamma-extension-firefox-1.1.4/` is the same
+The Firefox build at `../aigamma-extension-firefox-1.1.5/` is the same
 code with a `browser_specific_settings.gecko` block added to the
-manifest. Submit `../aigamma-extension-firefox-1.1.4.zip` (also pre-
+manifest. Submit `../aigamma-extension-firefox-1.1.5.zip` (also pre-
 built at the repo root) to addons.mozilla.org. AMO review typically
 takes three to ten business days.
 
