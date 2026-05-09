@@ -124,7 +124,7 @@
 
       <article class="card">
         <h1>AI Gamma SPX Regime Status and Metrics: Privacy Policy</h1>
-        <div class="updated">Last updated: 2026-05-03</div>
+        <div class="updated">Last updated: 2026-05-09</div>
 
         <p>
           The AI Gamma SPX Regime Status and Metrics browser extension
@@ -134,8 +134,9 @@
 
         <h2>What the extension does</h2>
         <p>
-          When the user clicks the extension icon, the popup issues two HTTPS
-          requests in parallel and renders the returned SPX market data:
+          When the user clicks the extension icon, the popup issues three
+          HTTPS requests in parallel and renders the returned SPX market
+          data:
         </p>
         <p>
           1. <code>https://aigamma.com/api/snapshot.json</code> &mdash; derived
@@ -148,10 +149,19 @@
           popup's high-impact alert ladder.
         </p>
         <p>
+          3. <code>https://aigamma.com/api/narrative?page=/</code> &mdash;
+          the latest AI-generated narrative paragraph for the
+          aigamma.com landing page, refreshed every five market-hour
+          minutes by the platform's server-side narration worker. Used
+          to populate the narration card at the top of the popup.
+        </p>
+        <p>
           In the background, a service worker issues only the snapshot
-          request on a schedule during US equity market hours and updates
-          the toolbar icon to reflect the current gamma regime. No other
-          network activity occurs.
+          request on a schedule and updates the toolbar icon to reflect
+          the current gamma regime. The events-calendar and narrative
+          endpoints are never polled in the background; both are fetched
+          only when the popup is opened. No other network activity
+          occurs.
         </p>
 
         <h2>What the extension collects</h2>
@@ -165,7 +175,7 @@
           The extension has no content scripts and cannot read data from
           any web page the user visits. The extension declares no
           <code>host_permissions</code> and has no ability to observe or
-          modify traffic on any site other than its two outgoing fetches
+          modify traffic on any site other than its three outgoing fetches
           to aigamma.com.
         </p>
         <p>
@@ -176,14 +186,14 @@
 
         <h2>What aigamma.com receives</h2>
         <p>
-          Both endpoints (<code>api/snapshot.json</code> and
-          <code>api/events-calendar</code>) are public, unauthenticated
-          resources. Requests made by the extension are standard HTTPS
-          requests. The receiving server records only standard HTTP request
-          metadata (IP address, user agent, timestamp) as part of normal
-          operational logging. This metadata is not linked to any user
-          identity, is not retained beyond operational need, and is not
-          shared with third parties.
+          All three endpoints (<code>api/snapshot.json</code>,
+          <code>api/events-calendar</code>, and <code>api/narrative</code>)
+          are public, unauthenticated resources. Requests made by the
+          extension are standard HTTPS requests. The receiving server
+          records only standard HTTP request metadata (IP address, user
+          agent, timestamp) as part of normal operational logging. This
+          metadata is not linked to any user identity, is not retained
+          beyond operational need, and is not shared with third parties.
         </p>
 
         <h2>Permissions justification</h2>
@@ -195,8 +205,8 @@
           <code>tabs</code>, <code>activeTab</code>, <code>storage</code>,
           <code>cookies</code>, <code>scripting</code>,
           <code>webRequest</code>, or any other permission. The cross-origin
-          fetches to aigamma.com are permitted because both endpoints
-          return CORS headers allowing any origin.
+          fetches to aigamma.com are permitted because all three
+          endpoints return CORS headers allowing any origin.
         </p>
 
         <h2>Data sharing</h2>

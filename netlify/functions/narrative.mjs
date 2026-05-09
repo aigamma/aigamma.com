@@ -47,10 +47,20 @@ async function tFetch(url, label) {
   }
 }
 
+// CORS open to any origin so the AI Gamma browser extension popup (running
+// from a chrome-extension:// or moz-extension:// origin with no
+// host_permissions declared) can consume this endpoint as a third parallel
+// fetch alongside /api/snapshot.json and /api/events-calendar, both of
+// which set the same wildcard. Without this header the popup's fetch
+// rejects on the implicit CORS preflight and the narration block stays
+// empty.
 function jsonError(status, message) {
   return new Response(JSON.stringify({ error: message }), {
     status,
-    headers: { 'Content-Type': 'application/json' },
+    headers: {
+      'Content-Type': 'application/json',
+      'Access-Control-Allow-Origin': '*',
+    },
   });
 }
 
@@ -60,6 +70,7 @@ function jsonOk(payload) {
     headers: {
       'Content-Type': 'application/json',
       'Cache-Control': CACHE_CONTROL_LIVE,
+      'Access-Control-Allow-Origin': '*',
     },
   });
 }

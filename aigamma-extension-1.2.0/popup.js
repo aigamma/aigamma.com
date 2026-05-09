@@ -1,17 +1,26 @@
-// AI Gamma popup — schemaVersion 2 of the snapshot wire contract.
+// AI Gamma popup — schemaVersion 2 of the snapshot wire contract, plus
+// the v1.2.0 AI narration block injection.
 //
-// Two parallel fetches on open:
+// Three parallel fetches on open:
 //   1. /api/snapshot.json — scalar regime + level + vol metrics from the
 //      Supabase pipeline (today's intraday run plus a server-computed delta
 //      block against the most recent prior-trading-date run).
 //   2. /api/events-calendar — Forex Factory aggregator filtered to USD by
 //      the function's server-side default. The popup further filters to
 //      impact === 'High' only and buckets events into 24 / 24-48 / 48-72
-//      hour windows for the alert ladder at the top. Earnings tickers
-//      (which the landing-page CatalystBanner also surfaces) are excluded
-//      because they carry no impact tier; the popup's alert ladder reads
-//      as a strict macroeconomic-event filter rather than the broader
-//      catalyst calendar.
+//      hour windows for the alert ladder above the metric rows. Earnings
+//      tickers (which the landing-page CatalystBanner also surfaces) are
+//      excluded because they carry no impact tier; the popup's alert
+//      ladder reads as a strict macroeconomic-event filter rather than
+//      the broader catalyst calendar.
+//   3. /api/narrative?page=/ — federated landing-page AI narrative from
+//      the page_narratives table written every 5 market-hour minutes by
+//      narrate-background.mjs. Renders at the very top of the popup as a
+//      severity-banded card with the same **__++--~~ inline markup the
+//      PageNarrator React component uses on the live site. When the
+//      endpoint returns null (no narrative for / yet) or fails the block
+//      stays hidden and the popup degrades gracefully to the v1.1.x
+//      layout (alerts ladder + 13 metric rows).
 //
 // Color tokens (see popup.css):
 //   --green-gamma  #02A29F  regime/teal — Dist from Risk Off, Gamma Index,
@@ -20,13 +29,18 @@
 //                            VRP positive, Contango, SPX up-delta
 //   --red          #e74c3c  defensive — every "negative regime" cell
 //   --yellow       #f1c40f  flat / near-zero / unchanged
+//   --accent-blue  #4a9eff  narration markup (tickers, defined terms)
+//   --accent-coral #d85a30  narration markup (negative moves, alerts)
+//   --accent-amber #f0a030  narration markup (threshold trips, watch)
 //
 // All DOM writes use textContent or createElement; no innerHTML, no eval,
 // no <script> insertion. Manifest declares only `alarms` permission and
-// no host_permissions because both fetched endpoints serve open CORS.
+// no host_permissions because the three fetched endpoints all serve open
+// CORS (Access-Control-Allow-Origin: *).
 
 const SNAPSHOT_ENDPOINT = 'https://aigamma.com/api/snapshot.json';
 const EVENTS_ENDPOINT = 'https://aigamma.com/api/events-calendar';
+const NARRATIVE_ENDPOINT = 'https://aigamma.com/api/narrative?page=/';
 
 // Compress an FF event title to a short banner-friendly label. Mirror of
 // CatalystBanner.jsx's EVENT_LABEL_PATTERNS so the shorthand a reader sees
@@ -230,6 +244,138 @@ function paintBucket(rowId, itemsId, items) {
   }
 }
 
+// ---------- AI narration block --------------------------------------------
+//
+// Mirrors src/components/PageNarrator.jsx. The narrator persona writes its
+// output with a small markup vocabulary that the renderer below resolves
+// into styled spans:
+//   **text**  -> .mk-bold strong (default text color, weight 600)
+//   *text*    -> .mk-italic em (slightly muted)
+//   __text__  -> .mk-blue (tickers, model names, defined terms)
+//   ++text++  -> .mk-green (positive moves, easing, contango, calm)
+//   --text--  -> .mk-coral (negative moves, alert levels, escalating)
+//   ~~text~~  -> .mk-amber (threshold trips, watch alerts, near-flip)
+// Markup is flat (does not nest) and the regex below tries the longer
+// delimiter alternatives first so **bold** beats *italic* on overlap. The
+// double-character delimiters use a negative lookahead / lookbehind pair
+// so triple-character sequences like '---' don't open a span, and the
+// content portion permits inner instances of the single character so
+// phrases like "--put-side bias--" (hyphen inside a coral wrap) render.
+
+const SEVERITY_LABEL = { 1: 'CONTEXT', 2: 'NOTABLE', 3: 'SIGNIFICANT' };
+
+const MARKUP_RE = /(\*\*(?!\*)(?:(?!\*\*).)+?(?<!\*)\*\*)|(\*[^*]+?\*)|(__(?!_)(?:(?!__).)+?(?<!_)__)|(\+\+(?!\+)(?:(?!\+\+).)+?(?<!\+)\+\+)|(--(?!-)(?:(?!--).)+?(?<!-)--)|(~~(?!~)(?:(?!~~).)+?(?<!~)~~)/g;
+
+function appendInlineMarkup(parent, text) {
+  if (!text || typeof text !== 'string') return;
+  let lastIndex = 0;
+  MARKUP_RE.lastIndex = 0;
+  let m;
+  while ((m = MARKUP_RE.exec(text)) !== null) {
+    if (m.index > lastIndex) {
+      parent.appendChild(document.createTextNode(text.slice(lastIndex, m.index)));
+    }
+    const raw = m[0];
+    let el = null;
+    if (raw.startsWith('**')) {
+      el = document.createElement('strong');
+      el.className = 'mk-bold';
+      el.textContent = raw.slice(2, -2);
+    } else if (raw.startsWith('__')) {
+      el = document.createElement('span');
+      el.className = 'mk-blue';
+      el.textContent = raw.slice(2, -2);
+    } else if (raw.startsWith('++')) {
+      el = document.createElement('span');
+      el.className = 'mk-green';
+      el.textContent = raw.slice(2, -2);
+    } else if (raw.startsWith('--')) {
+      el = document.createElement('span');
+      el.className = 'mk-coral';
+      el.textContent = raw.slice(2, -2);
+    } else if (raw.startsWith('~~')) {
+      el = document.createElement('span');
+      el.className = 'mk-amber';
+      el.textContent = raw.slice(2, -2);
+    } else if (raw.startsWith('*')) {
+      el = document.createElement('em');
+      el.className = 'mk-italic';
+      el.textContent = raw.slice(1, -1);
+    }
+    if (el) parent.appendChild(el);
+    lastIndex = m.index + raw.length;
+  }
+  if (lastIndex < text.length) {
+    parent.appendChild(document.createTextNode(text.slice(lastIndex)));
+  }
+}
+
+function appendBodyParagraphs(parent, text) {
+  if (!text || typeof text !== 'string') return;
+  const paragraphs = text
+    .split(/\n\s*\n+/)
+    .map((p) => p.trim())
+    .filter((p) => p.length > 0);
+  if (paragraphs.length === 0) return;
+  if (paragraphs.length === 1) {
+    appendInlineMarkup(parent, text);
+    return;
+  }
+  for (const para of paragraphs) {
+    const p = document.createElement('p');
+    appendInlineMarkup(p, para);
+    parent.appendChild(p);
+  }
+}
+
+function formatRelativeTime(iso) {
+  if (!iso) return '';
+  const ts = new Date(iso).getTime();
+  if (!Number.isFinite(ts)) return '';
+  const diffMin = Math.max(0, Math.round((Date.now() - ts) / 60000));
+  if (diffMin < 1) return 'just now';
+  if (diffMin < 60) return `${diffMin} min ago`;
+  const diffH = Math.round(diffMin / 60);
+  if (diffH < 24) return `${diffH}h ago`;
+  return new Date(iso).toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
+}
+
+function renderNarration(narrative) {
+  const section = document.getElementById('narrationSection');
+  const card = document.getElementById('narrationCard');
+  const chip = document.getElementById('narrationChip');
+  const age = document.getElementById('narrationAge');
+  const headline = document.getElementById('narrationHeadline');
+  const body = document.getElementById('narrationBody');
+  if (!section || !card || !headline || !body) return;
+
+  while (headline.firstChild) headline.removeChild(headline.firstChild);
+  while (body.firstChild) body.removeChild(body.firstChild);
+
+  if (!narrative || !narrative.headline || !narrative.headline.trim()) {
+    section.hidden = true;
+    return;
+  }
+
+  const sevRaw = Number.isFinite(+narrative.severity) ? +narrative.severity : 1;
+  const tier = Math.max(1, Math.min(3, sevRaw));
+  card.className = `narration-card narration-card--sev-${tier}`;
+  if (chip) {
+    chip.textContent = SEVERITY_LABEL[tier] || SEVERITY_LABEL[1];
+  }
+  if (age) {
+    const label = formatRelativeTime(narrative.created_at);
+    age.textContent = label;
+    age.title = narrative.created_at || '';
+  }
+
+  appendInlineMarkup(headline, narrative.headline);
+  if (narrative.body && narrative.body.trim().length > 0) {
+    appendBodyParagraphs(body, narrative.body);
+  }
+  section.hidden = false;
+}
+
 function applyDeltas(d) {
   const deltas = (d && d.deltas) || {};
 
@@ -415,7 +561,21 @@ async function load() {
     } catch { return null; }
   })();
 
-  const [snap, events] = await Promise.all([snapshotP, eventsP]);
+  // Narrative fetch is independent of snapshot/events: a failure here
+  // never affects the rest of the popup. The block stays hidden if the
+  // endpoint returns null, errors out, or returns an envelope without a
+  // headline. The function lets the snapshot/events render path proceed
+  // even if narrative is the slowest of the three.
+  const narrativeP = (async () => {
+    try {
+      const res = await fetch(NARRATIVE_ENDPOINT, { cache: 'no-store' });
+      if (!res.ok) return null;
+      const payload = await res.json();
+      return payload && payload.narrative ? payload.narrative : null;
+    } catch { return null; }
+  })();
+
+  const [snap, events, narrative] = await Promise.all([snapshotP, eventsP, narrativeP]);
 
   if (snap && snap.__error) {
     status.textContent = 'OFFLINE';
@@ -440,6 +600,7 @@ async function load() {
   }
 
   renderAlerts(events && events.events);
+  renderNarration(narrative);
 }
 
 document.addEventListener('DOMContentLoaded', load);

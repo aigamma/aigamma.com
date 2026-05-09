@@ -1,5 +1,56 @@
 # Changelog
 
+## 1.2.0 — 2026-05-09 — Browser extension AI narration card + popup widening
+
+The browser extension popup now leads with a federated AI narration card
+that mirrors the same severity-banded narrative the live site shows at
+the top of `/`. The card is fed by a third parallel fetch on popup open
+to `https://aigamma.com/api/narrative?page=/`, which reads the most
+recent row of `public.page_narratives` written by `narrate-background.mjs`
+every five market-hour minutes. Headline + multi-paragraph body, with
+the same `**__++--~~` inline markup vocabulary the React `PageNarrator`
+component uses, ported to vanilla DOM API in `popup.js` to honor the
+extension's existing "no innerHTML" security stance.
+
+The popup body widened from 360px to 440px to give the narration body
+room to breathe at the 13px Calibri body size (~60 chars per line). At
+360px the narrator's three-paragraph landing-page bodies rendered as a
+vertical noodle of broken sentences. Chrome's MV3 popup max width is
+800px so 440 is well within safe bounds across desktop screen sizes.
+
+Severity is signaled by the left-border accent color (text-secondary on
+CONTEXT, accent-amber on NOTABLE, accent-coral on SIGNIFICANT) plus a
+faint horizontal background gradient on tier 2 / 3, matching
+`PageNarrator.jsx`'s visual treatment exactly. The chip in the meta row
+carries a colored pill of the same tier color so the severity tag is
+readable at a glance without parsing the stripe alone. Hidden when no
+narrative is available; the popup degrades gracefully to the v1.1.x
+layout (alerts ladder + 13 metric rows) when the narrative endpoint
+returns null or fails.
+
+Server-side fix: `netlify/functions/narrative.mjs` now sets
+`Access-Control-Allow-Origin: *` on both its `jsonOk` and `jsonError`
+response paths, so the popup's chrome-extension:// origin (running with
+no `host_permissions` declared) can consume the endpoint as a third
+parallel fetch alongside `snapshot.json` and `events-calendar`, both of
+which already set the same wildcard header.
+
+Documentation refreshed across all three privacy surfaces:
+`aigamma-extension-1.2.0/PRIVACY.md`,
+`aigamma-extension-firefox-1.2.0/PRIVACY.md`, and the publicly-served
+`public/extension-privacy.html` at https://aigamma.com/extension-privacy.
+The "Last updated" date moved from 2026-05-03 to 2026-05-09. The "What
+the extension does" section now enumerates three endpoints. The "What
+aigamma.com receives" and "Permissions justification" sections update
+accordingly.
+
+Both extension directories were renamed (`aigamma-extension-1.1.3/` to
+`aigamma-extension-1.2.0/`, `aigamma-extension-firefox-1.1.3/` to
+`aigamma-extension-firefox-1.2.0/`) and submission-ready zip files
+(`aigamma-extension-1.2.0.zip` for the Chrome Web Store,
+`aigamma-extension-firefox-1.2.0.zip` for AMO) were rebuilt at the repo
+root.
+
 ## 1.1.2 — 2026-04-19 — Overnight Alignment metric + mobile-friendly labs
 
 This is the first semver-tagged release of aigamma.com. The existing
