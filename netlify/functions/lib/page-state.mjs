@@ -693,14 +693,6 @@ const ASSEMBLERS = {
     };
   },
 
-  '/smile/': async () => {
-    const spxRun = await getLatestSpxRun();
-    return {
-      kind: 'volatility_smile',
-      spx: spxRun,
-      expiration_metrics_summary: spxRun ? expMetricsSummary(spxRun.expiration_metrics) : null,
-    };
-  },
 };
 
 // --- Public API -------------------------------------------------------------

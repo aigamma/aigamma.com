@@ -144,8 +144,8 @@ function bachelierGreeks(S, K, T, r, q, sigmaLN, type) {
 }
 
 // ---- Heston pricing (Little-Trap characteristic function) ---------------
-// Same precompute-once / per-K-sum structure as the Volatility Smile card on
-// /smile/: build the 160-point CF table once for one (params, S0, T, r, q),
+// Same precompute-once / per-K-sum structure as the Heston slot on /jump/:
+// build the 160-point CF table once for one (params, S0, T, r, q),
 // then sum it against the inversion kernel e^{-iu·log(K)} for every K. The
 // CF math is inlined as scalar (re, im) pairs so a Heston calibration plus
 // a 48-strike Greeks pass on this slot is a few hundred thousand floating-
@@ -563,7 +563,7 @@ export default function SlotA() {
   // Calibration plus the 48-strike Greeks grid both run inside one
   // requestIdleCallback-deferred effect so the page can mount and paint its
   // header / picker / stat-row chrome without the Heston math blocking the
-  // main thread. Mirrors the deferral pattern on /smile/. The cancellation
+  // main thread. Mirrors the deferral pattern on /jump/. The cancellation
   // flag prevents a stale calibration from a now-superseded expiration or
   // greek dropdown overwriting fresh state if the reader changes the
   // selection mid-flight.

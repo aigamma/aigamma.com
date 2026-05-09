@@ -10,7 +10,7 @@ const WIRE_VERSION = 2;
 
 // Rehydrate the server's columnar contractCols payload back into the
 // row-of-objects shape every downstream consumer (LevelsPanel,
-// FixedStrikeIvMatrix, the multi-model Volatility Smile card on /smile/,
+// FixedStrikeIvMatrix, the smile-fitting slots on /jump/,
 // GexProfile, useSviFits, gammaProfile, gex, svi, Chat) already reads. Saves
 // ~515 KB gzipped on the wire versus the
 // prior row-of-objects encoding on a live 18,878-contract SPX snapshot, with

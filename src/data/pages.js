@@ -143,7 +143,7 @@ export const PAGES = {
     html: 'jump/index.html',
     title: 'Jump',
     chat: { surface: 'jump', prompt: 'netlify/functions/prompts/jump.mjs' },
-    menu: { section: 'research', desc: 'Merton, Kou, Bates, variance gamma' },
+    menu: { section: 'research', desc: 'Heston, Merton, Kou, Bates, variance gamma' },
   },
   '/local/': {
     vite: 'local',
@@ -175,14 +175,6 @@ export const PAGES = {
     menu: { section: 'research', desc: 'Rough Bergomi simulator + skew scaling-law fit, RFSV diagnostic, three-estimator Hurst triangulation' },
     mobile_desc: 'rBergomi simulator, skew scaling-law fit, RFSV, three-estimator Hurst triangulation',
   },
-  '/smile/': {
-    vite: 'smile',
-    html: 'smile/index.html',
-    title: 'Smile',
-    chat: { surface: 'smile', prompt: 'netlify/functions/prompts/smile.mjs' },
-    menu: { section: 'research', desc: 'Multi-model Volatility Smile · Heston + Merton + SVI raw concurrent fits' },
-  },
-
   // ---- Menu About ------------------------------------------------------
   '/disclaimer/': {
     vite: 'disclaimer',

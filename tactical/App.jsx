@@ -21,10 +21,11 @@ import useSviFits from '../src/hooks/useSviFits';
 // firing in the same frame," which on Chrome DevTools profiling shaves
 // roughly 600-1200 ms of main-thread blocking off the first interactive
 // frame on a typical mid-tier laptop. The Volatility Smile multi-model card
-// (Heston + Merton + SVI raw concurrent fits) was migrated off this page on
-// 2026-05-06 and now anchors its own /smile/ lab as the single reading
-// surface on the page, so a reader looking for the multi-model smile read
-// should follow the /smile/ link in the Menu dropdown.
+// was migrated off this page on 2026-05-06 and now lives on /jump/ (which
+// absorbed it via a brief intermediate /smile/ lab on 2026-05-08) as the
+// canonical five-model smile-fitting lineage (Heston, Merton, Kou, Bates
+// SVJ, Variance Gamma); a reader looking for the multi-model smile read
+// should follow the /jump/ link in the Menu dropdown.
 const TermStructure = lazy(() => import('../src/components/TermStructure'));
 const RiskNeutralDensity = lazy(() => import('../src/components/RiskNeutralDensity'));
 const FixedStrikeIvMatrix = lazy(() => import('../src/components/FixedStrikeIvMatrix'));
@@ -67,12 +68,13 @@ function prefetchBelowFoldChunks() {
 // over terminal spot via Breeden-Litzenberger) → Fixed-Strike IV Matrix
 // (the strike × tenor grid that makes day-over-day re-pricing events
 // visible cell by cell). The single-tenor multi-model Volatility Smile
-// card (Heston + Merton + SVI raw concurrent fits) used to sit between
-// Term Structure and RND on this page; it was migrated to /smile/ on
-// 2026-05-06 to cure cold-mount latency on this page (five concurrent
-// Plotly.newPlot calls firing on first paint was the slowest page on the
-// site) and to consolidate the parametric / calibrated single-slice smile
-// reads in one lab next to the Hagan SABR card.
+// card used to sit between Term Structure and RND on this page; it was
+// migrated to its own /smile/ lab on 2026-05-06 to cure cold-mount
+// latency on this page (five concurrent Plotly.newPlot calls firing on
+// first paint was the slowest page on the site), and on 2026-05-08 the
+// /smile/ lab itself was absorbed by /jump/ once the canonical
+// smile-fitting lineage (Heston, Merton, Kou, Bates SVJ, Variance Gamma)
+// landed on /jump/ as five reading surfaces sharing one calibration slice.
 //
 // Data layer mirrors the main dashboard: useOptionsData drains the
 // __apiBoot.today promise pre-fired by index.html for the live SPX chain,
@@ -100,11 +102,13 @@ function prefetchBelowFoldChunks() {
 // load was firing five Plotly.newPlot calls in the same frame, costing
 // ~600-1200 ms of synchronous main-thread work that the user perceived
 // as a long blank-then-everything-at-once load. Migrating the multi-
-// model Volatility Smile card to /smile/ on 2026-05-06 took this
+// model Volatility Smile card off this page on 2026-05-06 took the
 // page from five eager-or-near-eager charts down to four, shedding the
 // most expensive concurrent calibration cost (Heston Nelder-Mead +
 // Merton Poisson-weighted simplex + SVI Levenberg-Marquardt all on the
-// same slice) off the tactical critical path entirely.
+// same slice) off the tactical critical path entirely. The smile card
+// now lives on /jump/ as the first of five concurrent smile-fitting
+// surfaces.
 //
 // Three redundant Return-Home affordances follow the /jump/ pattern:
 // the logo wraps a hyperlink to `/`, a green RETURN HOME button
@@ -137,7 +141,7 @@ export default function App() {
         <div className="lab-brand">
           <span
             className="lab-badge"
-            title="Tactical Vol · VRP, term structure, RND, fixed-strike IV (smile moved to /smile/)"
+            title="Tactical Vol · VRP, term structure, RND, fixed-strike IV (smile moved to /jump/)"
           >
             <span className="lab-badge__desktop-text">Tactical Vol</span>
             <span className="lab-badge__mobile-text">Tactical Vol</span>
@@ -318,7 +322,7 @@ export default function App() {
             context="tactical"
             welcome={{
               quick:
-                'Ask about VRP, the term structure, the Breeden-Litzenberger density, or how to read day-over-day moves on the fixed-strike matrix. The multi-model Volatility Smile (Heston, Merton, SVI raw concurrent fits) moved to /smile/ on 2026-05-06.',
+                'Ask about VRP, the term structure, the Breeden-Litzenberger density, or how to read day-over-day moves on the fixed-strike matrix. The multi-model Volatility Smile (Heston, Merton, Kou, Bates SVJ, Variance Gamma) moved to /jump/.',
               deep:
                 'Deep Analysis mode: longer and more structurally detailed responses on the volatility risk premium, term-structure cloud-band construction, the analytical Breeden-Litzenberger derivation from SVI fits, and how the IV surface decomposes into tenor and strike effects.',
             }}

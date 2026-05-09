@@ -70,16 +70,19 @@ function lazyChunkPreloadPlugin() {
 // (served at `/garch/`), the bookmark-only three-slot regime-model
 // lab at `regime/index.html` (served at `/regime/`), the
 // bookmark-only three-slot rough-volatility lab at `rough/index.html`
-// (served at `/rough/`), the bookmark-only single-slot volatility
-// smile lab at `smile/index.html` (served at `/smile/`), the
-// bookmark-only four-slot local-volatility lab at
-// `local/index.html` (served at `/local/`), the bookmark-only
-// four-slot risk lab at `risk/index.html` (served at `/risk/`), the
-// bookmark-only four-slot jump-process lab at `jump/index.html`
-// (served at `/jump/`), and the bookmark-only six-slot discrete and
-// parametric lab at `discrete/index.html` (served at `/discrete/`),
-// (the /parity lab that previously sat at `parity/index.html` was
-// retired on 2026-05-07 and the URL 301-redirects to /).
+// (served at `/rough/`), the bookmark-only four-slot
+// local-volatility lab at `local/index.html` (served at `/local/`),
+// the bookmark-only four-slot risk lab at `risk/index.html` (served
+// at `/risk/`), the bookmark-only five-slot smile-fitting lab at
+// `jump/index.html` (served at `/jump/`), and the bookmark-only
+// six-slot discrete and parametric lab at `discrete/index.html`
+// (served at `/discrete/`). The /parity lab that previously sat at
+// `parity/index.html` was retired on 2026-05-07 and the URL
+// 301-redirects to /. The single-slot /smile/ lab that briefly hosted
+// a multi-model Volatility Smile card (Heston + Merton + SVI raw)
+// was retired on 2026-05-08 once /jump/ absorbed Heston as its first
+// slot, making /smile/'s three models fully duplicative; the URL
+// 301-redirects to /jump/.
 // The dev lab is a peer
 // scratch pad to /alpha — same pre-β release stage, independent
 // concept. The garch lab is a dedicated family-zoo surface for the
@@ -91,17 +94,7 @@ function lazyChunkPreloadPlugin() {
 // fractional-Brownian / Volterra-type volatility models: an RFSV
 // Hurst-signature diagnostic, a Rough Bergomi Monte Carlo simulator,
 // and a multi-estimator Hurst triangulation, all fit in-browser on
-// the same daily SPX log-return series. The volatility-smile lab is
-// a single-slot lab that hosts the multi-model Volatility Smile
-// card — Heston (1993) stochastic variance, Merton (1976) diffusion-
-// plus-jumps, and Gatheral SVI raw concurrent fits on one OTM-
-// preferred ±20% log-moneyness slice of the live SPX chain, with
-// reader-toggle visibility (Heston enabled by default). The card
-// lived briefly on /tactical/ as one of five surfaces and then on
-// /stochastic/ alongside a Hagan SABR card before being promoted to
-// its own page on 2026-05-06; SABR was dropped because its mount cost
-// inherited the same latency profile the move off /tactical/ was
-// supposed to cure. The
+// the same daily SPX log-return series. The
 // local-vol lab is a dedicated four-slot study of Dupire local
 // volatility end-to-end: surface extraction from the SVI slice set,
 // Monte Carlo pricing as a self-check of the extraction, an
@@ -112,13 +105,16 @@ function lazyChunkPreloadPlugin() {
 // across Black-Scholes, Bachelier, and Heston; five competing delta
 // definitions including Hull-White minimum-variance; a Vanna-Volga
 // three-anchor smile reconstruction; and the second-order Greeks
-// (vanna, volga, charm) across the smile. The jump lab is a four-slot
-// lineage of the canonical jump-process options-pricing models —
-// Merton (1976) finite-activity Gaussian jumps, Kou (2002)
-// asymmetric double-exponential jumps, Bates (1996) SVJ that
-// combines Heston with Merton jumps, and Variance Gamma
-// (Madan-Carr-Chang 1998) as a pure-jump infinite-activity Levy
-// process — all calibrated in-browser against the live SPX chain. The
+// (vanna, volga, charm) across the smile. The jump lab is a five-slot
+// lineage of the canonical smile-fitting models — Heston (1993)
+// stochastic variance as the no-jumps benchmark; Merton (1976)
+// finite-activity Gaussian jumps; Kou (2002) asymmetric double-
+// exponential jumps; Bates (1996) SVJ that combines Heston with
+// Merton jumps; and Variance Gamma (Madan-Carr-Chang 1998) as a
+// pure-jump infinite-activity Levy process — all calibrated in-browser
+// against the live SPX chain. The page absorbed the prior /smile/
+// lab on 2026-05-08 by adding Heston as its new first slot; /smile/
+// is now retired and 301-redirects here. The
 // discrete lab is a six-slot zoo pairing two discrete pricing engines
 // (Cox-Ross-Rubinstein binomial tree, Kamrad-Ritchken trinomial tree)
 // against the four-parameterization SVI family (raw, natural, JW, SSVI)
@@ -131,8 +127,10 @@ function lazyChunkPreloadPlugin() {
 // redistribution; the URL 301-redirects to /. Nothing in the built
 // output links the labs together. See beta/App.jsx, alpha/App.jsx,
 // dev/App.jsx, garch/App.jsx, regime/App.jsx, rough/App.jsx,
-// local/App.jsx, risk/App.jsx, jump/App.jsx, and discrete/App.jsx for
-// the rationale.
+// local/App.jsx, risk/App.jsx, jump/App.jsx (which is the
+// post-2026-05-08 home of the smile-fitting lineage including the
+// Heston slot that was previously its own /smile/ lab), and
+// discrete/App.jsx for the rationale.
 export default defineConfig({
   plugins: [react(), lazyChunkPreloadPlugin()],
   server: {

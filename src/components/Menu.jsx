@@ -42,9 +42,9 @@ import { MENU_TOOLS, MENU_RESEARCH, MENU_ABOUT } from '../data/pages.js';
 // duplicated here; opening Menu exposes only the labs that did
 // not get promoted to the top nav.
 //
-// Why the Research section: the eight model-family zoos
-// (/garch/, /regime/, /rough/, /smile/, /local/, /risk/,
-// /jump/, /discrete/) are intellectually distinct from the
+// Why the Research section: the seven model-family zoos
+// (/garch/, /regime/, /rough/, /local/, /risk/, /jump/,
+// /discrete/) are intellectually distinct from the
 // operational tools — they are calibrated-in-browser model libraries
 // rather than dashboards, and a reader scanning Menu in a flat
 // alphabetized list had no way to tell which entries were "live

@@ -43,7 +43,6 @@ import localPrompt from './prompts/narrator/local.mjs';
 import regimePrompt from './prompts/narrator/regime.mjs';
 import riskPrompt from './prompts/narrator/risk.mjs';
 import roughPrompt from './prompts/narrator/rough.mjs';
-import smilePrompt from './prompts/narrator/smile.mjs';
 
 const PROMPTS = {
   '/': landingPrompt,
@@ -64,7 +63,6 @@ const PROMPTS = {
   '/regime/': regimePrompt,
   '/risk/': riskPrompt,
   '/rough/': roughPrompt,
-  '/smile/': smilePrompt,
 };
 
 const SUPABASE_URL = process.env.SUPABASE_URL;

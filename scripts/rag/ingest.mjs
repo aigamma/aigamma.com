@@ -80,7 +80,7 @@ const REPO_ROOT = path.resolve(path.dirname(new URL(import.meta.url).pathname.re
 // adding a chat-enabled lab is a one-file edit to the registry rather than
 // a parallel update of this list and chat.mjs's SYSTEM_PROMPTS map. The
 // title field is the surface name title-cased plus " lab system prompt"
-// (e.g., 'smile' → 'Smile lab system prompt'), with two special cases for
+// (e.g., 'jump' → 'Jump lab system prompt'), with two special cases for
 // the homepage and tactical-vol surface.
 const TITLE_OVERRIDES = {
   main: 'Main Dashboard system prompt',

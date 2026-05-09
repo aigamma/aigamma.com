@@ -12,49 +12,34 @@ import {
 import { daysToExpiration, pickDefaultExpiration, filterPickerExpirations } from '../../src/lib/dates';
 
 // -----------------------------------------------------------------------------
-// Variance Gamma (Madan, Carr, Chang 1998). Pure-jump infinite-activity
-// Levy process built by time-changing a Brownian motion with a gamma
-// subordinator. No diffusive component at all. The model demonstrates
-// that an "all jumps, no diffusion" specification can fit the SPX
-// smile competitively.
+// Bates (1996) SVJ. Heston stochastic variance, plus Merton-style
+// log-normal jumps in the spot:
 //
-// Construction: let G_t be a gamma process with mean rate 1 and
-// variance rate ν per unit time. Set X_t = θ·G_t + σ·W(G_t) where W
-// is an independent Brownian motion. Then X_t is the Variance Gamma
-// process and the log price under the risk-neutral measure is
+//   dS/S = (r − q − λ·k)·dt + √v·dW₁ + (Y − 1)·dN
+//   dv   = κ(θ − v)·dt + ξ·√v·dW₂
+//   d⟨W₁,W₂⟩ = ρ·dt
+//   ln Y ~ N(μ_J, σ_J²),  k = E[Y − 1] = exp(μ_J + σ_J²/2) − 1
 //
-//   ln S_T = ln S₀ + (r − q + ω)·T + X_T,
-//   ω = (1/ν)·ln(1 − θ·ν − 0.5·σ²·ν)         [martingale compensator]
+// Eight parameters under the risk-neutral measure: the five Heston
+// parameters (κ, θ, ξ, ρ, v₀) plus the three Merton jump parameters
+// (λ, μ_J, σ_J). The characteristic function factorizes as the
+// Heston CF multiplied by an additive jump term in the exponent:
 //
-// Three free parameters: σ (Brownian vol of the time-changed motion),
-// ν (variance rate of the gamma clock, controls excess kurtosis), and
-// θ (drift of the time-changed motion, controls skew). When θ = 0 and
-// ν = 0 the model collapses back to Black-Scholes.
-//
-// The characteristic function is closed-form in a particularly clean
-// way:
-//
-//   φ_X(u; T) = (1 − i·u·θ·ν + 0.5·σ²·ν·u²)^(−T/ν)
-//   φ_lnS(u; T) = exp(i·u·(ln S₀ + (r − q + ω)·T)) · φ_X(u; T)
+//   φ_Bates(u; T) = φ_Heston(u; T) · exp[ λT · (e^(i·u·μ_J − 0.5·u²·σ_J²) − 1 − i·u·k) ]
 //
 // Pricing uses the Lewis (2001) single-integral inversion. The
-// kurtosis parameter ν is the one feature SPX really wants from this
-// family: it lets the smile flatten or steepen as a function of one
-// scalar that has a direct interpretation as the variance of the
-// stochastic clock.
-//
-// VG is the simplest member of the tempered-stable / CGMY family
-// (Carr-Geman-Madan-Yor 2002). Adding two parameters (G, M) and a
-// stability index Y gives CGMY. Adding a CIR-driven time change gives
-// VG-CIR or CGMY-CIR. This slot stops at base VG so the contrast with
-// Merton, Kou, and Bates stays clean: same dataset, three-parameter
-// pure-jump model, no diffusion.
+// jump component closes the empirical short-tenor skew gap that pure
+// Heston cannot match. Heston needs the diffusion correlation ρ to
+// produce skew, but the diffusive skew vanishes as T → 0 because
+// every diffusion path is locally Gaussian. Adding a finite-activity
+// jump preserves skew at short tenor because jumps are not Gaussian
+// even instantaneously.
 // -----------------------------------------------------------------------------
 
 const RATE_R = 0.045;
 const RATE_Q = 0.013;
 const INT_N = 601;
-const NM_MAX_ITERS = 240;
+const NM_MAX_ITERS = 280;
 
 // Pre-computed quadrature for Lewis (2001) inversion. See the Kou slot
 // for the substitution rationale: v = atan(2u), u = tan(v)/2, the
@@ -75,89 +60,166 @@ const U_WEIGHTS = new Float64Array(INT_N);
   }
 }
 
-// ---- VG characteristic function of X = ln(S_T/S₀) -----------------------
+// ---- Bates CF: Heston (Schoutens single-CF form) × Merton jump factor ---
 //
-// Centered CF (around S₀): the ln S₀ shift is absorbed into the Lewis k
-// outside this loop so the integrand has O(1) magnitude rather than the
-// O(√S₀) values produced by the un-centered ln S_T form. Same precompute-
-// once / per-K-sum factorisation that the Heston pricer on /smile/ and
-// /risk/ uses. The CF is independent of strike, so for one
-// (params, S0, T, r, q) we evaluate φ(u − i/2) once at every u in U_GRID
-// and store the (re, im) pair into Float64Arrays. Per-K pricing then
-// reduces to a tight O(INT_N) sum against the Lewis kernel
-// e^(i·u·k)/(u²+1/4).
-//
-//   φ_VG(u; T)  = (1 − i·u·θ·ν + 0.5·σ²·ν·u²)^(−T/ν)
-//   φ_X(u; T)   = exp[i·u·(r − q + ω)·T] · φ_VG(u; T)
-//   ω           = (1/ν)·ln(1 − θ·ν − 0.5·σ²·ν)
+// Centered CF (around S₀, i.e. CF of X = ln(S_T/S₀)): the ln S₀ shift is
+// absorbed into the Lewis k outside this loop so the integrand has O(1)
+// magnitude rather than the O(√S₀) values the un-centered ln S_T form
+// would produce. Same precompute-once / per-K-sum factorisation that the
+// Heston pricer on /jump/ and /risk/ uses, applied to the Schoutens
+// single-CF form that Lewis (2001) pricing wants. The CF is independent
+// of strike, so for one (params, S0, T, r, q) we evaluate φ(u − i/2) once
+// at every u in U_GRID and store the (re, im) pair into Float64Arrays.
+// Per-K pricing then reduces to a tight O(INT_N) sum against the Lewis
+// kernel e^(i·u·k)/(u²+1/4) with no fresh CF evaluations and zero array
+// allocations.
 //
 // At u = u_real − i/2 the complex parts collapse to:
 //   iu        = (1/2, u_real)
 //   u²        = (u_real² − 1/4, −u_real)
-//
-// Returns true on success, false if the parameters fall in the inadmissible
-// region (1 − θν − 0.5σ²ν ≤ 0); the calibration objective penalises that
-// region with a hard penalty so a single Float64Array NaN flag is enough.
-function fillVgCf(outRe, outIm, params, S0, T, r, q) {
-  const { sigma, nu, theta } = params;
-  const innerOmega = 1 - theta * nu - 0.5 * sigma * sigma * nu;
-  if (!(innerOmega > 0)) {
-    for (let i = 0; i < INT_N; i++) {
-      outRe[i] = Number.NaN;
-      outIm[i] = Number.NaN;
-    }
-    return false;
-  }
-  const omega = Math.log(innerOmega) / nu;
-  const drift = (r - q + omega) * T;
-  const power = -T / nu;
-  const halfSigma2Nu = 0.5 * sigma * sigma * nu;
-  const thetaNu = theta * nu;
+//   iu + u²   = (u_real² + 1/4, 0)        ← purely real
+//   ξ²·(iu+u²) = (ξ²·(u_real²+1/4), 0)
+function fillBatesCf(outRe, outIm, params, S0, T, r, q) {
+  const { kappa, theta, xi, rho, v0, lambda, muJ, sigmaJ } = params;
+  const xi2 = xi * xi;
+  const rhoXi = rho * xi;
+  const ktxi2 = (kappa * theta) / xi2;
+  const rmqT = (r - q) * T;
+  const k_j = Math.exp(muJ + 0.5 * sigmaJ * sigmaJ) - 1;
+  const halfSigJ2 = 0.5 * sigmaJ * sigmaJ;
+  const lambdaT = lambda * T;
 
   for (let i = 0; i < INT_N; i++) {
     const u = U_GRID[i];
 
-    // Inner = 1 − iu·θν + 0.5·σ²·ν·u²
-    //   −iu·θν = (−0.5·θν, −u·θν)
-    //   0.5·σ²ν·u² = (0.5·σ²ν·(u²−1/4), 0.5·σ²ν·(−u))
-    const inner_re = 1 - 0.5 * thetaNu + halfSigma2Nu * (u * u - 0.25);
-    const inner_im = -u * thetaNu + halfSigma2Nu * -u;
+    // ---- Heston Schoutens single CF at (u, −1/2) -----------------------
+    // a = ρ·ξ·iu − κ = (0.5·ρξ − κ, ρξ·u)
+    const a_re = 0.5 * rhoXi - kappa;
+    const a_im = rhoXi * u;
+    // a²
+    const aSq_re = a_re * a_re - a_im * a_im;
+    const aSq_im = 2 * a_re * a_im;
+    // ξ²·(iu + u²) is purely real: ξ²·(u² + 1/4)
+    const xi2_iuPlusU2_re = xi2 * (u * u + 0.25);
+    // inside = a² + ξ²·(iu + u²)
+    const inside_re = aSq_re + xi2_iuPlusU2_re;
+    const inside_im = aSq_im;
+    // d = sqrt(inside) — principal branch with sign continuity
+    const inside_mag = Math.sqrt(inside_re * inside_re + inside_im * inside_im);
+    const d_re = Math.sqrt(0.5 * (inside_mag + inside_re));
+    const d_im = Math.sign(inside_im || 1) * Math.sqrt(0.5 * (inside_mag - inside_re));
 
-    // phiX = inner^power = exp(power · log(inner))
-    const inner_mag2 = inner_re * inner_re + inner_im * inner_im;
-    const logInner_re = 0.5 * Math.log(inner_mag2);
-    const logInner_im = Math.atan2(inner_im, inner_re);
-    const phiX_exp_re = power * logInner_re;
-    const phiX_exp_im = power * logInner_im;
-    const phiXMag = Math.exp(phiX_exp_re);
-    const phiX_re = phiXMag * Math.cos(phiX_exp_im);
-    const phiX_im = phiXMag * Math.sin(phiX_exp_im);
+    // aMinus = κ − ρ·ξ·iu = (κ − 0.5·ρξ, −ρξ·u)
+    const am_re = kappa - 0.5 * rhoXi;
+    const am_im = -rhoXi * u;
+    // num = aMinus − d, den = aMinus + d
+    const num_re = am_re - d_re;
+    const num_im = am_im - d_im;
+    const den_re = am_re + d_re;
+    const den_im = am_im + d_im;
+    // g = num / den
+    const den_mag2 = den_re * den_re + den_im * den_im;
+    const g_re = (num_re * den_re + num_im * den_im) / den_mag2;
+    const g_im = (num_im * den_re - num_re * den_im) / den_mag2;
 
-    // expIuDrift = exp(iu·drift) — iu·drift = (0.5·drift, u·drift)
-    const eIuDriftMag = Math.exp(0.5 * drift);
-    const eIuDrift_re = eIuDriftMag * Math.cos(u * drift);
-    const eIuDrift_im = eIuDriftMag * Math.sin(u * drift);
+    // eDt = exp(−d·T)
+    const negDT_re = -d_re * T;
+    const negDT_im = -d_im * T;
+    const expMag1 = Math.exp(negDT_re);
+    const eDt_re = expMag1 * Math.cos(negDT_im);
+    const eDt_im = expMag1 * Math.sin(negDT_im);
 
-    // φ = expIuDrift · phiX
-    outRe[i] = eIuDrift_re * phiX_re - eIuDrift_im * phiX_im;
-    outIm[i] = eIuDrift_re * phiX_im + eIuDrift_im * phiX_re;
+    // gEdT = g · eDt — also serves as denominator (1 − gEdT) of D and ratio
+    const gEdT_re = g_re * eDt_re - g_im * eDt_im;
+    const gEdT_im = g_re * eDt_im + g_im * eDt_re;
+
+    // ratio = (1 − gEdT) / (1 − g)
+    const oneMinusGEdT_re = 1 - gEdT_re;
+    const oneMinusGEdT_im = -gEdT_im;
+    const oneMinusG_re = 1 - g_re;
+    const oneMinusG_im = -g_im;
+    const ompg_mag2 = oneMinusG_re * oneMinusG_re + oneMinusG_im * oneMinusG_im;
+    const ratio_re =
+      (oneMinusGEdT_re * oneMinusG_re + oneMinusGEdT_im * oneMinusG_im) / ompg_mag2;
+    const ratio_im =
+      (oneMinusGEdT_im * oneMinusG_re - oneMinusGEdT_re * oneMinusG_im) / ompg_mag2;
+    // logRatio = log(ratio) — principal branch
+    const logRatio_re = 0.5 * Math.log(ratio_re * ratio_re + ratio_im * ratio_im);
+    const logRatio_im = Math.atan2(ratio_im, ratio_re);
+
+    // term = num·T − 2·logRatio
+    const term_re = num_re * T - 2 * logRatio_re;
+    const term_im = num_im * T - 2 * logRatio_im;
+
+    // C = (r−q)·iu·T + (κθ/ξ²)·term. (r−q)·iu·T = (0.5·rmqT, u·rmqT)
+    const C_re = 0.5 * rmqT + term_re * ktxi2;
+    const C_im = u * rmqT + term_im * ktxi2;
+
+    // inner = (1 − eDt) / (1 − gEdT)
+    const oneMinusEDt_re = 1 - eDt_re;
+    const oneMinusEDt_im = -eDt_im;
+    const omgedt_mag2 =
+      oneMinusGEdT_re * oneMinusGEdT_re + oneMinusGEdT_im * oneMinusGEdT_im;
+    const inner_re =
+      (oneMinusEDt_re * oneMinusGEdT_re + oneMinusEDt_im * oneMinusGEdT_im) /
+      omgedt_mag2;
+    const inner_im =
+      (oneMinusEDt_im * oneMinusGEdT_re - oneMinusEDt_re * oneMinusGEdT_im) /
+      omgedt_mag2;
+
+    // D = (num/ξ²) · inner
+    const numXi2_re = num_re / xi2;
+    const numXi2_im = num_im / xi2;
+    const D_re = numXi2_re * inner_re - numXi2_im * inner_im;
+    const D_im = numXi2_re * inner_im + numXi2_im * inner_re;
+
+    // exponent_H = C + D·v0  (no iu·log S₀ term — centered CF)
+    const expH_re = C_re + D_re * v0;
+    const expH_im = C_im + D_im * v0;
+    const expHMag = Math.exp(expH_re);
+    const phiH_re = expHMag * Math.cos(expH_im);
+    const phiH_im = expHMag * Math.sin(expH_im);
+
+    // ---- Bates jump factor: exp[λT·(e^{iu·μJ − 0.5·σJ²·u²} − 1 − iu·k_j)]
+    // iu·μJ = (0.5·μJ, u·μJ)
+    // 0.5·σJ²·u² = (0.5·σJ²·(u² − 1/4), 0.5·σJ²·(−u))
+    const innerExp_re = 0.5 * muJ - halfSigJ2 * (u * u - 0.25);
+    const innerExp_im = u * muJ - halfSigJ2 * (-u);
+    // eInner = exp(innerExp)
+    const eInnerMag = Math.exp(innerExp_re);
+    const eInner_re = eInnerMag * Math.cos(innerExp_im);
+    const eInner_im = eInnerMag * Math.sin(innerExp_im);
+    // inner_jump = eInner − 1 − iu·k_j; iu·k_j = (0.5·k_j, u·k_j)
+    const innerJump_re = eInner_re - 1 - 0.5 * k_j;
+    const innerJump_im = eInner_im - u * k_j;
+    // jumpExp = λT·inner_jump
+    const jumpExp_re = lambdaT * innerJump_re;
+    const jumpExp_im = lambdaT * innerJump_im;
+    // jumpFactor = exp(jumpExp)
+    const jumpFactorMag = Math.exp(jumpExp_re);
+    const jumpFactor_re = jumpFactorMag * Math.cos(jumpExp_im);
+    const jumpFactor_im = jumpFactorMag * Math.sin(jumpExp_im);
+
+    // φ = phiH · jumpFactor
+    const phi_re = phiH_re * jumpFactor_re - phiH_im * jumpFactor_im;
+    const phi_im = phiH_re * jumpFactor_im + phiH_im * jumpFactor_re;
+    outRe[i] = phi_re;
+    outIm[i] = phi_im;
   }
-  return true;
 }
 
-function precomputeVgCfGrid(params, S0, T, r, q) {
+function precomputeBatesCfGrid(params, S0, T, r, q) {
   const F_re = new Float64Array(INT_N);
   const F_im = new Float64Array(INT_N);
-  const ok = fillVgCf(F_re, F_im, params, S0, T, r, q);
-  return { F_re, F_im, ok };
+  fillBatesCf(F_re, F_im, params, S0, T, r, q);
+  return { F_re, F_im };
 }
 
 // ---- Lewis call price ----------------------------------------------------
 //
 // C = S₀·e^(−q·T) − √(S₀·K)·e^(−r·T) / π · ∫₀^∞ Re[ e^(i·u·k) · φ_X(u − i/2) ] / (u² + 1/4) du
-// where k = ln(S₀/K) and φ_X is the CF of X = ln(S_T/S₀) (centered).
-function vgCallFromCfGrid(grid, S0, K, T, r, q) {
-  if (!grid.ok) return Number.NaN;
+// where k = ln(S₀/K) and φ_X is the centered CF of X = ln(S_T/S₀).
+function batesCallFromCfGrid(grid, S0, K, T, r, q) {
   const { F_re, F_im } = grid;
   const k = Math.log(S0 / K);
   let acc = 0;
@@ -223,20 +285,30 @@ function bsmIv(price, S, K, T, r, q) {
 
 // ------- Reparameterization ---------------------------------------------
 //
-// theta = [log σ, log ν, θ (free real)]
+// theta = [log κ, log θ, log ξ, atanh ρ, log v₀, log λ, μ_J, log σ_J]
 
 function unpack(theta) {
   return {
-    sigma: Math.exp(theta[0]),
-    nu: Math.exp(theta[1]),
-    theta: theta[2],
+    kappa: Math.exp(theta[0]),
+    theta: Math.exp(theta[1]),
+    xi: Math.exp(theta[2]),
+    rho: Math.tanh(theta[3]),
+    v0: Math.exp(theta[4]),
+    lambda: Math.exp(theta[5]),
+    muJ: theta[6],
+    sigmaJ: Math.exp(theta[7]),
   };
 }
 function pack(p) {
   return [
-    Math.log(Math.max(p.sigma, 1e-4)),
-    Math.log(Math.max(p.nu, 1e-4)),
-    p.theta,
+    Math.log(Math.max(p.kappa, 1e-4)),
+    Math.log(Math.max(p.theta, 1e-6)),
+    Math.log(Math.max(p.xi, 1e-4)),
+    Math.atanh(Math.max(-0.999, Math.min(0.999, p.rho))),
+    Math.log(Math.max(p.v0, 1e-6)),
+    Math.log(Math.max(p.lambda, 1e-4)),
+    p.muJ,
+    Math.log(Math.max(p.sigmaJ, 1e-4)),
   ];
 }
 
@@ -327,24 +399,19 @@ function sliceObservations(contracts, expiration, spotPrice) {
   return rows.filter((r) => Math.abs(Math.log(r.strike / spotPrice)) <= 0.2);
 }
 
-// ------- Calibration -----------------------------------------------------
+// ------- Calibration ---------------------------------------------------
 
-function calibrateVg(slice, S0, T, r, q, init) {
+function calibrateBates(slice, S0, T, r, q, init) {
   const obj = (theta) => {
     const p = unpack(theta);
-    if (p.sigma > 1.5 || p.nu > 5) return 1e6;
-    if (p.theta < -2 || p.theta > 1) return 1e6;
-    // Compensator condition: 1 − θν − 0.5σ²ν > 0
-    const innerOmega = 1 - p.theta * p.nu - 0.5 * p.sigma * p.sigma * p.nu;
-    if (!(innerOmega > 0.01)) return 1e6;
+    if (p.kappa > 50 || p.theta > 1 || p.xi > 3 || p.v0 > 1) return 1e6;
+    if (p.lambda > 30 || p.sigmaJ > 1 || p.muJ < -2 || p.muJ > 1) return 1e6;
     // One CF table per parameter set; every strike on the slice reuses it.
-    const grid = precomputeVgCfGrid(p, S0, T, r, q);
-    if (!grid.ok) return 1e6;
+    const grid = precomputeBatesCfGrid(p, S0, T, r, q);
     let sse = 0;
     let n = 0;
     for (const { strike, iv } of slice) {
-      const c = vgCallFromCfGrid(grid, S0, strike, T, r, q);
-      if (!Number.isFinite(c)) return 1e6;
+      const c = batesCallFromCfGrid(grid, S0, strike, T, r, q);
       const modelIv = bsmIv(c, S0, strike, T, r, q);
       if (modelIv == null || !Number.isFinite(modelIv)) return 1e6;
       const d = modelIv - iv;
@@ -358,15 +425,21 @@ function calibrateVg(slice, S0, T, r, q, init) {
   return { params: unpack(res.x), rmse: Math.sqrt(res.value) };
 }
 
-// Warm start. SPX-typical: σ a bit above ATM IV, moderate kurtosis,
-// negative drift (skew toward downside).
+// Warm start. Gentler Heston piece (lower κ, lower ξ) than the Heston-only
+// fit in the Stochastic Vol Lab, because the jump component will absorb
+// the deep-OTM skew that Heston-alone has to inflate ξ to match.
 const INIT_PARAMS = {
-  sigma: 0.18,
-  nu: 0.25,
-  theta: -0.20,
+  kappa: 1.5,
+  theta: 0.035,
+  xi: 0.30,
+  rho: -0.65,
+  v0: 0.035,
+  lambda: 0.6,
+  muJ: -0.10,
+  sigmaJ: 0.15,
 };
 
-// ------- UI ------------------------------------------------------------
+// ------- UI -------------------------------------------------------------
 
 function formatPct(v, d = 2) {
   if (v == null || !Number.isFinite(v)) return '-';
@@ -438,20 +511,18 @@ export default function SlotD() {
   }, [activeExp, data]);
   const T = dte != null ? dte / 365 : null;
 
-  // Variance Gamma calibration (3-parameter pure-jump Levy fit) deferred
-  // to idle callback so chart paints observation dots before the simplex
-  // runs. VG is the lightest of the four /jump/ slots by parameter count
-  // and converges in fewer iterations than the others, but the same
-  // pattern is applied for consistency and to keep the chart paintable
-  // alongside its three sibling slots.
+  // Bates SVJ calibration (8-parameter combined Heston+Merton, the
+  // heaviest of the four jump-process slots by parameter count and
+  // therefore by simplex iteration count) deferred to idle callback so
+  // chart paints observation dots before the simplex runs.
   const [calib, setCalib] = useState(null);
   useEffect(() => {
-    if (!data || !activeExp || slice.length < 6 || !T || T <= 0) {
+    if (!data || !activeExp || slice.length < 8 || !T || T <= 0) {
       setCalib(null);
       return undefined;
     }
     if (typeof window === 'undefined') {
-      setCalib(calibrateVg(slice, data.spotPrice, T, RATE_R, RATE_Q, INIT_PARAMS));
+      setCalib(calibrateBates(slice, data.spotPrice, T, RATE_R, RATE_Q, INIT_PARAMS));
       return undefined;
     }
     let cancelled = false;
@@ -461,7 +532,7 @@ export default function SlotD() {
     const cancel = window.cancelIdleCallback || clearTimeout;
     const handle = idle(() => {
       if (cancelled) return;
-      const res = calibrateVg(slice, data.spotPrice, T, RATE_R, RATE_Q, INIT_PARAMS);
+      const res = calibrateBates(slice, data.spotPrice, T, RATE_R, RATE_Q, INIT_PARAMS);
       if (cancelled) return;
       setCalib(res);
     });
@@ -481,13 +552,14 @@ export default function SlotD() {
 
     let gridK = null;
     let gridIv = null;
+    let gridIvNoJump = null;
     if (calib) {
-      const nGrid = 70;
+      const nGrid = 50;
       gridK = new Array(nGrid);
       gridIv = new Array(nGrid);
-      // Build the VG CF table once for the calibrated parameter set, then
-      // sum it against the Lewis kernel for each grid strike.
-      const vgGrid = precomputeVgCfGrid(
+      // Build the Bates CF table once for the calibrated parameter set,
+      // then sum it against the Lewis kernel for each grid strike.
+      const batesGrid = precomputeBatesCfGrid(
         calib.params,
         data.spotPrice,
         T,
@@ -497,13 +569,32 @@ export default function SlotD() {
       for (let i = 0; i < nGrid; i++) {
         const K = K_lo + (i / (nGrid - 1)) * (K_hi - K_lo);
         gridK[i] = K;
-        const c = vgCallFromCfGrid(vgGrid, data.spotPrice, K, T, RATE_R, RATE_Q);
-        const iv = Number.isFinite(c) ? bsmIv(c, data.spotPrice, K, T, RATE_R, RATE_Q) : null;
+        const c = batesCallFromCfGrid(batesGrid, data.spotPrice, K, T, RATE_R, RATE_Q);
+        const iv = bsmIv(c, data.spotPrice, K, T, RATE_R, RATE_Q);
         gridIv[i] = iv != null ? iv * 100 : null;
+      }
+      // Heston-only counterfactual. Jumps switched off; the gap to the
+      // full Bates curve is the smile contribution from the jump
+      // component, exactly the Heston short-skew gap that Bates closes.
+      const noJumpParams = { ...calib.params, lambda: 0 };
+      const batesNoJumpGrid = precomputeBatesCfGrid(
+        noJumpParams,
+        data.spotPrice,
+        T,
+        RATE_R,
+        RATE_Q
+      );
+      gridIvNoJump = new Array(nGrid);
+      for (let i = 0; i < nGrid; i++) {
+        const c = batesCallFromCfGrid(batesNoJumpGrid, data.spotPrice, gridK[i], T, RATE_R, RATE_Q);
+        const iv = bsmIv(c, data.spotPrice, gridK[i], T, RATE_R, RATE_Q);
+        gridIvNoJump[i] = iv != null ? iv * 100 : null;
       }
     }
 
-    const allIv = gridIv ? [...ivs, ...gridIv.filter((v) => v != null)] : ivs;
+    const allIv = calib
+      ? [...ivs, ...gridIv.filter((v) => v != null), ...gridIvNoJump.filter((v) => v != null)]
+      : ivs;
     const yMin = Math.min(...allIv);
     const yMax = Math.max(...allIv);
     const pad = (yMax - yMin) * 0.12 || 1;
@@ -521,8 +612,17 @@ export default function SlotD() {
         x: gridK,
         y: gridIv,
         mode: 'lines',
-        name: 'Variance Gamma fit',
-        line: { color: PLOTLY_COLORS.primarySoft, width: 2 },
+        name: 'Bates SVJ fit',
+        line: { color: PLOTLY_COLORS.secondary, width: 2 },
+        hoverinfo: 'skip',
+        connectgaps: false,
+      }] : []),
+      ...(calib ? [{
+        x: gridK,
+        y: gridIvNoJump,
+        mode: 'lines',
+        name: 'Heston-only · λ = 0',
+        line: { color: PLOTLY_COLORS.highlight, width: 1, dash: 'dash' },
         hoverinfo: 'skip',
         connectgaps: false,
       }] : []),
@@ -539,7 +639,7 @@ export default function SlotD() {
 
     const layout = plotly2DChartLayout({
       title: {
-        ...plotlyTitle('Variance Gamma Fit'),
+        ...plotlyTitle('Bates SVJ Fit'),
         y: 0.97,
         yref: 'container',
         yanchor: 'top',
@@ -607,12 +707,12 @@ export default function SlotD() {
     ? filterPickerExpirations(data.expirations, data.capturedAt)
     : [];
 
-  // Excess kurtosis of X_T under VG. For VG, kurt = 3·(1 + 2ν/T) at θ=0;
-  // with skew the formula is more involved but the headline is that ν
-  // controls how heavy the tail of the increment distribution is.
-  // Simplest readable derived stat is the annualized return variance
-  // of the time-changed motion: σ² + θ²·ν.
-  const annVar = calib ? calib.params.sigma ** 2 + calib.params.theta ** 2 * calib.params.nu : null;
+  // Annual jump variance contribution: λ·(μ_J² + σ_J²). Compare to θ
+  // (long-run variance) to read how much of total variance is jump-driven.
+  const jumpVar = calib ? calib.params.lambda * (calib.params.muJ ** 2 + calib.params.sigmaJ ** 2) : null;
+  const jumpShare = calib && calib.params.theta > 0
+    ? jumpVar / (jumpVar + calib.params.theta)
+    : null;
 
   return (
     <div className="card" style={{ padding: '1.25rem 1.25rem 1rem' }}>
@@ -626,7 +726,7 @@ export default function SlotD() {
           marginBottom: '0.85rem',
         }}
       >
-        variance gamma · pure-jump infinite-activity levy · 3 parameters
+        bates svj · heston variance plus merton jumps · 8 parameters
       </div>
 
       <div
@@ -673,7 +773,7 @@ export default function SlotD() {
       <div
         style={{
           display: 'grid',
-          gridTemplateColumns: mobile ? 'repeat(2, 1fr)' : 'repeat(5, 1fr)',
+          gridTemplateColumns: mobile ? 'repeat(2, 1fr)' : 'repeat(6, 1fr)',
           gap: '0.85rem',
           padding: '0.75rem 0',
           borderTop: '1px solid var(--bg-card-border)',
@@ -682,27 +782,33 @@ export default function SlotD() {
         }}
       >
         <StatCell
-          label="σ · BM scale"
-          value={calib ? formatPct(calib.params.sigma, 2) : '-'}
-          sub="time-changed BM vol"
-          accent={PLOTLY_COLORS.primary}
-        />
-        <StatCell
-          label="ν · gamma var rate"
-          value={calib ? formatFixed(calib.params.nu, 3) : '-'}
-          sub="kurtosis driver"
+          label="θ · long-run σ"
+          value={calib ? formatPct(Math.sqrt(calib.params.theta), 1) : '-'}
+          sub="Heston piece"
           accent={PLOTLY_COLORS.highlight}
         />
         <StatCell
-          label="θ · drift"
-          value={calib ? formatFixed(calib.params.theta, 3) : '-'}
-          sub="skew driver"
-          accent={calib && calib.params.theta < 0 ? PLOTLY_COLORS.secondary : undefined}
+          label="ρ · correlation"
+          value={calib ? formatFixed(calib.params.rho, 3) : '-'}
+          sub="Heston leverage"
+          accent={calib && calib.params.rho < -0.5 ? PLOTLY_COLORS.secondary : undefined}
         />
         <StatCell
-          label="σ² + θ²ν · ann var"
-          value={annVar != null ? formatPct(Math.sqrt(annVar), 1) : '-'}
-          sub="implied ann. vol"
+          label="ξ · vol of vol"
+          value={calib ? formatFixed(calib.params.xi, 3) : '-'}
+          sub="Heston piece"
+        />
+        <StatCell
+          label="λ · jump rate"
+          value={calib ? formatFixed(calib.params.lambda, 2) : '-'}
+          sub="jumps per year"
+          accent={PLOTLY_COLORS.secondary}
+        />
+        <StatCell
+          label="μ_J · log mean"
+          value={calib ? formatFixed(calib.params.muJ, 3) : '-'}
+          sub="avg log jump"
+          accent={calib && calib.params.muJ < -0.05 ? PLOTLY_COLORS.secondary : undefined}
         />
         <StatCell
           label="Fit RMSE (IV)"
@@ -723,74 +829,74 @@ export default function SlotD() {
         }}
       >
         <p style={{ margin: '0 0 0.75rem' }}>
-          Variance Gamma is a pure-jump model with no diffusive
-          component at all. The construction is conceptually elegant.
-          Take a Brownian motion, then run its clock not at constant
-          time but at a random rate given by an independent gamma
-          process. The result is a process that jumps at every instant
-          (infinite activity) and whose increments are heavy-tailed in
-          a way that calibrates well to options markets.
+          Bates (1996) is the answer to a problem that pure Heston could
+          not solve. Heston produces smile through diffusive correlation
+          ρ, but that mechanism vanishes as the tenor shrinks. Every
+          diffusion path is locally Gaussian, so a pure-Heston smile
+          flattens into a flat line as T approaches zero.
         </p>
         <p style={{ margin: '0 0 0.75rem' }}>
-          Three free parameters and they all have direct meaning. The
-          Brownian volatility{' '}
-          <strong style={{ color: PLOTLY_COLORS.primary }}>σ</strong>{' '}
-          sets the scale of the time-changed motion. The variance rate
-          of the gamma clock{' '}
-          <strong style={{ color: PLOTLY_COLORS.highlight }}>ν</strong>{' '}
-          controls the kurtosis (smile curvature). The drift parameter{' '}
-          <strong style={{ color: PLOTLY_COLORS.secondary }}>θ</strong>{' '}
-          controls the skew. With θ negative the model leans
-          asymmetrically toward downside log-returns, which is the
-          feature that lets it fit equity smiles cleanly.
+          Bates fixes that by adding{' '}
+          <strong style={{ color: PLOTLY_COLORS.secondary }}>Merton-style log-normal jumps</strong>{' '}
+          to a{' '}
+          <strong style={{ color: PLOTLY_COLORS.highlight }}>Heston stochastic-variance core</strong>.
+          The jump component preserves skew at short tenor because a
+          jump is non-Gaussian even instantaneously. Heston still does
+          the heavy lifting at long tenor, where mean-reverting
+          variance produces the right term-structure shape.
         </p>
         <p style={{ margin: '0 0 0.75rem' }}>
-          The characteristic function is closed-form and short:{' '}
-          <code style={{ color: 'var(--text-primary)' }}>
-            (1 − iuθν + 0.5σ²νu²)^(−T/ν)
-          </code>
-          . Pricing is by Lewis (2001) inversion of that single
-          integrand. When θ goes to zero and ν goes to zero the model
-          collapses back to Black-Scholes, so VG nests BSM as a
-          limiting case.
+          Eight parameters: the five Heston parameters (κ, θ, ξ, ρ, v₀)
+          plus three jump parameters (λ, μ_J, σ_J). The characteristic
+          function factorizes cleanly. Pricing is by Lewis (2001)
+          single-integral inversion. Calibration is an 8-parameter
+          Nelder-Mead in IV-space against the same SPX slice the other
+          three models use.
         </p>
         <p style={{ margin: '0 0 0.75rem' }}>
           <strong style={{ color: 'var(--text-primary)' }}>Reading.</strong>{' '}
           The{' '}
           <strong style={{ color: PLOTLY_COLORS.primary }}>blue dots</strong>{' '}
           are the chain&apos;s observed IVs. The{' '}
-          <strong style={{ color: PLOTLY_COLORS.primarySoft }}>soft-blue curve</strong>{' '}
-          is the Variance Gamma fit. With only three parameters the
-          model often matches the central smile shape competitively.
-          Where it tends to struggle is the very deep wings, because the
-          tempered-stable family with extra parameters (CGMY) has the
-          flexibility to bend each tail independently.
+          <strong style={{ color: PLOTLY_COLORS.secondary }}>coral curve</strong>{' '}
+          is the full Bates SVJ fit. The{' '}
+          <strong style={{ color: PLOTLY_COLORS.highlight }}>dashed amber line</strong>{' '}
+          is the Heston-only counterfactual using the same fitted (κ, θ,
+          ξ, ρ, v₀) but with λ set to zero. The visible gap between the
+          two model lines is the smile that the jump component
+          contributes, which is precisely the short-skew gap that pure
+          Heston cannot deliver.
         </p>
         <p style={{ margin: '0 0 0.75rem' }}>
-          The kurtosis parameter{' '}
-          <strong style={{ color: PLOTLY_COLORS.highlight }}>ν</strong>{' '}
-          is the lever that controls smile curvature, and it has a clean
-          interpretation: it is the variance per unit time of the random
-          clock that subordinates the Brownian motion. Larger ν means
-          the clock runs more erratically, which makes the increments
-          more leptokurtic. As ν approaches zero the random clock
-          becomes deterministic and VG collapses back to Black-Scholes.
+          A second indirect read of the jump contribution is the{' '}
+          <strong style={{ color: PLOTLY_COLORS.secondary }}>jump-variance share</strong>{' '}
+          {jumpShare != null ? (
+            <strong style={{ color: PLOTLY_COLORS.secondary }}>
+              ({(jumpShare * 100).toFixed(0)}% of total variance)
+            </strong>
+          ) : (
+            ''
+          )}
+          {'. '}
+          This is λ·(μ_J² + σ_J²) divided by the sum of long-run variance
+          θ and the same jump-variance contribution. It quantifies how
+          much of the model&apos;s total variance is being delivered by
+          discrete jumps versus continuous diffusion.
         </p>
         <p style={{ margin: '0 0 0.75rem' }}>
-          A negative{' '}
-          <strong style={{ color: PLOTLY_COLORS.secondary }}>θ</strong>{' '}
-          tilts the smile so that downside moves are larger and more
-          frequent than upside moves of the same probability. It is the
-          parameter that produces the put skew on equity calibrations,
-          analogous to the role ρ plays in the Heston family.
+          With Bates the calibrated Heston ξ is usually lower than the
+          Heston-alone calibration finds, because Bates does not need to
+          inflate vol-of-vol to match the deep-OTM put skew. The jump
+          component does that work cleanly, and ξ is left to describe
+          the diffusive short-rate of variance itself.
         </p>
         <p style={{ margin: 0 }}>
-          What VG demonstrates conceptually is that diffusive volatility
-          is not necessary to fit options markets. A pure-jump
-          infinite-activity Levy process can do the same job. That is
-          the clean contrast with the other three models on this page,
-          all of which keep a continuous diffusion piece somewhere in
-          their dynamics.
+          Bates is the canonical SVJ model and was the practitioner
+          default for SPX surfaces through the 2000s. Its main remaining
+          limitation is that the jump intensity is constant under the
+          risk-neutral measure. SVCJ (Duffie-Pan-Singleton 2000) lifts
+          that by jumping in variance as well, and self-exciting Hawkes
+          formulations make λ depend on the jump history.
         </p>
       </div>
     </div>

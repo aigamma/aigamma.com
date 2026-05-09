@@ -42,9 +42,9 @@ import { MOBILE_TOOLS, MOBILE_RESEARCH } from '../data/pages.js';
 // previously-promoted TopNav destinations (/tactical/, /earnings/, /scan/,
 // /rotations/, /vix/, /seasonality/) plus the three bookmark-only Tools
 // surfaces from the desktop Menu (/stocks/, /heatmap/, /expiring-gamma/).
-// The RESEARCH dropdown contains the eight calibrated-model research
-// zoos (/discrete/, /garch/, /jump/, /local/, /regime/, /risk/, /rough/,
-// /smile/). The dropdown then closes with an
+// The RESEARCH dropdown contains the seven calibrated-model research
+// zoos (/discrete/, /garch/, /jump/, /local/, /regime/, /risk/,
+// /rough/). The dropdown then closes with an
 // "About This Page" off-site exit followed by the on-site /disclaimer/
 // link, both pinned to the bottom — the About entry mirrors the bottom-
 // of-Menu About entry on desktop, and the /disclaimer/ entry mirrors the

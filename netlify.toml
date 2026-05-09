@@ -48,23 +48,47 @@
 [functions.chat]
   included_files = ["src/data/site-index.txt"]
 
-# Permanent redirect from the retired /stochastic/ lab to /smile/. The
+# Permanent redirect from the retired /stochastic/ lab to /jump/. The
 # /stochastic/ page was deleted on 2026-05-06 after profiling showed the
 # Hagan SABR card was the next bottleneck on phone-class hardware once
 # the multi-model Volatility Smile had migrated off /tactical/; the smile
-# was promoted to its own /smile/ lab and SABR was dropped entirely
+# was first promoted to its own /smile/ lab and SABR was dropped entirely
 # because the residual it earned over the multi-model fit did not justify
-# the second Plotly.newPlot mount cost. External bookmarks and search
-# results that point at /stochastic/ are routed to /smile/ via this 301
-# so they continue to land on the conceptual successor surface rather
-# than 404'ing. Status 301 (permanent) tells search engines and
-# aggressive caches to update their indices to the new URL; force = true
-# applies the rewrite even if a future build accidentally re-emits a
-# /stochastic/ asset path. Keep this entry for at least a year before
-# considering its removal.
+# the second Plotly.newPlot mount cost. The /smile/ lab itself was then
+# retired on 2026-05-08 once the /jump/ lab absorbed Heston as its first
+# slot, so the canonical multi-model smile-fitting page is now /jump/.
+# External bookmarks and search results that point at /stochastic/ are
+# routed to /jump/ via this 301 so they continue to land on the
+# conceptual successor surface rather than 404'ing. Status 301 (permanent)
+# tells search engines and aggressive caches to update their indices to
+# the new URL; force = true applies the rewrite even if a future build
+# accidentally re-emits a /stochastic/ asset path. Keep this entry for at
+# least a year before considering its removal.
 [[redirects]]
   from = "/stochastic/*"
-  to = "/smile/"
+  to = "/jump/"
+  status = 301
+  force = true
+
+# Permanent redirect from the retired /smile/ lab to /jump/. The /smile/
+# page was deleted on 2026-05-08 after the /jump/ lab absorbed Heston as
+# its new first slot, making /smile/'s three models (Heston, Merton, SVI)
+# fully duplicative: Heston is now the headline model on /jump/ in its
+# own dedicated card; Merton was already the second slot on /jump/ from
+# the page's original four-model lineage; and SVI is covered in
+# dedicated raw and natural slots on /discrete/. With every /smile/ model
+# represented elsewhere on the site, the smile lab itself contributed no
+# unique content and was retired to consolidate the smile-fitting
+# coverage on /jump/. External bookmarks and search results that point
+# at /smile/ are routed to /jump/ via this 301 so they continue to land
+# on the conceptual successor surface rather than 404'ing. Status 301
+# (permanent) tells search engines and aggressive caches to update
+# their indices to the new URL; force = true applies the rewrite even
+# if a future build accidentally re-emits a /smile/ asset path. Keep
+# this entry for at least a year before considering its removal.
+[[redirects]]
+  from = "/smile/*"
+  to = "/jump/"
   status = 301
   force = true
 

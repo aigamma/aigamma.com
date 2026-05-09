@@ -10,18 +10,17 @@ import SlotA from './slots/SlotA';
 
 // SlotA stays statically imported because it is the first card in the
 // reading order and partially above the fold on a typical desktop
-// viewport. SlotB / SlotC / SlotD plus Chat split out into their own
+// viewport. SlotB through SlotE plus Chat split out into their own
 // Vite chunks via React.lazy so the initial /jump/ chunk only carries
-// SlotA's Merton machinery (Poisson-weighted BSM series + Nelder-Mead
-// simplex). The other three slots' calibration code (Kou's double-
-// exponential characteristic-function inversion, Bates SVJ's eight-
-// parameter combined Heston+Merton fit, and Variance Gamma's pure-
-// jump three-parameter fit) lands in per-slot chunks that the LazyMount
-// viewport gate fetches when the reader scrolls within ~300 px of the
-// next card. Mirrors the /tactical/ and /smile/ patterns.
+// SlotA's Heston machinery (Schoutens single-CF Lewis inversion +
+// Nelder-Mead simplex). The other four slots' calibration code lands
+// in per-slot chunks that the LazyMount viewport gate fetches when the
+// reader scrolls within ~300 px of the next card. Mirrors the
+// /tactical/ pattern.
 const SlotB = lazy(() => import('./slots/SlotB'));
 const SlotC = lazy(() => import('./slots/SlotC'));
 const SlotD = lazy(() => import('./slots/SlotD'));
+const SlotE = lazy(() => import('./slots/SlotE'));
 const Chat = lazy(() => import('../src/components/Chat'));
 
 let prefetchedBelowFold = false;
@@ -35,25 +34,36 @@ function prefetchBelowFoldChunks() {
     import('./slots/SlotB');
     import('./slots/SlotC');
     import('./slots/SlotD');
+    import('./slots/SlotE');
     import('../src/components/Chat');
   });
 }
 
-// Jump Lab. Four-slot scratch pad dedicated to the canonical
-// jump-process options-pricing models for SPX. The lineage is
-// chronological and conceptual, each model removing or relaxing a
-// restriction of the one before it:
+// Jump Lab. Five-slot scratch pad dedicated to the canonical smile-
+// fitting models for SPX. The lineage is conceptual: pure stochastic
+// vol baseline → diffusion plus jumps → stochastic vol plus jumps →
+// pure jumps without diffusion. Each model on the page removes or
+// relaxes a structural constraint of the ones before it.
 //
-//   SLOT A. Merton (1976) Jump Diffusion. Geometric Brownian motion
+//   SLOT A. Heston (1993) Stochastic Variance. The benchmark no-jumps
+//           model. GBM spot with a CIR-driven instantaneous variance.
+//           Five parameters (κ, θ, ξ, ρ, v₀). Smile is produced by the
+//           leverage correlation ρ, which on equities calibrates
+//           strongly negative. The structural punchline is that pure
+//           Heston cannot match the short-tenor smile because every
+//           diffusion path is locally Gaussian; this is what the rest
+//           of the page is built to address.
+//
+//   SLOT B. Merton (1976) Jump Diffusion. Geometric Brownian motion
 //           with a compound Poisson overlay of log-normally distributed
 //           jumps. Five parameters: σ (diffusion vol), λ (jump
 //           intensity per year), μ_J and σ_J (mean and stdev of the log
 //           jump size), plus the risk-free / dividend pair carried as
 //           inputs. Closed-form call price as a Poisson-weighted sum of
-//           Black-Scholes calls. Calibrated in IV-space against an SPX
-//           expiration slice. The historical anchor of the family.
+//           Black-Scholes calls. Calibrated in IV-space against the
+//           same SPX expiration slice the Heston fit uses.
 //
-//   SLOT B. Kou (2002) Double Exponential. Same compound-Poisson
+//   SLOT C. Kou (2002) Double Exponential. Same compound-Poisson
 //           overlay, but jump sizes drawn from an asymmetric double
 //           exponential rather than a normal: probability p of an
 //           upward jump with rate η₁, probability 1-p of a downward
@@ -62,16 +72,18 @@ function prefetchBelowFoldChunks() {
 //           rally jumps. Closed-form characteristic function;
 //           Lewis-style integral inversion for the call price.
 //
-//   SLOT C. Bates (1996) SVJ. Heston stochastic variance plus Merton
-//           jumps in the spot. Eight parameters. The smile fix that
-//           Heston alone cannot deliver at the short end is supplied
-//           by the jump component, which closes the empirical gap
-//           identified in the Stochastic Vol Lab Slot A reading. The
-//           fitted jump intensity and jump-size mean tell the trader
-//           how much of the skew the market is pricing as a tail-risk
+//   SLOT D. Bates (1996) SVJ. The synthesis. Heston stochastic
+//           variance plus Merton-style jumps in the spot. Eight
+//           parameters. The short-tenor skew that pure Heston cannot
+//           deliver is supplied by the jump component, and the chart
+//           overlays a Heston-only counterfactual (the same Bates
+//           parameters with λ = 0) so the gap between full Bates and
+//           Heston-alone visualises exactly what the jump component
+//           contributes. The fitted jump intensity and mean tell the
+//           trader how much of the skew is being priced as a tail-risk
 //           premium versus diffusive vol.
 //
-//   SLOT D. Variance Gamma (Madan, Carr, Chang 1998). Pure-jump
+//   SLOT E. Variance Gamma (Madan, Carr, Chang 1998). Pure-jump
 //           infinite-activity Levy process built by time-changing a
 //           Brownian motion with a gamma subordinator. No diffusive
 //           component at all. Three parameters: σ (Brownian vol of
@@ -79,9 +91,11 @@ function prefetchBelowFoldChunks() {
 //           clock, controls kurtosis), θ (drift of the time-changed
 //           motion, controls skew). Closed-form characteristic
 //           function. Demonstrates that an "all jumps, no diffusion"
-//           process can fit the SPX smile competitively.
+//           process can fit the SPX smile competitively, which is the
+//           cleanest possible contrast to the Heston baseline at the
+//           top of the page.
 //
-// All four consume the same live /api/data snapshot so the four fits
+// All five consume the same live /api/data snapshot so the five fits
 // describe the same point-in-time chain through different process
 // assumptions. Unlike the other bookmark-only labs, this page carries
 // active egress back to the main dashboard at three redundant
@@ -103,7 +117,7 @@ export default function App() {
         <div className="lab-brand">
           <span
             className="lab-badge"
-            title="Jump Diffusion · Merton, Kou, Bates SVJ, Variance Gamma"
+            title="Smile Models · Heston, Merton, Kou, Bates SVJ, Variance Gamma"
           >
             <span className="lab-badge__desktop-text">Jump</span>
             <span className="lab-badge__mobile-text">Jump</span>
@@ -135,13 +149,19 @@ export default function App() {
 
       <section className="lab-slot">
         <ErrorBoundary>
-          <LazyMount height="1600px" margin="300px"><SlotC /></LazyMount>
+          <LazyMount height="1500px" margin="300px"><SlotC /></LazyMount>
         </ErrorBoundary>
       </section>
 
       <section className="lab-slot">
         <ErrorBoundary>
-          <LazyMount height="1500px" margin="300px"><SlotD /></LazyMount>
+          <LazyMount height="1600px" margin="300px"><SlotD /></LazyMount>
+        </ErrorBoundary>
+      </section>
+
+      <section className="lab-slot">
+        <ErrorBoundary>
+          <LazyMount height="1500px" margin="300px"><SlotE /></LazyMount>
         </ErrorBoundary>
       </section>
 
@@ -151,9 +171,9 @@ export default function App() {
             context="jump"
             welcome={{
               quick:
-                'Ask about jump-process option pricing, the four models above, or how the Merton, Kou, Bates, and Variance Gamma lineage relates to the pure stochastic-vol, local-vol, and rough-vol lineages on the sibling labs.',
+                'Ask about smile-fitting option pricing, the five models above, or how the Heston, Merton, Kou, Bates, and Variance Gamma lineage relates to the local-vol and rough-vol lineages on the sibling labs.',
               deep:
-                'Deep Analysis mode: longer and more structurally detailed responses on compound Poisson and double-exponential jump measures, affine jump-diffusion transform analysis, Levy processes and the Levy-Khintchine decomposition, Variance Gamma as a time-changed Brownian motion, and the philosophy of pricing a jump-augmented market that is formally incomplete.',
+                'Deep Analysis mode: longer and more structurally detailed responses on stochastic variance and the Heston CIR dynamics, compound Poisson and double-exponential jump measures, affine jump-diffusion transform analysis, Levy processes and the Levy-Khintchine decomposition, Variance Gamma as a time-changed Brownian motion, and the philosophy of pricing a jump-augmented market that is formally incomplete.',
             }}
           />
         </LazyMount>
@@ -161,7 +181,7 @@ export default function App() {
 
       <footer className="lab-footer">
         <span className="lab-footer-line">
-          AI Gamma · jump lab · four-model lineage · v0.1.0
+          AI Gamma · jump lab · five-model lineage · v0.2.0
         </span>
         <a href="/disclaimer/" className="lab-footer-disclaimer">Disclaimer</a>
         <a href="/" className="lab-footer-home">Return Home</a>
