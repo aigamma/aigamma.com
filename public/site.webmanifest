@@ -1,0 +1,14 @@
+{
+  "name": "AI Gamma",
+  "short_name": "AI Gamma",
+  "description": "Live SPX dealer gamma and volatility dashboard.",
+  "start_url": "/",
+  "display": "standalone",
+  "background_color": "#0d0f13",
+  "theme_color": "#4a9eff",
+  "icons": [
+    { "src": "/favicons/neutral/icon32.png", "sizes": "32x32", "type": "image/png" },
+    { "src": "/favicons/neutral/icon48.png", "sizes": "48x48", "type": "image/png" },
+    { "src": "/favicons/neutral/icon128.png", "sizes": "128x128", "type": "image/png" }
+  ]
+}
