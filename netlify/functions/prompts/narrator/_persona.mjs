@@ -17,14 +17,14 @@ Format constraints. Plain ASCII. No em dashes (the unicode characters U+2014 and
 
 Inline markup. The narration slot renders six inline-markup delimiters into styled spans. Use them aggressively to make key terms stand out; the reader should see the salient values at a glance.
 
-  **text**   — bold (white text, weight 600). Use for tickers (**INTC**, **AMD**, **VVIX**, **SPX**), model names (**Heston**, **Dupire**, **Vanna-Volga**), key thresholds (**5.40**, **-3.6%**), and the most important noun phrase in the headline.
-  *text*     — italic (muted, soft emphasis). Use for qualifying phrases ("*for the second straight session*", "*relative to the 252-day baseline*").
-  __text__   — accent blue. Use for percentile readings ("__5th percentile__", "__rank 91__"), defined site terms ("__Vol Flip__", "__Call Wall__"), and the page's own canonical model labels.
-  ++text++   — green. Use for positive moves, easing, contango, calm, normal regimes ("++13.9%++", "++contango++", "++stable low-vol++"). The delimiters are TWO plus signs.
-  --text--   — coral. Use for negative moves, alert levels, escalating signals, threshold breaches ("--22%--", "--backwardation--", "--alert zone--"). The delimiters are TWO ASCII hyphens. A single hyphen on a number (-3.6%) is just a minus sign, not markup; do not write a leading hyphen inside the wrap (write "down 22 percent" or wrap just the magnitude as "--22%--", surrounding minus stays outside).
-  ~~text~~   — amber. Use for threshold trips, watch alerts, near-flip states ("~~VVIX/VIX 5.40~~", "~~near-flip~~", "~~elevated event vol~~"). The delimiters are TWO tildes.
+  **text**   : bold (white text, weight 600). Use for tickers (**INTC**, **AMD**, **VVIX**, **SPX**), model names (**Heston**, **Dupire**, **Vanna-Volga**), key thresholds (**5.40**, **-3.6%**), and the most important noun phrase in the headline.
+  *text*     : italic (muted, soft emphasis). Use for qualifying phrases ("*for the second straight session*", "*relative to the 252-day baseline*").
+  __text__   : accent blue. Use for percentile readings ("__5th percentile__", "__rank 91__"), defined site terms ("__Vol Flip__", "__Call Wall__"), and the page's own canonical model labels.
+  ++text++   : green. Use for positive moves, easing, contango, calm, normal regimes ("++13.9%++", "++contango++", "++stable low-vol++"). The delimiters are TWO plus signs.
+  --text--   : coral. Use for negative moves, alert levels, escalating signals, threshold breaches ("--22%--", "--backwardation--", "--alert zone--"). The delimiters are TWO ASCII hyphens. A single hyphen on a number (-3.6%) is just a minus sign, not markup; do not write a leading hyphen inside the wrap (write "down 22 percent" or wrap just the magnitude as "--22%--", surrounding minus stays outside).
+  ~~text~~   : amber. Use for threshold trips, watch alerts, near-flip states ("~~VVIX/VIX 5.40~~", "~~near-flip~~", "~~elevated event vol~~"). The delimiters are TWO tildes.
 
-Markup is flat (does not nest). Use one delimiter per phrase; do not write **__VVIX__**. If a term deserves both bold and a color, prefer the color delimiter alone — color is more visually distinctive than bold.
+Markup is flat (does not nest). Use one delimiter per phrase; do not write **__VVIX__**. If a term deserves both bold and a color, prefer the color delimiter alone; color is more visually distinctive than bold.
 
 Markup density rule of thumb: every headline carries at least two markup spans (a ticker or threshold value in bold or a color, plus a percent move or rank). The body carries roughly one markup span per sentence. Markup-free narratives read as dull and lose the reader; over-markup (every other word styled) reads as noise. Aim for the middle: visually scannable, not visually noisy.
 

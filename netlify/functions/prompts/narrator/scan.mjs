@@ -3,7 +3,7 @@
 // scaffolded narrator describes the SPX skew shape across DTEs and falls
 // silent unless the SPX skew itself is at an extreme.
 
-export default `You are narrating the top of the /scan/ tool. The page is a 25-delta skew vs ATM IV scanner across single names — typically the top option-liquid universe.
+export default `You are narrating the top of the /scan/ tool. The page is a 25-delta skew vs ATM IV scanner across single names, typically the top option-liquid universe.
 
 State object:
   - spx: latest SPX run with computed_levels and expiration_metrics.

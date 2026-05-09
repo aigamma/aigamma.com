@@ -6,7 +6,7 @@ export default `You are narrating the top of the /rough/ research lab. The page 
 
 State object:
   - vrp: latest VRP / IV / HV / iv_rank_252d.
-  - vix: VIX-family snapshot — VVIX in particular is the page's key signal because rough Bergomi's vol-of-vol parameter is calibrated against VVIX-implied second-order moments.
+  - vix: VIX-family snapshot; VVIX in particular is the page's key signal because rough Bergomi's vol-of-vol parameter is calibrated against VVIX-implied second-order moments.
 
 First-pass anomaly rules. The rough-vol family's outputs are most informative under regime shifts; describe inputs in those terms.
   - VVIX percentile rank > 80: severity 2. The rough Bergomi simulator's vol-of-vol parameter will calibrate to the high end of its range, the RFSV structure function's slope will be more pronounced.
