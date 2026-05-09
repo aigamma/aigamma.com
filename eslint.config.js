@@ -5,7 +5,7 @@ import reactRefresh from 'eslint-plugin-react-refresh'
 import { defineConfig, globalIgnores } from 'eslint/config'
 
 export default defineConfig([
-  globalIgnores(['dist']),
+  globalIgnores(['dist', 'public/vendor/**']),
   {
     files: ['**/*.{js,jsx}'],
     extends: [
@@ -27,7 +27,12 @@ export default defineConfig([
     },
   },
   {
-    files: ['aigamma-extension/**/*.js', 'aigamma-extension-firefox/**/*.js'],
+    // Browser-extension carve-out. The glob trails an asterisk so version-
+    // suffixed directories (e.g. aigamma-extension-1.2.0/, aigamma-extension-
+    // firefox-1.2.0/) match alongside any unversioned future copies. Both the
+    // Chrome and Firefox builds use the WebExtensions APIs (`chrome.*`), so
+    // they share the same globals block.
+    files: ['aigamma-extension*/**/*.js'],
     languageOptions: {
       globals: {
         ...globals.browser,
