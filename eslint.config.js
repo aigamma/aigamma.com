@@ -35,4 +35,23 @@ export default defineConfig([
       },
     },
   },
+  {
+    // Node-runtime carve-out for build-time and server-side .js files. The
+    // default `**/*.{js,jsx}` rule above gives browser globals to every .js
+    // in the repo, which is wrong for files that run under Node (build
+    // plugins, backfill scripts, the vite + eslint config files themselves).
+    // Without this block, references to process, Buffer, __dirname etc. in
+    // those files trip no-undef. Adding Node globals here is strictly
+    // additive (browser globals from the parent block still merge in) and
+    // doesn't affect React component linting in the rest of the tree.
+    files: [
+      'netlify/**/*.js',
+      'scripts/**/*.js',
+      'vite.config.js',
+      'eslint.config.js',
+    ],
+    languageOptions: {
+      globals: globals.node,
+    },
+  },
 ])
