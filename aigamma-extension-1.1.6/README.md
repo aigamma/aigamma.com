@@ -198,13 +198,22 @@ Each response should be `200 OK` with `Access-Control-Allow-Origin: *`.
 3. Host the privacy policy at https://aigamma.com/extension-privacy.
    Source content lives in `PRIVACY.md` and the public HTML render lives
    at `public/extension-privacy.html`.
-4. Zip the *contents* of this folder (not the folder itself). On Windows
-   PowerShell, from inside `aigamma-extension-1.1.6/`:
+4. Build the submission zip from the repo root using the build
+   script, which uses .NET `System.IO.Compression` directly with
+   explicit forward-slash entry-name conversion so the resulting zip
+   passes AMO validation. Do NOT use PowerShell's built-in
+   `Compress-Archive` cmdlet: it writes zip entries using the platform
+   path separator (backslash on Windows), and Mozilla's AMO validator
+   rejects those zips with "Invalid file name in archive:
+   icons\negative\icon16.png" even though Chrome Web Store accepts
+   them.
 
-        Compress-Archive -Path * -DestinationPath ..\aigamma-extension-1.1.6.zip
+        ./scripts/build-extension-zips.ps1
 
-   The repo root also contains a pre-built `aigamma-extension-1.1.6.zip`
-   ready for upload.
+   This builds both the Chrome zip (`aigamma-extension-1.1.6.zip`)
+   and the Firefox zip (`aigamma-extension-firefox-1.1.6.zip`) at the
+   repo root and prints their sizes. Both ship pre-built at the repo
+   root, ready for upload.
 5. In the developer console, click New Version and upload the zip.
 6. Submit. Review is typically one to three business days for low-permission
    MV3 extensions. The manifest declares only `alarms`; no host_permissions,
