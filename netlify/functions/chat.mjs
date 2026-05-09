@@ -534,7 +534,7 @@ export default async (req) => {
             'data: ' + JSON.stringify({
               type: 'content_block_delta',
               index: 0,
-              delta: { type: 'text_delta', text: 'The AI is temporarily unavailable. Please try again in a moment, or reach eric@aigamma.com.' }
+              delta: { type: 'text_delta', text: 'The AI is temporarily unavailable. Please try again in a moment, or reach support@aigamma.com.' }
             }) + '\n\n'
           ));
           finalStopReason = 'upstream_network_error';
@@ -554,7 +554,7 @@ export default async (req) => {
           );
 
           const status = anthropicRes.status;
-          let errMsg = 'The AI is temporarily unavailable. Please try again in a moment, or reach eric@aigamma.com.';
+          let errMsg = 'The AI is temporarily unavailable. Please try again in a moment, or reach support@aigamma.com.';
           if (status === 429) errMsg = 'The AI is experiencing high demand. Please wait a moment and try again.';
           if (status === 529) errMsg = 'The AI is temporarily at capacity. Please try again in a few minutes.';
           controller.enqueue(encoder.encode(
