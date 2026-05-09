@@ -1,10 +1,11 @@
 // netlify/functions/snapshot.mjs
 // Browser-extension-facing endpoint. Returns a scalar snapshot of SPX
 // regime status, key dealer-positioning levels, volatility metrics, and
-// prior-trading-day deltas for the AI Gamma browser extension (see
-// aigamma-extension-1.1.3/, aigamma-extension-firefox-1.1.3/). Contract is
-// pinned against popup.js — do not change field names or types without
-// also updating both extension clients.
+// prior-trading-day deltas for the AI Gamma browser extension (see the
+// aigamma-extension-*/ and aigamma-extension-firefox-*/ directories at
+// the repo root for the latest version). Contract is pinned against
+// popup.js; do not change field names or types without also updating
+// both extension clients.
 //
 // Shape (schemaVersion: 2 — additive on top of v1; every v1 field
 // preserved so older extension installs in the wild keep working):
