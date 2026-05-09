@@ -1,5 +1,5 @@
 // AI Gamma popup — schemaVersion 2 of the snapshot wire contract, plus
-// the v1.2.0 AI narration block injection.
+// the v1.1.4 AI narration block injection.
 //
 // Three parallel fetches on open:
 //   1. /api/snapshot.json — scalar regime + level + vol metrics from the

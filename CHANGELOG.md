@@ -1,6 +1,6 @@
 # Changelog
 
-## 1.2.0 — 2026-05-09 — Browser extension AI narration card + popup widening
+## 1.1.4 — 2026-05-09 — Browser extension AI narration card + popup overflow scrolling
 
 The browser extension popup now leads with a federated AI narration card
 that mirrors the same severity-banded narrative the live site shows at
@@ -28,6 +28,18 @@ narrative is available; the popup degrades gracefully to the v1.1.x
 layout (alerts ladder + 13 metric rows) when the narrative endpoint
 returns null or fails.
 
+The popup also gained internal scrolling. Chrome and Firefox both cap
+browser-action popups at ~600px tall, and without an explicit overflow
+rule the browser TRUNCATES content past the cap rather than surfacing a
+scrollbar. The narration card pushed the popup well past 600px on a
+typical three-paragraph narrative, hiding the four bottom metric rows
+(Call Wall, ATM IV%, P/C Volume, P/C OI) and the asOf timestamp
+completely below the fold and out of reach. Setting `max-height: 600px`
+plus `overflow-y: auto` on `body` lets the popup scroll internally; a
+companion dark `::-webkit-scrollbar` block makes the scrollbar visible
+against the popup's `#0b0f1a` background, plus `scrollbar-width: thin`
++ `scrollbar-color: var(--border) var(--bg)` for Firefox.
+
 Server-side fix: `netlify/functions/narrative.mjs` now sets
 `Access-Control-Allow-Origin: *` on both its `jsonOk` and `jsonError`
 response paths, so the popup's chrome-extension:// origin (running with
@@ -36,8 +48,8 @@ parallel fetch alongside `snapshot.json` and `events-calendar`, both of
 which already set the same wildcard header.
 
 Documentation refreshed across all three privacy surfaces:
-`aigamma-extension-1.2.0/PRIVACY.md`,
-`aigamma-extension-firefox-1.2.0/PRIVACY.md`, and the publicly-served
+`aigamma-extension-1.1.4/PRIVACY.md`,
+`aigamma-extension-firefox-1.1.4/PRIVACY.md`, and the publicly-served
 `public/extension-privacy.html` at https://aigamma.com/extension-privacy.
 The "Last updated" date moved from 2026-05-03 to 2026-05-09. The "What
 the extension does" section now enumerates three endpoints. The "What
@@ -45,11 +57,14 @@ aigamma.com receives" and "Permissions justification" sections update
 accordingly.
 
 Both extension directories were renamed (`aigamma-extension-1.1.3/` to
-`aigamma-extension-1.2.0/`, `aigamma-extension-firefox-1.1.3/` to
-`aigamma-extension-firefox-1.2.0/`) and submission-ready zip files
-(`aigamma-extension-1.2.0.zip` for the Chrome Web Store,
-`aigamma-extension-firefox-1.2.0.zip` for AMO) were rebuilt at the repo
-root.
+`aigamma-extension-1.1.4/`, `aigamma-extension-firefox-1.1.3/` to
+`aigamma-extension-firefox-1.1.4/`) and submission-ready zip files
+(`aigamma-extension-1.1.4.zip` for the Chrome Web Store,
+`aigamma-extension-firefox-1.1.4.zip` for AMO) were rebuilt at the repo
+root. The version was set as a patch bump on v1.1.3 rather than a minor
+v1.2.0 because the new narration card is a content-presentation
+addition rather than a new wire-protocol surface; the snapshot endpoint
+schema is unchanged at `schemaVersion: 2`.
 
 ## 1.1.2 — 2026-04-19 — Overnight Alignment metric + mobile-friendly labs
 

@@ -10,7 +10,7 @@ no third-party runtime dependencies.
 
 ## Layout
 
-    aigamma-extension-1.2.0/
+    aigamma-extension-1.1.4/
       manifest.json
       background.js        service worker: polls snapshot, swaps icon
       popup.html
@@ -31,7 +31,7 @@ no third-party runtime dependencies.
           icon16.png
           icon32.png
 
-The Firefox build at `../aigamma-extension-firefox-1.2.0/` is byte-identical
+The Firefox build at `../aigamma-extension-firefox-1.1.4/` is byte-identical
 to this folder except for the `browser_specific_settings.gecko` block in
 the manifest (extension id `aigamma@aigamma.com`, `strict_min_version`
 `115.0`, `data_collection_permissions: { required: ["none"] }`).
@@ -127,11 +127,12 @@ hides the narration card.
 
 ## Local testing
 
-1. Open `chrome://extensions`.
-2. Toggle Developer mode on (top right).
-3. Click Load unpacked and select the `aigamma-extension-1.2.0` folder.
-4. Pin the extension from the toolbar puzzle icon.
-5. Click the icon. The popup opens and fetches from
+1. Open `about:debugging#/runtime/this-firefox`.
+2. Click Load Temporary Add-on and select any file inside the
+   `aigamma-extension-firefox-1.1.4` folder (Firefox loads the entire
+   directory).
+3. Pin the extension from the toolbar overflow menu.
+4. Click the icon. The popup opens and fetches from
    `aigamma.com/api/snapshot.json`, `aigamma.com/api/events-calendar`,
    and `aigamma.com/api/narrative?page=/`.
 
@@ -158,7 +159,7 @@ all routed via `netlify.toml` redirects:
   aggregator with USD-only server-side default.
 - `netlify/functions/narrative.mjs` &ndash; reads
   `public.page_narratives` for a single page key. Added
-  `Access-Control-Allow-Origin: *` in v1.2.0 so the popup's third
+  `Access-Control-Allow-Origin: *` in v1.1.4 so the popup's third
   parallel fetch resolves under the same CORS posture as the other two.
 
 `schemaVersion: 2` (snapshot.json) adds:
@@ -180,33 +181,31 @@ Each response should be `200 OK` with `Access-Control-Allow-Origin: *`.
 
 ## Publishing
 
-### Chrome Web Store
+### Firefox (addons.mozilla.org)
 
-1. Pay the one-time $5 developer registration fee at
-   https://chrome.google.com/webstore/devconsole.
-2. Produce at least one screenshot (1280x800 or 640x400) of the popup.
+1. Sign in at https://addons.mozilla.org/en-US/developers/.
+2. Produce at least one screenshot of the popup.
 3. Host the privacy policy at https://aigamma.com/extension-privacy.
    Source content lives in `PRIVACY.md` and the public HTML render lives
    at `public/extension-privacy.html`.
 4. Zip the *contents* of this folder (not the folder itself). On Windows
-   PowerShell, from inside `aigamma-extension-1.2.0/`:
+   PowerShell, from inside `aigamma-extension-firefox-1.1.4/`:
 
-        Compress-Archive -Path * -DestinationPath ..\aigamma-extension-1.2.0.zip
+        Compress-Archive -Path * -DestinationPath ..\aigamma-extension-firefox-1.1.4.zip
 
-   The repo root also contains a pre-built `aigamma-extension-1.2.0.zip`
-   ready for upload.
-5. In the developer console, click New Version and upload the zip.
-6. Submit. Review is typically one to three business days for low-permission
-   MV3 extensions. The manifest declares only `alarms`; no host_permissions,
-   no content scripts, no storage, no tabs.
+   The repo root also contains a pre-built
+   `aigamma-extension-firefox-1.1.4.zip` ready for upload.
+5. In the AMO developer console, upload the zip as a new version. AMO
+   review typically takes three to ten business days for low-permission
+   MV3 extensions.
 
-### Firefox (addons.mozilla.org)
+### Chrome Web Store
 
-The Firefox build at `../aigamma-extension-firefox-1.2.0/` is the same
-code with a `browser_specific_settings.gecko` block added to the
-manifest. Submit `../aigamma-extension-firefox-1.2.0.zip` (also pre-
-built at the repo root) to addons.mozilla.org. AMO review typically
-takes three to ten business days.
+The Chrome build at `../aigamma-extension-1.1.4/` is the same code
+without the `browser_specific_settings.gecko` block. Submit
+`../aigamma-extension-1.1.4.zip` (also pre-built at the repo root) to
+the Chrome Web Store. Chrome review typically takes one to three
+business days for low-permission MV3 extensions.
 
 ## Updating
 
