@@ -109,6 +109,29 @@ const SOURCES = [
   { rel: 'netlify/functions/prompts/core_persona.mjs', surface: 'all', kind: 'system_prompt_global', extract: extractTemplateLiteral, title: 'Core persona' },
   { rel: 'netlify/functions/prompts/behavior.mjs',     surface: 'all', kind: 'system_prompt_global', extract: extractTemplateLiteral, title: 'Behavioral constraints' },
   { rel: 'netlify/functions/prompts/site_nav.mjs',     surface: 'all', kind: 'system_prompt_global', extract: extractTemplateLiteral, title: 'Site navigation context' },
+
+  // Cross-repo: about.aigamma.com is a separate Netlify property with its own
+  // index.html on the about subdomain. The page is a static hand-authored
+  // HTML document (not a React build artifact), so the prose lives literally
+  // in the file and can be extracted by stripping markup. The absPath
+  // override resolves outside the aigamma.com repo because the about repo
+  // lives at C:\about.aigamma.com on the same local machine that runs the
+  // ingest walker; the rel value stays clean so it reads naturally in the
+  // rag_documents.source_path column. Surface 'about' lets the about
+  // chatbot's rag-search call return its own bio content with a small
+  // surface boost, and surface-agnostic similarity hits on the aigamma chat
+  // function can still pull these chunks for "who built this" style queries.
+  // Re-run ingest after any about.aigamma.com prose edit to refresh the
+  // embedded chunks (same idempotency-by-hash semantics as every other
+  // source — unchanged chunks skip the embed round-trip).
+  {
+    rel: 'about.aigamma.com/index.html',
+    absPath: 'C:\\about.aigamma.com\\index.html',
+    surface: 'about',
+    kind: 'reference',
+    extract: extractHtmlProse,
+    title: 'About Eric Allione (about.aigamma.com)',
+  },
 ];
 
 // Extract the contents of the first export-default-ed or named-export
@@ -137,6 +160,54 @@ function extractTemplateLiteral(raw) {
 
 function readAsIs(raw) {
   return raw.trim();
+}
+
+// Strip a static HTML document down to the prose so the markdown-aware chunker
+// in chunkText() can split it on section boundaries. Used by the
+// about.aigamma.com source (a single hand-authored index.html, not a React
+// build artifact). Specifically: drops <head> (metadata, not content), drops
+// <script>/<style> (CSS and JS noise), drops <nav>/<footer> (navigation and
+// boilerplate that recur on every page), converts <h1>..<h6> to ## headings
+// so the chunker picks them up as section boundaries, converts block-level
+// closers to double newlines so paragraphs survive the tag strip, then strips
+// remaining tags and decodes the common HTML entities. Whitespace is
+// collapsed at the end so the chunker sees clean paragraph boundaries rather
+// than the original source's tab-and-newline indentation.
+function extractHtmlProse(raw) {
+  let text = raw;
+
+  text = text.replace(/<head[\s\S]*?<\/head>/gi, '');
+  text = text.replace(/<script[\s\S]*?<\/script>/gi, '');
+  text = text.replace(/<style[\s\S]*?<\/style>/gi, '');
+  text = text.replace(/<nav[\s\S]*?<\/nav>/gi, '');
+  text = text.replace(/<footer[\s\S]*?<\/footer>/gi, '');
+  text = text.replace(/<svg[\s\S]*?<\/svg>/gi, '');
+
+  text = text.replace(/<h1[^>]*>([\s\S]*?)<\/h1>/gi, (_, inner) => `\n\n## ${inner.replace(/<[^>]+>/g, '').trim()}\n\n`);
+  for (let i = 2; i <= 6; i++) {
+    const hashes = '#'.repeat(i);
+    const re = new RegExp(`<h${i}[^>]*>([\\s\\S]*?)<\\/h${i}>`, 'gi');
+    text = text.replace(re, (_, inner) => `\n\n${hashes} ${inner.replace(/<[^>]+>/g, '').trim()}\n\n`);
+  }
+
+  text = text.replace(/<br\s*\/?>/gi, '\n');
+  text = text.replace(/<\/(p|div|section|article|li|tr|h[1-6])>/gi, '\n\n');
+
+  text = text.replace(/<[^>]+>/g, '');
+
+  text = text.replace(/&nbsp;/g, ' ');
+  text = text.replace(/&amp;/g, '&');
+  text = text.replace(/&lt;/g, '<');
+  text = text.replace(/&gt;/g, '>');
+  text = text.replace(/&quot;/g, '"');
+  text = text.replace(/&#39;/g, "'");
+  text = text.replace(/&apos;/g, "'");
+  text = text.replace(/&#\d+;/g, '');
+
+  text = text.replace(/[ \t]+/g, ' ');
+  text = text.replace(/\n\s*\n\s*\n+/g, '\n\n');
+
+  return text.trim();
 }
 
 // Markdown-aware chunker. Splits on H2/H3 headings first; if a section is
@@ -362,7 +433,9 @@ async function pruneRetiredSources() {
 }
 
 async function ingestSource(src) {
-  const absPath = path.join(REPO_ROOT, src.rel);
+  // src.absPath wins if set (cross-repo sources like about.aigamma.com/index.html
+  // resolve outside REPO_ROOT); otherwise path.join with REPO_ROOT as before.
+  const absPath = src.absPath || path.join(REPO_ROOT, src.rel);
   let raw;
   try {
     raw = await readFile(absPath, 'utf8');
