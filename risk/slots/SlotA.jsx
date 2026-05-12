@@ -437,8 +437,8 @@ function buildCurves(calib, slice, data, T) {
   }
 
   // Five Heston CF tables for the FD bumps. The base grid is reused for the
-  // c0 term in gamma; the four bumped grids cover spot delta / spot gamma /
-  // vol vega.
+  // c0 term in the gamma central difference; the four bumped grids cover
+  // delta (S ± h), gamma (S ± h via c0), and vega (vol ± h).
   const hS = FD_BUMP_S;
   const hSig = FD_BUMP_SIGMA;
   const sigma0 = Math.sqrt(calib.params.v0);
