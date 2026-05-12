@@ -119,6 +119,25 @@ const ABOUT_ITEM = {
   desc: 'Created by Eric Allione',
 };
 
+// Pinned at the bottom of the TOOLS dropdown, immediately above the
+// divider + About row. Mirrors the Extensions section in the desktop
+// Menu dropdown (see src/components/Menu.jsx) so the two browser
+// extension store links are reachable from either viewport class.
+// Only surfaced in TOOLS; RESEARCH stays focused on the model-family
+// zoos and gets the About egress without the extension rows.
+const EXTENSION_ITEMS = [
+  {
+    href: 'https://chromewebstore.google.com/detail/ai-gamma-spx-regime-statu/pigfafocmendmpmplaaeknmopodioemh',
+    label: 'Chrome Extension',
+    desc: 'Toolbar regime icon + metrics popup',
+  },
+  {
+    href: 'https://addons.mozilla.org/en-US/firefox/addon/ai-gamma-spx-regime-and-metric/',
+    label: 'Firefox Extension',
+    desc: 'Toolbar regime icon + metrics popup',
+  },
+];
+
 export default function MobileNav({ regimeIndicator } = {}) {
   // Single dropdown-state machine: only one of TOOLS / RESEARCH can be
   // open at a time. Tapping the open pill again closes it; tapping the
@@ -369,6 +388,18 @@ export default function MobileNav({ regimeIndicator } = {}) {
           aria-label="Tools"
         >
           {visibleToolsItems.map((item) => (
+            <a
+              key={item.href}
+              href={item.href}
+              className="mobile-nav__item mobile-nav__item--tools"
+              role="menuitem"
+              onClick={() => setOpenPanel(null)}
+            >
+              <span className="mobile-nav__item-path">{item.label}</span>
+              <span className="mobile-nav__item-desc">{item.desc}</span>
+            </a>
+          ))}
+          {EXTENSION_ITEMS.map((item) => (
             <a
               key={item.href}
               href={item.href}

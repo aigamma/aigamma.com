@@ -78,6 +78,19 @@ const MENU_ITEMS = [
   ...MENU_TOOLS.map((item) => ({ type: 'item', ...item })),
   { type: 'header', label: 'Research' },
   ...MENU_RESEARCH.map((item) => ({ type: 'item', ...item })),
+  { type: 'header', label: 'Extensions' },
+  {
+    type: 'item',
+    href: 'https://chromewebstore.google.com/detail/ai-gamma-spx-regime-statu/pigfafocmendmpmplaaeknmopodioemh',
+    label: 'Chrome Extension',
+    desc: 'Toolbar regime icon + metrics popup',
+  },
+  {
+    type: 'item',
+    href: 'https://addons.mozilla.org/en-US/firefox/addon/ai-gamma-spx-regime-and-metric/',
+    label: 'Firefox Extension',
+    desc: 'Toolbar regime icon + metrics popup',
+  },
   { type: 'header', label: 'About' },
   { type: 'item', href: 'https://about.aigamma.com/', label: 'About This Page', desc: 'Created by Eric Allione' },
 ];
