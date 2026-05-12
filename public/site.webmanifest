@@ -1,7 +1,7 @@
 {
   "name": "AI Gamma",
   "short_name": "AI Gamma",
-  "description": "Live SPX dealer gamma and volatility dashboard.",
+  "description": "Live quant trading dashboard.",
   "start_url": "/",
   "display": "standalone",
   "background_color": "#0d0f13",
