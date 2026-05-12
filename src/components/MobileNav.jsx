@@ -56,7 +56,7 @@ import { MOBILE_TOOLS, MOBILE_RESEARCH } from '../data/pages.js';
 // and as the .page-footer-disclaimer link in the footer of every page
 // page, so the dropdown row was adding redundancy without discovery
 // benefit. The desktop counterpart of the About dropdown entry is the
-// .page-footer-about "Who made this?" link wired into every page footer
+// .page-footer-about "Created by Eric Allione" link wired into every page footer
 // (see src/styles/page.css and the per-app footer blocks); mobile users
 // get the in-dropdown path because the footer requires scrolling past
 // the entire page content to reach.

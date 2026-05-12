@@ -131,7 +131,7 @@ export default function App() {
           AI Gamma · disclaimer · v0.1.0
         </span>
         <a href="/" className="page-footer-home">Return Home</a>
-        <a href="https://about.aigamma.com/" className="page-footer-about">Who made this?</a>
+        <a href="https://about.aigamma.com/" className="page-footer-about">Created by Eric Allione</a>
       </footer>
     </div>
   );

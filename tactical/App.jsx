@@ -333,7 +333,7 @@ export default function App() {
       <footer className="page-footer">
         <a href="/disclaimer/" className="page-footer-disclaimer">Disclaimer</a>
         <a href="/" className="page-footer-home">Return Home</a>
-        <a href="https://about.aigamma.com/" className="page-footer-about">Who made this?</a>
+        <a href="https://about.aigamma.com/" className="page-footer-about">Created by Eric Allione</a>
       </footer>
     </div>
   );

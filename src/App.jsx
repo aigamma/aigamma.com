@@ -818,7 +818,7 @@ export default function App() {
             fontWeight: 700,
           }}
         >
-          Who made this?
+          Created by Eric Allione
         </a>
       </div>
     </div>

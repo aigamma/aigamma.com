@@ -353,8 +353,8 @@
    different accent color), so the eye reads them as a paired pair of
    primary egress affordances rather than a primary + secondary split.
    The intended reading order from chat down is Disclaimer (legal,
-   coral, top), Return Home (primary egress, green), Who made this?
-   (attribution, blue, bottom). The mobile breakpoint scaling below
+   coral, top), Return Home (primary egress, green), Created by Eric
+   Allione (attribution, blue, bottom). The mobile breakpoint scaling below
    mirrors page-footer-home / page-footer-about so the three links read
    at the same typographic weight on phones. */
 .page-footer-disclaimer {
