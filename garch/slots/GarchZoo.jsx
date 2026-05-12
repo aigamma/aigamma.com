@@ -528,9 +528,9 @@ export default function GarchZoo() {
 
   if (loading && !data) {
     return (
-      <div className="lab-placeholder">
-        <div className="lab-placeholder-title">Loading SPX history…</div>
-        <div className="lab-placeholder-hint">
+      <div className="page-placeholder">
+        <div className="page-placeholder-title">Loading SPX history…</div>
+        <div className="page-placeholder-hint">
           Loading the daily close series.
         </div>
       </div>
@@ -539,31 +539,31 @@ export default function GarchZoo() {
 
   if (error) {
     return (
-      <div className="lab-placeholder" style={{ borderColor: 'var(--accent-coral)' }}>
-        <div className="lab-placeholder-title" style={{ color: 'var(--accent-coral)' }}>
+      <div className="page-placeholder" style={{ borderColor: 'var(--accent-coral)' }}>
+        <div className="page-placeholder-title" style={{ color: 'var(--accent-coral)' }}>
           History fetch failed
         </div>
-        <div className="lab-placeholder-hint">{error}</div>
+        <div className="page-placeholder-hint">{error}</div>
       </div>
     );
   }
 
   if (plotlyError) {
     return (
-      <div className="lab-placeholder" style={{ borderColor: 'var(--accent-coral)' }}>
-        <div className="lab-placeholder-title" style={{ color: 'var(--accent-coral)' }}>
+      <div className="page-placeholder" style={{ borderColor: 'var(--accent-coral)' }}>
+        <div className="page-placeholder-title" style={{ color: 'var(--accent-coral)' }}>
           Plotly unavailable
         </div>
-        <div className="lab-placeholder-hint">{plotlyError}</div>
+        <div className="page-placeholder-hint">{plotlyError}</div>
       </div>
     );
   }
 
   if (!returnsWithDate || returnsWithDate.length < 200) {
     return (
-      <div className="lab-placeholder">
-        <div className="lab-placeholder-title">Not enough history</div>
-        <div className="lab-placeholder-hint">
+      <div className="page-placeholder">
+        <div className="page-placeholder-title">Not enough history</div>
+        <div className="page-placeholder-hint">
           Need at least 200 daily returns to fit the GARCH family;
           the current history endpoint returned {returnsWithDate?.length ?? 0}.
         </div>
@@ -573,20 +573,20 @@ export default function GarchZoo() {
 
   if (fitState.error) {
     return (
-      <div className="lab-placeholder" style={{ borderColor: 'var(--accent-coral)' }}>
-        <div className="lab-placeholder-title" style={{ color: 'var(--accent-coral)' }}>
+      <div className="page-placeholder" style={{ borderColor: 'var(--accent-coral)' }}>
+        <div className="page-placeholder-title" style={{ color: 'var(--accent-coral)' }}>
           Fit failed
         </div>
-        <div className="lab-placeholder-hint">{fitState.error}</div>
+        <div className="page-placeholder-hint">{fitState.error}</div>
       </div>
     );
   }
 
   if (!fitState.fit) {
     return (
-      <div className="lab-placeholder">
-        <div className="lab-placeholder-title">Fitting zoo…</div>
-        <div className="lab-placeholder-hint">
+      <div className="page-placeholder">
+        <div className="page-placeholder-title">Fitting zoo…</div>
+        <div className="page-placeholder-hint">
           17 GARCH-family specifications by Gaussian MLE on{' '}
           {returnsWithDate.length.toLocaleString()} daily returns. Nelder-Mead
           in-browser, serial fit with FIGARCH / HYGARCH / MS-GARCH the

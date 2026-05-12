@@ -26,9 +26,9 @@ export const slotName = '(empty)';
 
 export default function SlotB() {
   return (
-    <div className="lab-placeholder">
-      <div className="lab-placeholder-title">Empty Slot</div>
-      <div className="lab-placeholder-hint">
+    <div className="page-placeholder">
+      <div className="page-placeholder-title">Empty Slot</div>
+      <div className="page-placeholder-hint">
         Replace the default export of <code>beta/slots/SlotB.jsx</code> with
         a component. The Economic Events listener that lived here graduated
         to <code>/events/</code>; do not rebuild it in this slot.

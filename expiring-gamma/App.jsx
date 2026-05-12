@@ -1,5 +1,5 @@
 import '../src/styles/theme.css';
-import '../src/styles/lab.css';
+import '../src/styles/page.css';
 import ErrorBoundary from '../src/ErrorBoundary';
 import Menu from '../src/components/Menu';
 import PageNarrator from '../src/components/PageNarrator';
@@ -29,32 +29,32 @@ import ExpiringGamma from '../src/components/ExpiringGamma';
 
 export default function App() {
   return (
-    <div className="app-shell lab-shell expiring-gamma-shell">
-      <header className="lab-header">
-        <div className="lab-brand">
+    <div className="app-shell page-shell expiring-gamma-shell">
+      <header className="page-header">
+        <div className="page-brand">
           <span
-            className="lab-badge"
+            className="page-badge"
             title="Expiring Gamma · per-expiration call / put dollar gamma scheduled to expire at current spot"
           >
-            <span className="lab-badge__desktop-text">Expiring</span>
-            <span className="lab-badge__mobile-text">Expiring</span>
+            <span className="page-badge__desktop-text">Expiring</span>
+            <span className="page-badge__mobile-text">Expiring</span>
           </span>
         </div>
         <TopNav />
         <a
           href="/"
-          className="lab-home-button lab-home-button--inline lab-home-button--split"
+          className="page-home-button page-home-button--inline page-home-button--split"
           aria-label="Return Home"
         >
-          <span className="lab-home-button__desktop-text">Home</span>
-          <span className="lab-home-button__mobile-text">Home</span>
+          <span className="page-home-button__desktop-text">Home</span>
+          <span className="page-home-button__mobile-text">Home</span>
         </a>
         <Menu />
       </header>
 
       <ErrorBoundary><PageNarrator page="/expiring-gamma/" /></ErrorBoundary>
 
-      <section className="lab-slot expiring-gamma-slot">
+      <section className="page-slot expiring-gamma-slot">
         <ErrorBoundary><ExpiringGamma /></ErrorBoundary>
       </section>
 
@@ -98,13 +98,13 @@ export default function App() {
         </div>
       </section>
 
-      <footer className="lab-footer">
-        <span className="lab-footer-line">
+      <footer className="page-footer">
+        <span className="page-footer-line">
           AI Gamma · Expiring Gamma · per-expiration gamma scheduled to roll off · v0.1.2
         </span>
-        <a href="/disclaimer/" className="lab-footer-disclaimer">Disclaimer</a>
-        <a href="/" className="lab-footer-home">Return Home</a>
-        <a href="https://about.aigamma.com/" className="lab-footer-about">Who made this?</a>
+        <a href="/disclaimer/" className="page-footer-disclaimer">Disclaimer</a>
+        <a href="/" className="page-footer-home">Return Home</a>
+        <a href="https://about.aigamma.com/" className="page-footer-about">Who made this?</a>
       </footer>
     </div>
   );

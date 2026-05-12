@@ -287,7 +287,7 @@ function StatCell({ label, value, sub, accent }) {
   );
 }
 
-// slotName drives the visible "lab-slot-label" rendered by ../App.jsx so
+// slotName drives the visible "page-slot-label" rendered by ../App.jsx so
 // the chrome reflects the model in the slot rather than the slot's letter
 // position. Update this string whenever the model under test changes.
 export const slotName = 'PUT-CALL PARITY · BOX VS DIRECT';
@@ -663,9 +663,9 @@ export default function SlotA() {
 
   if (loading && !data) {
     return (
-      <div className="lab-placeholder">
-        <div className="lab-placeholder-title">Loading chain…</div>
-        <div className="lab-placeholder-hint">
+      <div className="page-placeholder">
+        <div className="page-placeholder-title">Loading chain…</div>
+        <div className="page-placeholder-hint">
           Loading the live SPX snapshot.
         </div>
       </div>
@@ -674,31 +674,31 @@ export default function SlotA() {
 
   if (error) {
     return (
-      <div className="lab-placeholder" style={{ borderColor: 'var(--accent-coral)' }}>
-        <div className="lab-placeholder-title" style={{ color: 'var(--accent-coral)' }}>
+      <div className="page-placeholder" style={{ borderColor: 'var(--accent-coral)' }}>
+        <div className="page-placeholder-title" style={{ color: 'var(--accent-coral)' }}>
           Chain fetch failed
         </div>
-        <div className="lab-placeholder-hint">{error}</div>
+        <div className="page-placeholder-hint">{error}</div>
       </div>
     );
   }
 
   if (plotlyError) {
     return (
-      <div className="lab-placeholder" style={{ borderColor: 'var(--accent-coral)' }}>
-        <div className="lab-placeholder-title" style={{ color: 'var(--accent-coral)' }}>
+      <div className="page-placeholder" style={{ borderColor: 'var(--accent-coral)' }}>
+        <div className="page-placeholder-title" style={{ color: 'var(--accent-coral)' }}>
           Plotly unavailable
         </div>
-        <div className="lab-placeholder-hint">{plotlyError}</div>
+        <div className="page-placeholder-hint">{plotlyError}</div>
       </div>
     );
   }
 
   if (rows.length === 0) {
     return (
-      <div className="lab-placeholder">
-        <div className="lab-placeholder-title">No usable strike pairs</div>
-        <div className="lab-placeholder-hint">
+      <div className="page-placeholder">
+        <div className="page-placeholder-title">No usable strike pairs</div>
+        <div className="page-placeholder-hint">
           The current snapshot does not contain enough matched call/put pairs
           bracketing the spot price to compute implied rates at either method.
         </div>

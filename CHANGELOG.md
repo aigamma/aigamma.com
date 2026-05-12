@@ -178,10 +178,10 @@ same breakpoints as the production dashboard.** The two lab shells
 already inherited the viewport meta and some mobile scaling from the
 original implementation, but the treatment stopped at the badge and
 logo; the warning strip, the slot cards, the footer, and the placeholder
-chrome all kept their desktop padding on phone widths. `src/styles/lab.css`
+chrome all kept their desktop padding on phone widths. `src/styles/page.css`
 now adds a second pass at `@media (max-width: 768px)` that tightens
-every lab-specific chrome element (warning padding, slot gap, card
-padding scoped to `.lab-shell .card` so the main dashboard's cards are
+every page-specific chrome element (warning padding, slot gap, card
+padding scoped to `.page-shell .card` so the main dashboard's cards are
 untouched, placeholder font sizes, footer spacing) and a new
 `@media (max-width: 480px)` block that scales one more step down for
 phone-width viewports (badge height 2.8 → 2.4rem, meta 0.72 → 0.68rem,

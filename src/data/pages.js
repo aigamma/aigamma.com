@@ -32,7 +32,7 @@
 // Field reference:
 //   vite          — vite_entry name (matches rollupOptions.input key)
 //   html          — relative path to the entry HTML
-//   title         — short title (used in lab-badge / browser tab when relevant)
+//   title         — short title (used in page-badge / browser tab when relevant)
 //   chat          — { surface, prompt } if the page mounts a Chat component
 //                   (homepage + 11 lab pages); absent on pages that don't
 //   topnav        — { key, label } if the page is in the promoted top nav
@@ -181,7 +181,7 @@ export const PAGES = {
     mobile_desc: 'VIX term structure, contango, Ornstein-Uhlenbeck, VVIX, SDEX/TDEX, regimes, Cboe strategies',
   },
   // ---- Disclaimer page (intentionally not exposed in any nav dropdown;
-  //      the right-corner chat-header chip and the lab-footer link both
+  //      the right-corner chat-header chip and the page-footer link both
   //      already surface it on every page) -----------------------------
   '/disclaimer/': {
     vite: 'disclaimer',
@@ -228,7 +228,7 @@ export const TOPNAV_ITEMS = Object.entries(PAGES)
 // Desktop Menu items, split by section. There is no longer an `about`
 // section: /disclaimer/ used to live there but was removed from the
 // dropdown on 2026-05-08 (already surfaced via the right-corner chat-
-// header chip and the lab-footer link on every page), and the off-site
+// header chip and the page-footer link on every page), and the off-site
 // "About This Page" exit link is hardcoded directly in Menu.jsx because
 // it points off-domain to about.aigamma.com and never had a registry
 // entry.

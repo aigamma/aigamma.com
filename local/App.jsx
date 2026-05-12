@@ -1,6 +1,6 @@
 import { lazy, useEffect } from 'react';
 import '../src/styles/theme.css';
-import '../src/styles/lab.css';
+import '../src/styles/page.css';
 import ErrorBoundary from '../src/ErrorBoundary';
 import Menu from '../src/components/Menu';
 import PageNarrator from '../src/components/PageNarrator';
@@ -116,48 +116,48 @@ export default function App() {
   }, []);
 
   return (
-    <div className="app-shell lab-shell">
-      <header className="lab-header">
-        <div className="lab-brand">
+    <div className="app-shell page-shell">
+      <header className="page-header">
+        <div className="page-brand">
           <span
-            className="lab-badge"
+            className="page-badge"
             title="Local Vol: Dupire pricing, viewer, forward-smile"
           >
-            <span className="lab-badge__desktop-text">Local Vol</span>
-            <span className="lab-badge__mobile-text">Local Vol</span>
+            <span className="page-badge__desktop-text">Local Vol</span>
+            <span className="page-badge__mobile-text">Local Vol</span>
           </span>
         </div>
         <TopNav />
         <a
           href="/"
-          className="lab-home-button lab-home-button--inline lab-home-button--split"
+          className="page-home-button page-home-button--inline page-home-button--split"
           aria-label="Return Home"
         >
-          <span className="lab-home-button__desktop-text">Home</span>
-          <span className="lab-home-button__mobile-text">Home</span>
+          <span className="page-home-button__desktop-text">Home</span>
+          <span className="page-home-button__mobile-text">Home</span>
         </a>
         <Menu />
       </header>
 
       <ErrorBoundary><PageNarrator page="/local/" /></ErrorBoundary>
 
-      <section className="lab-slot">
+      <section className="page-slot">
         <ErrorBoundary><SlotB /></ErrorBoundary>
       </section>
 
-      <section className="lab-slot">
+      <section className="page-slot">
         <ErrorBoundary>
           <LazyMount height="1500px" margin="300px"><SlotC /></LazyMount>
         </ErrorBoundary>
       </section>
 
-      <section className="lab-slot">
+      <section className="page-slot">
         <ErrorBoundary>
           <LazyMount height="1500px" margin="300px"><SlotD /></LazyMount>
         </ErrorBoundary>
       </section>
 
-      <section className="lab-slot">
+      <section className="page-slot">
         <ErrorBoundary>
           <LazyMount height="1400px" margin="300px"><SlotE /></LazyMount>
         </ErrorBoundary>
@@ -177,13 +177,13 @@ export default function App() {
         </LazyMount>
       </ErrorBoundary>
 
-      <footer className="lab-footer">
-        <span className="lab-footer-line">
+      <footer className="page-footer">
+        <span className="page-footer-line">
           AI Gamma · local vol lab · dupire extraction + pricing · v0.1.0
         </span>
-        <a href="/disclaimer/" className="lab-footer-disclaimer">Disclaimer</a>
-        <a href="/" className="lab-footer-home">Return Home</a>
-        <a href="https://about.aigamma.com/" className="lab-footer-about">Who made this?</a>
+        <a href="/disclaimer/" className="page-footer-disclaimer">Disclaimer</a>
+        <a href="/" className="page-footer-home">Return Home</a>
+        <a href="https://about.aigamma.com/" className="page-footer-about">Who made this?</a>
       </footer>
     </div>
   );

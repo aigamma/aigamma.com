@@ -13,7 +13,7 @@ import { MENU_TOOLS, MENU_RESEARCH } from '../data/pages.js';
 // header alongside the off-site About This Page link, but the
 // dropdown entry was removed on 2026-05-08 — the disclaimer is
 // already surfaced as the coral DISCLAIMER chip in the right corner
-// of the chat header on every page and as the lab-footer-disclaimer
+// of the chat header on every page and as the page-footer-disclaimer
 // link in the footer of every lab page, so the dropdown row was
 // adding redundancy without discovery benefit. The /disclaimer/
 // page itself is unchanged.
@@ -24,7 +24,7 @@ import { MENU_TOOLS, MENU_RESEARCH } from '../data/pages.js';
 // cluster (the imported MobileNav). CSS in src/styles/theme.css
 // swaps which one is visible at the 768px breakpoint — at desktop
 // widths the MobileNav is display:none and the desktop chrome (this
-// MENU pill plus the sibling TopNav and lab-home-button) renders as
+// MENU pill plus the sibling TopNav and page-home-button) renders as
 // before; at mobile widths the desktop chrome is hidden and only the
 // MobileNav cluster shows. Wiring the swap inside Menu rather than
 // adding <MobileNav /> to all 22 App.jsx page-header blocks keeps the
@@ -99,7 +99,7 @@ export default function Menu({ regimeIndicator } = {}) {
   const itemRefs = useRef([]);
 
   // Wrap-detection. When the surrounding header (.site-header on the
-  // main dashboard, .lab-header on every lab page) is too narrow to
+  // main dashboard, .page-header on every lab page) is too narrow to
   // fit the lab badge + the five TopNav buttons + the optional Return
   // Home button + this Menu trigger on one row, flex-wrap reflows the
   // overflowing children onto a second row. With the existing desktop
@@ -115,9 +115,9 @@ export default function Menu({ regimeIndicator } = {}) {
   // and, whenever the .menu element's bounding-rect top is more than
   // a few pixels below the header's bounding-rect top (= it has
   // wrapped), toggles an .is-menu-wrapped class on the header. The
-  // companion CSS in src/styles/theme.css and src/styles/lab.css
+  // companion CSS in src/styles/theme.css and src/styles/page.css
   // overrides the desktop space-between to flex-end (with a brand
-  // auto-margin on the lab-header so the .lab-brand stays anchored
+  // auto-margin on the page-header so the .page-brand stays anchored
   // to the left while the wrapped Menu trigger anchors to the right
   // of its new row, keeping the dropdown panel on-screen). The
   // class is scoped to the actual header element so adjacent pages
@@ -128,7 +128,7 @@ export default function Menu({ regimeIndicator } = {}) {
   useEffect(() => {
     const menuBox = menuBoxRef.current;
     if (!menuBox) return;
-    const header = menuBox.closest('.site-header, .lab-header');
+    const header = menuBox.closest('.site-header, .page-header');
     if (!header) return;
 
     const update = () => {

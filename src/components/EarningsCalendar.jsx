@@ -93,7 +93,7 @@ const DEFAULT_FILTER_MODE = 'topN-100';
 // wants larger fonts can dial up the whole component in one move.
 // 'S' is a 10% shrink, 'M' is the baseline, 'L' is a 15% bump.
 // First-render default is viewport-derived: phones (≤768px, the
-// platform-wide mobile breakpoint shared with lab.css and the
+// platform-wide mobile breakpoint shared with page.css and the
 // MobileNav swap) get 'S' so the SVG text doesn't crowd the
 // container-width-sized chart, desktops get 'L' so labels read
 // cleanly without a manual toggle. The user's explicit toggle
@@ -510,7 +510,7 @@ function ScatterChart({ chartDays, containerWidth, impliedMovesLive, impliedMove
 
   const width = Math.max(Math.min(containerWidth - 16, 1100), 320);
   // Aspect ratio: on mobile (containerWidth < 600px, which catches every
-  // phone-class viewport since the lab-shell padding shaves the wrap to
+  // phone-class viewport since the page-shell padding shaves the wrap to
   // ~320-360px even on the widest phones) we render the chart roughly
   // 2.5× TALLER than wide so the implied-move axis has enough vertical
   // room for the per-ticker dots to spread out and stay readable. The

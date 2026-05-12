@@ -714,20 +714,20 @@ export default function SlotB() {
 
   if (plotlyError) {
     return (
-      <div className="lab-placeholder" style={{ borderColor: 'var(--accent-coral)' }}>
-        <div className="lab-placeholder-title" style={{ color: 'var(--accent-coral)' }}>
+      <div className="page-placeholder" style={{ borderColor: 'var(--accent-coral)' }}>
+        <div className="page-placeholder-title" style={{ color: 'var(--accent-coral)' }}>
           Plotly unavailable
         </div>
-        <div className="lab-placeholder-hint">{plotlyError}</div>
+        <div className="page-placeholder-hint">{plotlyError}</div>
       </div>
     );
   }
 
   if (!result) {
     return (
-      <div className="lab-placeholder">
-        <div className="lab-placeholder-title">Cholesky failed</div>
-        <div className="lab-placeholder-hint">
+      <div className="page-placeholder">
+        <div className="page-placeholder-title">Cholesky failed</div>
+        <div className="page-placeholder-hint">
           Joint covariance matrix is not positive-definite at this parameter
           point. Try nudging H away from 0 or 0.5 and re-simulate.
         </div>

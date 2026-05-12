@@ -39,7 +39,7 @@
      variable is referenced by every CSS rule that used to hardcode
      'Courier New', monospace so a future brand change is one-line. */
   --font-base: Calibri, 'Segoe UI', system-ui, sans-serif;
-  /* Kept for backward compatibility with lab.css references that target
+  /* Kept for backward compatibility with page.css references that target
      model-title text specifically. Same value as --font-base now that the
      whole platform shares one font, but the variable name is preserved
      so a future divergence (e.g., a heavier Calibri Bold for titles only)
@@ -346,7 +346,7 @@ body {
    blue/white/blue/white/blue/white cluster. Border color is bound
    to currentColor so each variant only needs to declare `color`.
    Trigger sizing matches the 3.2rem chrome of .menu-trigger and
-   .lab-home-button--inline so the six buttons sit on a single
+   .page-home-button--inline so the six buttons sit on a single
    horizontal baseline alongside the Menu trigger at desktop
    widths. Mobile uses the same full labels — an earlier two-span
    splitter that abbreviated to 3-4 letters at ≤768px was removed
@@ -433,7 +433,7 @@ body {
    Hidden by default (display: none); the @media (max-width: 768px)
    block at the bottom of this file flips it to display: inline-flex
    and simultaneously hides the desktop .top-nav, .menu, and
-   .lab-home-button--inline so the three desktop-chrome blocks dissolve
+   .page-home-button--inline so the three desktop-chrome blocks dissolve
    in favor of this single cluster. The component itself lives in
    src/components/MobileNav.jsx and is mounted automatically as a
    sibling of the desktop .menu inside src/components/Menu.jsx, so
@@ -455,8 +455,8 @@ body {
    + gaps), the auto margin collapses to 0, and the brand cluster sits
    flush against the pills with no separation. Lab pages, which don't
    render the brand cluster, keep the default flex-end layout so the
-   pills cluster on the right edge of the .lab-header alongside the
-   .lab-badge on the left without taking the whole row. */
+   pills cluster on the right edge of the .page-header alongside the
+   .page-badge on the left without taking the whole row. */
 .mobile-nav--with-brand {
   width: 100%;
 }
@@ -718,9 +718,9 @@ body {
      packs every child (the six top-nav buttons + the trigger) against
      the right edge of whatever row each one is on, which keeps the
      wrapped Menu trigger anchored to the right and the dropdown
-     panel on-screen. The companion override on .lab-header in
-     src/styles/lab.css keeps the lab-brand cluster pinned to the
-     left edge via an auto right-margin on .lab-brand; the main
+     panel on-screen. The companion override on .page-header in
+     src/styles/page.css keeps the page-brand cluster pinned to the
+     left edge via an auto right-margin on .page-brand; the main
      dashboard has no brand cluster in its header (the wordmark and
      the dealer-gamma regime indicator both moved into LevelsPanel),
      so flex-end alone produces the right-clustered wrapped layout. */
@@ -730,7 +730,7 @@ body {
 
   /* display: contents lets .top-nav's anchor children participate
      in the parent flex layout (.site-header on the main page,
-     .lab-header on the lab pages) as if they were direct siblings
+     .page-header on the lab pages) as if they were direct siblings
      of the Menu trigger (and, on lab pages, the Return Home
      button and lab badge). Combined with justify-content:
      space-between on the parent, this produces a single
@@ -1259,7 +1259,7 @@ body {
   /* Mobile-nav swap. The desktop right-cluster (five TopNav buttons +
      inline Return Home + MENU dropdown trigger) collapses into the
      three-pill MobileNav at ≤768px. Hiding .top-nav, .menu, and
-     .lab-home-button--inline (the last lives in lab.css and gets its
+     .page-home-button--inline (the last lives in page.css and gets its
      own display: none rule there) lets the .mobile-nav cluster
      render as the sole navigation chrome on the right side of the
      header on phone-class viewports. */
@@ -1370,13 +1370,13 @@ body {
 
 /* Phone-class second-step scaling for the mobile-nav pills so the
    right cluster (HOME + TOOLS + RESEARCH) shares a single header row
-   with the lab-badge at the narrowest 480px-class viewports without
+   with the page-badge at the narrowest 480px-class viewports without
    wrapping. The 768px sizing above (height 2.8rem, font-size 0.95rem,
    padding 0.85rem horizontal) overflowed alongside the 2.4rem
-   lab-badge on a typical iPhone-class width once a 12-character lab
+   page-badge on a typical iPhone-class width once a 12-character lab
    label like "TACTICAL VOL" was on the page; dropping pill height to
-   2.4rem and font-size to 0.82rem matches the chrome the lab-badge,
-   lab-logo, and menu-trigger drop to inside lab.css's own 480px
+   2.4rem and font-size to 0.82rem matches the chrome the page-badge,
+   page-logo, and menu-trigger drop to inside page.css's own 480px
    block, so the whole header reads at a single uniform stripe height
    on phones. The dropdown panel itself stays the same — only the
    triggers shrink. */

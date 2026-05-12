@@ -28,7 +28,7 @@ import { MOBILE_TOOLS, MOBILE_RESEARCH } from '../data/pages.js';
 // its panel anchored to its own trigger would clip the right edge).
 //
 // Color identity — TOOLS in purple, RESEARCH in blue. TOOLS keeps the
-// same accent the desktop MENU trigger has used since the lab-rollup-
+// same accent the desktop MENU trigger has used since the page-rollup-
 // pill rename (TOOLS is conceptually the descendant of the desktop
 // Menu's Tools section plus the TopNav buttons), and RESEARCH stays in
 // the platform's primary blue (the gateway to the eight calibrated-
@@ -53,11 +53,11 @@ import { MOBILE_TOOLS, MOBILE_RESEARCH } from '../data/pages.js';
 // previously sat above About This Page in both dropdowns was removed
 // on 2026-05-08; the disclaimer is already surfaced as the coral
 // DISCLAIMER chip in the right corner of the chat header on every page
-// and as the .lab-footer-disclaimer link in the footer of every lab
+// and as the .page-footer-disclaimer link in the footer of every lab
 // page, so the dropdown row was adding redundancy without discovery
 // benefit. The desktop counterpart of the About dropdown entry is the
-// .lab-footer-about "Who made this?" link wired into every lab footer
-// (see src/styles/lab.css and the per-app footer blocks); mobile users
+// .page-footer-about "Who made this?" link wired into every lab footer
+// (see src/styles/page.css and the per-app footer blocks); mobile users
 // get the in-dropdown path because the footer requires scrolling past
 // the entire lab content to reach.
 //
@@ -66,12 +66,12 @@ import { MOBILE_TOOLS, MOBILE_RESEARCH } from '../data/pages.js';
 // renders <Menu /> picks up the mobile design without per-app edits to
 // the 22 App.jsx files. CSS in src/styles/theme.css swaps which UI is
 // visible: at ≥769px, .mobile-nav is display:none and the existing
-// .menu / .top-nav / .lab-home-button--inline render normally; at
+// .menu / .top-nav / .page-home-button--inline render normally; at
 // ≤768px, those three desktop blocks are display:none and .mobile-nav
 // becomes display:inline-flex.
 //
 // Home-page-only brand cluster. On the home page (where there is no
-// .lab-badge on the left), the .mobile-nav also carries the aigamma
+// .page-badge on the left), the .mobile-nav also carries the aigamma
 // wordmark and the dealer-gamma regime status as a left-aligned pair,
 // so the entire mobile header reads as a single row of:
 //
@@ -100,7 +100,7 @@ import { MOBILE_TOOLS, MOBILE_RESEARCH } from '../data/pages.js';
 // Brand cluster only renders when the parent passes a regimeIndicator
 // (the home page App.jsx does; lab page App.jsx files do not) AND the
 // detected path is /, so lab pages keep their lean pills-only mobile
-// row chrome and the lab-badge on the left side of the .lab-header.
+// row chrome and the page-badge on the left side of the .page-header.
 
 // TOOLS_ITEMS and RESEARCH_ITEMS are derived from src/data/pages.js so the
 // mobile dropdown content stays aligned with the desktop Menu without

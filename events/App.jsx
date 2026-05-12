@@ -1,5 +1,5 @@
 import '../src/styles/theme.css';
-import '../src/styles/lab.css';
+import '../src/styles/page.css';
 import ErrorBoundary from '../src/ErrorBoundary';
 import Menu from '../src/components/Menu';
 import PageNarrator from '../src/components/PageNarrator';
@@ -32,10 +32,10 @@ import SlotB from './slots/SlotB';
 // browser-Notification opt-in fires a 5-minute lead-time alert ahead
 // of the next high-impact print.
 //
-// The shell is the standard lab-shell chrome shared with /earnings/,
+// The shell is the standard page-shell chrome shared with /earnings/,
 // /tactical/, /vix/, and the rest of the production lab pages: a
-// lab-badge identifying the page, the six-button TopNav, a Return
-// Home button, and the Menu dropdown. The experimental lab-warning
+// page-badge identifying the page, the six-button TopNav, a Return
+// Home button, and the Menu dropdown. The experimental page-warning
 // strip and slot-label that the /beta/ shell carries are dropped
 // here — /events/ is a single-tenant production surface, not a
 // sandbox holding bay. SlotB itself is mounted verbatim from
@@ -45,32 +45,32 @@ import SlotB from './slots/SlotB';
 // promoting it to src/components/.
 export default function App() {
   return (
-    <div className="app-shell lab-shell">
-      <header className="lab-header">
-        <div className="lab-brand">
+    <div className="app-shell page-shell">
+      <header className="page-header">
+        <div className="page-brand">
           <span
-            className="lab-badge"
+            className="page-badge"
             title="Economic Events · upcoming US releases with SPX implied moves"
           >
-            <span className="lab-badge__desktop-text">Events</span>
-            <span className="lab-badge__mobile-text">Events</span>
+            <span className="page-badge__desktop-text">Events</span>
+            <span className="page-badge__mobile-text">Events</span>
           </span>
         </div>
         <TopNav />
         <a
           href="/"
-          className="lab-home-button lab-home-button--inline lab-home-button--split"
+          className="page-home-button page-home-button--inline page-home-button--split"
           aria-label="Return Home"
         >
-          <span className="lab-home-button__desktop-text">Home</span>
-          <span className="lab-home-button__mobile-text">Home</span>
+          <span className="page-home-button__desktop-text">Home</span>
+          <span className="page-home-button__mobile-text">Home</span>
         </a>
         <Menu />
       </header>
 
       <ErrorBoundary><PageNarrator page="/events/" /></ErrorBoundary>
 
-      <section className="lab-slot">
+      <section className="page-slot">
         <ErrorBoundary><SlotB /></ErrorBoundary>
       </section>
 
@@ -228,13 +228,13 @@ export default function App() {
         </div>
       </div>
 
-      <footer className="lab-footer">
-        <span className="lab-footer-line">
+      <footer className="page-footer">
+        <span className="page-footer-line">
           AI Gamma · Economic Events · upcoming US releases with SPX implied moves
         </span>
-        <a href="/disclaimer/" className="lab-footer-disclaimer">Disclaimer</a>
-        <a href="/" className="lab-footer-home">Return Home</a>
-        <a href="https://about.aigamma.com/" className="lab-footer-about">Who made this?</a>
+        <a href="/disclaimer/" className="page-footer-disclaimer">Disclaimer</a>
+        <a href="/" className="page-footer-home">Return Home</a>
+        <a href="https://about.aigamma.com/" className="page-footer-about">Who made this?</a>
       </footer>
     </div>
   );

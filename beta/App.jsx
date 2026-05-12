@@ -1,5 +1,5 @@
 import '../src/styles/theme.css';
-import '../src/styles/lab.css';
+import '../src/styles/page.css';
 import ErrorBoundary from '../src/ErrorBoundary';
 import Menu from '../src/components/Menu';
 import TopNav from '../src/components/TopNav';
@@ -24,10 +24,10 @@ import SlotB, { slotName as slotBName } from './slots/SlotB';
 // index.html and the robots.txt Disallow line.
 export default function App() {
   return (
-    <div className="app-shell lab-shell">
-      <header className="lab-header">
-        <div className="lab-brand">
-          <span className="lab-badge" title="Beta Lab: experimental">
+    <div className="app-shell page-shell">
+      <header className="page-header">
+        <div className="page-brand">
+          <span className="page-badge" title="Beta Lab: experimental">
             BETA LAB
           </span>
         </div>
@@ -35,24 +35,24 @@ export default function App() {
         <Menu />
       </header>
 
-      <div className="lab-warning">
+      <div className="page-warning">
         <strong>Experimental.</strong>{' '}
         Models in these slots are under test. Data, math, and rendering may
         be incomplete, incorrect, or change without notice.
       </div>
 
-      <section className="lab-slot">
-        <div className="lab-slot-label">{slotBName}</div>
+      <section className="page-slot">
+        <div className="page-slot-label">{slotBName}</div>
         <ErrorBoundary><SlotB /></ErrorBoundary>
       </section>
 
-      <footer className="lab-footer">
-        <span className="lab-footer-line">
+      <footer className="page-footer">
+        <span className="page-footer-line">
           AI Gamma · internal beta lab · not for public consumption · v1.1.2
         </span>
-        <a href="/disclaimer/" className="lab-footer-disclaimer">Disclaimer</a>
-        <a href="/" className="lab-footer-home">Return Home</a>
-        <a href="https://about.aigamma.com/" className="lab-footer-about">Who made this?</a>
+        <a href="/disclaimer/" className="page-footer-disclaimer">Disclaimer</a>
+        <a href="/" className="page-footer-home">Return Home</a>
+        <a href="https://about.aigamma.com/" className="page-footer-about">Who made this?</a>
       </footer>
     </div>
   );

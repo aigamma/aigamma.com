@@ -766,11 +766,11 @@ export default function App() {
           surface so a reader who has scrolled to the chatbot cannot
           miss the legal / risk-disclosure egress on the way to or from
           asking the model anything. The landing page is not a lab
-          surface (it does not import lab.css and does not render the
-          .lab-footer trio that every subpage carries below its Chat),
+          surface (it does not import page.css and does not render the
+          .page-footer trio that every subpage carries below its Chat),
           so the disclaimer affordance is reproduced inline here in the
           same accent-coral + uppercase + 0.1em tracking the
-          .lab-footer-disclaimer class uses elsewhere on the site,
+          .page-footer-disclaimer class uses elsewhere on the site,
           giving every page on aigamma.com — landing, lab, and the
           /disclaimer page itself — a structurally identical
           "Disclaimer above any other footer affordance, immediately

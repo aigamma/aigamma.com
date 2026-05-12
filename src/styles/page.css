@@ -2,15 +2,15 @@
    The theme variables (--bg-primary, --accent-amber, etc.) and shared
    classes (.app-shell, .card) are inherited as-is so a component dropped
    into a slot renders identically to how it would on the production
-   dashboard. Everything in this file is lab-specific chrome. */
+   dashboard. Everything in this file is page-specific chrome. */
 
-.lab-shell {
+.page-shell {
   max-width: 1100px;
   margin: 0 auto;
   padding: 1.5rem;
 }
 
-.lab-header {
+.page-header {
   display: flex;
   align-items: center;
   justify-content: flex-start;
@@ -23,17 +23,17 @@
    sibling to the right edge of the row, so the brand anchors the left
    and the navigational chrome (TopNav, Return Home button, Menu trigger)
    clusters tightly on the right. The desktop @media (min-width: 769px)
-   block below cancels both the auto margin and lab-header's flex-start
+   block below cancels both the auto margin and page-header's flex-start
    distribution and switches in justify-content: space-between with
    display: contents on .top-nav, so the five TopNav buttons become
-   direct flex items of .lab-header alongside the brand, the Return
+   direct flex items of .page-header alongside the brand, the Return
    Home button, and the Menu trigger and the whole row distributes
    evenly across the desktop viewport instead of clustering tightly
    on the right after a single big gap. The mobile cluster relies on
    flex-wrap as a fallback: with five top-nav buttons plus the
    Return Home button, the Menu trigger, and the lab badge it will
    spill onto a second line at the narrower phone widths. */
-.lab-brand {
+.page-brand {
   display: flex;
   align-items: center;
   gap: 0.75rem;
@@ -41,17 +41,17 @@
   margin-right: auto;
 }
 
-.lab-logo {
+.page-logo {
   height: 3.2rem;
   display: block;
 }
 
-/* Wrapper anchor that makes the lab-logo clickable as a route back to
+/* Wrapper anchor that makes the page-logo clickable as a route back to
    the main dashboard. Kept as a bare inline-flex box with no border,
    no padding, and no color so the rendered logo is visually identical
    to the non-linked version; only the cursor and the focus-visible
    outline communicate the hyperlink affordance. */
-.lab-logo-link {
+.page-logo-link {
   display: inline-flex;
   align-items: center;
   border-radius: 3px;
@@ -59,7 +59,7 @@
   outline: none;
 }
 
-.lab-logo-link:focus-visible {
+.page-logo-link:focus-visible {
   outline: 2px solid var(--accent-green);
   outline-offset: 2px;
 }
@@ -70,13 +70,13 @@
    family as the adjacent Menu trigger (both are green-text on
    dark-background with a green border); hover flips to filled green
    so the active affordance still stays within the same color token. */
-.lab-home-row {
+.page-home-row {
   display: flex;
   justify-content: center;
   margin: 0.25rem 0 1.5rem;
 }
 
-.lab-home-button {
+.page-home-button {
   display: inline-flex;
   align-items: center;
   justify-content: center;
@@ -94,20 +94,20 @@
   transition: background-color 0.2s ease, color 0.2s ease;
 }
 
-.lab-home-button:hover,
-.lab-home-button:focus-visible {
+.page-home-button:hover,
+.page-home-button:focus-visible {
   background: var(--accent-green);
   color: #0d1016;
   outline: none;
 }
 
 /* Inline variant of the Return-Home button used on labs that drop
-   the button directly into the lab-header row alongside the
+   the button directly into the page-header row alongside the
    Menu trigger rather than floating it in its own centered row
    below the header. Matches the 3.2rem / 1.1rem / 1rem-padding
    sizing of .menu-trigger so the two sit on the same
    horizontal baseline with identical vertical chrome weight. */
-.lab-home-button--inline {
+.page-home-button--inline {
   height: 3.2rem;
   padding: 0 1rem;
   font-size: 1.1rem;
@@ -123,28 +123,28 @@
    two spans — one for desktop copy, one for mobile copy — and the
    mobile block below toggles them via display: none, which cannot
    fail silently the way font-size: 0 did. */
-.lab-home-button__mobile-text {
+.page-home-button__mobile-text {
   display: none;
 }
 
-.lab-home-button__desktop-text {
+.page-home-button__desktop-text {
   display: inline;
 }
 
-/* Two-span splitter for the lab-badge pill used on labs with a long
+/* Two-span splitter for the page-badge pill used on labs with a long
    brand title (for example "Discrete & Parametric Vol Lab") that
    crowds the mobile header. Desktop renders the full string, the
    max-width 768px block below swaps to the short form via
    display: none rather than any font-size trick. */
-.lab-badge__mobile-text {
+.page-badge__mobile-text {
   display: none;
 }
 
-.lab-badge__desktop-text {
+.page-badge__desktop-text {
   display: inline;
 }
 
-.lab-badge {
+.page-badge {
   font-family: var(--font-model-title);
   font-size: 1.25rem;
   padding: 0 1rem;
@@ -160,7 +160,7 @@
   align-items: center;
 }
 
-.lab-meta {
+.page-meta {
   font-family: var(--font-base);
   font-size: 0.8rem;
   color: var(--text-secondary);
@@ -172,21 +172,21 @@
   text-transform: uppercase;
 }
 
-/* Cluster the Menu trigger with the lab-meta block so the right
+/* Cluster the Menu trigger with the page-meta block so the right
    side of the lab header reads as one group. The gap matches the
    header's own 0.75rem inter-item gap for visual continuity. */
-.lab-nav-group {
+.page-nav-group {
   display: inline-flex;
   align-items: center;
   gap: 1rem;
   flex-wrap: wrap;
 }
 
-.lab-meta-sep {
+.page-meta-sep {
   opacity: 0.5;
 }
 
-.lab-warning {
+.page-warning {
   background: rgba(241, 196, 15, 0.06);
   border: 1px solid rgba(241, 196, 15, 0.3);
   border-left: 3px solid var(--accent-amber);
@@ -198,7 +198,7 @@
   line-height: 1.6;
 }
 
-.lab-warning strong {
+.page-warning strong {
   color: var(--accent-amber);
   font-family: var(--font-base);
   letter-spacing: 0.08em;
@@ -206,7 +206,7 @@
   margin-right: 0.25rem;
 }
 
-.lab-slot {
+.page-slot {
   margin-bottom: 1.25rem;
 }
 
@@ -228,7 +228,7 @@
   margin-bottom: 2rem;
 }
 
-.lab-slot-label {
+.page-slot-label {
   font-family: var(--font-base);
   font-size: 0.9rem;
   letter-spacing: 0.08em;
@@ -239,7 +239,7 @@
   margin-bottom: 0.45rem;
 }
 
-.lab-placeholder {
+.page-placeholder {
   background-color: var(--bg-card);
   border: 1px dashed var(--bg-card-border);
   border-radius: 6px;
@@ -248,7 +248,7 @@
   color: var(--text-secondary);
 }
 
-.lab-placeholder-title {
+.page-placeholder-title {
   font-family: var(--font-base);
   font-size: 1rem;
   letter-spacing: 0.08em;
@@ -257,14 +257,14 @@
   margin-bottom: 0.65rem;
 }
 
-.lab-placeholder-hint {
+.page-placeholder-hint {
   font-size: 0.85rem;
   line-height: 1.65;
   max-width: 560px;
   margin: 0 auto;
 }
 
-.lab-placeholder-hint code {
+.page-placeholder-hint code {
   font-family: var(--font-base);
   background: rgba(255, 255, 255, 0.04);
   border: 1px solid var(--bg-card-border);
@@ -274,14 +274,14 @@
   color: var(--text-primary);
 }
 
-.lab-footer {
+.page-footer {
   margin-top: 2rem;
   padding-top: 1rem;
   border-top: 1px solid var(--bg-card-border);
   text-align: center;
 }
 
-.lab-footer-line {
+.page-footer-line {
   font-family: var(--font-base);
   font-size: 0.7rem;
   color: var(--text-secondary);
@@ -292,10 +292,10 @@
 
 /* Bolded footer Return-Home link used by labs that wire up active
    egress back to the main dashboard. Lives on its own block-level
-   line under the lab-footer-line so the bold-green link reads as a
+   line under the page-footer-line so the bold-green link reads as a
    distinct affordance rather than melting into the muted grey meta
    strip above it. */
-.lab-footer-home {
+.page-footer-home {
   display: block;
   margin-top: 0.75rem;
   font-family: var(--font-base);
@@ -307,25 +307,25 @@
   font-weight: 700;
 }
 
-.lab-footer-home:hover,
-.lab-footer-home:focus-visible {
+.page-footer-home:hover,
+.page-footer-home:focus-visible {
   text-decoration: underline;
   outline: none;
 }
 
 /* Bolded footer attribution link to the sister site about.aigamma.com.
-   Sits below the lab-footer-home Return-Home link on lab pages where
+   Sits below the page-footer-home Return-Home link on lab pages where
    both are present, or stands alone on the home-page footer where there
    is no Return-Home (the reader is already home). Reads as a distinct
    secondary affordance — accent-blue + bold, mixed case so the question
    mark looks natural — separate from the green uppercase Return-Home
-   above and the muted grey lab-footer-line meta strip above that. The
+   above and the muted grey page-footer-line meta strip above that. The
    link is the desktop counterpart to the About entry pinned at the
    bottom of the mobile TOOLS and RESEARCH dropdowns; it stays visible
    at every breakpoint (matching the Return-Home pattern) so a reader
    who has scrolled past the header chrome still has an in-page path
    to the about page without scrolling back up. */
-.lab-footer-about {
+.page-footer-about {
   display: block;
   margin-top: 0.75rem;
   font-family: var(--font-base);
@@ -336,8 +336,8 @@
   font-weight: 700;
 }
 
-.lab-footer-about:hover,
-.lab-footer-about:focus-visible {
+.page-footer-about:hover,
+.page-footer-about:focus-visible {
   text-decoration: underline;
   outline: none;
 }
@@ -353,9 +353,9 @@
    The intended reading order from chat down is Disclaimer (legal,
    coral, top), Return Home (primary egress, green), Who made this?
    (attribution, blue, bottom). The mobile breakpoint scaling below
-   mirrors lab-footer-home / lab-footer-about so the three links read
+   mirrors page-footer-home / page-footer-about so the three links read
    at the same typographic weight on phones. */
-.lab-footer-disclaimer {
+.page-footer-disclaimer {
   display: block;
   margin-top: 0.75rem;
   font-family: var(--font-base);
@@ -367,34 +367,34 @@
   font-weight: 700;
 }
 
-.lab-footer-disclaimer:hover,
-.lab-footer-disclaimer:focus-visible {
+.page-footer-disclaimer:hover,
+.page-footer-disclaimer:focus-visible {
   text-decoration: underline;
   outline: none;
 }
 
-/* Desktop-only override that flips the lab-header from a left-anchored
+/* Desktop-only override that flips the page-header from a left-anchored
    brand + right-anchored nav cluster (the mobile-first default above)
    into an evenly distributed row. justify-content: space-between on
    the header pushes the first item to the start and the last to the
    end and divides the remaining horizontal space equally between every
    adjacent pair of children. Removing the auto right-margin from
-   .lab-brand is required because an auto margin in flex consumes free
+   .page-brand is required because an auto margin in flex consumes free
    space before space-between can distribute it; with the auto cleared,
    space-between has space to work with. The companion .top-nav
    { display: contents } rule lives in theme.css beside the rest of
    the .top-nav styles and dissolves the TopNav wrapper at desktop
    widths so its six buttons (Vol, Earnings, Scan,
    Rotations, VIX, Seasonality) become direct flex items of
-   .lab-header alongside the brand cluster, the Return Home button,
+   .page-header alongside the brand cluster, the Return Home button,
    and the Menu trigger — nine children that space-between
    distributes as a single evenly-spaced row. */
 @media (min-width: 769px) {
-  .lab-header {
+  .page-header {
     justify-content: space-between;
   }
 
-  .lab-brand {
+  .page-brand {
     margin-right: 0;
   }
 
@@ -409,7 +409,7 @@
      viewport's left edge and makes its menuitems unreachable on
      narrow desktop windows (notably split-screen). When the JS
      observer adds .is-menu-wrapped, the desktop layout switches
-     from space-between to flex-end and re-arms the .lab-brand's
+     from space-between to flex-end and re-arms the .page-brand's
      auto right-margin so the brand stays anchored to the left edge
      while every other child — including the wrapped Menu trigger —
      packs against the right edge of its row. The wrapped Menu sits
@@ -420,11 +420,11 @@
      to "brand left, nav cluster right" only on the narrow widths
      where wrap actually fired; widths that fit on a single row keep
      the evenly-distributed layout the desktop block was designed for. */
-  .lab-header.is-menu-wrapped {
+  .page-header.is-menu-wrapped {
     justify-content: flex-end;
   }
 
-  .lab-header.is-menu-wrapped .lab-brand {
+  .page-header.is-menu-wrapped .page-brand {
     margin-right: auto;
   }
 }
@@ -438,20 +438,20 @@
    against the desktop grid still renders in the same shell hierarchy on
    every width. */
 @media (max-width: 768px) {
-  .lab-shell {
+  .page-shell {
     padding: 0.75rem;
   }
 
-  .lab-header {
+  .page-header {
     margin-bottom: 0.75rem;
     gap: 0.6rem;
   }
 
-  .lab-brand {
+  .page-brand {
     gap: 0.5rem;
   }
 
-  .lab-badge {
+  .page-badge {
     font-size: 1rem;
     height: 2.8rem;
     padding: 0 0.75rem;
@@ -459,70 +459,70 @@
 
   /* Drop the upper-left logo at phone widths so the TopNav buttons
      (Vol, Earnings, Scan, Rotations, VIX, Seasonality)
-     inherit the freed horizontal space. The lab-brand cluster on
-     the left collapses to just the .lab-badge that names the lab —
+     inherit the freed horizontal space. The page-brand cluster on
+     the left collapses to just the .page-badge that names the lab —
      the functional identifier the reader needs in context, while
      the static brand mark adds no information at mobile widths and
      was the largest single contributor to the header crowding
      once the six top-nav buttons joined the right-side cluster.
      The Return Home button + the bolded footer link still cover
      the navigation-back-to-home affordance the logo previously
-     supplied. .lab-logo-link is the wrapper anchor (now used on
+     supplied. .page-logo-link is the wrapper anchor (now used on
      every lab entry, including the formerly inline-styled alpha /
      beta / dev / discrete / smile anchors that picked up the
      class as part of the same change); hiding the wrapper rather
      than just the inner img drops the entire flex item out of the
      row so no orphan gap is reserved on the left. */
-  .lab-logo-link {
+  .page-logo-link {
     display: none;
   }
 
-  .lab-logo {
+  .page-logo {
     height: 2.8rem;
   }
 
-  .lab-meta {
+  .page-meta {
     font-size: 0.72rem;
     gap: 0.4rem;
   }
 
-  .lab-warning {
+  .page-warning {
     padding: 0.7rem 0.85rem;
     font-size: 0.8rem;
     margin-bottom: 1.1rem;
   }
 
-  .lab-slot {
+  .page-slot {
     margin-bottom: 1rem;
   }
 
-  .lab-shell .card {
+  .page-shell .card {
     padding: 0.85rem;
   }
 
-  .lab-placeholder {
+  .page-placeholder {
     padding: 2rem 1rem;
   }
 
-  .lab-placeholder-title {
+  .page-placeholder-title {
     font-size: 0.9rem;
   }
 
-  .lab-placeholder-hint {
+  .page-placeholder-hint {
     font-size: 0.82rem;
     line-height: 1.55;
   }
 
-  .lab-footer {
+  .page-footer {
     margin-top: 1.5rem;
     padding-top: 0.75rem;
   }
 
-  .lab-home-row {
+  .page-home-row {
     margin: 0.25rem 0 1.1rem;
   }
 
-  .lab-home-button {
+  .page-home-button {
     font-size: 0.9rem;
     padding: 0.7rem 1.4rem;
     letter-spacing: 0.12em;
@@ -534,18 +534,18 @@
      button here means lab pages render exactly one HOME affordance on
      mobile — the leftmost of the three .mobile-nav pills — instead of
      duplicating it as both a free-standing inline button and a
-     dropdown-cluster pill. The footer-bottom .lab-footer-home link is
+     dropdown-cluster pill. The footer-bottom .page-footer-home link is
      left visible at every width because it serves the secondary
      "after-scroll egress" affordance separate from the header
      navigation cluster.
 
      Several legacy rules below this block (font-size: 0 + ::before
      "HOME" pseudo, --split variant, 480px height/padding scaling)
-     remain in source for the .lab-home-button--inline class because
+     remain in source for the .page-home-button--inline class because
      the desktop variant (≥769px) still uses them; setting display:none
      here does not affect the desktop render but prevents the button
      from occupying header real estate on mobile. */
-  .lab-home-button--inline {
+  .page-home-button--inline {
     display: none;
     height: 2.8rem;
     padding: 0 0.75rem;
@@ -553,7 +553,7 @@
     letter-spacing: 0;
   }
 
-  .lab-home-button--inline::before {
+  .page-home-button--inline::before {
     content: "HOME";
     font-size: 1rem;
     letter-spacing: 0.08em;
@@ -563,20 +563,20 @@
      reveals the short mobile span via display toggle. Double-class
      specificity (0,2,0) beats the shared single-class font-size: 0
      rule above regardless of source order. */
-  .lab-home-button--inline.lab-home-button--split {
+  .page-home-button--inline.page-home-button--split {
     font-size: 1rem;
     letter-spacing: 0.08em;
   }
 
-  .lab-home-button--inline.lab-home-button--split::before {
+  .page-home-button--inline.page-home-button--split::before {
     content: none;
   }
 
-  .lab-home-button--split .lab-home-button__desktop-text {
+  .page-home-button--split .page-home-button__desktop-text {
     display: none;
   }
 
-  .lab-home-button--split .lab-home-button__mobile-text {
+  .page-home-button--split .page-home-button__mobile-text {
     display: inline;
   }
 
@@ -584,25 +584,25 @@
      that opt into the splitter wrap the badge text in two spans; the
      base rules above hide the short span and show the long span,
      this rule reverses that at ≤768px. */
-  .lab-badge .lab-badge__desktop-text {
+  .page-badge .page-badge__desktop-text {
     display: none;
   }
 
-  .lab-badge .lab-badge__mobile-text {
+  .page-badge .page-badge__mobile-text {
     display: inline;
   }
 
-  .lab-footer-home {
+  .page-footer-home {
     font-size: 0.82rem;
     margin-top: 0.6rem;
   }
 
-  .lab-footer-about {
+  .page-footer-about {
     font-size: 0.82rem;
     margin-top: 0.6rem;
   }
 
-  .lab-footer-disclaimer {
+  .page-footer-disclaimer {
     font-size: 0.82rem;
     margin-top: 0.6rem;
     letter-spacing: 0.08em;
@@ -610,109 +610,109 @@
 }
 
 @media (max-width: 480px) {
-  .lab-shell {
+  .page-shell {
     padding: 0.6rem;
   }
 
-  .lab-badge {
+  .page-badge {
     font-size: 0.9rem;
     height: 2.4rem;
     padding: 0 0.6rem;
     letter-spacing: 0.06em;
   }
 
-  .lab-logo {
+  .page-logo {
     height: 2.4rem;
   }
 
-  .lab-meta {
+  .page-meta {
     font-size: 0.68rem;
   }
 
-  /* Inside the lab-shell, scale the Menu trigger a second step to
-     match the 2.4rem lab-badge / lab-logo sizing at phone widths. The
-     trigger selector outside of lab-shell stays at the 2.8rem width set
+  /* Inside the page-shell, scale the Menu trigger a second step to
+     match the 2.4rem page-badge / page-logo sizing at phone widths. The
+     trigger selector outside of page-shell stays at the 2.8rem width set
      by the 768px block in theme.css. */
-  .lab-shell .menu-trigger {
+  .page-shell .menu-trigger {
     font-size: 0.85rem;
     height: 2.4rem;
     padding: 0 0.6rem;
     letter-spacing: 0.06em;
   }
 
-  /* Match the 2.4rem cell sizing the rest of the lab-shell header
-     drops to at the 480px breakpoint (lab-badge, lab-logo,
-     menu-trigger, lab-home-button--inline). The desktop / 768px
+  /* Match the 2.4rem cell sizing the rest of the page-shell header
+     drops to at the 480px breakpoint (page-badge, page-logo,
+     menu-trigger, page-home-button--inline). The desktop / 768px
      layers in theme.css already shrink the top-nav buttons from
      3.2rem → 2.8rem; this rule is the third step inside the
-     lab-shell only, so the buttons stay larger on the main
+     page-shell only, so the buttons stay larger on the main
      dashboard at the same width (the main dashboard does not have
      a 480px-scoped block — see the @media (max-width: 768px) tail
      in theme.css). */
-  .lab-shell .top-nav__item {
+  .page-shell .top-nav__item {
     font-size: 0.78rem;
     height: 2.4rem;
     padding: 0 0.5rem;
     letter-spacing: 0.05em;
   }
 
-  .lab-warning {
+  .page-warning {
     padding: 0.6rem 0.75rem;
     font-size: 0.78rem;
   }
 
-  .lab-shell .card {
+  .page-shell .card {
     padding: 0.7rem;
   }
 
-  .lab-placeholder {
+  .page-placeholder {
     padding: 1.5rem 0.85rem;
   }
 
-  .lab-placeholder-hint {
+  .page-placeholder-hint {
     font-size: 0.78rem;
   }
 
-  .lab-footer-line {
+  .page-footer-line {
     font-size: 0.65rem;
     letter-spacing: 0.06em;
   }
 
-  .lab-home-button {
+  .page-home-button {
     font-size: 0.82rem;
     padding: 0.6rem 1.2rem;
     letter-spacing: 0.1em;
   }
 
-  .lab-home-button--inline {
+  .page-home-button--inline {
     height: 2.4rem;
     padding: 0 0.6rem;
   }
 
-  .lab-home-button--inline::before {
+  .page-home-button--inline::before {
     font-size: 0.85rem;
     letter-spacing: 0.06em;
   }
 
   /* Scale the split variant down a second step to match the 2.4rem
-     height and tighter letter-spacing the other lab-header chrome
+     height and tighter letter-spacing the other page-header chrome
      uses at phone widths. */
-  .lab-home-button--inline.lab-home-button--split {
+  .page-home-button--inline.page-home-button--split {
     font-size: 0.85rem;
     letter-spacing: 0.06em;
   }
 
-  .lab-footer-home {
+  .page-footer-home {
     font-size: 0.75rem;
     letter-spacing: 0.08em;
   }
 
-  .lab-footer-about {
+  .page-footer-about {
     font-size: 0.75rem;
     letter-spacing: 0.03em;
   }
 
-  .lab-footer-disclaimer {
+  .page-footer-disclaimer {
     font-size: 0.75rem;
     letter-spacing: 0.06em;
   }
@@ -1161,7 +1161,7 @@
    band. Buttons share a single accent-blue border with internal
    separators so the cluster reads as one segmented control rather than
    three disconnected pills, matching the segmented-control idiom used
-   by the Menu trigger and the lab-home-button family elsewhere on
+   by the Menu trigger and the page-home-button family elsewhere on
    the lab pages. The active button reverses to a filled accent-blue
    background with dark text so the current step is unambiguous; hover
    on inactive buttons tints them lightly. The compact 0.75rem font
@@ -2445,7 +2445,7 @@
    hero card scrolls out of view. The IntersectionObserver in SlotB
    toggles its render based on hero visibility; CSS does the layout +
    transition. Z-index sits above the lab header chrome on the
-   page (the lab-shell hierarchy doesn't introduce a stacking context
+   page (the page-shell hierarchy doesn't introduce a stacking context
    above 30, and z=80 here clears Menu's panel z=40). */
 .econ-events__sticky {
   position: fixed;

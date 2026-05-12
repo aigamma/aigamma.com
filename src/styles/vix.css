@@ -1,5 +1,5 @@
 /* /vix lab — page-local styling.
-   Layered on top of theme.css and lab.css. Every rule here is scoped to
+   Layered on top of theme.css and page.css. Every rule here is scoped to
    the .vix-* class family so it can't leak into other lab pages. */
 
 /* ---- Header pill grid ---------------------------------------------------- */

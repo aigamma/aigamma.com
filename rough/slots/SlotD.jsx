@@ -329,9 +329,9 @@ export default function SlotD() {
 
   if (loading && !data) {
     return (
-      <div className="lab-placeholder">
-        <div className="lab-placeholder-title">Loading chain…</div>
-        <div className="lab-placeholder-hint">
+      <div className="page-placeholder">
+        <div className="page-placeholder-title">Loading chain…</div>
+        <div className="page-placeholder-hint">
           Loading the live SPX snapshot.
         </div>
       </div>
@@ -339,29 +339,29 @@ export default function SlotD() {
   }
   if (error) {
     return (
-      <div className="lab-placeholder" style={{ borderColor: 'var(--accent-coral)' }}>
-        <div className="lab-placeholder-title" style={{ color: 'var(--accent-coral)' }}>
+      <div className="page-placeholder" style={{ borderColor: 'var(--accent-coral)' }}>
+        <div className="page-placeholder-title" style={{ color: 'var(--accent-coral)' }}>
           Chain fetch failed
         </div>
-        <div className="lab-placeholder-hint">{error}</div>
+        <div className="page-placeholder-hint">{error}</div>
       </div>
     );
   }
   if (plotlyError) {
     return (
-      <div className="lab-placeholder" style={{ borderColor: 'var(--accent-coral)' }}>
-        <div className="lab-placeholder-title" style={{ color: 'var(--accent-coral)' }}>
+      <div className="page-placeholder" style={{ borderColor: 'var(--accent-coral)' }}>
+        <div className="page-placeholder-title" style={{ color: 'var(--accent-coral)' }}>
           Plotly unavailable
         </div>
-        <div className="lab-placeholder-hint">{plotlyError}</div>
+        <div className="page-placeholder-hint">{plotlyError}</div>
       </div>
     );
   }
   if (points.length < 3) {
     return (
-      <div className="lab-placeholder">
-        <div className="lab-placeholder-title">Not enough SVI slices</div>
-        <div className="lab-placeholder-hint">
+      <div className="page-placeholder">
+        <div className="page-placeholder-title">Not enough SVI slices</div>
+        <div className="page-placeholder-hint">
           The power-law fit needs at least three well-fit SVI expirations in
           the current snapshot. Check back after the next ingest cycle.
         </div>

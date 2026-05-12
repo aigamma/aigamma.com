@@ -11,7 +11,7 @@ import { TOPNAV_ITEMS } from '../data/pages.js';
 // curated left-to-right by importance and clustering:
 //   1. Vol      — densest tactical-positioning surface, top priority
 //                 (the destination /tactical/ page's own in-page
-//                 lab-badge still identifies the lab as "Tactical
+//                 page-badge still identifies the lab as "Tactical
 //                 Vol"; the top-nav button was shortened — first to
 //                 single-word "Tactical" and then again to the
 //                 three-letter "Vol" — to match the short single-word
@@ -26,7 +26,7 @@ import { TOPNAV_ITEMS } from '../data/pages.js';
 //                     before the Return Home button on lab pages).
 //                     The label is rendered as the full word
 //                     "Seasonality" only on the landing page (where
-//                     the header has no .lab-brand badge eating
+//                     the header has no .page-brand badge eating
 //                     horizontal space and the row reliably fits at
 //                     desktop widths) and as the shortened "Season"
 //                     on every lab page, where the brand badge plus
@@ -65,7 +65,7 @@ import { TOPNAV_ITEMS } from '../data/pages.js';
 // fallback already handles the multi-row layout cleanly.
 //
 // The `current` prop suppresses the button matching the page the
-// user is already on — the lab-badge in the upper-left already
+// user is already on — the page-badge in the upper-left already
 // names the page, so a duplicate button in the same header row is
 // redundant. Pages that aren't one of the five promoted
 // destinations (e.g. /rough/, /risk/, /jump/, /vix/) omit the
