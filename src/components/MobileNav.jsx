@@ -129,12 +129,12 @@ const EXTENSION_ITEMS = [
   {
     href: 'https://chromewebstore.google.com/detail/ai-gamma-spx-regime-statu/pigfafocmendmpmplaaeknmopodioemh',
     label: 'Chrome Extension',
-    desc: 'Toolbar regime icon + metrics popup',
+    desc: 'Dynamic regime icon + AI highlights and key metrics',
   },
   {
     href: 'https://addons.mozilla.org/en-US/firefox/addon/ai-gamma-spx-regime-and-metric/',
     label: 'Firefox Extension',
-    desc: 'Toolbar regime icon + metrics popup',
+    desc: 'Dynamic regime icon + AI highlights and key metrics',
   },
 ];
 
