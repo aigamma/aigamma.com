@@ -36,10 +36,10 @@ const STATE_LABEL = {
   stressed: 'STRESSED',
 };
 const STATE_HINT = {
-  calm:     'VIX < 12 — risk-on regime',
-  normal:   'VIX 12-18 — typical operating zone',
-  elevated: 'VIX 18-30 — caution',
-  stressed: 'VIX > 30 — crisis pricing',
+  calm:     'VIX < 12: risk-on regime',
+  normal:   'VIX 12-18: typical operating zone',
+  elevated: 'VIX 18-30: caution',
+  stressed: 'VIX > 30: crisis pricing',
 };
 
 function pctTone(p) {
