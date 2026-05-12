@@ -31,6 +31,15 @@
 [functions.scan]
   included_files = ["src/data/options-volume-roster.json"]
 
+# /api/earnings reads the same options-volume roster JSON at module
+# init to derive its visible-slice toggles (topN-100, topN-250, plus
+# the revenue-floor relaxations). Same readFileSync + bundler-trace
+# gap as heatmap.mjs and scan.mjs above — the explicit included_files
+# opt-in is required or the function ENOENTs at cold start before the
+# handler runs. See netlify/functions/earnings.mjs.
+[functions.earnings]
+  included_files = ["src/data/options-volume-roster.json"]
+
 # /api/chat reads the runtime site index file at module init via
 # readFileSync and injects its contents into every chat agent's
 # system prompt as a [SITE INDEX] block before the per-page template.

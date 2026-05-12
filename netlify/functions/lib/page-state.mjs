@@ -48,6 +48,34 @@ async function tFetch(url, label) {
   }
 }
 
+// Per-cycle Promise cache for shared fetchers. Many assemblers
+// (/risk, /jump, /local, /discrete, /expiring-gamma, ...) each call
+// getLatestSpxRun(); narrate-background.mjs runs them in parallel via
+// Promise.all, so without sharing each assembler fires its own
+// ingest_runs + computed_levels + expiration_metrics round-trip.
+// Caching the Promise rather than the resolved value means the first
+// caller pays the round-trip cost and the rest await the same promise;
+// callers waiting at sub-millisecond intervals get collapsed into one
+// Supabase request. resetSharedCache() is called by the narrate handler
+// at the start of each cycle so the cache is one-cycle scoped and
+// doesn't leak stale data into the next cycle on a warm instance.
+const sharedCache = new Map();
+
+export function resetSharedCache() {
+  sharedCache.clear();
+}
+
+function memoizeShared(key, fn) {
+  const cached = sharedCache.get(key);
+  if (cached) return cached;
+  const promise = Promise.resolve().then(fn).catch((err) => {
+    sharedCache.delete(key);
+    throw err;
+  });
+  sharedCache.set(key, promise);
+  return promise;
+}
+
 function r(value, decimals = 4) {
   if (value == null || !Number.isFinite(+value)) return null;
   const f = 10 ** decimals;
@@ -62,34 +90,37 @@ function pct(value, decimals = 2) {
 // --- Shared fetchers --------------------------------------------------------
 
 // Latest successful intraday SPX run + computed_levels + expiration_metrics.
-async function getLatestSpxRun() {
-  const runs = await tFetch(
-    `${SUPABASE_URL}/rest/v1/ingest_runs?underlying=eq.SPX&snapshot_type=eq.intraday&status=eq.success&contract_count=gt.0&order=captured_at.desc&limit=1&select=id,captured_at,trading_date,spot_price,contract_count`,
-    'spx_run'
-  );
-  if (!Array.isArray(runs) || runs.length === 0) return null;
-  const run = runs[0];
+// Shared across every assembler that surfaces SPX state.
+function getLatestSpxRun() {
+  return memoizeShared('spx_run', async () => {
+    const runs = await tFetch(
+      `${SUPABASE_URL}/rest/v1/ingest_runs?underlying=eq.SPX&snapshot_type=eq.intraday&status=eq.success&contract_count=gt.0&order=captured_at.desc&limit=1&select=id,captured_at,trading_date,spot_price,contract_count`,
+      'spx_run'
+    );
+    if (!Array.isArray(runs) || runs.length === 0) return null;
+    const run = runs[0];
 
-  const [levels, expMetrics] = await Promise.all([
-    tFetch(
-      `${SUPABASE_URL}/rest/v1/computed_levels?run_id=eq.${run.id}&select=call_wall_strike,put_wall_strike,abs_gamma_strike,volatility_flip,atm_call_gex,atm_put_gex,atm_contract_count,put_call_ratio_oi,put_call_ratio_volume,total_call_volume,total_put_volume,net_vanna_notional,net_charm_notional`,
-      'computed_levels'
-    ),
-    tFetch(
-      `${SUPABASE_URL}/rest/v1/expiration_metrics?run_id=eq.${run.id}&order=expiration_date.asc&select=expiration_date,atm_iv,atm_strike,put_25d_iv,call_25d_iv,skew_25d_rr,contract_count`,
-      'expiration_metrics'
-    ),
-  ]);
+    const [levels, expMetrics] = await Promise.all([
+      tFetch(
+        `${SUPABASE_URL}/rest/v1/computed_levels?run_id=eq.${run.id}&select=call_wall_strike,put_wall_strike,abs_gamma_strike,volatility_flip,atm_call_gex,atm_put_gex,atm_contract_count,put_call_ratio_oi,put_call_ratio_volume,total_call_volume,total_put_volume,net_vanna_notional,net_charm_notional`,
+        'computed_levels'
+      ),
+      tFetch(
+        `${SUPABASE_URL}/rest/v1/expiration_metrics?run_id=eq.${run.id}&order=expiration_date.asc&select=expiration_date,atm_iv,atm_strike,put_25d_iv,call_25d_iv,skew_25d_rr,contract_count`,
+        'expiration_metrics'
+      ),
+    ]);
 
-  return {
-    run_id: run.id,
-    captured_at: run.captured_at,
-    trading_date: run.trading_date,
-    spot_price: r(run.spot_price, 2),
-    contract_count: run.contract_count,
-    levels: Array.isArray(levels) && levels.length > 0 ? levels[0] : null,
-    expiration_metrics: Array.isArray(expMetrics) ? expMetrics : [],
-  };
+    return {
+      run_id: run.id,
+      captured_at: run.captured_at,
+      trading_date: run.trading_date,
+      spot_price: r(run.spot_price, 2),
+      contract_count: run.contract_count,
+      levels: Array.isArray(levels) && levels.length > 0 ? levels[0] : null,
+      expiration_metrics: Array.isArray(expMetrics) ? expMetrics : [],
+    };
+  });
 }
 
 // Latest daily_volatility_stats (IV 30d CM, RV 20d YZ) + N-day tail. The
@@ -98,32 +129,42 @@ async function getLatestSpxRun() {
 // or 60-day vol regime read fall back to comparing the latest hv_20d_yz to
 // rolling means computed from the tail. Schema: trading_date, spx_open/
 // high/low/close, hv_20d_yz, iv_30d_cm, vrp_spread, sample_count.
-async function getRecentDailyVolStats(limit = 60) {
-  const rows = await tFetch(
-    `${SUPABASE_URL}/rest/v1/daily_volatility_stats?order=trading_date.desc&limit=${limit}&select=trading_date,spx_close,iv_30d_cm,hv_20d_yz,vrp_spread`,
-    'daily_volatility_stats'
-  );
-  if (!Array.isArray(rows) || rows.length === 0) return null;
-  const sorted = [...rows].sort((a, b) => a.trading_date.localeCompare(b.trading_date));
-  return sorted;
+function getRecentDailyVolStats(limit = 60) {
+  return memoizeShared(`daily_volatility_stats:${limit}`, async () => {
+    const rows = await tFetch(
+      `${SUPABASE_URL}/rest/v1/daily_volatility_stats?order=trading_date.desc&limit=${limit}&select=trading_date,spx_close,iv_30d_cm,hv_20d_yz,vrp_spread`,
+      'daily_volatility_stats'
+    );
+    if (!Array.isArray(rows) || rows.length === 0) return null;
+    return [...rows].sort((a, b) => a.trading_date.localeCompare(b.trading_date));
+  });
 }
 
-// Latest VIX-family EOD readings — last 252 days for percentile context.
-async function getRecentVixFamily(limit = 252) {
-  const rows = await tFetch(
-    `${SUPABASE_URL}/rest/v1/vix_family_eod?order=trading_date.desc&limit=${limit * 25}&select=trading_date,symbol,close`,
-    'vix_family_eod'
-  );
-  if (!Array.isArray(rows) || rows.length === 0) return null;
-  const bySymbol = {};
-  for (const row of rows) {
-    if (!bySymbol[row.symbol]) bySymbol[row.symbol] = [];
-    bySymbol[row.symbol].push(row);
-  }
-  for (const sym of Object.keys(bySymbol)) {
-    bySymbol[sym].sort((a, b) => a.trading_date.localeCompare(b.trading_date));
-  }
-  return bySymbol;
+// Latest VIX-family EOD readings — last `limit` days for percentile context.
+// The vixSummary helper only reads the 13 headline symbols, so the query
+// filters to that set rather than letting PostgREST return rows for every
+// vix_family_eod symbol (which previously silently truncated at the 1000-
+// row default cap when limit*25 exceeded the threshold).
+const VIX_HEADLINE_SYMBOLS = ['VIX', 'VIX1D', 'VIX9D', 'VIX3M', 'VIX6M', 'VIX1Y', 'VVIX', 'SDEX', 'TDEX', 'VXN', 'RVX', 'OVX', 'GVZ'];
+const VIX_SYMBOL_FILTER = VIX_HEADLINE_SYMBOLS.map((s) => `"${s}"`).join(',');
+
+function getRecentVixFamily(limit = 252) {
+  return memoizeShared(`vix_family_eod:${limit}`, async () => {
+    const rows = await tFetch(
+      `${SUPABASE_URL}/rest/v1/vix_family_eod?symbol=in.(${VIX_SYMBOL_FILTER})&order=trading_date.desc&limit=${limit * VIX_HEADLINE_SYMBOLS.length}&select=trading_date,symbol,close`,
+      'vix_family_eod'
+    );
+    if (!Array.isArray(rows) || rows.length === 0) return null;
+    const bySymbol = {};
+    for (const row of rows) {
+      if (!bySymbol[row.symbol]) bySymbol[row.symbol] = [];
+      bySymbol[row.symbol].push(row);
+    }
+    for (const sym of Object.keys(bySymbol)) {
+      bySymbol[sym].sort((a, b) => a.trading_date.localeCompare(b.trading_date));
+    }
+    return bySymbol;
+  });
 }
 
 // Daily EOD for a list of stock/ETF symbols. Schema: symbol, trading_date,
@@ -151,28 +192,32 @@ async function getRecentDailyEod(symbols, days = 90) {
 // spx_close, net_gex, call_gex, put_gex, vol_flip_strike, contract_count,
 // expiration_count, atm_call_gex, atm_put_gex, atm_contract_count,
 // call_wall_strike, put_wall_strike.
-async function getLatestDailyGex() {
-  const rows = await tFetch(
-    `${SUPABASE_URL}/rest/v1/daily_gex_stats?order=trading_date.desc&limit=5&select=trading_date,spx_close,net_gex,call_gex,put_gex,vol_flip_strike,call_wall_strike,put_wall_strike,atm_call_gex,atm_put_gex,atm_contract_count,contract_count,expiration_count`,
-    'daily_gex_stats'
-  );
-  if (!Array.isArray(rows) || rows.length === 0) return null;
-  return rows;
+function getLatestDailyGex() {
+  return memoizeShared('daily_gex_stats:5', async () => {
+    const rows = await tFetch(
+      `${SUPABASE_URL}/rest/v1/daily_gex_stats?order=trading_date.desc&limit=5&select=trading_date,spx_close,net_gex,call_gex,put_gex,vol_flip_strike,call_wall_strike,put_wall_strike,atm_call_gex,atm_put_gex,atm_contract_count,contract_count,expiration_count`,
+      'daily_gex_stats'
+    );
+    if (!Array.isArray(rows) || rows.length === 0) return null;
+    return rows;
+  });
 }
 
 // Recent daily term structure (SPX implied vol curve across DTEs at EOD).
-async function getRecentTermStructure(limit = 30) {
-  const rows = await tFetch(
-    `${SUPABASE_URL}/rest/v1/daily_term_structure?order=trading_date.desc&limit=${limit * 12}&select=trading_date,dte,atm_iv`,
-    'daily_term_structure'
-  );
-  if (!Array.isArray(rows) || rows.length === 0) return null;
-  const byDate = {};
-  for (const row of rows) {
-    if (!byDate[row.trading_date]) byDate[row.trading_date] = {};
-    byDate[row.trading_date][row.dte] = r(row.atm_iv, 5);
-  }
-  return byDate;
+function getRecentTermStructure(limit = 30) {
+  return memoizeShared(`daily_term_structure:${limit}`, async () => {
+    const rows = await tFetch(
+      `${SUPABASE_URL}/rest/v1/daily_term_structure?order=trading_date.desc&limit=${limit * 12}&select=trading_date,dte,atm_iv`,
+      'daily_term_structure'
+    );
+    if (!Array.isArray(rows) || rows.length === 0) return null;
+    const byDate = {};
+    for (const row of rows) {
+      if (!byDate[row.trading_date]) byDate[row.trading_date] = {};
+      byDate[row.trading_date][row.dte] = r(row.atm_iv, 5);
+    }
+    return byDate;
+  });
 }
 
 // Recently produced peer narratives (used by the landing-page federation).

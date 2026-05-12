@@ -83,11 +83,19 @@ export default async function handler(request) {
   const events = [];
 
   try {
-    events.push(await probeSpxCloseXcheck(tradingDate));
-    events.push(await probeRunCount(tradingDate));
-    events.push(await probePartialRate(tradingDate));
-    events.push(await probeAtmIvNullRate(tradingDate));
-    events.push(await probeLateSnapshot(tradingDate));
+    // Probes hit disjoint tables and don't share state, so fan out in
+    // parallel rather than serializing five round-trips end to end. Each
+    // probe issues a count-exact PostgREST query that costs 100-500 ms;
+    // parallelizing cuts the reconcile cycle's wall-clock time
+    // proportionally on the warm path.
+    const probed = await Promise.all([
+      probeSpxCloseXcheck(tradingDate),
+      probeRunCount(tradingDate),
+      probePartialRate(tradingDate),
+      probeAtmIvNullRate(tradingDate),
+      probeLateSnapshot(tradingDate),
+    ]);
+    for (const event of probed) events.push(event);
   } catch (err) {
     console.error('[reconcile] probe error:', err);
     events.push({

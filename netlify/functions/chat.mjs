@@ -111,6 +111,14 @@ const CORS_HEADERS = {
   'Access-Control-Allow-Methods': 'POST, OPTIONS'
 };
 
+// cache_control on the last tool definition pins the entire tools block plus
+// every earlier system content block at this breakpoint, so the static
+// prompt prefix (persona + nav + site index + per-page template + scope
+// blocks + behavior) reuses Anthropic's prompt cache across turns within a
+// ~5 min sliding window. The retrieved-chunks block sits AFTER this
+// breakpoint in the system array (see below), which is correct because the
+// retrieved chunks vary per query and would otherwise bust the cache on
+// every turn.
 const TOOLS = [
   {
     type: 'web_search_20250305',
@@ -128,7 +136,8 @@ const TOOLS = [
         }
       },
       required: ['url']
-    }
+    },
+    cache_control: { type: 'ephemeral' }
   }
 ];
 
@@ -449,7 +458,14 @@ export default async (req) => {
   const siteIndexBlock = SITE_INDEX_CONTENT
     ? '[SITE INDEX]\n\n' + SITE_INDEX_CONTENT.trim()
     : SITE_INDEX_FAILSAFE;
-  const promptParts = [
+  // The system prompt is split into a stable prefix and a per-turn
+  // retrieved-context block. The prefix is identical across turns within a
+  // (surface, model) session, so we mark it as the cache breakpoint via
+  // cache_control on the text block; Anthropic's prompt cache reuses it
+  // across turns inside the ~5-minute sliding window. The retrieved-chunks
+  // block follows the breakpoint because the chunks vary by query and
+  // would otherwise bust the cache on every turn.
+  const stablePromptParts = [
     CORE_PERSONA,
     SITE_NAVIGATION_CONTEXT,
     siteIndexBlock,
@@ -458,27 +474,13 @@ export default async (req) => {
     SITE_LEVEL_QUESTION_HANDLING,
     BEHAVIORAL_CONSTRAINTS,
   ];
+  const stableSystemPrefix = stablePromptParts.join('\n\n').replace(/MODEL_PLACEHOLDER/g, config.displayName);
+  const systemBlocks = [
+    { type: 'text', text: stableSystemPrefix, cache_control: { type: 'ephemeral' } }
+  ];
   if (retrievedContextBlock) {
-    promptParts.push(retrievedContextBlock);
+    systemBlocks.push({ type: 'text', text: retrievedContextBlock });
   }
-  const systemPrompt = promptParts.join('\n\n').replace(/MODEL_PLACEHOLDER/g, config.displayName);
-
-  // ===== TEMPORARY VERIFICATION LOGGING — REMOVE AFTER DEPLOY VERIFICATION =====
-  // Two log lines per turn to confirm the site-index integration is wired
-  // correctly. Once the deployed Netlify function logs show:
-  //   (1) site_index_load: ok with a non-zero length, AND
-  //   (2) system_prompt for an agent contains the literal string "[SITE INDEX]"
-  // the integration is verified end-to-end and this block can be deleted
-  // without affecting any of the function's other behavior. Log lines are
-  // intentionally tagged with a unique prefix so a single grep against the
-  // Netlify function logs returns just the verification trace.
-  if (SITE_INDEX_CONTENT) {
-    console.log('[chat-verify] site_index_load: ok length=' + SITE_INDEX_CONTENT.length);
-  } else {
-    console.log('[chat-verify] site_index_load: failed error=' + SITE_INDEX_LOAD_ERROR);
-  }
-  console.log('[chat-verify] system_prompt surface=' + surface + ' length=' + systemPrompt.length + ' content=' + JSON.stringify(systemPrompt));
-  // ===== END TEMPORARY VERIFICATION LOGGING =====
 
   const initialMessages = [
     ...historyArray,
@@ -521,7 +523,7 @@ export default async (req) => {
             body: JSON.stringify({
               model: resolvedModel,
               max_tokens: config.maxTokens,
-              system: systemPrompt,
+              system: systemBlocks,
               messages: apiMessages,
               stream: true,
               tools: TOOLS

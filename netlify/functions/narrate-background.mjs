@@ -22,7 +22,7 @@
 // well under $0.01 at typical volumes; ~78 cycles/day × 252 trading days =
 // ~$20-50 / year for the whole narration layer.
 
-import { gatherPageState, NARRATOR_PAGES } from './lib/page-state.mjs';
+import { gatherPageState, NARRATOR_PAGES, resetSharedCache } from './lib/page-state.mjs';
 import { NARRATOR_PERSONA } from './prompts/narrator/_persona.mjs';
 
 import landingPrompt from './prompts/narrator/landing.mjs';
@@ -269,6 +269,12 @@ export default async function handler(request) {
   const onlyPage = url.searchParams.get('page');
 
   console.log(`[narrate] starting cycle (only=${onlyPage || 'all'})`);
+
+  // Clear the per-cycle Promise cache in page-state.mjs so shared fetchers
+  // (getLatestSpxRun, getRecentVixFamily, etc.) hit Supabase once on this
+  // invocation rather than serving a stale promise from a prior cycle on
+  // a warm function instance.
+  resetSharedCache();
 
   const feederPages = NARRATOR_PAGES.filter((p) => p !== '/');
   const targetFeeders = onlyPage ? feederPages.filter((p) => p === onlyPage) : feederPages;
