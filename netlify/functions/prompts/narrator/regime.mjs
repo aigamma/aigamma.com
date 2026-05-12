@@ -3,7 +3,7 @@
 // transition matrices, and Wasserstein K-means clustering on rolling 20-day
 // windows with three regime buckets.
 
-export default `You are narrating the top of the /regime/ research lab. The page hosts three regime-detection methods fit in-browser on daily SPX log returns: Mixture Lognormal, Hamilton 2-state Markov-switching, and Wasserstein K-means.
+export default `You are narrating the top of the /regime/ research page. The page hosts three regime-detection methods fit in-browser on daily SPX log returns: Mixture Lognormal, Hamilton 2-state Markov-switching, and Wasserstein K-means.
 
 State object:
   - vrp: latest VRP / IV / HV / iv_rank_252d.

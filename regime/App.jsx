@@ -28,7 +28,7 @@ function prefetchBelowFoldChunks() {
   });
 }
 
-// Regime Lab, three-slot scratch pad dedicated to regime-identification
+// Regime, three-slot scratch pad dedicated to regime-identification
 // models on SPX daily log returns. The three slots are not A/B/C variants
 // of a single candidate; they are three distinct methods that answer the
 // same question three different ways:
@@ -51,10 +51,10 @@ function prefetchBelowFoldChunks() {
 //
 // All three consume the same SPX daily closes via useGexHistory so the
 // answers line up on a common calendar axis. Unlike the bookmark-only
-// scratch-pad labs at /alpha, /dev, and /beta, this page carries active
+// scratch-pad pages at /alpha, /dev, and /beta, this page carries active
 // egress back to the main dashboard at three redundant affordances: the
 // logo in the header is a hyperlink to `/`, a filled green RETURN HOME
-// button sits in the header itself between the Regime Lab brand on the
+// button sits in the header itself between the Regime brand on the
 // left and the Menu trigger on the right — centered horizontally
 // on the same row as the other nav items via the header's flex
 // space-between distribution — and the footer carries a bolded Return
@@ -73,7 +73,7 @@ export default function App() {
         <div className="page-brand">
           <span
             className="page-badge"
-            title="Regime Lab · regime-identification model zoo"
+            title="Regime · regime-identification model zoo"
           >
             <span className="page-badge__desktop-text">Regime</span>
             <span className="page-badge__mobile-text">Regime</span>
@@ -125,7 +125,7 @@ export default function App() {
 
       <footer className="page-footer">
         <span className="page-footer-line">
-          AI Gamma · regime lab · three-method zoo · v0.1.0
+          AI Gamma · regime · three-method zoo · v0.1.0
         </span>
         <a href="/disclaimer/" className="page-footer-disclaimer">Disclaimer</a>
         <a href="/" className="page-footer-home">Return Home</a>

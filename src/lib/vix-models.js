@@ -1,6 +1,6 @@
 // src/lib/vix-models.js
 //
-// Pure-function math layer for the /vix lab. Every visualization on the page
+// Pure-function math layer for the /vix page. Every visualization on the page
 // derives from this module; nothing here touches the DOM, Plotly, or fetch.
 // Six families of model:
 //

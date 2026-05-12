@@ -1,8 +1,10 @@
-/* Beta Lab — additions layered on top of src/styles/theme.css.
+/* Cross-page chrome stylesheet, layered on top of src/styles/theme.css.
    The theme variables (--bg-primary, --accent-amber, etc.) and shared
    classes (.app-shell, .card) are inherited as-is so a component dropped
-   into a slot renders identically to how it would on the production
-   dashboard. Everything in this file is page-specific chrome. */
+   into a slot renders identically to how it would on the homepage
+   dashboard. Everything in this file is page-chrome scaffolding (shell,
+   header, brand, badge, home button, placeholder, slot, warning,
+   footer) imported by the 21 non-homepage App.jsx files. */
 
 .page-shell {
   max-width: 1100px;
@@ -31,7 +33,7 @@
    evenly across the desktop viewport instead of clustering tightly
    on the right after a single big gap. The mobile cluster relies on
    flex-wrap as a fallback: with five top-nav buttons plus the
-   Return Home button, the Menu trigger, and the lab badge it will
+   Return Home button, the Menu trigger, and the page badge it will
    spill onto a second line at the narrower phone widths. */
 .page-brand {
   display: flex;
@@ -65,7 +67,7 @@
 }
 
 /* Outlined green call-to-action placed between the header and the first
-   slot on a lab page that wants a prominent Return-Home affordance.
+   slot on a page that wants a prominent Return-Home affordance.
    Outlined rather than filled so the button reads as the same chrome
    family as the adjacent Menu trigger (both are green-text on
    dark-background with a green border); hover flips to filled green
@@ -101,7 +103,7 @@
   outline: none;
 }
 
-/* Inline variant of the Return-Home button used on labs that drop
+/* Inline variant of the Return-Home button used on pages that drop
    the button directly into the page-header row alongside the
    Menu trigger rather than floating it in its own centered row
    below the header. Matches the 3.2rem / 1.1rem / 1rem-padding
@@ -115,10 +117,10 @@
   box-sizing: border-box;
 }
 
-/* Split-label variant of the inline Return-Home button used on labs
+/* Split-label variant of the inline Return-Home button used on pages
    that opt into a DOM-based long/short swap rather than the shared
    font-size-zero plus ::before pseudo trick. The trick failed visibly
-   on the /local/ lab (both "HOME" from the pseudo and "RETURN HOME"
+   on the /local/ page (both "HOME" from the pseudo and "RETURN HOME"
    from the text node rendered side-by-side) so this variant carries
    two spans — one for desktop copy, one for mobile copy — and the
    mobile block below toggles them via display: none, which cannot
@@ -131,8 +133,8 @@
   display: inline;
 }
 
-/* Two-span splitter for the page-badge pill used on labs with a long
-   brand title (for example "Discrete & Parametric Vol Lab") that
+/* Two-span splitter for the page-badge pill used on pages with a long
+   brand title (for example "Discrete & Parametric Vol") that
    crowds the mobile header. Desktop renders the full string, the
    max-width 768px block below swaps to the short form via
    display: none rather than any font-size trick. */
@@ -173,7 +175,7 @@
 }
 
 /* Cluster the Menu trigger with the page-meta block so the right
-   side of the lab header reads as one group. The gap matches the
+   side of the page header reads as one group. The gap matches the
    header's own 0.75rem inter-item gap for visual continuity. */
 .page-nav-group {
   display: inline-flex;
@@ -210,12 +212,12 @@
   margin-bottom: 1.25rem;
 }
 
-/* /heatmap is the only lab that wants the full viewport width.
+/* /heatmap is the only page that wants the full viewport width.
    The grid layout (top ~250 stocks, equal-size tiles, sector bands)
    takes its natural height — typically ~1000-1400px on a 15-column
    desktop layout — and the page scrolls vertically below the fold
    if the user's viewport is shorter than that. The shell widens
-   past the default 1100px lab cap up to ~1800px (or 96vw on smaller
+   past the default 1100px page cap up to ~1800px (or 96vw on smaller
    screens) so the column count can climb to 14-16 wide on big
    monitors; on phone-class viewports the column count auto-shrinks
    to 6-8 with smaller tiles per the MIN_TILE_WIDTH guard in the
@@ -290,7 +292,7 @@
   opacity: 0.6;
 }
 
-/* Bolded footer Return-Home link used by labs that wire up active
+/* Bolded footer Return-Home link used by pages that wire up active
    egress back to the main dashboard. Lives on its own block-level
    line under the page-footer-line so the bold-green link reads as a
    distinct affordance rather than melting into the muted grey meta
@@ -314,7 +316,7 @@
 }
 
 /* Bolded footer attribution link to the sister site about.aigamma.com.
-   Sits below the page-footer-home Return-Home link on lab pages where
+   Sits below the page-footer-home Return-Home link on pages where
    both are present, or stands alone on the home-page footer where there
    is no Return-Home (the reader is already home). Reads as a distinct
    secondary affordance — accent-blue + bold, mixed case so the question
@@ -429,8 +431,8 @@
   }
 }
 
-/* The labs borrow the main dashboard's single-breakpoint approach at 768px
-   and add a tighter 480px stop for phones, because the lab surfaces carry
+/* The pages borrow the main dashboard's single-breakpoint approach at 768px
+   and add a tighter 480px stop for phones, because the page surfaces carry
    less content per viewport than the main dashboard and the extra space
    on a narrow screen shows up as awkward emptiness unless chrome shrinks
    a second step. Everything below is additive to the desktop layout —
@@ -460,7 +462,7 @@
   /* Drop the upper-left logo at phone widths so the TopNav buttons
      (Vol, Earnings, Scan, Rotations, VIX, Seasonality)
      inherit the freed horizontal space. The page-brand cluster on
-     the left collapses to just the .page-badge that names the lab —
+     the left collapses to just the .page-badge that names the page —
      the functional identifier the reader needs in context, while
      the static brand mark adds no information at mobile widths and
      was the largest single contributor to the header crowding
@@ -468,7 +470,7 @@
      The Return Home button + the bolded footer link still cover
      the navigation-back-to-home affordance the logo previously
      supplied. .page-logo-link is the wrapper anchor (now used on
-     every lab entry, including the formerly inline-styled alpha /
+     every page entry, including the formerly inline-styled alpha /
      beta / dev / discrete / smile anchors that picked up the
      class as part of the same change); hiding the wrapper rather
      than just the inner img drops the entire flex item out of the
@@ -531,7 +533,7 @@
   /* The inline Return Home button is replaced on phone-class viewports
      by the green HOME pill that lives inside the new .mobile-nav
      cluster (see src/components/MobileNav.jsx). Hiding the inline
-     button here means lab pages render exactly one HOME affordance on
+     button here means pages render exactly one HOME affordance on
      mobile — the leftmost of the three .mobile-nav pills — instead of
      duplicating it as both a free-standing inline button and a
      dropdown-cluster pill. The footer-bottom .page-footer-home link is
@@ -580,7 +582,7 @@
     display: inline;
   }
 
-  /* Swap the long and short badge labels at mobile widths. Lab pages
+  /* Swap the long and short badge labels at mobile widths. Pages
      that opt into the splitter wrap the badge text in two spans; the
      base rules above hide the short span and show the long span,
      this rule reverses that at ≤768px. */
@@ -718,7 +720,7 @@
   }
 }
 
-/* /seasonality lab grid. A bordered 14-column cell table (row-label +
+/* /seasonality page grid. A bordered 14-column cell table (row-label +
    13 30-min bucket columns) rendered as a semantic <table>. The card
    wrapper handles scroll on narrow viewports; the table itself owns
    the cell borders and the header/row-label chrome. */
@@ -1114,7 +1116,7 @@
   }
 }
 
-/* Relative Sector Rotation lab. The card holds a meta line (benchmark
+/* Relative Sector Rotation page. The card holds a meta line (benchmark
    ticker, periods/components count, "Through M/D/YYYY" stamp) and a
    single Plotly-rendered 600px-tall scatter that draws the four-
    quadrant rotation plane. The card chrome reuses the seasonality
@@ -1162,7 +1164,7 @@
    separators so the cluster reads as one segmented control rather than
    three disconnected pills, matching the segmented-control idiom used
    by the Menu trigger and the page-home-button family elsewhere on
-   the lab pages. The active button reverses to a filled accent-blue
+   the pages. The active button reverses to a filled accent-blue
    background with dark text so the current step is unambiguous; hover
    on inactive buttons tints them lightly. The compact 0.75rem font
    size matches the .rotation-meta-line and .rotation-asof typography
@@ -1376,7 +1378,7 @@
    /rotations page. The card holds three Plotly horizontal bar charts
    stacked vertically, each independently sorted by its own horizon. The
    meta band on top mirrors the rotation card's meta band so the two
-   surfaces feel like vertically stacked siblings inside the same lab
+   surfaces feel like vertically stacked siblings inside the same page
    rather than unrelated cards. Each panel gets its own min-height so
    the eleven y-axis labels don't squish together vertically; on mobile
    the panels shrink proportionally but the labels stay legible. */
@@ -1465,7 +1467,7 @@
   }
 }
 
-/* /expiring-gamma lab. The card holds a meta band on top, a totals
+/* /expiring-gamma page. The card holds a meta band on top, a totals
    row, and a single Plotly bar chart. The meta and totals bands
    borrow the rotation card's vocabulary (SPX ticker accent-blue,
    secondary metadata muted Courier) so the surface reads as a peer
@@ -1775,7 +1777,7 @@
 /* Plotly draws SVG <text> elements with inline font-family that beats
    class-level CSS. Force the brand sans (Calibri-first via
    var(--font-base)) on every text element inside the chart so the tick
-   labels, axis title, and rangeslider chrome match the rest of the lab
+   labels, axis title, and rangeslider chrome match the rest of the page
    chrome's typography. Same convention as .rotation-chart text above. */
 .expiring-gamma-chart text,
 .expiring-gamma-chart .gtitle,
@@ -2444,7 +2446,7 @@
    Fixes to the top of the viewport via position:fixed when the main
    hero card scrolls out of view. The IntersectionObserver in SlotB
    toggles its render based on hero visibility; CSS does the layout +
-   transition. Z-index sits above the lab header chrome on the
+   transition. Z-index sits above the page header chrome on the
    page (the page-shell hierarchy doesn't introduce a stacking context
    above 30, and z=80 here clears Menu's panel z=40). */
 .econ-events__sticky {

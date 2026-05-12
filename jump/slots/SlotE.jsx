@@ -662,8 +662,8 @@ export default function SlotE() {
           Black-Scholes calls, each priced with a per-jump-count adjusted
           spot drift and variance. The series converges fast. Calibration
           is a 4-parameter Nelder-Mead in IV-space against the same SPX
-          slice the Stochastic Vol Lab uses, so the smiles can be compared
-          side by side across labs.
+          slice the Stochastic Vol uses, so the smiles can be compared
+          side by side across pages.
         </p>
         <p style={{ margin: '0 0 0.75rem' }}>
           <strong style={{ color: 'var(--text-primary)' }}>Reading.</strong>{' '}

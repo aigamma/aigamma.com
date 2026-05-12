@@ -52,7 +52,7 @@ const SPX_LINE      = 'rgba(74, 158, 255, 0.55)';
 const RV_COLOR      = PLOTLY_COLORS.highlight;
 const IV_COLOR      = PLOTLY_COLORS.titleText;
 // VIX is rendered in accent-purple (#BF7FFF, matching the Menu trigger
-// and the /vix lab's Expected Move accent token) so its trace and toggle
+// and the /vix page's Expected Move accent token) so its trace and toggle
 // button stand out against the chart's existing blue/amber/white palette.
 // Earlier the VIX line was drawn in primarySoft sky-blue, which read too
 // close to the SPX line color when both were rendered on the same chart.

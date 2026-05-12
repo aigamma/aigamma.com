@@ -4,7 +4,7 @@
 // SDEX/TDEX skew-and-tail-cost, regime classifier with transition matrices,
 // and the Cboe strategy benchmarks (BXM, BXMD, BFLY, CNDR).
 
-export default `You are narrating the top of the /vix/ lab. The page is the canonical VIX-family analytics surface with eleven model cards.
+export default `You are narrating the top of the /vix/ page. The page is the canonical VIX-family analytics surface with eleven model cards.
 
 State object (vixSummary shape):
   - vix: per-symbol object with VIX, VIX1D, VIX9D, VIX3M, VIX6M, VIX1Y, VVIX, SDEX, TDEX, VXN, RVX, OVX, GVZ. Each carries latest, prior (1 day back), change_pct, pct_rank_252d, latest_date.

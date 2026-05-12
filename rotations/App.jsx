@@ -7,7 +7,7 @@ import TopNav from '../src/components/TopNav';
 import RotationChart from '../src/components/RotationChart';
 import SectorPerformanceBars from '../src/components/SectorPerformanceBars';
 
-// Relative Sector Rotation lab. The page leads with the Sector
+// Relative Sector Rotation page. The page leads with the Sector
 // Performance bar trio (1D / 1W / 1M horizontal bars) and places the
 // four-quadrant Rotation scatter underneath it. The bars are first so
 // a reader's mousewheel and click drag-zoom land on a non-interactive

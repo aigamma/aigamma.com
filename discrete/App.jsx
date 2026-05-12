@@ -40,8 +40,8 @@ function prefetchBelowFoldChunks() {
   });
 }
 
-// Discrete & Parametric Vol Lab. Every implied-vol number on the main
-// dashboard is produced by a model fit. This lab opens the model layer
+// Discrete & Parametric Vol. Every implied-vol number on the main
+// dashboard is produced by a model fit. This page opens the model layer
 // and shows two complementary fitting families side by side: discrete
 // pricing engines (binomial and trinomial trees) that reconstruct an
 // option's price on a finite state space, and parametric surface
@@ -95,7 +95,7 @@ function prefetchBelowFoldChunks() {
 //           in a way that slice-fitting cannot guarantee.
 //
 // All six slots consume the same live /api/data snapshot. Nothing on
-// the main site links here; the lab is bookmark-only and will only be
+// the main site links here; the page is bookmark-only and will only be
 // reachable by typing /discrete directly.
 export default function App() {
   useEffect(() => {
@@ -200,7 +200,7 @@ export default function App() {
           </p>
           <p style={{ margin: 0 }}>
             <strong style={{ color: 'var(--text-primary)' }}>Why both, side by side.</strong>{' '}
-            This lab runs both schools against the same live SPX chain so outputs are directly
+            This page runs both schools against the same live SPX chain so outputs are directly
             comparable. For cash-settled European SPX, the tree engines{' '}
             <strong style={{ color: 'var(--text-primary)' }}>collapse onto Black-Scholes by
             construction</strong>: a clean reference against which the parametric surface fits
@@ -226,7 +226,7 @@ export default function App() {
 
       <footer className="page-footer">
         <span className="page-footer-line">
-          AI Gamma · discrete &amp; parametric vol lab · six-slot fitting zoo · v0.1.0
+          AI Gamma · discrete &amp; parametric vol page · six-slot fitting zoo · v0.1.0
         </span>
         <a href="/disclaimer/" className="page-footer-disclaimer">Disclaimer</a>
         <a href="/" className="page-footer-home">Return Home</a>

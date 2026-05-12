@@ -6,11 +6,11 @@ import TopNav from '../src/components/TopNav';
 import SlotA, { slotName as slotAName } from './slots/SlotA';
 import SlotB, { slotName as slotBName } from './slots/SlotB';
 
-// Dev — two-slot scratch pad, a peer to the alpha lab at /alpha. Same
+// Dev — two-slot scratch pad, a peer to the alpha page at /alpha. Same
 // pre-β release stage, independent concept. Keeping two sibling surfaces
 // alive at once — /alpha and /dev — buys the platform room to carry a
 // stable visible example (formerly the Discord-seeded put-call-parity
-// surface on /alpha; that lab was retired alongside the standalone
+// surface on /alpha; that page was retired alongside the standalone
 // /parity page on 2026-05-07) without freezing a second, earlier-stage
 // idea out of the
 // scratch-pad tier. The second slot inside each surface exists so an
@@ -20,8 +20,8 @@ import SlotB, { slotName as slotBName } from './slots/SlotB';
 // maturing in either surface can promote into a beta slot on identical
 // terms because the shell, theme, and warning strip are shared verbatim.
 // The logo in the upper-left links back to the homepage and the
-// Menu in the upper-right opens the cross-lab navigator, matching
-// the chrome on the integrated Menu labs; nothing on the main
+// Menu in the upper-right opens the cross-page navigator, matching
+// the chrome on the integrated Menu pages; nothing on the main
 // site points here, so the page is still reached only by typing /dev
 // or loading a bookmark.
 export default function App() {
@@ -33,7 +33,7 @@ export default function App() {
             className="page-badge"
             title="Dev: peer scratch pad to /alpha, same pre-β release stage"
           >
-            DEV LAB
+            DEV
           </span>
         </div>
         <TopNav />
@@ -58,7 +58,7 @@ export default function App() {
 
       <footer className="page-footer">
         <span className="page-footer-line">
-          AI Gamma · dev lab · peer of /alpha
+          AI Gamma · dev · peer of /alpha
         </span>
         <a href="/disclaimer/" className="page-footer-disclaimer">Disclaimer</a>
         <a href="/" className="page-footer-home">Return Home</a>

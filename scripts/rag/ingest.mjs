@@ -77,19 +77,19 @@ const REPO_ROOT = path.resolve(path.dirname(new URL(import.meta.url).pathname.re
 // rows are pulled by similarity match.
 //
 // The per-page entries are derived from src/data/pages.js (CHAT_PAGES) so
-// adding a chat-enabled lab is a one-file edit to the registry rather than
+// adding a chat-enabled page is a one-file edit to the registry rather than
 // a parallel update of this list and chat.mjs's SYSTEM_PROMPTS map. The
-// title field is the surface name title-cased plus " lab system prompt"
-// (e.g., 'jump' → 'Jump lab system prompt'), with two special cases for
+// title field is the surface name title-cased plus " page system prompt"
+// (e.g., 'jump' → 'Jump page system prompt'), with two special cases for
 // the homepage and tactical-vol surface.
 const TITLE_OVERRIDES = {
   main: 'Main Dashboard system prompt',
-  tactical: 'Tactical Vol lab system prompt',
+  tactical: 'Tactical Vol page system prompt',
 };
 function defaultTitle(surface) {
   if (TITLE_OVERRIDES[surface]) return TITLE_OVERRIDES[surface];
   const cap = surface.charAt(0).toUpperCase() + surface.slice(1);
-  return `${cap} lab system prompt`;
+  return `${cap} page system prompt`;
 }
 
 const SOURCES = [

@@ -7,7 +7,7 @@
 //
 // This file is the model zoo for /garch/. See /dev/garch.js for the earlier
 // three-model (GARCH, GJR, EGARCH) prototype; that file predates this one
-// and is kept in place so the /dev/ lab continues to work unchanged.
+// and is kept in place so the /dev/ page continues to work unchanged.
 //
 // COVERAGE (21 specifications — Stage 1 + Stage 2, full user list)
 //   Tier-1 univariate quadratic/power/absolute:

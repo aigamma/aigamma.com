@@ -359,7 +359,7 @@ export default function SlotB() {
         // top and clips its top half. Drop y on mobile so two lines clear.
         // The trailing " · SPX" suffix that used to live in both branches was
         // dropped because /local/ is dedicated entirely to SPX volatility (the
-        // lab badge reads "Local Vol", the page-level explainer prose
+        // page badge reads "Local Vol", the page-level explainer prose
         // references SPX repeatedly, the chat agent's per-page system prompt
         // is anchored to SPX, and useOptionsData is hard-coded to underlying:
         // 'SPX'); re-asserting "· SPX" inside every chart title was pure

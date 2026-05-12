@@ -2,7 +2,7 @@
 //
 // Pulls daily EOD OHLC for the VIX family + cross-asset vol + skew + Cboe
 // option-strategy benchmark indices from Massive Indices Starter and upserts
-// every row into public.vix_family_eod. The /vix lab reads exclusively from
+// every row into public.vix_family_eod. The /vix page reads exclusively from
 // that table — never directly from Massive — so the page renders from cached
 // historical state on weekends and stays useful even if Massive is unreachable.
 //
@@ -28,7 +28,7 @@
 import { readFileSync, existsSync } from 'node:fs';
 import { resolve } from 'node:path';
 
-// All symbols the /vix lab catalog touches. Stored without the Massive
+// All symbols the /vix page catalog touches. Stored without the Massive
 // 'I:' prefix in Supabase for cleaner downstream queries. Verified
 // available on Indices Starter by probing the /v3/snapshot/indices and
 // /v2/aggs/ticker endpoints on 2026-04-26.

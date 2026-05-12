@@ -7,7 +7,7 @@ import TopNav from '../src/components/TopNav';
 // red Disclaimer affordance in every page-footer across the site. Single
 // content card, no charts, no Chat mount, no /api fetch. The page-shell
 // chrome (Menu + TopNav + Home + .page-footer) is preserved so the page
-// reads as a sibling of the rest of the labs rather than a free-floating
+// reads as a sibling of the rest of the pages rather than a free-floating
 // document, but the body is intentionally short — the goal is "minimum
 // surface area to convey the disclaimers", not an exhaustive legal
 // brief. Every assertion in the body is meant to be verifiable from

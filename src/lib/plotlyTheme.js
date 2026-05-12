@@ -77,7 +77,7 @@ export function plotlyAxis(titleText, extras = {}) {
     // a wide-enough range to produce long tick strings will render the
     // axis title on top of the tick labels — the main landing page is
     // fine because its rates and IVs sit in tidy single-digit-percent
-    // ranges, but the lab directories (alpha, garch, regime, risk,
+    // ranges, but the page directories (alpha, garch, regime, risk,
     // etc.) routinely surface wider ranges where the collision shows.
     // automargin only expands margins it never shrinks them, so this
     // change is layout-safe for charts that already had enough room.

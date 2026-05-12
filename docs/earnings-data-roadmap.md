@@ -1,7 +1,7 @@
-# Earnings Lab — Data Roadmap
+# Earnings — Data Roadmap
 
 This document captures the strategic data work that surrounds the
-`/earnings` lab page. Written 2026-04-26 after the v0.4 chart-filter
+`/earnings` page. Written 2026-04-26 after the v0.4 chart-filter
 toggles shipped (Top 100 OV / Top 250 OV / Rev ≥ $5B / Rev ≥ $1B / Rev
 ≥ $500M, plus a disabled "Market Cap" placeholder); the toggles fix
 the immediate "300 dots is illegible" problem, but the third filter

@@ -47,7 +47,7 @@ RLS: anon and authenticated have SELECT; writes are service-role-only by default
 
 ### `metadata.surface` values
 
-Tied to URL path segments: `main`, `garch`, `regime`, `rough`, `stochastic`, `local`, `jump`, `risk`, `discrete`, `parity`, `tactical`, `alpha`, `beta`, plus the cross-surface tag `all` for content that applies platform-wide (CLAUDE.md, AGENTS.md, the global system prompt blocks). Specific surfaces also exist for content scoped to particular labs (`heatmap`, `earnings`).
+Tied to URL path segments: `main`, `garch`, `regime`, `rough`, `stochastic`, `local`, `jump`, `risk`, `discrete`, `parity`, `tactical`, `alpha`, `beta`, plus the cross-surface tag `all` for content that applies platform-wide (CLAUDE.md, AGENTS.md, the global system prompt blocks). Specific surfaces also exist for content scoped to particular pages (`heatmap`, `earnings`).
 
 ### `public.chat_logs`
 

@@ -8,7 +8,7 @@ import TopNav from '../src/components/TopNav';
 import LazyMount from '../src/components/LazyMount';
 import GarchZoo from './slots/GarchZoo';
 
-// Single-slot lab: GarchZoo stays statically imported because it IS the
+// Single-slot page: GarchZoo stays statically imported because it IS the
 // slot. Only the Chat splits out into a lazy chunk so the chat bundle
 // (which carries useChat, the Anthropic SDK shim, and the markdown
 // renderer) doesn't land on the critical path. The chat chunk is fetched
@@ -28,7 +28,7 @@ function prefetchChatChunk() {
   });
 }
 
-// /garch/ — GARCH Ensemble page, an integrated Menu lab.
+// /garch/ — GARCH Ensemble page, an integrated Menu page.
 // Single slot rendering 17 univariate GARCH-family specifications plus an
 // equal-weight master ensemble on daily SPX log returns, with a family
 // picker above the chart that lets a viewer hide a family — the ensemble
@@ -44,7 +44,7 @@ function prefetchChatChunk() {
 // This page carries active egress back to the main dashboard at three
 // redundant affordances, matching the /jump/ pattern: the logo in the
 // header is a hyperlink to `/`, a filled green RETURN HOME
-// button sits in the header itself between the GARCH LAB brand on the
+// button sits in the header itself between the GARCH brand on the
 // left and the Menu trigger on the right — centered horizontally
 // on the same row as the other nav items via the header's flex
 // space-between distribution — and the footer carries a bolded Return
@@ -63,7 +63,7 @@ export default function App() {
             className="page-badge"
             title="GARCH: 17-model univariate family zoo with equal-weight ensemble and a family picker"
           >
-            <span className="page-badge__desktop-text">GARCH LAB</span>
+            <span className="page-badge__desktop-text">GARCH</span>
             <span className="page-badge__mobile-text">GARCH</span>
           </span>
         </div>
@@ -101,7 +101,7 @@ export default function App() {
 
       <footer className="page-footer">
         <span className="page-footer-line">
-          AI Gamma · GARCH lab · univariate family zoo with picker
+          AI Gamma · GARCH · univariate family zoo with picker
         </span>
         <a href="/disclaimer/" className="page-footer-disclaimer">Disclaimer</a>
         <a href="/" className="page-footer-home">Return Home</a>

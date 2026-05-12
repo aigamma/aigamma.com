@@ -6,7 +6,7 @@ import PageNarrator from '../src/components/PageNarrator';
 import TopNav from '../src/components/TopNav';
 import SkewScanner from '../src/components/SkewScanner';
 
-// SPX Skew Scanner lab. Two-tab interactive 2x2 quadrant view of the
+// SPX Skew Scanner page. Two-tab interactive 2x2 quadrant view of the
 // top-N options-active single-name stocks plotted by 30D ATM IV
 // (vertical) versus 25-delta call-side or put-side skew (horizontal).
 // Mirrors the analytical quadrant common to professional vol screeners
@@ -20,7 +20,7 @@ import SkewScanner from '../src/components/SkewScanner';
 //
 // Data lineage:
 //   tickers + sectors:  Same options-volume roster JSON the /heatmap
-//                       lab uses (src/data/options-volume-roster.json,
+//                       page uses (src/data/options-volume-roster.json,
 //                       generated from a Barchart screener CSV at
 //                       C:\sheets\). This page slices the top 40 by
 //                       default, which is the universe size that fits

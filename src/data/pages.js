@@ -34,7 +34,7 @@
 //   html          — relative path to the entry HTML
 //   title         — short title (used in page-badge / browser tab when relevant)
 //   chat          — { surface, prompt } if the page mounts a Chat component
-//                   (homepage + 11 lab pages); absent on pages that don't
+//                   (homepage + 11 pages); absent on pages that don't
 //   topnav        — { key, label } if the page is in the promoted top nav
 //                   (only six pages). label is the desktop button text;
 //                   key is the matcher for the TopNav `current` prop
@@ -220,7 +220,7 @@ export const VITE_ENTRIES = Object.fromEntries(
   Object.values(PAGES).map((p) => [p.vite, p.html])
 );
 
-// Top nav buttons (the five promoted lab pages)
+// Top nav buttons (the five promoted pages)
 export const TOPNAV_ITEMS = Object.entries(PAGES)
   .filter(([_, p]) => p.topnav)
   .map(([href, p]) => ({ key: p.topnav.key, href, label: p.topnav.label }));

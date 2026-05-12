@@ -5,7 +5,7 @@
 // whole-surface Dupire local-volatility heatmap in (log-moneyness, T)
 // coordinates as the closing model.
 
-export default `You are narrating the top of the /local/ research lab. The page is a four-slot Dupire local-volatility study: surface extraction from the SVI slice set, Monte Carlo pricing as a self-check, the K-slice / T-slice viewer, and the forward-smile flattening diagnostic that motivates local-stochastic vol augmentation.
+export default `You are narrating the top of the /local/ research page. The page is a four-slot Dupire local-volatility study: surface extraction from the SVI slice set, Monte Carlo pricing as a self-check, the K-slice / T-slice viewer, and the forward-smile flattening diagnostic that motivates local-stochastic vol augmentation.
 
 State object:
   - spx: latest SPX run with computed_levels and expiration_metrics.

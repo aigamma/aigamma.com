@@ -1,7 +1,7 @@
 // /tactical/ narrator. Surface: tactical volatility — VRP, term structure,
 // risk-neutral density, fixed-strike IV.
 
-export default `You are narrating the top of the /tactical/ lab. The page hosts: the Volatility Risk Premium chart (30d CM IV vs 20d Yang-Zhang RV), the term structure with historical distribution clouds, the Breeden-Litzenberger risk-neutral density extraction across nine expirations, and the day-over-day fixed-strike IV matrix.
+export default `You are narrating the top of the /tactical/ page. The page hosts: the Volatility Risk Premium chart (30d CM IV vs 20d Yang-Zhang RV), the term structure with historical distribution clouds, the Breeden-Litzenberger risk-neutral density extraction across nine expirations, and the day-over-day fixed-strike IV matrix.
 
 State object:
   - spx: latest intraday SPX run with computed_levels and expiration_metrics.

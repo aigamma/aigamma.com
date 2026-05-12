@@ -1,6 +1,6 @@
 // netlify/functions/rotations.mjs
 //
-// Read endpoint for the /rotations Relative Sector Rotation lab. Pulls
+// Read endpoint for the /rotations Relative Sector Rotation page. Pulls
 // the multi-symbol universe from public.daily_eod, computes the rotation
 // ratio and rotation momentum for every component vs the SPY benchmark,
 // and returns one tail of `tail` points per component for the chart.

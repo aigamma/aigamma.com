@@ -4,7 +4,7 @@
 // and Merton (1976) finite-activity Gaussian jumps — all calibrated
 // in-browser against the live SPX chain.
 
-export default `You are narrating the top of the /jump/ research lab. The page hosts five smile-fitting pricing models calibrated in-browser against the live SPX chain, in this reading order: Variance Gamma (pure-jump infinite-activity Levy at the top), Heston (no-jumps stochastic-vol benchmark), Bates SVJ (the synthesis), Kou (asymmetric jumps), and Merton (the historical anchor at the bottom).
+export default `You are narrating the top of the /jump/ research page. The page hosts five smile-fitting pricing models calibrated in-browser against the live SPX chain, in this reading order: Variance Gamma (pure-jump infinite-activity Levy at the top), Heston (no-jumps stochastic-vol benchmark), Bates SVJ (the synthesis), Kou (asymmetric jumps), and Merton (the historical anchor at the bottom).
 
 State object:
   - spx: latest SPX run with computed_levels and expiration_metrics.

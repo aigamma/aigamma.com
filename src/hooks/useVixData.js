@@ -1,7 +1,7 @@
 import { useEffect, useState } from 'react';
 
-// Single-fetch hook for the /vix lab. Drains a boot promise stashed at
-// window.__vixBoot when present (the lab's index.html fires the request
+// Single-fetch hook for the /vix page. Drains a boot promise stashed at
+// window.__vixBoot when present (the page's index.html fires the request
 // before the React bundle parses, the same pattern /tactical/ uses for its
 // today + vrpHistory boot promises) and falls back to a fresh fetch on
 // pages that don't pre-boot. Every card on /vix consumes the same payload

@@ -9,7 +9,7 @@ import LazyMount from '../src/components/LazyMount';
 import SlotB from './slots/SlotB';
 
 // SlotB stays statically imported because it is the first card in the
-// reading order on this lab and partially above the fold on a typical
+// reading order on this page and partially above the fold on a typical
 // desktop viewport. SlotC + SlotD + SlotE plus Chat split into per-slot
 // Vite chunks via React.lazy.
 const SlotC = lazy(() => import('./slots/SlotC'));
@@ -32,7 +32,7 @@ function prefetchBelowFoldChunks() {
   });
 }
 
-// Local Volatility Lab — four-slot scratch pad dedicated to Dupire's
+// Local Volatility — four-slot scratch pad dedicated to Dupire's
 // local-volatility framework end-to-end: extract σ_LV(K, T) from the
 // SVI slice set of today's SPX chain, price options under the Dupire
 // SDE dS = (r−q)·S dt + σ_LV(S, t)·S dW, visualize the surface from
@@ -42,8 +42,8 @@ function prefetchBelowFoldChunks() {
 // the whole-surface heatmap so the reader can see the (K, T) shape
 // as a single object after the slice-by-slice readings above.
 //
-// Where the /stochastic lab keeps the broader SV lineage (Heston,
-// SABR), this lab treats local vol as the subject from extraction
+// Where the /stochastic page keeps the broader SV lineage (Heston,
+// SABR), this page treats local vol as the subject from extraction
 // through pricing through diagnostic through whole-surface display.
 // All four slots operate on the same extracted Dupire surface, so a
 // disagreement between slots can only be a disagreement in reading,
@@ -94,17 +94,17 @@ function prefetchBelowFoldChunks() {
 //            on 2026-05-06 because that four-card stochastic-vol
 //            composition was slow to mount and the surface heatmap
 //            is a more natural fit at the bottom of the dedicated
-//            local-vol lab.
+//            local-vol page.
 //
 // All four slots consume the same live /api/data snapshot through
 // useOptionsData, so the MC pricer, the slice viewer, the forward-
 // smile diagnostic, and the whole-surface heatmap are internally
 // consistent views of one point-in-time SPX chain. Unlike the other
-// bookmark-only labs, this page now carries active egress back to
+// bookmark-only pages, this page now carries active egress back to
 // the main dashboard at three redundant affordances, matching the
 // /jump/ pattern: the logo in the header is a hyperlink
 // to `/`, a filled green RETURN HOME button sits in the header
-// itself between the Local Vol Lab brand on the left and the Menu
+// itself between the Local Vol brand on the left and the Menu
 // trigger on the right (centered horizontally on the same row as
 // the other nav items via the header's flex space-between
 // distribution), and the footer carries a bolded Return Home link
@@ -179,7 +179,7 @@ export default function App() {
 
       <footer className="page-footer">
         <span className="page-footer-line">
-          AI Gamma · local vol lab · dupire extraction + pricing · v0.1.0
+          AI Gamma · local vol page · dupire extraction + pricing · v0.1.0
         </span>
         <a href="/disclaimer/" className="page-footer-disclaimer">Disclaimer</a>
         <a href="/" className="page-footer-home">Return Home</a>

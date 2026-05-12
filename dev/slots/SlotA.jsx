@@ -15,7 +15,7 @@ import { fitEnsemble, forecastEnsemble, annualize } from '../garch';
 export const slotName = 'GARCH ENSEMBLE';
 
 // -----------------------------------------------------------------------------
-// GARCH ensemble — dev-lab proof of concept
+// GARCH ensemble — dev-sandbox proof of concept
 //
 // This card fits three GARCH-family models on daily SPX log returns and
 // renders the ensemble forecast next to each component's individual fit.

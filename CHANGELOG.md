@@ -141,7 +141,7 @@ v1.2.0 because the new narration card is a content-presentation
 addition rather than a new wire-protocol surface; the snapshot endpoint
 schema is unchanged at `schemaVersion: 2`.
 
-## 1.1.2 — 2026-04-19 — Overnight Alignment metric + mobile-friendly labs
+## 1.1.2 — 2026-04-19 — Overnight Alignment metric + mobile-friendly pages
 
 This is the first semver-tagged release of aigamma.com. The existing
 history up to this point is the dated entries below; going forward the
@@ -173,8 +173,8 @@ both days (the zero-crossing of the gamma profile) so the overnight
 comparison isn't a mix of fresh profile today vs stale backend
 gamma-max flip yesterday.
 
-**Alpha (/alpha) and Beta (/beta) labs are now mobile-friendly at the
-same breakpoints as the production dashboard.** The two lab shells
+**Alpha (/alpha) and Beta (/beta) pages are now mobile-friendly at the
+same breakpoints as the production dashboard.** The two page shells
 already inherited the viewport meta and some mobile scaling from the
 original implementation, but the treatment stopped at the badge and
 logo; the warning strip, the slot cards, the footer, and the placeholder
@@ -187,11 +187,11 @@ untouched, placeholder font sizes, footer spacing) and a new
 phone-width viewports (badge height 2.8 → 2.4rem, meta 0.72 → 0.68rem,
 footer letter-spacing eases for legibility at the smallest label size).
 The structure of the layout is unchanged — nothing reflows, nothing
-hides on mobile — so a component developed in a lab slot on desktop
-renders in the same hierarchy on mobile. The two lab footers now
+hides on mobile — so a component developed in a page slot on desktop
+renders in the same hierarchy on mobile. The two page footers now
 include a `v1.1.2` version token at the end of their existing text; the
-alpha footer reads "AI Gamma · α lab · software-stage sense ·
-v1.1.2" and the beta footer reads "AI Gamma · internal beta lab ·
+alpha footer reads "AI Gamma · α · software-stage sense ·
+v1.1.2" and the beta footer reads "AI Gamma · internal beta ·
 not for public consumption · v1.1.2". The main dashboard at `/` does not
 carry a visible version marker because the production surface has never
 had a footer; readers who want to confirm the deployed version can read

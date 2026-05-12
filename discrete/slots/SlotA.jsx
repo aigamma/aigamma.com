@@ -611,7 +611,7 @@ export default function SlotA() {
           <strong style={{ color: PLOTLY_COLORS.secondary }}>American curve</strong>{' '}
           on SPX sits on top of the European curve. That is the right
           answer. SPX has no discrete dividends, a smooth q accrual, and no
-          rational reason to exercise an index option early. When this lab
+          rational reason to exercise an index option early. When this page
           is later pointed at a symbol with chunky dividends, the coral
           curve will visibly detach upward on the put side before each
           ex-dividend date.

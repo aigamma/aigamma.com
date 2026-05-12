@@ -3,7 +3,7 @@ import MobileNav from './MobileNav';
 import { MENU_TOOLS, MENU_RESEARCH } from '../data/pages.js';
 
 // Shared menu dropdown. Rendered in the main dashboard header and in
-// every lab header so the bookmark-only labs are reachable from any
+// every page header so the bookmark-only pages are reachable from any
 // page without touching the URL bar. Items are organized into three
 // sections separated by inline section headers — Tools (operational
 // surfaces and diagnostics), Research (model-family zoos), and About
@@ -14,7 +14,7 @@ import { MENU_TOOLS, MENU_RESEARCH } from '../data/pages.js';
 // dropdown entry was removed on 2026-05-08 — the disclaimer is
 // already surfaced as the coral DISCLAIMER chip in the right corner
 // of the chat header on every page and as the page-footer-disclaimer
-// link in the footer of every lab page, so the dropdown row was
+// link in the footer of every page, so the dropdown row was
 // adding redundancy without discovery benefit. The /disclaimer/
 // page itself is unchanged.
 //
@@ -35,16 +35,16 @@ import { MENU_TOOLS, MENU_RESEARCH } from '../data/pages.js';
 // (sector-weighted overview) and /expiring-gamma/ (dated catalyst).
 // The earlier alphabetized order put /expiring-gamma/ at the top,
 // which understated the centrality of the single-names and sector
-// views to the daily read. The /parity lab that previously sat in
+// views to the daily read. The /parity page that previously sat in
 // Research between /local/ and /regime/ was retired on 2026-05-07
 // and the URL 301-redirects to /; /vix/ joined the Research section
 // on 2026-05-08 after being demoted from the TopNav.
 //
-// Five lab pages — /tactical/, /earnings/, /scan/, /rotations/,
+// Five pages — /tactical/, /earnings/, /scan/, /rotations/,
 // /seasonality/ — live in the TopNav component (see
 // src/components/TopNav.jsx) and render as standalone buttons in
 // the header alongside the Menu trigger. Their entries are not
-// duplicated here; opening Menu exposes only the labs that did
+// duplicated here; opening Menu exposes only the pages that did
 // not get promoted to the top nav.
 //
 // Why the Research section: the eight model-family / VIX-family
@@ -58,7 +58,7 @@ import { MENU_TOOLS, MENU_RESEARCH } from '../data/pages.js';
 // I'd visit to read about a vol model." Grouping them under a
 // Research header signals the difference at a glance without
 // removing them from the dropdown — TopNav stays at five items per
-// its deliberate design, and the bookmark-only labs remain
+// its deliberate design, and the bookmark-only pages remain
 // bookmark-discoverable.
 //
 // Section headers are rendered as non-interactive `role="presentation"`
@@ -99,8 +99,8 @@ export default function Menu({ regimeIndicator } = {}) {
   const itemRefs = useRef([]);
 
   // Wrap-detection. When the surrounding header (.site-header on the
-  // main dashboard, .page-header on every lab page) is too narrow to
-  // fit the lab badge + the five TopNav buttons + the optional Return
+  // main dashboard, .page-header on every page) is too narrow to
+  // fit the page badge + the five TopNav buttons + the optional Return
   // Home button + this Menu trigger on one row, flex-wrap reflows the
   // overflowing children onto a second row. With the existing desktop
   // layout (justify-content: space-between + display: contents on
@@ -216,7 +216,7 @@ export default function Menu({ regimeIndicator } = {}) {
     };
   }, [isOpen, close]);
 
-  // Route changes are full-page loads on this MPA (each lab is its own
+  // Route changes are full-page loads on this MPA (each page is its own
   // Vite entry), so a click on a menuitem will unmount the component
   // naturally. popstate covers back/forward navigation while the menu
   // is open.
@@ -264,7 +264,7 @@ export default function Menu({ regimeIndicator } = {}) {
           ref={panelRef}
           className="menu-panel"
           role="menu"
-          aria-label="Lab navigation"
+          aria-label="Page navigation"
         >
           {(() => {
             // Render walk: items get an interactive index keyed against

@@ -5,10 +5,10 @@ import Menu from '../src/components/Menu';
 import TopNav from '../src/components/TopNav';
 import SlotB, { slotName as slotBName } from './slots/SlotB';
 
-// Beta Lab shell — single slot for models under test. Graduated
+// Beta shell — single slot for models under test. Graduated
 // slots (previously SlotA/SPX-vs-Vol-Flip and SlotC/Gamma-Index-
 // Oscillator, and most recently SlotB/Economic-Events) now live on
-// the main dashboard or as their own production lab pages. SlotB
+// the main dashboard or as their own production pages. SlotB
 // is currently empty, ready for the next experimental tenant.
 // Visual language intentionally mirrors the production dashboard
 // (dark card chrome, Calibri-style brand sans-serif, four-token
@@ -18,8 +18,8 @@ import SlotB, { slotName as slotBName } from './slots/SlotB';
 // production dashboard.
 //
 // The logo in the header links back to the homepage and the Menu on
-// the right of the header opens the nine-lab directory, so the page is
-// reachable from and navigable to every other lab without leaving the
+// the right of the header opens the page directory, so the page is
+// reachable from and navigable to every other page without leaving the
 // keyboard. Crawlers are still blocked via the noindex meta tag in
 // index.html and the robots.txt Disallow line.
 export default function App() {
@@ -27,8 +27,8 @@ export default function App() {
     <div className="app-shell page-shell">
       <header className="page-header">
         <div className="page-brand">
-          <span className="page-badge" title="Beta Lab: experimental">
-            BETA LAB
+          <span className="page-badge" title="Beta: experimental">
+            BETA
           </span>
         </div>
         <TopNav />
@@ -48,7 +48,7 @@ export default function App() {
 
       <footer className="page-footer">
         <span className="page-footer-line">
-          AI Gamma · internal beta lab · not for public consumption · v1.1.2
+          AI Gamma · internal beta · not for public consumption · v1.1.2
         </span>
         <a href="/disclaimer/" className="page-footer-disclaimer">Disclaimer</a>
         <a href="/" className="page-footer-home">Return Home</a>

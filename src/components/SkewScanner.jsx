@@ -443,7 +443,7 @@ function ScannerToolbar({
 
 // Three-position pill toggle for the upcoming-earnings filter. The
 // chrome borrows from the .rotation-step-toggle pattern used on the
-// Lab pages: a thin amber outline framing three segmented buttons,
+// Pages: a thin amber outline framing three segmented buttons,
 // active button reverses to a filled amber background with dark
 // text. Amber is the right tonal anchor here because the warning
 // pills behind earnings tickers on the chart are the same amber —

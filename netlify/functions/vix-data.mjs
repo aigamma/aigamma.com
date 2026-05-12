@@ -1,10 +1,10 @@
 // netlify/functions/vix-data.mjs
 //
-// Read endpoint for the /vix lab. Returns the full daily history for every
+// Read endpoint for the /vix page. Returns the full daily history for every
 // symbol in public.vix_family_eod (VIX family, cross-asset vol, Nations
 // SDEX/TDEX skew-and-tail-cost pair, Cboe strategy benchmarks) plus the SPX
 // OHLC + 30-day constant-maturity IV / 20-day realized vol series from
-// public.daily_volatility_stats so the lab can compute the VIX-vs-realized
+// public.daily_volatility_stats so the page can compute the VIX-vs-realized
 // comparison without a second round trip.
 //
 // All ten visualizations on /vix derive from this single payload; they

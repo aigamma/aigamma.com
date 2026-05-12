@@ -35,7 +35,7 @@ universe diverges materially from that set.
   JSON. Header docstring (lines 1-48) is the operational reference for
   running it.
 - **`docs/earnings-data-roadmap.md`** — strategic data roadmap for the
-  /earnings lab; references this doc for roster shape decisions.
+  /earnings page; references this doc for roster shape decisions.
 
 ## Current data source (manual)
 
@@ -148,7 +148,7 @@ ranking:
 1. **Earnings quarantine.** When computing the rolling average for a
    ticker, exclude the trailing 5 trading days around each of its
    earnings reports. The earnings calendar is already in the /earnings
-   lab (EarningsWhispers, scraped server-side by
+   page (EarningsWhispers, scraped server-side by
    `netlify/functions/earnings.mjs`); the roster generator joins to it
    and skips the spike window. This kills the "AAPL reports → MARA gets
    pushed off the roster" problem at the source.

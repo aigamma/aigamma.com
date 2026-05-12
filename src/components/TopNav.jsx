@@ -1,17 +1,17 @@
 import { TOPNAV_ITEMS } from '../data/pages.js';
 
-// Promoted top-level navigation. Five lab pages — Vol,
+// Promoted top-level navigation. Five pages — Vol,
 // Earnings, Scan, Rotations, Seasonality — are surfaced as
 // their own buttons in every page header so a reader does not
 // have to open the Menu dropdown to reach them. The remaining
-// labs continue to live in the Menu component. /vix/ used to
+// pages continue to live in the Menu component. /vix/ used to
 // occupy the fifth position (between Rotations and Seasonality)
 // but was demoted to the Menu's Research section on 2026-05-08,
 // where it now sits alphabetically after /rough/. Order is
 // curated left-to-right by importance and clustering:
 //   1. Vol      — densest tactical-positioning surface, top priority
 //                 (the destination /tactical/ page's own in-page
-//                 page-badge still identifies the lab as "Tactical
+//                 page-badge still identifies the page as "Tactical
 //                 Vol"; the top-nav button was shortened — first to
 //                 single-word "Tactical" and then again to the
 //                 three-letter "Vol" — to match the short single-word
@@ -23,13 +23,13 @@ import { TOPNAV_ITEMS } from '../data/pages.js';
 //                     and Seasonality")
 //   4. Rotations    — cross-sector relative strength
 //   5. Seasonality  — intraday seasonality grid (last; immediately
-//                     before the Return Home button on lab pages).
+//                     before the Return Home button on pages).
 //                     The label is rendered as the full word
 //                     "Seasonality" only on the landing page (where
 //                     the header has no .page-brand badge eating
 //                     horizontal space and the row reliably fits at
 //                     desktop widths) and as the shortened "Season"
-//                     on every lab page, where the brand badge plus
+//                     on every page, where the brand badge plus
 //                     the Return Home button shrink the available
 //                     width enough that the longer label was the
 //                     specific item that pushed the Menu trigger
@@ -39,7 +39,7 @@ import { TOPNAV_ITEMS } from '../data/pages.js';
 //                     half (six characters vs eleven, both rendered
 //                     uppercased via the .top-nav__item CSS rule),
 //                     which materially reduces wrap likelihood on
-//                     the lab headers without changing the landing
+//                     the page headers without changing the landing
 //                     page's already-stable layout.
 // Items render as outlined buttons matching the 3.2rem chrome of
 // the Menu trigger and Return Home button. The fill color
@@ -78,12 +78,12 @@ const TOP_NAV_ITEMS = TOPNAV_ITEMS;
 export default function TopNav({ current, landing = false } = {}) {
   const items = TOP_NAV_ITEMS.filter((item) => item.key !== current);
   return (
-    <nav className="top-nav" aria-label="Featured labs">
+    <nav className="top-nav" aria-label="Featured pages">
       {items.map((item, index) => {
         const variant = index % 2 === 0 ? 'top-nav__item--blue' : 'top-nav__item--white';
         // Seasonality renders as "Season" on every page except the
         // landing page; see the comment block above for the rationale
-        // (lab headers carry the brand badge + Return Home button and
+        // (page headers carry the brand badge + Return Home button and
         // wrap at narrow desktop widths; the landing header is wider
         // and reliably fits the full word).
         const label =

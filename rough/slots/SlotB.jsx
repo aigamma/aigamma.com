@@ -75,7 +75,7 @@ const MATURITY_STEPS = [10, 25, 50, 100]; // T = 0.1, 0.25, 0.5, 1.0 years
 const MONEYNESS = [-0.10, -0.05, 0, 0.05, 0.10];
 
 // mulberry32: deterministic PRNG so path fans are reproducible across
-// re-renders (same behaviour pattern used across the regime/garch labs).
+// re-renders (same behaviour pattern used across the regime/garch pages).
 function mulberry32(seed) {
   let a = seed >>> 0;
   return function () {

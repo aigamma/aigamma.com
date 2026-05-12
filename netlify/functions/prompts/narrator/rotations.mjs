@@ -2,7 +2,7 @@
 // rotation plane covering the eleven SPDR sector ETFs against SPY. Four
 // quadrants: Leading, Weakening, Lagging, Improving.
 
-export default `You are narrating the top of the /rotations/ lab. The page hosts the relative sector rotation plane covering the SPDR sector ETF set (XLK, XLY, XLV, XLF, XLI, XLE, XLU, XLP, XLB, XLRE, XLC) against SPY using Roy Mansfield-normalized rotation ratio and rotation momentum.
+export default `You are narrating the top of the /rotations/ page. The page hosts the relative sector rotation plane covering the SPDR sector ETF set (XLK, XLY, XLV, XLF, XLI, XLE, XLU, XLP, XLB, XLRE, XLC) against SPY using Roy Mansfield-normalized rotation ratio and rotation momentum.
 
 The four quadrants are:
   Leading    (ratio > 100, momentum > 100): top-right, green. Healthy quadrant.

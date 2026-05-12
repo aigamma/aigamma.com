@@ -6,7 +6,7 @@ import PageNarrator from '../src/components/PageNarrator';
 import TopNav from '../src/components/TopNav';
 import SpxHeatmap from '../src/components/SpxHeatmap';
 
-// SPX Heatmap lab. An equal-size GICS-sector grid of the top ~250
+// SPX Heatmap page. An equal-size GICS-sector grid of the top ~250
 // single-name stocks by US options volume, colored by the most-recent
 // session's percent change from previous close. Equal-size tiles are
 // a deliberate departure from the conventional finviz / TradingView

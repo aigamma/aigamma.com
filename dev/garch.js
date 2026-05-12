@@ -1,7 +1,7 @@
 // -----------------------------------------------------------------------------
 // GARCH ensemble — pure-JS GARCH(1,1), GJR-GARCH(1,1,1), and EGARCH(1,1),
 // fit by Gaussian maximum likelihood with a Nelder-Mead simplex search in
-// unconstrained parameter space. Built for the dev lab at /dev, where the
+// unconstrained parameter space. Built for the dev at /dev, where the
 // whole pipeline runs in the browser off the daily SPX closes that ship
 // with the existing /api/gex-history endpoint.
 //

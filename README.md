@@ -63,7 +63,7 @@ Sign convention follows dealer positioning: calls create positive gamma (stabili
 | daily_cloud_bands | Frozen percentile bands (p10/p30/p50/p70/p90) per (trading_date, DTE) |
 | daily_volatility_stats | Yang-Zhang realized vol, constant-maturity IV, and VRP spread |
 | daily_gex_stats | Daily GEX summary (net/call/put GEX, walls, vol flip) |
-| spx_intraday_bars | 30-minute SPX bars for the /seasonality lab |
+| spx_intraday_bars | 30-minute SPX bars for the /seasonality page |
 | daily_eod | Index and stock symbol daily OHLC for cross-asset and stock surfaces |
 | vix_family_eod | VIX family + cross-asset vol + Nations skew/tail-cost (SDEX, TDEX) + Cboe strategy benchmarks |
 | reconciliation_audit | Daily self-consistency probe log |

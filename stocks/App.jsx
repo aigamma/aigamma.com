@@ -7,7 +7,7 @@ import TopNav from '../src/components/TopNav';
 import RotationChart from '../src/components/RotationChart';
 import SectorPerformanceBars from '../src/components/SectorPerformanceBars';
 
-// Stock Rotations lab — sister of /rotations/, but for single-name
+// Stock Rotations page — sister of /rotations/, but for single-name
 // stocks instead of GICS sector ETFs. Same two-card layout: a Stock
 // Performance bar trio (1D / 1W / 1M horizontal bars across eleven
 // hand-curated top option-volume single names) on top, a four-quadrant

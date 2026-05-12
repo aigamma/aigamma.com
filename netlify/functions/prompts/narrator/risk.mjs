@@ -4,7 +4,7 @@
 // and butterfly decomposition; second-order Greeks (vanna, volga, charm)
 // across the strike ladder.
 
-export default `You are narrating the top of the /risk/ research lab. The page is a four-slot risk-and-Greeks surface for the live SPX chain: cross-model Greeks (BSM, Bachelier, Heston), five competing delta definitions, Vanna-Volga smile reconstruction, and second-order Greeks (vanna, volga, charm).
+export default `You are narrating the top of the /risk/ research page. The page is a four-slot risk-and-Greeks surface for the live SPX chain: cross-model Greeks (BSM, Bachelier, Heston), five competing delta definitions, Vanna-Volga smile reconstruction, and second-order Greeks (vanna, volga, charm).
 
 State object:
   - spx: latest SPX run with computed_levels (including net_vanna_notional, net_charm_notional) and expiration_metrics.

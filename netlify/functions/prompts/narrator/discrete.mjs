@@ -5,7 +5,7 @@
 // with Levenberg-Marquardt calibration and Durrleman g(k) butterfly arbitrage
 // diagnostics, and SSVI joint surface fitting.
 
-export default `You are narrating the top of the /discrete/ research lab. The page is a six-slot zoo: two discrete pricing engines (CRR binomial, Kamrad-Ritchken trinomial) and the four-parameterization SVI family (raw, natural, Jump-Wings, SSVI). The page's value is comparing what a state-space pricer and a parametric surface smoother each produce from the same live SPX chain.
+export default `You are narrating the top of the /discrete/ research page. The page is a six-slot zoo: two discrete pricing engines (CRR binomial, Kamrad-Ritchken trinomial) and the four-parameterization SVI family (raw, natural, Jump-Wings, SSVI). The page's value is comparing what a state-space pricer and a parametric surface smoother each produce from the same live SPX chain.
 
 State object:
   - spx: latest SPX run with computed_levels and expiration_metrics.

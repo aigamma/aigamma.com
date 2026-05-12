@@ -39,7 +39,7 @@ function prefetchBelowFoldChunks() {
   });
 }
 
-// Jump Lab. Five-slot scratch pad dedicated to the canonical smile-
+// Jump. Five-slot scratch pad dedicated to the canonical smile-
 // fitting models for SPX. Reading order opens with the most extreme
 // departures from BSM (pure jumps, then pure stoch vol) and walks
 // toward the more conventional hybrids that combine diffusion with
@@ -100,11 +100,11 @@ function prefetchBelowFoldChunks() {
 //
 // All five consume the same live /api/data snapshot so the five fits
 // describe the same point-in-time chain through different process
-// assumptions. Unlike the other bookmark-only labs, this page carries
+// assumptions. Unlike the other bookmark-only pages, this page carries
 // active egress back to the main dashboard at three redundant
 // affordances: the logo in the header is a hyperlink to `/`, a filled
 // green RETURN HOME button sits in the header itself between the
-// Jump Lab brand on the left and the Menu trigger on the right
+// Jump brand on the left and the Menu trigger on the right
 // — centered horizontally on the same row as the other nav items via
 // the header's flex space-between distribution — and the footer
 // carries a bolded Return Home link for a reader who has scrolled to
@@ -174,7 +174,7 @@ export default function App() {
             context="jump"
             welcome={{
               quick:
-                'Ask about smile-fitting option pricing, the five models above (Variance Gamma, Heston, Bates SVJ, Kou, Merton), or how this lineage relates to the local-vol and rough-vol lineages on the sibling labs.',
+                'Ask about smile-fitting option pricing, the five models above (Variance Gamma, Heston, Bates SVJ, Kou, Merton), or how this lineage relates to the local-vol and rough-vol lineages on the sibling pages.',
               deep:
                 'Deep Analysis mode: longer and more structurally detailed responses on Variance Gamma as a time-changed Brownian motion, stochastic variance and the Heston CIR dynamics, compound Poisson and double-exponential jump measures, affine jump-diffusion transform analysis, Levy processes and the Levy-Khintchine decomposition, and the philosophy of pricing a jump-augmented market that is formally incomplete.',
             }}
@@ -184,7 +184,7 @@ export default function App() {
 
       <footer className="page-footer">
         <span className="page-footer-line">
-          AI Gamma · jump lab · five-model lineage · v0.2.0
+          AI Gamma · jump page · five-model lineage · v0.2.0
         </span>
         <a href="/disclaimer/" className="page-footer-disclaimer">Disclaimer</a>
         <a href="/" className="page-footer-home">Return Home</a>

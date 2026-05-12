@@ -48,14 +48,14 @@
 [functions.chat]
   included_files = ["src/data/site-index.txt"]
 
-# Permanent redirect from the retired /stochastic/ lab to /jump/. The
+# Permanent redirect from the retired /stochastic/ page to /jump/. The
 # /stochastic/ page was deleted on 2026-05-06 after profiling showed the
 # Hagan SABR card was the next bottleneck on phone-class hardware once
 # the multi-model Volatility Smile had migrated off /tactical/; the smile
-# was first promoted to its own /smile/ lab and SABR was dropped entirely
+# was first promoted to its own /smile/ page and SABR was dropped entirely
 # because the residual it earned over the multi-model fit did not justify
-# the second Plotly.newPlot mount cost. The /smile/ lab itself was then
-# retired on 2026-05-08 once the /jump/ lab absorbed Heston as its first
+# the second Plotly.newPlot mount cost. The /smile/ page itself was then
+# retired on 2026-05-08 once the /jump/ page absorbed Heston as its first
 # slot, so the canonical multi-model smile-fitting page is now /jump/.
 # External bookmarks and search results that point at /stochastic/ are
 # routed to /jump/ via this 301 so they continue to land on the
@@ -70,14 +70,14 @@
   status = 301
   force = true
 
-# Permanent redirect from the retired /smile/ lab to /jump/. The /smile/
-# page was deleted on 2026-05-08 after the /jump/ lab absorbed Heston as
+# Permanent redirect from the retired /smile/ page to /jump/. The /smile/
+# page was deleted on 2026-05-08 after the /jump/ page absorbed Heston as
 # its new first slot, making /smile/'s three models (Heston, Merton, SVI)
 # fully duplicative: Heston is now the headline model on /jump/ in its
 # own dedicated card; Merton was already the second slot on /jump/ from
 # the page's original four-model lineage; and SVI is covered in
 # dedicated raw and natural slots on /discrete/. With every /smile/ model
-# represented elsewhere on the site, the smile lab itself contributed no
+# represented elsewhere on the site, the smile page itself contributed no
 # unique content and was retired to consolidate the smile-fitting
 # coverage on /jump/. External bookmarks and search results that point
 # at /smile/ are routed to /jump/ via this 301 so they continue to land
@@ -92,7 +92,7 @@
   status = 301
   force = true
 
-# Permanent redirect from the retired /parity/ lab to /. The page was
+# Permanent redirect from the retired /parity/ page to /. The page was
 # deleted on 2026-05-07 because the put-call-parity box-spread r solver
 # requires synchronous mid-of-NBBO marks, and Massive does not sell
 # delayed options quotes at any tier compatible with public-website
@@ -100,7 +100,7 @@
 # OPRA redistribution to non-pro subscribers on a public site).
 # External bookmarks and search results land on the homepage instead
 # of 404-ing, with the navigation visible so the reader can route to
-# whichever current lab interests them. Status 301 (permanent) tells
+# whichever current page interests them. Status 301 (permanent) tells
 # search engines and aggressive caches to update their indices to /.
 # Keep this entry indefinitely; there is no successor surface.
 [[redirects]]

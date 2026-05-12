@@ -55,7 +55,7 @@ function prefetchBelowFoldChunks() {
   });
 }
 
-// /vix lab — full profile catalog of VIX models.
+// /vix page — full profile catalog of VIX models.
 //
 // Sole data source: public.vix_family_eod (sourced from Massive Indices
 // Starter, see CLAUDE.md note in the table comment) + the SPX OHLC + 30d

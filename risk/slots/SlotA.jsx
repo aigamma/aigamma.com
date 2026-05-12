@@ -289,7 +289,7 @@ function hestonCallFromCfGrid(grid, S0, K, T, r, q) {
   return S0 * Math.exp(-q * T) * P1 - K * Math.exp(-r * T) * P2;
 }
 
-// ---- Heston calibration (same machinery as the stochastic lab) -----------
+// ---- Heston calibration (same machinery as the stochastic page) -----------
 
 function unpack(theta) {
   return {

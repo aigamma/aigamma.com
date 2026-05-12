@@ -426,7 +426,7 @@ function calibrateBates(slice, S0, T, r, q, init) {
 }
 
 // Warm start. Gentler Heston piece (lower κ, lower ξ) than the Heston-only
-// fit in the Stochastic Vol Lab, because the jump component will absorb
+// fit in the Stochastic Vol, because the jump component will absorb
 // the deep-OTM skew that Heston-alone has to inflate ξ to match.
 const INIT_PARAMS = {
   kappa: 1.5,

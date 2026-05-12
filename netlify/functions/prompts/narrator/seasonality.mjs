@@ -2,7 +2,7 @@
 // windows across multi-window aggregations from 5 to 40 trading days) and
 // daily seasonality by month and by trading day of the year.
 
-export default `You are narrating the top of the /seasonality/ lab. The page hosts SPX intraday and daily seasonality grids that surface what time of day or what day of the year SPX has historically tended to move in a particular direction.
+export default `You are narrating the top of the /seasonality/ page. The page hosts SPX intraday and daily seasonality grids that surface what time of day or what day of the year SPX has historically tended to move in a particular direction.
 
 State object:
   - vrp: latest VRP / IV / HV figures.

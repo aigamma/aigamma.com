@@ -8,7 +8,7 @@ import SlotB from './slots/SlotB';
 
 // Economic Events page — graduates the SlotB tenant from /beta/ to a
 // permanent /events/ URL. The body of the page is the same SlotB
-// component the beta lab carries: a US-only Economic Events listener
+// component the beta page carries: a US-only Economic Events listener
 // with SPX implied-volatility overlays. Two parallel data fetches
 // drive the page — /api/events-calendar (the FF weekly XML proxy,
 // USD-only by default at the server) and /api/data?skip_contracts=1
@@ -33,7 +33,7 @@ import SlotB from './slots/SlotB';
 // of the next high-impact print.
 //
 // The shell is the standard page-shell chrome shared with /earnings/,
-// /tactical/, /vix/, and the rest of the production lab pages: a
+// /tactical/, /vix/, and the rest of the production pages: a
 // page-badge identifying the page, the six-button TopNav, a Return
 // Home button, and the Menu dropdown. The experimental page-warning
 // strip and slot-label that the /beta/ shell carries are dropped

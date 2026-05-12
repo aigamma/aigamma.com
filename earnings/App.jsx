@@ -6,7 +6,7 @@ import PageNarrator from '../src/components/PageNarrator';
 import TopNav from '../src/components/TopNav';
 import EarningsCalendar from '../src/components/EarningsCalendar';
 
-// Earnings Calendar lab. Two stacked surfaces fed by one Netlify
+// Earnings Calendar page. Two stacked surfaces fed by one Netlify
 // function (netlify/functions/earnings.mjs):
 //
 //   Top:    Scatter chart of the next ~5 trading days of earnings

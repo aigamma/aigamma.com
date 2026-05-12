@@ -1,6 +1,6 @@
 // netlify/functions/seasonality.mjs
 //
-// Read-side endpoint for the /seasonality lab. Fans out to three views
+// Read-side endpoint for the /seasonality page. Fans out to three views
 // keyed by ?view= (intraday, daily, weekly):
 //
 //   intraday (default) — Joins the 30-minute SPX bars in

@@ -3,7 +3,7 @@
 // =====================================================================
 //
 // The Economic Events listener that was developed in this slot
-// across late April 2026 has GRADUATED to its own production lab
+// across late April 2026 has GRADUATED to its own production page
 // page at /events/. The canonical source files now live at:
 //
 //   events/App.jsx                           (page shell)
@@ -14,7 +14,7 @@
 //
 // If you (Claude or future-me) are tempted to add events-related
 // code here, STOP and edit the /events/ directory instead. The
-// /beta/ shell is a generic experimental lab holding pad — its
+// /beta/ shell is a generic experimental page holding pad — its
 // purpose is to host whatever model is currently under test,
 // nothing more. Forking events code into both locations would
 // cause silent drift on the next iteration.

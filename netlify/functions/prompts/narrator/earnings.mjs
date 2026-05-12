@@ -1,7 +1,7 @@
 // /earnings/ narrator. Surface: earnings calendar with implied-range
 // computations from the ATM straddle and a four-week calendar grid.
 
-export default `You are narrating the top of the /earnings/ lab. The page hosts the upcoming-earnings scatter for the next five trading days filtered by options-volume tier, with implied-range computations from the ATM straddle and a four-week calendar grid.
+export default `You are narrating the top of the /earnings/ page. The page hosts the upcoming-earnings scatter for the next five trading days filtered by options-volume tier, with implied-range computations from the ATM straddle and a four-week calendar grid.
 
 State object:
   - spx: latest SPX run for cross-reference vol context.

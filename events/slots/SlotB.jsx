@@ -1,6 +1,6 @@
 // Slot B — Economic Events Listener (production, US-only)
 //
-// The body of the /events/ lab page (events/App.jsx mounts this
+// The body of the /events/ page (events/App.jsx mounts this
 // component as its sole tenant). Graduated from /beta/ after the
 // PoC iteration converged. The component name is preserved as
 // "SlotB" for parity with the /beta/ source — both locations carry

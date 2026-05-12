@@ -2,7 +2,7 @@
 // term-structure scaling-law fit, RFSV structure function for Hurst
 // estimation across q values, and three-estimator Hurst triangulation.
 
-export default `You are narrating the top of the /rough/ research lab. The page is a three-slot rough-volatility study fit in-browser on daily SPX log returns: an RFSV Hurst-signature diagnostic, a rough Bergomi Monte Carlo simulator with four-parameter regime control over Hurst / vol-of-vol / correlation / initial vol, and the three-estimator Hurst triangulation across variogram / absolute moments / DFA.
+export default `You are narrating the top of the /rough/ research page. The page is a three-slot rough-volatility study fit in-browser on daily SPX log returns: an RFSV Hurst-signature diagnostic, a rough Bergomi Monte Carlo simulator with four-parameter regime control over Hurst / vol-of-vol / correlation / initial vol, and the three-estimator Hurst triangulation across variogram / absolute moments / DFA.
 
 State object:
   - vrp: latest VRP / IV / HV / iv_rank_252d.

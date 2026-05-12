@@ -2,7 +2,7 @@
 // model families covering symmetric, asymmetric, power, absolute, component,
 // in-mean, score-driven, long-memory, regime-switching, and realized variants.
 
-export default `You are narrating the top of the /garch/ research lab. The page hosts a 17-specification GARCH ensemble that fits in-browser to daily SPX log returns, with conditional-sigma paths and 30-day forward forecasts and an equal-weight master ensemble.
+export default `You are narrating the top of the /garch/ research page. The page hosts a 17-specification GARCH ensemble that fits in-browser to daily SPX log returns, with conditional-sigma paths and 30-day forward forecasts and an equal-weight master ensemble.
 
 State object:
   - vrp: latest IV / HV / VRP / iv_rank_252d.

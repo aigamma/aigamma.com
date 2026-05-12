@@ -1,4 +1,4 @@
-// Shared in-lab library for the /local page. Centralizes the SVI
+// Shared in-page library for the /local page. Centralizes the SVI
 // y-derivatives, the Dupire local-variance extraction, the bilinear
 // look-up of σ_LV at an arbitrary (y, T), and the arbitrage diagnostics
 // the slots on this page all consume. Keeping this in one file means
@@ -247,7 +247,7 @@ export function coverageStats(grid) {
 }
 
 // Abramowitz-Stegun 7.1.26 normal CDF — enough accuracy for BS pricing and
-// implied-vol inversion at the display precision of the labs.
+// implied-vol inversion at the display precision of the pages.
 export function normCdf(x) {
   const t = 1 / (1 + 0.2316419 * Math.abs(x));
   const d = 0.3989422804014327 * Math.exp(-0.5 * x * x);
@@ -308,7 +308,7 @@ export function impliedVol(price, S, K, T, { tol = 1e-5, maxIter = 50 } = {}) {
 
 // Deterministic PRNG — mulberry32, seeded per call so slot-specific MC
 // noise reshuffles don't alias across slots. See rough/slots/SlotB.jsx
-// for the convention this shares with the /rough lab.
+// for the convention this shares with the /rough page.
 export function mulberry32(seed) {
   let s = seed | 0;
   return function next() {

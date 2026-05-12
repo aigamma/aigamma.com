@@ -15,7 +15,7 @@ export default function App() {
             className="page-badge"
             title="Alpha · pre-β, software-stage sense"
           >
-            Alpha Lab
+            Alpha
           </span>
         </div>
         <TopNav />
@@ -40,7 +40,7 @@ export default function App() {
 
       <footer className="page-footer">
         <span className="page-footer-line">
-          AI Gamma · α lab · software-stage sense · v1.1.4
+          AI Gamma · α · software-stage sense · v1.1.4
         </span>
         <a href="/disclaimer/" className="page-footer-disclaimer">Disclaimer</a>
         <a href="/" className="page-footer-home">Return Home</a>

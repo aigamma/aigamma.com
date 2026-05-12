@@ -2,7 +2,7 @@ import { useCallback, useEffect, useRef, useState } from 'react';
 import { MOBILE_TOOLS, MOBILE_RESEARCH } from '../data/pages.js';
 
 // Mobile-only navigation block. Replaces the desktop right-cluster (TopNav's
-// five promoted-lab buttons + the inline Return Home button + the MENU
+// five promoted-page buttons + the inline Return Home button + the MENU
 // dropdown trigger) with three larger-tap-target pills laid out left-to-
 // right in a single right-aligned row at ≤768px:
 //
@@ -11,8 +11,8 @@ import { MOBILE_TOOLS, MOBILE_RESEARCH } from '../data/pages.js';
 // HOME is suppressed on the home page itself (where it would be a no-op
 // link to the page the reader is already on). The same suppression rule
 // extends inside the dropdowns: when the reader is already on one of the
-// listed labs (e.g. at /tactical/ when tapping TOOLS, or at /garch/ when
-// tapping RESEARCH), that lab's row is filtered out so neither dropdown
+// listed pages (e.g. at /tactical/ when tapping TOOLS, or at /garch/ when
+// tapping RESEARCH), that page's row is filtered out so neither dropdown
 // ever offers an option to navigate to the page the reader is already
 // on. The desktop TopNav already enforces the same hygiene via its
 // `current` prop; this brings the rule to the mobile dropdowns. The
@@ -38,11 +38,11 @@ import { MOBILE_TOOLS, MOBILE_RESEARCH } from '../data/pages.js';
 // sits closest to the right-handed reader's thumb position on a phone
 // held in portrait, with TOOLS one pill to its left.
 //
-// The TOOLS dropdown contains the nine operational lab pages — the five
+// The TOOLS dropdown contains the nine operational pages — the five
 // TopNav-promoted destinations (/tactical/, /earnings/, /scan/, /rotations/,
 // /seasonality/) plus the four bookmark-only Tools surfaces from the
 // desktop Menu (/stocks/, /heatmap/, /events/, /expiring-gamma/). The
-// RESEARCH dropdown contains the eight research lab pages (/discrete/,
+// RESEARCH dropdown contains the eight research pages (/discrete/,
 // /garch/, /jump/, /local/, /regime/, /risk/, /rough/, /vix/). /vix/
 // joined Research on 2026-05-08 after being demoted from the TopNav.
 // Each dropdown closes with a single "About This Page" off-site exit
@@ -53,13 +53,13 @@ import { MOBILE_TOOLS, MOBILE_RESEARCH } from '../data/pages.js';
 // previously sat above About This Page in both dropdowns was removed
 // on 2026-05-08; the disclaimer is already surfaced as the coral
 // DISCLAIMER chip in the right corner of the chat header on every page
-// and as the .page-footer-disclaimer link in the footer of every lab
+// and as the .page-footer-disclaimer link in the footer of every page
 // page, so the dropdown row was adding redundancy without discovery
 // benefit. The desktop counterpart of the About dropdown entry is the
-// .page-footer-about "Who made this?" link wired into every lab footer
+// .page-footer-about "Who made this?" link wired into every page footer
 // (see src/styles/page.css and the per-app footer blocks); mobile users
 // get the in-dropdown path because the footer requires scrolling past
-// the entire lab content to reach.
+// the entire page content to reach.
 //
 // The component is rendered automatically as a sibling of the desktop
 // .menu in src/components/Menu.jsx, so every page header that already
@@ -98,8 +98,8 @@ import { MOBILE_TOOLS, MOBILE_RESEARCH } from '../data/pages.js';
 // widths.
 //
 // Brand cluster only renders when the parent passes a regimeIndicator
-// (the home page App.jsx does; lab page App.jsx files do not) AND the
-// detected path is /, so lab pages keep their lean pills-only mobile
+// (the home page App.jsx does; page App.jsx files do not) AND the
+// detected path is /, so pages keep their lean pills-only mobile
 // row chrome and the page-badge on the left side of the .page-header.
 
 // TOOLS_ITEMS and RESEARCH_ITEMS are derived from src/data/pages.js so the
@@ -179,8 +179,8 @@ export default function MobileNav({ regimeIndicator } = {}) {
   }, [openPanel, close]);
 
   // Close the dropdown on browser back/forward navigation while it is open
-  // (an in-page action that didn't navigate to a new lab) — mirrors the
-  // popstate handler in Menu.jsx. Lab clicks themselves cause a full page
+  // (an in-page action that didn't navigate to a new page) — mirrors the
+  // popstate handler in Menu.jsx. Page clicks themselves cause a full page
   // load and unmount the component, so no separate handler is needed for
   // those.
   useEffect(() => {

@@ -35,7 +35,7 @@ function prefetchBelowFoldChunks() {
   });
 }
 
-// Risk Lab. Four slots dedicated to risk-measurement and Greek-comparison
+// Risk. Four slots dedicated to risk-measurement and Greek-comparison
 // models that the main dashboard does not currently carry. Each slot picks
 // one operational question a risk manager asks when reading an options
 // chain and lets a different model answer it on the same live SPX snapshot.
@@ -73,12 +73,12 @@ function prefetchBelowFoldChunks() {
 //
 // All four slots consume the same live /api/data snapshot so their
 // Greeks, deltas, and smile reconstructions describe one point-in-time
-// chain. Unlike the bookmark-only lab surfaces, this page carries
+// chain. Unlike the bookmark-only page surfaces, this page carries
 // active egress back to the main dashboard at three redundant
 // affordances, matching the /jump/, /garch/, and /regime/ pattern:
 // the logo in the header is a hyperlink to `/`,
 // a filled green RETURN HOME button sits in the header itself between
-// the Risk Lab brand on the left and the Menu trigger on the
+// the Risk brand on the left and the Menu trigger on the
 // right — centered horizontally as the midpoint of the other two nav
 // items via the header's flex space-between distribution across three
 // direct children — and the footer carries a bolded Return Home link
@@ -94,7 +94,7 @@ export default function App() {
         <div className="page-brand">
           <span
             className="page-badge"
-            title="Risk Lab · cross-model Greeks, delta comparison, Vanna-Volga, second-order Greeks"
+            title="Risk · cross-model Greeks, delta comparison, Vanna-Volga, second-order Greeks"
           >
             <span className="page-badge__desktop-text">Risk</span>
             <span className="page-badge__mobile-text">Risk</span>
@@ -152,7 +152,7 @@ export default function App() {
 
       <footer className="page-footer">
         <span className="page-footer-line">
-          AI Gamma · risk lab · four-model comparison · v0.1.0
+          AI Gamma · risk · four-model comparison · v0.1.0
         </span>
         <a href="/disclaimer/" className="page-footer-disclaimer">Disclaimer</a>
         <a href="/" className="page-footer-home">Return Home</a>

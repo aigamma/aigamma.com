@@ -6,7 +6,7 @@ import PageNarrator from '../src/components/PageNarrator';
 import TopNav from '../src/components/TopNav';
 import SeasonalityGrid from '../src/components/SeasonalityGrid';
 
-// Intraday seasonality lab. A bordered 14-column grid of SPX's
+// Intraday seasonality page. A bordered 14-column grid of SPX's
 // cumulative % change since the prior session's close, sampled at
 // 30-minute RTH bars (10:00, 10:30, ..., 4:00). The top section
 // stacks rolling 5 / 10 / 20 / 30 / 40 day column-wise averages so a

@@ -1,5 +1,5 @@
 #!/usr/bin/env node
-// daily-eod.mjs — multi-symbol EOD backfill for the /rotations lab.
+// daily-eod.mjs — multi-symbol EOD backfill for the /rotations page.
 //
 // Pulls ThetaData EOD prices for every symbol in DEFAULT_SYMBOLS and
 // upserts rows into public.daily_eod, one row per (symbol, trading_date).

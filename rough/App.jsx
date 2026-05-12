@@ -36,7 +36,7 @@ function prefetchBelowFoldChunks() {
   });
 }
 
-// Rough Volatility Lab — four-slot scratch pad for rough-path volatility
+// Rough Volatility — four-slot scratch pad for rough-path volatility
 // models on SPX. "Rough" volatility is the empirical finding (Gatheral-
 // Jaisson-Rosenbaum 2018) that the log of realized variance behaves like
 // a fractional Brownian motion with Hurst H ≈ 0.1, far below the H = 0.5
@@ -77,7 +77,7 @@ function prefetchBelowFoldChunks() {
 //            stochastic-vol composition was slow
 //            to mount and this card is conceptually a rough-vol surface
 //            counterpart to the simulator and the structure-function
-//            diagnostic that already lived on this lab.
+//            diagnostic that already lived on this page.
 //
 //   SLOT A — RFSV Hurst Signature (Gatheral-Jaisson-Rosenbaum diagnostic).
 //            Compute a daily realized-variance proxy, take its log, and
@@ -96,19 +96,19 @@ function prefetchBelowFoldChunks() {
 //
 // SlotB / SlotA / SlotC consume daily SPX closes through the existing
 // useGexHistory hook (same calendar axis as the /regime and /garch
-// labs); SlotD instead consumes the live SPX options snapshot through
+// pages); SlotD instead consumes the live SPX options snapshot through
 // useOptionsData and reads H off the instantaneous SVI surface, so the
 // four cards together triangulate H from one parametric generative
 // model, one closed-form options-surface read, and two realized-variance
 // reads. Navigation back to the homepage is provided at three redundant
-// affordances so the path out of the lab is unmissable: the logo in the
+// affordances so the path out of the page is unmissable: the logo in the
 // upper-left of the header is wrapped in an anchor to /, a filled green
 // "Return Home" button sits inline in the header row between the Rough
-// Vol Lab brand on the left and the Menu trigger on the right (horiz-
+// Vol Page brand on the left and the Menu trigger on the right (horiz-
 // ontally aligned with the other top-level nav items via the header's
 // flex space-between distribution), and the footer carries a bold
 // "Return Home" link on its own line. The Menu in the upper-right
-// remains the cross-lab navigator; nothing on the main site's public
+// remains the cross-page navigator; nothing on the main site's public
 // nav points here, so /rough is still reached by typing the URL or
 // loading a bookmark.
 export default function App() {
@@ -180,7 +180,7 @@ export default function App() {
 
       <footer className="page-footer">
         <span className="page-footer-line">
-          AI Gamma · rough vol lab · three-method zoo · v0.1.0
+          AI Gamma · rough vol page · three-method zoo · v0.1.0
         </span>
         <a href="/disclaimer/" className="page-footer-disclaimer">Disclaimer</a>
         <a href="/" className="page-footer-home">Return Home</a>

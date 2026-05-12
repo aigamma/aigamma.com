@@ -22,7 +22,7 @@ import useSviFits from '../src/hooks/useSviFits';
 // roughly 600-1200 ms of main-thread blocking off the first interactive
 // frame on a typical mid-tier laptop. The Volatility Smile multi-model card
 // was migrated off this page on 2026-05-06 and now lives on /jump/ (which
-// absorbed it via a brief intermediate /smile/ lab on 2026-05-08) as the
+// absorbed it via a brief intermediate /smile/ page on 2026-05-08) as the
 // canonical five-model smile-fitting lineage (Variance Gamma, Heston,
 // Bates SVJ, Kou, Merton); a reader looking for the multi-model smile
 // read should follow the /jump/ link in the Menu dropdown.
@@ -55,7 +55,7 @@ function prefetchBelowFoldChunks() {
   });
 }
 
-// /tactical/ — Tactical Vol Lab.
+// /tactical/ — Tactical Vol.
 //
 // Four tactical-positioning surfaces moved off the main landing page so the
 // main dashboard can lead with the dealer-gamma regime read (status badge,
@@ -69,10 +69,10 @@ function prefetchBelowFoldChunks() {
 // (the strike × tenor grid that makes day-over-day re-pricing events
 // visible cell by cell). The single-tenor multi-model Volatility Smile
 // card used to sit between Term Structure and RND on this page; it was
-// migrated to its own /smile/ lab on 2026-05-06 to cure cold-mount
+// migrated to its own /smile/ page on 2026-05-06 to cure cold-mount
 // latency on this page (five concurrent Plotly.newPlot calls firing on
 // first paint was the slowest page on the site), and on 2026-05-08 the
-// /smile/ lab itself was absorbed by /jump/ once the canonical
+// /smile/ page itself was absorbed by /jump/ once the canonical
 // smile-fitting lineage (Variance Gamma, Heston, Bates SVJ, Kou, Merton)
 // landed on /jump/ as five reading surfaces sharing one calibration slice.
 //

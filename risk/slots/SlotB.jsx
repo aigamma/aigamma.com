@@ -101,7 +101,7 @@ function bsmDelta(S, K, T, r, q, sigma, type) {
   return type === 'put' ? callD - eqT : callD;
 }
 
-// ---- SVI smile analytics (same as the stochastic / rough-vol labs) ------
+// ---- SVI smile analytics (same as the stochastic / rough-vol pages) ------
 
 function sviTotalVariance(params, k) {
   const { a, b, rho, m, sigma } = params;

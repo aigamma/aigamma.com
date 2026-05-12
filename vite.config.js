@@ -13,7 +13,7 @@ import { PAGES, VITE_ENTRIES } from './src/data/pages.js'
 // that rarely opens) but wasteful for a dashboard where every lazy chunk
 // will be consumed within seconds by a scrolling reader. This plugin
 // generates preload tags for the main-entry's dynamic chunks only, leaving
-// the twelve lab entries untouched (their charts aren't split and they
+// the twelve page entries untouched (their charts aren't split and they
 // have their own noindex audience). The plugin reads the full rollup bundle
 // in generateBundle, then transformIndexHtml injects a tag per dynamic
 // chunk into the <head> of index.html. Uses `crossorigin` to match how
@@ -41,7 +41,7 @@ function lazyChunkPreloadPlugin() {
     transformIndexHtml: {
       order: 'post',
       handler(_html, ctx) {
-        // Only transform the main entry's HTML — the lab entries don't use
+        // Only transform the main entry's HTML — the page entries don't use
         // React.lazy and gain nothing from preloading dynamic chunks that
         // don't exist in their import graph.
         if (ctx.filename && !ctx.filename.endsWith('index.html')) return;
@@ -94,50 +94,50 @@ function sitemapPlugin() {
 }
 
 // Multi-page build. Thirteen entries: the main dashboard at `index.html`
-// (served at `/`), the bookmark-only three-slot beta lab at
+// (served at `/`), the bookmark-only three-slot beta page at
 // `beta/index.html` (served at `/beta/`), the bookmark-only two-slot
-// alpha lab at `alpha/index.html` (served at `/alpha/`), the
-// bookmark-only two-slot dev lab at `dev/index.html` (served at
+// alpha page at `alpha/index.html` (served at `/alpha/`), the
+// bookmark-only two-slot dev at `dev/index.html` (served at
 // `/dev/`), the bookmark-only GARCH family zoo at `garch/index.html`
 // (served at `/garch/`), the bookmark-only three-slot regime-model
-// lab at `regime/index.html` (served at `/regime/`), the
-// bookmark-only three-slot rough-volatility lab at `rough/index.html`
+// page at `regime/index.html` (served at `/regime/`), the
+// bookmark-only three-slot rough-volatility page at `rough/index.html`
 // (served at `/rough/`), the bookmark-only four-slot
-// local-volatility lab at `local/index.html` (served at `/local/`),
-// the bookmark-only four-slot risk lab at `risk/index.html` (served
-// at `/risk/`), the bookmark-only five-slot smile-fitting lab at
+// local-volatility page at `local/index.html` (served at `/local/`),
+// the bookmark-only four-slot risk at `risk/index.html` (served
+// at `/risk/`), the bookmark-only five-slot smile-fitting page at
 // `jump/index.html` (served at `/jump/`), and the bookmark-only
-// six-slot discrete and parametric lab at `discrete/index.html`
-// (served at `/discrete/`). The /parity lab that previously sat at
+// six-slot discrete and parametric page at `discrete/index.html`
+// (served at `/discrete/`). The /parity page that previously sat at
 // `parity/index.html` was retired on 2026-05-07 and the URL
-// 301-redirects to /. The single-slot /smile/ lab that briefly hosted
+// 301-redirects to /. The single-slot /smile/ page that briefly hosted
 // a multi-model Volatility Smile card (Heston + Merton + SVI raw)
 // was retired on 2026-05-08 once /jump/ absorbed Heston as its first
 // slot, making /smile/'s three models fully duplicative; the URL
 // 301-redirects to /jump/.
-// The dev lab is a peer
+// The dev is a peer
 // scratch pad to /alpha — same pre-β release stage, independent
-// concept. The garch lab is a dedicated family-zoo surface for the
+// concept. The garch page is a dedicated family-zoo surface for the
 // full GARCH specification list (univariate + multivariate) with an
-// equal-weight master ensemble. The regime lab is a dedicated three-
+// equal-weight master ensemble. The regime is a dedicated three-
 // method zoo (Mixture Lognormal, Markov Regime Switching, Wasserstein
 // K-Means) for regime-identification models fit in-browser on daily
-// SPX log returns. The rough-vol lab is a three-slot zoo for
+// SPX log returns. The rough-vol page is a three-slot zoo for
 // fractional-Brownian / Volterra-type volatility models: an RFSV
 // Hurst-signature diagnostic, a Rough Bergomi Monte Carlo simulator,
 // and a multi-estimator Hurst triangulation, all fit in-browser on
 // the same daily SPX log-return series. The
-// local-vol lab is a dedicated four-slot study of Dupire local
+// local-vol page is a dedicated four-slot study of Dupire local
 // volatility end-to-end: surface extraction from the SVI slice set,
 // Monte Carlo pricing as a self-check of the extraction, an
 // interactive 3D viewer with K-slice / T-slice controls, and the
 // forward-smile flattening diagnostic that motivates local-stochastic
-// vol. The risk lab is a four-slot surface for risk-measurement and
+// vol. The risk is a four-slot surface for risk-measurement and
 // Greek-comparison models on the live chain: cross-model Greeks
 // across Black-Scholes, Bachelier, and Heston; five competing delta
 // definitions including Hull-White minimum-variance; a Vanna-Volga
 // three-anchor smile reconstruction; and the second-order Greeks
-// (vanna, volga, charm) across the smile. The jump lab is a five-slot
+// (vanna, volga, charm) across the smile. The jump page is a five-slot
 // lineage of the canonical smile-fitting models, in this reading
 // order — Variance Gamma (Madan-Carr-Chang 1998) pure-jump infinite-
 // activity Levy at the top; Heston (1993) stochastic variance as the
@@ -145,24 +145,24 @@ function sitemapPlugin() {
 // Merton jumps; Kou (2002) asymmetric double-exponential jumps; and
 // Merton (1976) finite-activity Gaussian jumps as the historical
 // anchor — all calibrated in-browser against the live SPX chain.
-// The page absorbed the prior /smile/ lab on 2026-05-08 by adding
+// The page absorbed the prior /smile/ page on 2026-05-08 by adding
 // Heston as a dedicated slot; /smile/ is now retired and
 // 301-redirects here. The
-// discrete lab is a six-slot zoo pairing two discrete pricing engines
+// discrete page is a six-slot zoo pairing two discrete pricing engines
 // (Cox-Ross-Rubinstein binomial tree, Kamrad-Ritchken trinomial tree)
 // against the four-parameterization SVI family (raw, natural, JW, SSVI)
 // so the reader can compare what a state-space pricer and a parametric
 // surface smoother each produce from the same live chain. The /parity
-// lab existed briefly as a put-call-parity study originated in /alpha,
+// page existed briefly as a put-call-parity study originated in /alpha,
 // but was retired on 2026-05-07 once it became clear that synchronous
 // mid-of-NBBO marks (the data the box-spread r solver requires) are
 // not buyable on Massive at any tier compatible with public-website
 // redistribution; the URL 301-redirects to /. Nothing in the built
-// output links the labs together. See beta/App.jsx, alpha/App.jsx,
+// output links the pages together. See beta/App.jsx, alpha/App.jsx,
 // dev/App.jsx, garch/App.jsx, regime/App.jsx, rough/App.jsx,
 // local/App.jsx, risk/App.jsx, jump/App.jsx (which is the
 // post-2026-05-08 home of the smile-fitting lineage including the
-// Heston slot that was previously its own /smile/ lab), and
+// Heston slot that was previously its own /smile/ page), and
 // discrete/App.jsx for the rationale.
 export default defineConfig({
   plugins: [react(), lazyChunkPreloadPlugin(), sitemapPlugin()],

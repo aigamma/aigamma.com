@@ -6,7 +6,7 @@ import PageNarrator from '../src/components/PageNarrator';
 import TopNav from '../src/components/TopNav';
 import ExpiringGamma from '../src/components/ExpiringGamma';
 
-// Expiration Concentration lab. One Netlify function
+// Expiration Concentration page. One Netlify function
 // (netlify/functions/expiring-gamma.mjs) reads the latest intraday
 // SPX ingest, aggregates per-expiration call and put dollar gamma
 // at the run's spot price, and feeds a single Plotly bar chart that
