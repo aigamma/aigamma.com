@@ -138,7 +138,7 @@ export default function VixStrategyOverlay({ data }) {
     });
 
     const node = ref.current;
-    plotly.newPlot(node, traces, layout, {
+    plotly.react(node, traces, layout, {
       displayModeBar: false,
       responsive: true,
     });
@@ -147,7 +147,6 @@ export default function VixStrategyOverlay({ data }) {
     window.addEventListener('resize', onResize);
     return () => {
       window.removeEventListener('resize', onResize);
-      plotly.purge(node);
     };
   }, [plotly, enriched, isMobile, activeRange]);
 

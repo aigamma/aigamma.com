@@ -142,7 +142,7 @@ export default function VixCrossAsset({ data }) {
     });
 
     const node = ref.current;
-    plotly.newPlot(node, traces, layout, {
+    plotly.react(node, traces, layout, {
       displayModeBar: false,
       responsive: true,
     });
@@ -151,7 +151,6 @@ export default function VixCrossAsset({ data }) {
     window.addEventListener('resize', onResize);
     return () => {
       window.removeEventListener('resize', onResize);
-      plotly.purge(node);
     };
   }, [plotly, traces, isMobile, activeRange]);
 
@@ -173,8 +172,8 @@ export default function VixCrossAsset({ data }) {
           {ranks.map(({ sym, underlier, color, last, rank }) => {
             const rankText = rank != null ? `${rank.toFixed(0)}th pct` : '—';
             const tooltip = rank != null
-              ? `${sym} (${underlier}) — current ${last != null ? last.toFixed(2) : '—'}. 1-year percentile rank: today's value sits at the ${rank.toFixed(0)}th percentile of the trailing 252 trading-day distribution.`
-              : `${sym} (${underlier}) — insufficient history for percentile rank.`;
+              ? `${sym} (${underlier}): current ${last != null ? last.toFixed(2) : '-'}. 1-year percentile rank: today's value sits at the ${rank.toFixed(0)}th percentile of the trailing 252 trading-day distribution.`
+              : `${sym} (${underlier}): insufficient history for percentile rank.`;
             return (
               <div key={sym} className="vix-rank-cell" title={tooltip}>
                 <span className="vix-rank-cell__dot" style={{ background: color }} />
