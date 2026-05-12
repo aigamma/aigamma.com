@@ -170,10 +170,10 @@ export default function PageNarrator({ page }) {
   const [narrative, setNarrative] = useState(null);
   const [loaded, setLoaded] = useState(false);
 
-  const fetchNarrative = useCallback(async () => {
+  const fetchNarrative = useCallback(async (signal) => {
     if (!page) return;
     try {
-      const res = await fetch(`/api/narrative?page=${encodeURIComponent(page)}`);
+      const res = await fetch(`/api/narrative?page=${encodeURIComponent(page)}`, { signal });
       if (!res.ok) {
         setNarrative(null);
         setLoaded(true);
@@ -182,16 +182,21 @@ export default function PageNarrator({ page }) {
       const json = await res.json();
       setNarrative(json?.narrative || null);
       setLoaded(true);
-    } catch {
+    } catch (err) {
+      if (err?.name === 'AbortError') return;
       setNarrative(null);
       setLoaded(true);
     }
   }, [page]);
 
   useEffect(() => {
-    fetchNarrative();
-    const id = setInterval(fetchNarrative, POLL_INTERVAL_MS);
-    return () => clearInterval(id);
+    const ac = new AbortController();
+    fetchNarrative(ac.signal);
+    const id = setInterval(() => fetchNarrative(ac.signal), POLL_INTERVAL_MS);
+    return () => {
+      ac.abort();
+      clearInterval(id);
+    };
   }, [fetchNarrative]);
 
   if (!loaded) return null;

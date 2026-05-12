@@ -259,8 +259,16 @@ export default function App() {
 
     if (ivValues.length > 1) {
       const currentIv = ivValues[0];
-      const lo = Math.min(...ivValues);
-      const hi = Math.max(...ivValues);
+      // Manual min/max sweep over the 252-entry array. Math.min(...arr) /
+      // Math.max(...arr) was triggering a 252-arg spread on every VRP
+      // refresh; a single linear sweep is constant-stack and bounded.
+      let lo = ivValues[0];
+      let hi = ivValues[0];
+      for (let i = 1; i < ivValues.length; i++) {
+        const v = ivValues[i];
+        if (v < lo) lo = v;
+        else if (v > hi) hi = v;
+      }
       const range = hi - lo;
 
       result.ivRank = range > 0 ? ((currentIv - lo) / range) * 100 : 50;

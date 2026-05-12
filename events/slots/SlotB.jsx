@@ -138,7 +138,7 @@ export default function SlotB() {
   const [feed, setFeed] = useState({ status: 'loading', data: null, error: null, fetchedAt: null });
   const [iv, setIv] = useState({ status: 'loading', data: null });
   const [earningsFeed, setEarningsFeed] = useState({ status: 'loading', data: null });
-  const [impacts, setImpacts] = useState(new Set(DEFAULT_IMPACTS));
+  const [impacts, setImpacts] = useState(() => new Set(DEFAULT_IMPACTS));
   const [showEarnings, setShowEarnings] = useState(true);
   const [expandedId, setExpandedId] = useState(null);
   const [now, setNow] = useState(() => Date.now());

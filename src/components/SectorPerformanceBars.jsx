@@ -265,7 +265,11 @@ export default function SectorPerformanceBars({
         if (!res.ok) throw new Error(`${endpoint} fetch failed: ${res.status}`);
         const json = await res.json();
         if (!cancelled) {
-          setPayload(json);
+          // Skip setPayload when the asOf timestamp hasn't moved — the
+          // identity change otherwise cascades into the three child
+          // PerformancePanel effects (each running Plotly.react on the
+          // unchanged trio) once per UPDATE_INTERVAL tick.
+          setPayload((prev) => (prev?.asOf && json?.asOf === prev.asOf ? prev : json));
           setFetchError(null);
           setLoading(false);
         }
