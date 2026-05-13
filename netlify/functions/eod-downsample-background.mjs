@@ -475,36 +475,53 @@ async function fetchMassiveDailyAggs(ticker, tradingDate) {
   return { open: o, high: h, low: l, close: c };
 }
 
-// Phase 6: VIX family.
-async function phaseVixFamily(tradingDate) {
+// Bounded-concurrency fan-out helper used by phaseVixFamily and phaseDailyEod
+// to parallelize the per-ticker Massive aggregates fetches. The previous
+// sequential loops paid one round-trip latency per ticker (52 tickers total
+// across the two phases) and serialized them, which added ~15-25 seconds to
+// every EOD cycle for no benefit. CONCURRENCY=5 is the conservative ceiling:
+// well under the Indices Starter and Stocks Starter rate limits but high
+// enough to overlap five RTTs at a time. If Massive starts 429ing, lower
+// this constant rather than reintroducing the sequential pattern.
+const MASSIVE_AGGS_CONCURRENCY = 5;
+
+async function fetchTickerBatch(tickers, mapFn) {
   const rows = [];
   let failures = 0;
-  for (const symbol of VIX_FAMILY_SYMBOLS) {
-    try {
-      const r = await fetchMassiveDailyAggs(`I:${symbol}`, tradingDate);
-      if (r) rows.push({ trading_date: tradingDate, symbol, ...r, source: 'massive' });
-    } catch (err) {
-      failures++;
-      console.warn(`[eod] vix_family ${symbol} failed: ${err.message}`);
+  for (let i = 0; i < tickers.length; i += MASSIVE_AGGS_CONCURRENCY) {
+    const batch = tickers.slice(i, i + MASSIVE_AGGS_CONCURRENCY);
+    const results = await Promise.allSettled(batch.map((t) => mapFn(t)));
+    for (let j = 0; j < results.length; j++) {
+      const res = results[j];
+      if (res.status === 'fulfilled') {
+        if (res.value) rows.push(res.value);
+      } else {
+        failures++;
+        console.warn(`[eod] ${batch[j]} failed: ${res.reason?.message ?? res.reason}`);
+      }
     }
   }
+  return { rows, failures };
+}
+
+// Phase 6: VIX family.
+async function phaseVixFamily(tradingDate) {
+  const { rows, failures } = await fetchTickerBatch(VIX_FAMILY_SYMBOLS, async (symbol) => {
+    const r = await fetchMassiveDailyAggs(`I:${symbol}`, tradingDate);
+    if (!r) return null;
+    return { trading_date: tradingDate, symbol, ...r, source: 'massive' };
+  });
   const written = await sbUpsert('/rest/v1/vix_family_eod', rows, 'vix_family_eod');
   return { ok: failures === 0, rows: written, failures };
 }
 
 // Phase 7: stocks/ETFs.
 async function phaseDailyEod(tradingDate) {
-  const rows = [];
-  let failures = 0;
-  for (const symbol of DAILY_EOD_SYMBOLS) {
-    try {
-      const r = await fetchMassiveDailyAggs(symbol, tradingDate);
-      if (r) rows.push({ symbol, trading_date: tradingDate, ...r, source: 'massive' });
-    } catch (err) {
-      failures++;
-      console.warn(`[eod] daily_eod ${symbol} failed: ${err.message}`);
-    }
-  }
+  const { rows, failures } = await fetchTickerBatch(DAILY_EOD_SYMBOLS, async (symbol) => {
+    const r = await fetchMassiveDailyAggs(symbol, tradingDate);
+    if (!r) return null;
+    return { symbol, trading_date: tradingDate, ...r, source: 'massive' };
+  });
   const written = await sbUpsert('/rest/v1/daily_eod', rows, 'daily_eod');
   return { ok: failures === 0, rows: written, failures };
 }
