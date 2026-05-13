@@ -30,17 +30,11 @@ export const config = {
 const INGEST_SECRET = process.env.INGEST_SECRET;
 const BACKGROUND_URL = process.env.INGEST_BACKGROUND_URL;
 
-// Hardcoded US market holidays through 2028. Mirrors ingest-background.mjs.
-// Refresh this set before 2028-12-31 — past the last entry, the ingest will
-// silently fire on closed-market days (wasted Massive API calls, empty runs).
-const US_MARKET_HOLIDAYS = new Set([
-  '2026-01-01', '2026-01-19', '2026-02-16', '2026-04-03', '2026-05-25',
-  '2026-06-19', '2026-07-03', '2026-09-07', '2026-11-26', '2026-12-25',
-  '2027-01-01', '2027-01-18', '2027-02-15', '2027-03-26', '2027-05-31',
-  '2027-06-18', '2027-07-05', '2027-09-06', '2027-11-25', '2027-12-24',
-  '2028-01-17', '2028-02-21', '2028-04-14', '2028-05-29', '2028-06-19',
-  '2028-07-04', '2028-09-04', '2028-11-23', '2028-12-25',
-]);
+// US market holidays sourced from lib/market-calendar.mjs (single source of
+// truth across every function that gates on trading days). Refresh that file
+// before 2028-12-31 — past the last entry, the ingest will silently fire on
+// closed-market days (wasted Massive API calls, empty runs).
+import { US_MARKET_HOLIDAYS } from './lib/market-calendar.mjs';
 
 export default async function handler(request) {
   const now = new Date();
