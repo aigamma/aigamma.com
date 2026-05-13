@@ -1,8 +1,5 @@
 // Thin PostgREST upsert helper for the backfill scripts. Writes
-// daily_term_structure and daily_cloud_bands directly through REST;
-// does NOT go through the reconcile_day_atomic stored procedure
-// because that path expects a full Massive+Theta comparison payload
-// that we don't have during a pure historical backfill.
+// daily_term_structure and daily_cloud_bands directly through REST.
 //
 // Writes use the service-role key so they bypass RLS. The frontend's
 // anon key cannot reach these tables at all.
@@ -35,7 +32,7 @@ export function createBackfillWriter({ url, serviceKey, fetchImpl = fetch }) {
       expiration_date: r.expiration_date,
       dte: r.dte,
       atm_iv: r.atm_iv,
-      source: r.source ?? 'theta',
+      source: r.source ?? 'massive',
       percentile_rank: null,
     }));
     return upsert('/rest/v1/daily_term_structure', payload);
@@ -135,13 +132,15 @@ export function createBackfillWriter({ url, serviceKey, fetchImpl = fetch }) {
   }
 
   // Pages through daily_term_structure via Range headers because
-  // PostgREST caps a single response at 1000 rows — a full year of
-  // ~40 expirations × 252 days is ~10k rows, well past that cap, and
+  // PostgREST caps a single response at 1000 rows. A full year of
+  // ~40 expirations x 252 days is ~10k rows, well past that cap, and
   // silently truncating on the oldest 25 days was masking band samples
-  // for the newer trading dates in the first smoke run.
+  // for the newer trading dates in the first smoke run. No source
+  // filter: the table mixes historical and current provenance and
+  // both feed the same downstream computations.
   async function getHistoricalTermStructure({ from, to }) {
     const PAGE_SIZE = 1000;
-    const query = `select=trading_date,dte,atm_iv&trading_date=gte.${from}&trading_date=lt.${to}&source=eq.theta&order=trading_date.asc,dte.asc`;
+    const query = `select=trading_date,dte,atm_iv&trading_date=gte.${from}&trading_date=lt.${to}&order=trading_date.asc,dte.asc`;
     const out = [];
     for (let offset = 0; ; offset += PAGE_SIZE) {
       const end = offset + PAGE_SIZE - 1;
@@ -160,10 +159,9 @@ export function createBackfillWriter({ url, serviceKey, fetchImpl = fetch }) {
     return out;
   }
 
-  // 30-minute SPX index bars for the /seasonality grid. Each request to
-  // ThetaData's /v3/index/history/ohlc?symbol=SPX&interval=30M returns
-  // 14 rows per session (09:30, 10:00, ..., 15:30, 16:00 close-tick),
-  // so a 60-day backfill upserts ~840 rows in one POST. Uses the same
+  // 30-minute SPX index bars for the /seasonality grid. Each session
+  // produces 14 rows (09:30, 10:00, ..., 15:30, 16:00 close-tick), so a
+  // 60-day backfill upserts ~840 rows in one POST. Uses the same
   // merge-duplicates Prefer header the other writers use, so re-running
   // is idempotent on (trading_date, bucket_time).
   async function upsertSpxIntradayBars(rows) {
@@ -174,7 +172,7 @@ export function createBackfillWriter({ url, serviceKey, fetchImpl = fetch }) {
       spx_high: r.spx_high,
       spx_low: r.spx_low,
       spx_close: r.spx_close,
-      source: r.source ?? 'thetadata',
+      source: r.source ?? 'massive',
     }));
     return upsert('/rest/v1/spx_intraday_bars', payload);
   }

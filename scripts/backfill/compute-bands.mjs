@@ -1,17 +1,13 @@
 #!/usr/bin/env node
-// Historical cloud-bands backfill — Step 3 of the pipeline.
+// Historical cloud-bands backfill.
 //
-// Reads daily_term_structure (source=theta) and, for each trading day
-// in the target window, computes percentile bands for DTE 0..280
-// using a 1-year rolling lookback. The DTE wiggle tolerance is pulled
-// from scripts/reconcile/tolerance.mjs so the backfill and the live
-// reconciler stay bit-for-bit consistent. Writes to daily_cloud_bands
-// via PostgREST upsert.
+// Reads daily_term_structure and, for each trading day in the target
+// window, computes percentile bands for DTE 0..280 using a 1-year
+// rolling lookback. Writes to daily_cloud_bands via PostgREST upsert.
 //
-// By spec these bands are FROZEN once written — the live reconciler
-// never recomputes a historical row even if daily_term_structure is
-// corrected downstream. If you need to rebuild (e.g., you just
-// discovered a parsing bug), pass --force to overwrite.
+// Bands are frozen point-in-time snapshots: once written for a
+// (trading_date, dte) they reflect the distribution of trailing IVs
+// as of that day. Pass --force to overwrite an existing row.
 //
 // Usage:
 //   SUPABASE_URL=... SUPABASE_SERVICE_KEY=... \
@@ -24,7 +20,67 @@
 import process from 'node:process';
 import { tradingDaysBetween } from './trading-days.mjs';
 import { createBackfillWriter } from './supabase-writer.mjs';
-import { buildBandGrid, BAND_DTE_MAX } from '../reconcile/bands.mjs';
+
+// DTE wiggle window for sampling historical observations: under 7 DTE
+// only matches within +/- 1 day; at 7+ DTE matches within +/- 3 days.
+// Sensitivity is a function of time-to-expiry, not whether the
+// expiration is weekly or monthly. Previously lived in
+// scripts/reconcile/tolerance.mjs alongside the ThetaData reconciler;
+// inlined here when that directory was removed.
+function wiggleWindowFor(dte) {
+  return dte < 7 ? 1 : 3;
+}
+
+const BAND_DTE_MIN = 0;
+const BAND_DTE_MAX = 280;
+
+function percentile(sortedValues, p) {
+  if (sortedValues.length === 0) return null;
+  if (sortedValues.length === 1) return sortedValues[0];
+  const rank = p * (sortedValues.length - 1);
+  const lower = Math.floor(rank);
+  const upper = Math.ceil(rank);
+  if (lower === upper) return sortedValues[lower];
+  const weight = rank - lower;
+  return sortedValues[lower] * (1 - weight) + sortedValues[upper] * weight;
+}
+
+function sampleForDte(targetDte, historicalRows) {
+  const window = wiggleWindowFor(targetDte);
+  const samples = [];
+  for (const row of historicalRows) {
+    if (Math.abs(row.dte - targetDte) <= window) samples.push(row.atm_iv);
+  }
+  samples.sort((a, b) => a - b);
+  return samples;
+}
+
+// Interior split points are p30/p70 (not p25/p75) so the four rendered
+// bands (p10-p30, p30-p50, p50-p70, p70-p90) each hold exactly 20
+// percentile points of probability mass.
+function computeBand(targetDte, historicalRows) {
+  const samples = sampleForDte(targetDte, historicalRows);
+  if (samples.length === 0) {
+    return { dte: targetDte, iv_p10: null, iv_p30: null, iv_p50: null, iv_p70: null, iv_p90: null, sample_count: 0 };
+  }
+  return {
+    dte: targetDte,
+    iv_p10: percentile(samples, 0.10),
+    iv_p30: percentile(samples, 0.30),
+    iv_p50: percentile(samples, 0.50),
+    iv_p70: percentile(samples, 0.70),
+    iv_p90: percentile(samples, 0.90),
+    sample_count: samples.length,
+  };
+}
+
+function buildBandGrid(historicalRows) {
+  const grid = [];
+  for (let dte = BAND_DTE_MIN; dte <= BAND_DTE_MAX; dte++) {
+    grid.push(computeBand(dte, historicalRows));
+  }
+  return grid;
+}
 
 const DEFAULT_START = '2025-04-14';
 

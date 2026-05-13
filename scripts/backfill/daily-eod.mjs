@@ -1,210 +1,78 @@
 #!/usr/bin/env node
-// daily-eod.mjs — multi-symbol EOD backfill for the /rotations page.
+// daily-eod.mjs - multi-symbol stock + ETF EOD backfill for /rotations,
+// /stocks, /heatmap, /scan, and any other surface that reads from
+// public.daily_eod. Pulls daily aggregates from Massive Stocks Starter
+// and upserts one row per (symbol, trading_date).
 //
-// Pulls ThetaData EOD prices for every symbol in DEFAULT_SYMBOLS and
-// upserts rows into public.daily_eod, one row per (symbol, trading_date).
-// Supports two ThetaData endpoints based on each symbol's kind:
-//
-//   - kind='index'  →  /v3/index/history/eod  (Index Standard tier)
-//   - kind='stock'  →  /v3/stock/history/eod  (Stock Value tier — note the
-//                       account upgraded from Stock Free to Stock Value
-//                       on 2026-04-25; the EOD endpoint works on both
-//                       tiers, but Stock Value also unlocks intraday
-//                       OHLC, Greeks, IV, and quote endpoints if a
-//                       follow-up surface ever needs them).
-//
-// Both endpoints return CSV with the same first-six columns this script
-// cares about: created, last_trade, open, high, low, close. Differences
-// downstream (volume, NBBO, market-maker fields) are non-zero on stocks
-// and zero on indices, but neither is persisted to public.daily_eod.
-//
-// The /rotations Relative Sector Rotation page reads from this table to
-// compute the rotation ratio and rotation momentum of every component
-// vs the SPY benchmark. The default universe matches the reference
-// chart at C:\i\: SPY (benchmark) plus the eleven SPDR sector ETFs and
-// three additional theme ETFs that appear on that chart. The reference
-// image's "$713.94" SPY readout matches the ThetaData close for SPY on
-// 2026-04-24 exactly, confirming this is the right symbol set.
+// Source: Massive Stocks Starter (api.massive.com /v2/aggs/ticker/{SYMBOL}
+// /range/1/day/{from}/{to}). Same response shape as the Indices Starter
+// endpoint that vix-family-eod.mjs uses, just without the 'I:' prefix
+// because the universe here is all equity ETFs / single-name stocks.
 //
 // Usage:
-//   SUPABASE_URL=... SUPABASE_SERVICE_KEY=... \
-//   node scripts/backfill/daily-eod.mjs \
-//        [--start YYYY-MM-DD] [--end YYYY-MM-DD] \
-//        [--symbols SPY,XLF,...] [--force]
+//   node scripts/backfill/daily-eod.mjs                          # default 2-year window ending today
+//   node scripts/backfill/daily-eod.mjs --from 2026-04-25        # custom start
+//   node scripts/backfill/daily-eod.mjs --symbols NVDA,AMD       # custom universe
+//   node scripts/backfill/daily-eod.mjs --force                  # overwrite existing rows
 //
-// Defaults to a 2-year backfill (~504 trading days) ending today (ET) so
-// the rotation chart has enough history for the 63-day standardization
-// window without ever hitting the start of the table. Already-present
-// (symbol, trading_date) pairs are skipped unless --force is set.
+// Required env: MASSIVE_API_KEY, SUPABASE_URL, SUPABASE_SERVICE_KEY.
+// Reads .env at the repo root if present (no dotenv dep - minimal parser).
+//
+// Already-present (symbol, trading_date) pairs are skipped unless --force
+// is set. Re-runs over a stable window are idempotent on the PK.
 
+import { readFileSync, existsSync } from 'node:fs';
+import { resolve } from 'node:path';
 import process from 'node:process';
 
-const DEFAULT_THETA = 'http://127.0.0.1:25503';
-const DEFAULT_LOOKBACK_CALENDAR_DAYS = 730; // ~2 years
+const MASSIVE_BASE = 'https://api.massive.com';
+const MASSIVE_TIMEOUT_MS = 20000;
+const FETCH_DELAY_MS = 250;
+const UPSERT_BATCH_SIZE = 1000;
+const DEFAULT_LOOKBACK_CALENDAR_DAYS = 730;
 
-// Reference universe combines two sets:
-//
-//   /rotations consumers (15 symbols): SPY benchmark plus the eleven
-//   SPDR sector ETFs (XLB, XLC, XLE, XLF, XLI, XLK, XLP, XLRE, XLU,
-//   XLV, XLY) and three additional theme ETFs that appear on the
-//   reference chart at C:\i\ (XBI biotech, XME metals & mining, KWEB
-//   China internet).
-//
-//   /stocks consumers (20 symbols): the twenty top option-volume
-//   single-name stocks curated for the Stock Performance bar trio
-//   (eleven names: NVDA, TSLA, INTC, AMD, AMZN, AAPL, MU, MSFT, MSTR,
-//   META, PLTR) and the Relative Stock Rotations scatter (those eleven
-//   plus GOOGL, ORCL, NFLX, AVGO, TSM, QCOM, MRVL, HOOD, COIN). Both
-//   surfaces share the same SPY benchmark above so a reader can
-//   compare single-name relative strength against sector relative
-//   strength on the same axis convention.
-//
-// Each symbol's `kind` decides which ThetaData endpoint the fetcher
-// hits — sector ETFs and single-name stocks both go through
-// /v3/stock/history/eod (Stock Value tier on this account as of
-// 2026-04-25). ThetaData's index/list/symbols endpoint includes a
-// few sector-flavored entries (SP500-10 through SP500-60, the GICS-
-// coded S&P 500 sector indices) but those returned no current data
-// in probe runs and were excluded earlier; the actual ETFs at
-// /v3/stock/history/eod do have current 2026-04-24 coverage.
+// Reference universe combines /rotations consumers (SPY benchmark plus
+// the eleven SPDR sector ETFs and three theme ETFs that appear on the
+// reference chart at C:\i\) with /stocks consumers (the twenty top-
+// option-volume single names curated for the Stock Performance bar trio
+// and the Relative Stock Rotations scatter). All entries hit the same
+// Massive stocks endpoint, so the per-symbol kind tag that the prior
+// ThetaData-era script needed is gone.
 const DEFAULT_SYMBOLS = [
-  { symbol: 'SPY',   kind: 'stock' },
+  'SPY',
   // Sector rotation universe (/rotations).
-  { symbol: 'XBI',   kind: 'stock' },
-  { symbol: 'XLB',   kind: 'stock' },
-  { symbol: 'XLC',   kind: 'stock' },
-  { symbol: 'XLE',   kind: 'stock' },
-  { symbol: 'XLF',   kind: 'stock' },
-  { symbol: 'XLI',   kind: 'stock' },
-  { symbol: 'XLK',   kind: 'stock' },
-  { symbol: 'XLP',   kind: 'stock' },
-  { symbol: 'XLRE',  kind: 'stock' },
-  { symbol: 'XLU',   kind: 'stock' },
-  { symbol: 'XLV',   kind: 'stock' },
-  { symbol: 'XLY',   kind: 'stock' },
-  { symbol: 'XME',   kind: 'stock' },
-  { symbol: 'KWEB',  kind: 'stock' },
+  'XBI', 'XLB', 'XLC', 'XLE', 'XLF', 'XLI', 'XLK', 'XLP', 'XLRE', 'XLU',
+  'XLV', 'XLY', 'XME', 'KWEB',
   // Single-name stock universe (/stocks).
-  { symbol: 'NVDA',  kind: 'stock' },
-  { symbol: 'TSLA',  kind: 'stock' },
-  { symbol: 'INTC',  kind: 'stock' },
-  { symbol: 'AMD',   kind: 'stock' },
-  { symbol: 'AMZN',  kind: 'stock' },
-  { symbol: 'AAPL',  kind: 'stock' },
-  { symbol: 'MU',    kind: 'stock' },
-  { symbol: 'MSFT',  kind: 'stock' },
-  { symbol: 'MSTR',  kind: 'stock' },
-  { symbol: 'META',  kind: 'stock' },
-  { symbol: 'PLTR',  kind: 'stock' },
-  { symbol: 'GOOGL', kind: 'stock' },
-  { symbol: 'ORCL',  kind: 'stock' },
-  { symbol: 'NFLX',  kind: 'stock' },
-  { symbol: 'AVGO',  kind: 'stock' },
-  { symbol: 'TSM',   kind: 'stock' },
-  { symbol: 'QCOM',  kind: 'stock' },
-  { symbol: 'MRVL',  kind: 'stock' },
-  { symbol: 'HOOD',  kind: 'stock' },
-  { symbol: 'COIN',  kind: 'stock' },
+  'NVDA', 'TSLA', 'INTC', 'AMD', 'AMZN', 'AAPL', 'MU', 'MSFT', 'MSTR',
+  'META', 'PLTR', 'GOOGL', 'ORCL', 'NFLX', 'AVGO', 'TSM', 'QCOM', 'MRVL',
+  'HOOD', 'COIN',
 ];
 
-function parseArgs(argv) {
-  const out = { start: null, end: null, force: false, symbols: null };
-  for (let i = 0; i < argv.length; i++) {
-    const a = argv[i];
-    if (a === '--start') out.start = argv[++i];
-    else if (a === '--end') out.end = argv[++i];
-    else if (a === '--force') out.force = true;
-    else if (a === '--symbols') out.symbols = argv[++i].split(',').map((s) => s.trim()).filter(Boolean);
-  }
-  return out;
-}
-
-const log = (event, data = {}) =>
-  console.log(JSON.stringify({ ts: new Date().toISOString(), event, ...data }));
-
-function toCompactDate(iso) {
-  return iso.replaceAll('-', '');
-}
-
-function parseCsvLine(line) {
-  const out = [];
-  let i = 0;
-  let field = '';
-  let inQuotes = false;
-  while (i < line.length) {
-    const ch = line[i];
-    if (inQuotes) {
-      if (ch === '"') {
-        if (line[i + 1] === '"') { field += '"'; i += 2; continue; }
-        inQuotes = false; i++; continue;
-      }
-      field += ch; i++; continue;
+function loadDotEnv() {
+  const p = resolve(process.cwd(), '.env');
+  if (!existsSync(p)) return;
+  const text = readFileSync(p, 'utf8');
+  for (const raw of text.split(/\r?\n/)) {
+    const line = raw.trim();
+    if (!line || line.startsWith('#')) continue;
+    const eq = line.indexOf('=');
+    if (eq < 0) continue;
+    const key = line.slice(0, eq).trim();
+    let value = line.slice(eq + 1).trim();
+    if ((value.startsWith('"') && value.endsWith('"')) ||
+        (value.startsWith("'") && value.endsWith("'"))) {
+      value = value.slice(1, -1);
     }
-    if (ch === '"') { inQuotes = true; i++; continue; }
-    if (ch === ',') { out.push(field); field = ''; i++; continue; }
-    field += ch; i++;
+    if (!(key in process.env)) process.env[key] = value;
   }
-  out.push(field);
-  return out;
 }
 
-// last_trade is an ET wall-clock ISO string (e.g. 2026-04-24T17:14:31.483
-// for stocks, 2026-04-23T16:03:50.000 for indices). The date portion is
-// the trading date — no timezone conversion needed because ThetaData
-// emits it already in ET. Stock prints arrive at 17:1X (post-close
-// auction) while index prints arrive at 16:0X (cash close); the date
-// part is the same for both.
-function extractTradingDate(lastTrade) {
-  if (!lastTrade || typeof lastTrade !== 'string') return null;
-  const datePart = lastTrade.slice(0, 10);
-  return /^\d{4}-\d{2}-\d{2}$/.test(datePart) ? datePart : null;
-}
-
-function parseEodCsv(csvText) {
-  if (!csvText || csvText.startsWith('No data')) return [];
-  const lines = csvText.split(/\r?\n/).filter((l) => l.length > 0);
-  if (lines.length < 2) return [];
-  const header = parseCsvLine(lines[0]);
-  const idx = {
-    last_trade: header.indexOf('last_trade'),
-    open:       header.indexOf('open'),
-    high:       header.indexOf('high'),
-    low:        header.indexOf('low'),
-    close:      header.indexOf('close'),
-  };
-  for (const [k, v] of Object.entries(idx)) {
-    if (v < 0) throw new Error(`theta EOD CSV missing column: ${k}`);
-  }
-  const rows = [];
-  for (let i = 1; i < lines.length; i++) {
-    const parts = parseCsvLine(lines[i]);
-    const tradingDate = extractTradingDate(parts[idx.last_trade]);
-    if (!tradingDate) continue;
-    const open = Number(parts[idx.open]);
-    const high = Number(parts[idx.high]);
-    const low = Number(parts[idx.low]);
-    const close = Number(parts[idx.close]);
-    if (![open, high, low, close].every(Number.isFinite)) continue;
-    if ([open, high, low, close].some((v) => v <= 0)) continue;
-    rows.push({ trading_date: tradingDate, open, high, low, close });
-  }
-  return rows;
-}
-
-function endpointFor(kind) {
-  if (kind === 'stock') return '/v3/stock/history/eod';
-  if (kind === 'index') return '/v3/index/history/eod';
-  throw new Error(`Unknown symbol kind: ${kind}`);
-}
-
-async function fetchEod(baseUrl, symbol, kind, startIso, endIso) {
-  const url = `${baseUrl}${endpointFor(kind)}?symbol=${encodeURIComponent(symbol)}&start_date=${toCompactDate(startIso)}&end_date=${toCompactDate(endIso)}`;
-  const res = await fetch(url, { method: 'GET' });
-  if (!res.ok) {
-    const body = await res.text().catch(() => '');
-    throw new Error(`theta EOD HTTP ${res.status} for ${symbol} (${kind}): ${body.slice(0, 300)}`);
-  }
-  return parseEodCsv(await res.text());
+function todayIsoEastern() {
+  return new Intl.DateTimeFormat('en-CA', {
+    timeZone: 'America/New_York',
+    year: 'numeric', month: '2-digit', day: '2-digit',
+  }).format(new Date());
 }
 
 function addDaysIso(iso, n) {
@@ -213,69 +81,70 @@ function addDaysIso(iso, n) {
   return d.toISOString().slice(0, 10);
 }
 
-function etTodayIso() {
-  const now = new Date();
-  const etParts = new Intl.DateTimeFormat('en-CA', {
-    timeZone: 'America/New_York',
-    year: 'numeric',
-    month: '2-digit',
-    day: '2-digit',
-  }).formatToParts(now);
-  const y = etParts.find((p) => p.type === 'year').value;
-  const m = etParts.find((p) => p.type === 'month').value;
-  const d = etParts.find((p) => p.type === 'day').value;
-  return `${y}-${m}-${d}`;
-}
-
-// Both EOD endpoints cap single requests at ~365 calendar days. Chunk to
-// 360 to leave a 5-day safety margin.
-const CHUNK_DAYS = 360;
-
-async function fetchSymbolChunked(baseUrl, symbol, kind, startIso, endIso) {
-  const all = [];
-  let cursor = startIso;
-  while (cursor <= endIso) {
-    const tentativeEnd = addDaysIso(cursor, CHUNK_DAYS - 1);
-    const chunkEnd = tentativeEnd > endIso ? endIso : tentativeEnd;
-    const rows = await fetchEod(baseUrl, symbol, kind, cursor, chunkEnd);
-    all.push(...rows);
-    cursor = addDaysIso(chunkEnd, 1);
-  }
-  return [...new Map(all.map((r) => [r.trading_date, r])).values()];
-}
-
-async function upsertRows(supabaseUrl, serviceKey, rows) {
-  if (rows.length === 0) return 0;
-  const headers = {
-    apikey: serviceKey,
-    Authorization: `Bearer ${serviceKey}`,
-    'Content-Type': 'application/json',
-    Prefer: 'resolution=merge-duplicates,return=minimal',
+function parseArgs(argv) {
+  const end = todayIsoEastern();
+  const args = {
+    from: addDaysIso(end, -DEFAULT_LOOKBACK_CALENDAR_DAYS),
+    to: end,
+    symbols: DEFAULT_SYMBOLS,
+    force: false,
   };
-  const BATCH = 1000;
-  let written = 0;
-  for (let i = 0; i < rows.length; i += BATCH) {
-    const slice = rows.slice(i, i + BATCH);
-    const res = await fetch(`${supabaseUrl}/rest/v1/daily_eod`, {
-      method: 'POST',
-      headers,
-      body: JSON.stringify(slice),
-    });
-    if (!res.ok) {
-      const body = await res.text().catch(() => '');
-      throw new Error(`supabase upsert daily_eod failed: ${res.status} ${body.slice(0, 300)}`);
+  for (let i = 2; i < argv.length; i++) {
+    const a = argv[i];
+    if (a === '--from') args.from = argv[++i];
+    else if (a === '--to') args.to = argv[++i];
+    else if (a === '--force') args.force = true;
+    else if (a === '--symbols') {
+      args.symbols = argv[++i].split(',').map((s) => s.trim().toUpperCase()).filter(Boolean);
+    } else if (a === '--help' || a === '-h') {
+      console.log('Usage: node scripts/backfill/daily-eod.mjs [--from YYYY-MM-DD] [--to YYYY-MM-DD] [--symbols A,B,C] [--force]');
+      process.exit(0);
     }
-    written += slice.length;
   }
-  return written;
+  return args;
+}
+
+async function fetchJson(url, headers, label) {
+  const res = await fetch(url, { headers, signal: AbortSignal.timeout(MASSIVE_TIMEOUT_MS) });
+  if (!res.ok) {
+    const text = await res.text().catch(() => '');
+    throw new Error(`${label} ${res.status}: ${text.slice(0, 200)}`);
+  }
+  return res.json();
+}
+
+async function fetchDailyBars(symbol, from, to, apiKey) {
+  let url =
+    `${MASSIVE_BASE}/v2/aggs/ticker/${symbol}/range/1/day/${from}/${to}` +
+    `?adjusted=true&sort=asc&limit=5000`;
+  const headers = { Authorization: `Bearer ${apiKey}` };
+  const out = [];
+  let pageCount = 0;
+  while (url) {
+    const body = await fetchJson(url, headers, `massive ${symbol} page ${pageCount + 1}`);
+    const results = Array.isArray(body?.results) ? body.results : [];
+    for (const r of results) {
+      const ts = Number(r.t);
+      if (!Number.isFinite(ts)) continue;
+      const tradingDate = new Date(ts).toISOString().slice(0, 10);
+      const open = Number(r.o);
+      const high = Number(r.h);
+      const low = Number(r.l);
+      const close = Number(r.c);
+      if (![open, high, low, close].every(Number.isFinite)) continue;
+      if ([open, high, low, close].some((v) => v <= 0)) continue;
+      out.push({ symbol, trading_date: tradingDate, open, high, low, close });
+    }
+    pageCount += 1;
+    url = body?.next_url || null;
+    if (url) await new Promise((r) => setTimeout(r, FETCH_DELAY_MS));
+  }
+  return out;
 }
 
 async function getExistingSymbolDates(supabaseUrl, serviceKey) {
   const PAGE_SIZE = 1000;
-  const headers = {
-    apikey: serviceKey,
-    Authorization: `Bearer ${serviceKey}`,
-  };
+  const headers = { apikey: serviceKey, Authorization: `Bearer ${serviceKey}` };
   const set = new Set();
   for (let offset = 0; ; offset += PAGE_SIZE) {
     const end = offset + PAGE_SIZE - 1;
@@ -294,91 +163,83 @@ async function getExistingSymbolDates(supabaseUrl, serviceKey) {
   return set;
 }
 
+async function upsertRows(supabaseUrl, serviceKey, rows) {
+  if (rows.length === 0) return 0;
+  const headers = {
+    apikey: serviceKey,
+    Authorization: `Bearer ${serviceKey}`,
+    'Content-Type': 'application/json',
+    Prefer: 'resolution=merge-duplicates,return=minimal',
+  };
+  let written = 0;
+  for (let i = 0; i < rows.length; i += UPSERT_BATCH_SIZE) {
+    const batch = rows.slice(i, i + UPSERT_BATCH_SIZE).map((r) => ({
+      symbol: r.symbol,
+      trading_date: r.trading_date,
+      open: r.open,
+      high: r.high,
+      low: r.low,
+      close: r.close,
+      source: 'massive',
+    }));
+    const res = await fetch(`${supabaseUrl}/rest/v1/daily_eod`, {
+      method: 'POST',
+      headers,
+      body: JSON.stringify(batch),
+    });
+    if (!res.ok) {
+      const body = await res.text().catch(() => '');
+      throw new Error(`supabase upsert ${i / UPSERT_BATCH_SIZE + 1} failed: ${res.status} ${body.slice(0, 300)}`);
+    }
+    written += batch.length;
+  }
+  return written;
+}
+
 async function main() {
-  const args = parseArgs(process.argv.slice(2));
-  const url = process.env.SUPABASE_URL;
+  loadDotEnv();
+
+  const apiKey = process.env.MASSIVE_API_KEY;
+  const supabaseUrl = process.env.SUPABASE_URL;
   const serviceKey = process.env.SUPABASE_SERVICE_KEY;
-  if (!url || !serviceKey) {
-    log('eod.missing_env', { need: ['SUPABASE_URL', 'SUPABASE_SERVICE_KEY'] });
+  if (!apiKey || !supabaseUrl || !serviceKey) {
+    console.error('missing env: need MASSIVE_API_KEY, SUPABASE_URL, SUPABASE_SERVICE_KEY');
     process.exit(2);
   }
 
-  const end = args.end ?? etTodayIso();
-  const start = args.start ?? addDaysIso(end, -DEFAULT_LOOKBACK_CALENDAR_DAYS);
+  const args = parseArgs(process.argv);
+  console.log(`[daily-eod] symbols=${args.symbols.length} from=${args.from} to=${args.to} force=${args.force}`);
 
-  // If --symbols is passed, look up the kind from DEFAULT_SYMBOLS by name;
-  // unknown symbols default to 'stock' since most ad-hoc additions to a
-  // rotation universe are equity ETFs. To force kind='index' for an
-  // ad-hoc symbol, edit DEFAULT_SYMBOLS rather than passing --symbols.
-  let universe = DEFAULT_SYMBOLS;
-  if (args.symbols) {
-    const known = new Map(DEFAULT_SYMBOLS.map((s) => [s.symbol, s.kind]));
-    universe = args.symbols.map((sym) => ({
-      symbol: sym,
-      kind: known.get(sym) ?? 'stock',
-    }));
-  }
+  const existing = args.force ? new Set() : await getExistingSymbolDates(supabaseUrl, serviceKey);
+  if (!args.force) console.log(`[daily-eod] existing rows in daily_eod: ${existing.size}`);
 
-  const baseUrl = process.env.THETA_BASE_URL || DEFAULT_THETA;
-
-  log('eod.start', {
-    start, end, theta: baseUrl, force: args.force,
-    symbols: universe.map((u) => `${u.symbol}(${u.kind})`),
-  });
-
-  let existing = args.force ? new Set() : await getExistingSymbolDates(url, serviceKey);
-  log('eod.existing_loaded', { rows: existing.size });
-
-  let totalFetched = 0;
-  let totalWritten = 0;
-  const perSymbol = {};
-
-  for (const { symbol, kind } of universe) {
-    let rows;
+  const startedAt = Date.now();
+  const summary = [];
+  for (const symbol of args.symbols) {
+    const t0 = Date.now();
     try {
-      rows = await fetchSymbolChunked(baseUrl, symbol, kind, start, end);
+      const rows = await fetchDailyBars(symbol, args.from, args.to, apiKey);
+      const toWrite = args.force
+        ? rows
+        : rows.filter((r) => !existing.has(`${r.symbol}|${r.trading_date}`));
+      const written = await upsertRows(supabaseUrl, serviceKey, toWrite);
+      const ms = Date.now() - t0;
+      console.log(`  [${symbol}] fetched=${rows.length} new=${toWrite.length} upserted=${written} (${ms}ms)`);
+      summary.push({ symbol, rows: rows.length, written, ms });
     } catch (err) {
-      log('eod.fetch_failed', { symbol, kind, error: String(err) });
-      continue;
+      console.error(`  [${symbol}] FAILED: ${err.message}`);
+      summary.push({ symbol, error: err.message });
     }
-    totalFetched += rows.length;
-
-    let toWrite = rows.map((r) => ({ symbol, ...r }));
-    if (!args.force) {
-      toWrite = toWrite.filter((r) => !existing.has(`${r.symbol}|${r.trading_date}`));
-    }
-
-    if (toWrite.length === 0) {
-      log('eod.symbol_skip', { symbol, kind, fetched: rows.length });
-      perSymbol[symbol] = { fetched: rows.length, written: 0 };
-      continue;
-    }
-
-    try {
-      const n = await upsertRows(url, serviceKey, toWrite);
-      totalWritten += n;
-      perSymbol[symbol] = {
-        kind,
-        fetched: rows.length,
-        written: n,
-        first: toWrite[0].trading_date,
-        last: toWrite[toWrite.length - 1].trading_date,
-      };
-      log('eod.symbol_done', { symbol, ...perSymbol[symbol] });
-    } catch (err) {
-      log('eod.write_failed', { symbol, kind, error: String(err) });
-    }
+    await new Promise((r) => setTimeout(r, FETCH_DELAY_MS));
   }
-
-  log('eod.done', {
-    symbols: universe.length,
-    fetched_rows: totalFetched,
-    written_rows: totalWritten,
-    perSymbol,
-  });
+  const totalMs = Date.now() - startedAt;
+  const totalWritten = summary.reduce((s, x) => s + (x.written || 0), 0);
+  const errors = summary.filter((x) => x.error).length;
+  console.log(`[daily-eod] done in ${totalMs}ms - ${totalWritten} rows written across ${args.symbols.length - errors}/${args.symbols.length} symbols`);
+  if (errors > 0) process.exit(1);
 }
 
 main().catch((err) => {
-  log('eod.fatal', { error: String(err), stack: err?.stack });
+  console.error('[daily-eod] fatal:', err);
   process.exit(1);
 });
