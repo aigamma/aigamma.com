@@ -141,12 +141,21 @@ async function callAnthropic(model, systemPrompt, userMessage) {
 // double up. Newlines are preserved deliberately because the body uses
 // '\\n\\n' as paragraph breaks; collapsing all whitespace runs would destroy
 // those breaks and turn the body back into a single wall of text.
+// Sanitizer regexes hoisted out of sanitizeNarratorString so they're
+// compiled once at module init instead of on every narrator output. The
+// narrator fires every ~10 minutes per page across 18 pages; the savings are
+// real on cumulative cold-start CPU even if each individual call is cheap.
+const EM_DASH_RE = /—/g;
+const EN_DASH_RE = /–/g;
+const REPEATED_HORIZONTAL_WHITESPACE_RE = /[ \t]{2,}/g;
+const JSON_FENCE_RE = /^```(?:json)?\s*([\s\S]*?)\s*```$/;
+
 function sanitizeNarratorString(s) {
   if (typeof s !== 'string') return s;
   return s
-    .replace(/—/g, ', ')
-    .replace(/–/g, '-')
-    .replace(/[ \t]{2,}/g, ' ')
+    .replace(EM_DASH_RE, ', ')
+    .replace(EN_DASH_RE, '-')
+    .replace(REPEATED_HORIZONTAL_WHITESPACE_RE, ' ')
     .trim();
 }
 
@@ -157,7 +166,7 @@ function parseNarratorOutput(text) {
   if (!text) return null;
   let candidate = text.trim();
   // Strip markdown fences.
-  const fenceMatch = candidate.match(/^```(?:json)?\s*([\s\S]*?)\s*```$/);
+  const fenceMatch = candidate.match(JSON_FENCE_RE);
   if (fenceMatch) candidate = fenceMatch[1].trim();
   // Strip leading text before the first { (model-side preamble).
   const firstBrace = candidate.indexOf('{');
@@ -213,9 +222,14 @@ async function narrateOne(page) {
     }
     const model = page === '/' ? LANDING_MODEL : FEEDER_MODEL;
     const systemPrompt = NARRATOR_PERSONA + '\n\n' + promptBody;
+    // Compact JSON (no indentation) for the user message: the model's
+    // tokenizer sees the same structure either way, but pretty-printing
+    // inflates input-token count ~3x for nested objects with no semantic
+    // payoff for the model. The chat_logs row stores the raw response, so
+    // human readability isn't a constraint on this stringify.
     const userMessage =
       `State snapshot for page "${page}", captured ${new Date().toISOString()}:\n\n` +
-      JSON.stringify(state, null, 2) +
+      JSON.stringify(state) +
       `\n\nProduce the narration JSON object now. Stay silent (severity 0) if nothing material is happening.`;
 
     const llm = await callAnthropic(model, systemPrompt, userMessage);
