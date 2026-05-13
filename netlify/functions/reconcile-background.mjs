@@ -1,8 +1,7 @@
 // netlify/functions/reconcile-background.mjs
 //
-// Daily self-consistency audit for the SPX intraday ingest pipeline. Replaces
-// the unshipped ThetaData-vs-Massive cross-vendor reconciler that previously
-// lived in scripts/reconcile/. The model is single-vendor self-checking:
+// Daily self-consistency audit for the SPX intraday ingest pipeline. The
+// model is single-vendor self-checking:
 // confirm that two independent paths through the existing Massive pipeline
 // agree on the day's SPX close, and verify a handful of structural invariants
 // over the day's intraday runs. Five probes total, all recorded as one row

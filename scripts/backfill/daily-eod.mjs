@@ -36,8 +36,7 @@ const DEFAULT_LOOKBACK_CALENDAR_DAYS = 730;
 // reference chart at C:\i\) with /stocks consumers (the twenty top-
 // option-volume single names curated for the Stock Performance bar trio
 // and the Relative Stock Rotations scatter). All entries hit the same
-// Massive stocks endpoint, so the per-symbol kind tag that the prior
-// ThetaData-era script needed is gone.
+// Massive stocks endpoint with no per-symbol dispatch needed.
 const DEFAULT_SYMBOLS = [
   'SPY',
   // Sector rotation universe (/rotations).

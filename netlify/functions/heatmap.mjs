@@ -379,7 +379,7 @@ export default async function handler(_request) {
   return jsonResponse(200, {
     mode: 'sector-etf-fallback',
     asOf: fallback.asOf,
-    source: 'thetadata-via-supabase',
+    source: 'massive-via-supabase',
     generatedAt: roster.generatedAt,
     count: tiles.length,
     pricedCount: tiles.length,

@@ -24,9 +24,7 @@ import { createBackfillWriter } from './supabase-writer.mjs';
 // DTE wiggle window for sampling historical observations: under 7 DTE
 // only matches within +/- 1 day; at 7+ DTE matches within +/- 3 days.
 // Sensitivity is a function of time-to-expiry, not whether the
-// expiration is weekly or monthly. Previously lived in
-// scripts/reconcile/tolerance.mjs alongside the ThetaData reconciler;
-// inlined here when that directory was removed.
+// expiration is weekly or monthly.
 function wiggleWindowFor(dte) {
   return dte < 7 ? 1 : 3;
 }

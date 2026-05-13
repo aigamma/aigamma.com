@@ -133,8 +133,8 @@ export default async function handler(request) {
     // on the underlying 20-day realized-vol and 30-day constant-maturity-
     // IV estimators. Trimming cuts ~16 KB gzipped per request by stripping
     // the ~12 trailing noise digits the full-float storage emitted. SPX
-    // close is already 2dp from ThetaData, no precision trim needed. VIX
-    // is already 2dp from Massive's daily aggregates, no trim needed.
+    // close and VIX are both already 2dp from the Massive daily
+    // aggregates upstream, no precision trim needed on those fields.
     const series = rows.map((r) => ({
       trading_date: r.trading_date,
       spx_close: toNum(r.spx_close),

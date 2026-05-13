@@ -10,11 +10,13 @@
 //   https://www.ssga.com/library-content/products/fund-data/etfs/us/holdings-daily-us-en-spy.xlsx
 //
 // CORS-open (Access-Control-Allow-Origin: *), ~54 KB, refreshed once per
-// trading session. The /heatmap surface needs four things per name —
-// ticker, name, GICS sector, market-cap weight — that no market-data
-// vendor at the project's current tier provides (ThetaData has no
-// fundamentals or constituent endpoints; Massive's ticker-overview is
-// single-call so a 500-name pull is 500 round-trips).
+// trading session. The /heatmap surface needs four things per name --
+// ticker, name, GICS sector, market-cap weight -- that the project's
+// current options/equity data tier does not provide: Massive's
+// ticker-overview endpoint is single-call so a 500-name pull is 500
+// round-trips, and the Stocks Starter tier does not expose a
+// fundamentals or constituent-list endpoint that returns the four
+// fields in one shot.
 //
 // Two-source join: SSGA's xlsx supplies ticker, name, weight, and
 // shares held but NOT GICS sector — every Sector cell in the file is

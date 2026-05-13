@@ -219,7 +219,7 @@ automatically.
 {
   "generatedAt": "2026-04-26T05:38:27.796Z",
   "anchorRevision": "2026-Q2",
-  "tailRefreshSource": "barchart-csv | massive-grouped | thetadata-eod",
+  "tailRefreshSource": "barchart-csv | massive-grouped | massive-daily-eod",
   "tailRefreshWindow": "30d-rolling-ex-earnings-quarantine",
   "count": 250,
   "sectors": { ... },

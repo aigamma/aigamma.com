@@ -6,8 +6,9 @@
 // and returns one tail of `tail` points per component for the chart.
 // Default universe is the SPDR sector ETF set from C:\i\: SPY benchmark
 // plus XBI / XLB / XLC / XLE / XLF / XLI / XLK / XLP / XLRE / XLU / XLV /
-// XLY / XME / KWEB. Source data is ThetaData /v3/stock/history/eod (Stock
-// Value tier on this account as of 2026-04-25).
+// XLY / XME / KWEB. Source data is the Massive Stocks Starter daily
+// aggregates endpoint upserted into public.daily_eod by
+// scripts/backfill/daily-eod.mjs.
 //
 // The math is a three-stage EMA-percentage construction with Roy
 // Mansfield's 1979 "Mansfield Relative Performance" indicator as the
@@ -83,9 +84,8 @@
 // → snapshots) covers SPX option chains, not sector ETF prices — so
 // hour mode returns a 503 with a clear explanation. Adding hourly
 // support is a follow-up that needs a new etf_intraday_bars table
-// fed by ThetaData stock OHLC at the Stock Value tier (which the
-// account has as of 2026-04-25) plus a backfill script analogous to
-// scripts/backfill/spx-intraday-bars.mjs.
+// fed by Massive stock intraday aggregates plus a backfill script
+// analogous to scripts/backfill/spx-intraday-bars.mjs.
 //
 // Reads through the anon SUPABASE_KEY against the allow_anon_read RLS
 // policy on daily_eod. Cache-Control: 15 minutes at the edge with
@@ -183,8 +183,8 @@ export default async function handler(request) {
     return jsonError(503,
       'Hourly rotation needs intraday ETF bars in Supabase, which are not yet ingested. ' +
       'The daily_eod table is end-of-day only and no etf_intraday_bars table exists. ' +
-      'Use day or week with the existing daily backfill, or run a ThetaData stock OHLC ' +
-      'intraday backfill to enable hourly mode.'
+      'Use day or week with the existing daily backfill, or stand up an ETF intraday ' +
+      'backfill against Massive stock aggregates to enable hourly mode.'
     );
   }
 
@@ -327,7 +327,7 @@ export default async function handler(request) {
         slow_window: stepConfig.slowWindow,
         fast_window: stepConfig.fastWindow,
       },
-      source: 'thetadata',
+      source: 'massive',
     };
 
     return new Response(JSON.stringify(round(payload, 4)), {
@@ -442,7 +442,7 @@ function computeTail(series, benchByDate, benchDates, tail, stepConfig) {
 // multiple historical splits — each split-day adjusts everything before
 // it, so a later split adjusts the earlier-adjusted values once more,
 // stacking the factors. The fix lives at the API layer rather than as
-// a one-time SQL UPDATE on daily_eod so the raw ThetaData EOD remains
+// a one-time SQL UPDATE on daily_eod so the raw daily aggregates remain
 // the authoritative table on disk; if a future ETF split is detected
 // at fetch time, the rotation chart picks it up automatically without
 // a backfill rerun.

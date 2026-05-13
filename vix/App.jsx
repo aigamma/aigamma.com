@@ -59,10 +59,10 @@ function prefetchBelowFoldChunks() {
 //
 // Sole data source: public.vix_family_eod (sourced from Massive Indices
 // Starter, see CLAUDE.md note in the table comment) + the SPX OHLC + 30d
-// CM IV + 20d HV columns of public.daily_volatility_stats (sourced from
-// ThetaData per the data-provenance rule). The /api/vix-data endpoint
-// returns both in a single payload so every card on the page reads from
-// one network call.
+// CM IV + 20d HV columns of public.daily_volatility_stats (downsampled
+// from the intraday ingest_runs snapshots per the single-vendor
+// data-provenance rule). The /api/vix-data endpoint returns both in a
+// single payload so every card on the page reads from one network call.
 //
 // Reading sequence (top to bottom):
 //   1. VixHeaderProfile     — current Friday-close pill grid with 1y ranks

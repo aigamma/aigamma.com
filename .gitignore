@@ -46,7 +46,7 @@ scripts/test-ingest.mjs
 scripts/backfill/.cache/
 reports/
 
-# ThetaData terminal credentials and binaries
+# Local credentials files and any historical vendor terminal jars
 creds.txt
 *.jar
 

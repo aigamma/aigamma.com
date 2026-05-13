@@ -49,11 +49,11 @@ import SectorPerformanceBars from '../src/components/SectorPerformanceBars';
 //   RotationChart lets a reader hide individual tickers to declutter
 //   on demand.
 //
-// Data lineage: ThetaData /v3/stock/history/eod (Stock Value tier)
-// feeds public.daily_eod via scripts/backfill/daily-eod.mjs. The 20
-// stock symbols are appended to that script's DEFAULT_SYMBOLS list
-// alongside the existing 14 ETF rotation universe, so a single nightly
-// backfill run keeps both /rotations and /stocks fresh with no extra
+// Data lineage: Massive Stocks Starter daily aggregates feed
+// public.daily_eod via scripts/backfill/daily-eod.mjs. The 20 stock
+// symbols are appended to that script's DEFAULT_SYMBOLS list alongside
+// the existing 14 ETF rotation universe, so a single nightly backfill
+// run keeps both /rotations and /stocks fresh with no extra
 // orchestration. SPY remains the benchmark all relative-strength math
 // is computed against — for single-name stocks SPY is still the right
 // market basis, the same reference point a vol trader uses to read

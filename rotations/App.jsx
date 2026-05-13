@@ -26,7 +26,7 @@ import SectorPerformanceBars from '../src/components/SectorPerformanceBars';
 // Improving top-left — describe a clockwise rotation that components
 // typically traverse over weeks-to-months as regimes shift.
 //
-// Data source: ThetaData /v3/stock/history/eod (Stock Value tier) feeds
+// Data source: Massive Stocks Starter daily aggregates feed
 // public.daily_eod via scripts/backfill/daily-eod.mjs. The endpoint at
 // netlify/functions/rotations.mjs computes the rotation ratio and the
 // rotation momentum vs SPY and returns a tail of N daily points per

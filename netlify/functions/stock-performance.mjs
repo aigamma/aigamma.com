@@ -180,7 +180,7 @@ export default async function handler(request) {
         '1m': sorted_1m.map((s) => ({ symbol: s.symbol, name: s.name, value: s.return_1m })),
       },
       stocks,
-      source: 'thetadata',
+      source: 'massive',
     };
 
     return new Response(JSON.stringify(round(payload, 4)), {

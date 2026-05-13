@@ -12,10 +12,12 @@
 // search probing the daily aggregate endpoint), so the default backfill window
 // is 2023-03-01 to today.
 //
-// SPX is deliberately NOT in the symbol list — its EOD lives in
-// daily_volatility_stats sourced from ThetaData per the data-provenance rule
-// in CLAUDE.md. This script's data layer is for symbols ThetaData does not
-// cover at the Index Standard tier.
+// SPX is deliberately NOT in the symbol list. Its EOD lives in
+// daily_volatility_stats, downsampled from the intraday ingest_runs +
+// snapshots rows the live ingest writes every 5 minutes during the
+// session. This script's data layer is for the VIX-family / cross-
+// asset-vol / Cboe-strategy-benchmark indices whose history is not
+// available from the intraday SPX-options pipeline.
 //
 // Usage:
 //   node scripts/backfill/vix-family-eod.mjs                   # default 2023-03-01 → today

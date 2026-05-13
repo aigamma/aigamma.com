@@ -15,17 +15,17 @@ import SeasonalityGrid from '../src/components/SeasonalityGrid';
 // most recent trading sessions as individual rows so today's shape
 // can be compared against the historical pattern at a glance.
 //
-// Data source: ThetaData /v3/index/history/ohlc?symbol=SPX&interval=30M
-// persists into public.spx_intraday_bars via scripts/backfill/
+// Data source: Massive index 30-minute aggregates (I:SPX) persist
+// into public.spx_intraday_bars via scripts/backfill/
 // spx-intraday-bars.mjs. The prior close for each row's denominator
 // comes from public.daily_volatility_stats.spx_close on the next-
-// earlier trading_date — the two tables share the ThetaData sole-
-// source lineage so the postmarket settlement window is consistent
-// between the numerator (intraday close at time T) and the
-// denominator (prior session's official EOD close). No secondary
-// feeds (Yahoo / FRED / Google) fill gaps; any date ThetaData does
-// not cover at query time stays absent from the grid rather than
-// getting backfilled from a non-normalized source.
+// earlier trading_date. Both tables share the single-vendor Massive
+// lineage so the postmarket settlement window is consistent between
+// the numerator (intraday close at time T) and the denominator
+// (prior session's official EOD close). No secondary feeds (Yahoo /
+// FRED / Google) fill gaps; any date Massive does not cover at
+// query time stays absent from the grid rather than getting
+// backfilled from a non-normalized source.
 export default function App() {
   return (
     <div className="app-shell page-shell">

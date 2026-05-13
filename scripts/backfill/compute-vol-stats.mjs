@@ -9,12 +9,12 @@
 //                 because each daily return spans one trading session; the
 //                 weekend return compresses into a single overnight term.
 //
-//   iv_30d_cm   — 30-day constant-maturity ATM IV, linearly interpolated
-//                 on total variance w(k,T) = iv² · T between the two
+//   iv_30d_cm   - 30-day constant-maturity ATM IV, linearly interpolated
+//                 on total variance w(k,T) = iv^2 * T between the two
 //                 daily_term_structure rows bracketing 30 calendar DTE.
-//                 ThetaData IV is already annualized on a 365-calendar-day
-//                 convention, which is the correct options convention
-//                 because theta decays over weekends.
+//                 The IV values stored upstream are annualized on a
+//                 365-calendar-day convention, which is the correct
+//                 options convention because theta decays over weekends.
 //
 //   vrp_spread  — iv_30d_cm − hv_20d_yz. Positive (the normal state)
 //                 means options are pricing more vol than has been

@@ -209,8 +209,8 @@ async function handleIntraday(url, supabaseUrl, headers) {
     (barsByDate[r.trading_date] ||= {})[r.bucket_time] = Number(r.spx_close);
   }
 
-  // Canonical column order. The 14 RTH bucket timestamps ThetaData
-  // emits per session. Column labels are the END of each 30-min bin
+  // Canonical column order. The 14 RTH bucket timestamps per session
+  // (09:30, 10:00, ..., 15:30, 16:00). Column labels are the END of each 30-min bin
   // (the readable wall-clock time when that cell's value is finalized),
   // which matches the SPY reference image's header. 09:30 bar ends at
   // 10:00, 10:00 bar ends at 10:30, ..., 16:00 bar is the closing
@@ -278,7 +278,7 @@ async function handleIntraday(url, supabaseUrl, headers) {
     averages,
     days: days_rows,
     asOf: relevantDates[0],
-    source: 'thetadata',
+    source: 'massive',
   };
 
   return new Response(JSON.stringify(round(payload, 4)), {
@@ -403,7 +403,7 @@ async function handleDaily(url, supabaseUrl, headers) {
     averages,
     weeks: weekRows,
     asOf: dailyRows[dailyRows.length - 1].trading_date,
-    source: 'thetadata',
+    source: 'massive',
   };
 
   return new Response(JSON.stringify(round(payload, 4)), {
@@ -533,7 +533,7 @@ async function handleWeekly(url, supabaseUrl, headers) {
     averages: [{ label: 'All Years', values: averageValues }],
     years: yearRows,
     asOf: dailyRows[dailyRows.length - 1].trading_date,
-    source: 'thetadata',
+    source: 'massive',
   };
 
   return new Response(JSON.stringify(round(payload, 4)), {
@@ -555,9 +555,11 @@ async function handleWeekly(url, supabaseUrl, headers) {
 // the intraday 15:30 slice is the same row count, so anything covering
 // "all available history" needs at least two pages.
 //
-// Source priority: daily_volatility_stats.spx_close is ThetaData's
-// canonical CBOE EOD close and the preferred source. spx_intraday_bars
-// at bucket_time = '15:30:00' is the 16:00:00 index tick (the close OF
+// Source priority: daily_volatility_stats.spx_close is the canonical
+// CBOE EOD close (Massive index daily aggregate when available, or
+// snapshot-downsampled spot otherwise) and the preferred source.
+// spx_intraday_bars at bucket_time = '15:30:00' is the 16:00:00 index
+// tick (the close OF
 // the 15:30-16:00 bar). The two diverge by ~$5 / 0.1% on average
 // because the official close incorporates the closing-auction print
 // while the tick is the spot value at the bell — close enough for a

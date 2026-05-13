@@ -31,11 +31,10 @@
 //      implied_volatility per contract. underlying_asset.price
 //      populates correctly for single names (the missing-spot quirk
 //      is SPX-index-specific and was a separate ingest fix).
-//   2. ThetaData is not needed for the live path. EOD-only and the
-//      2-thread Standard concurrency cap make it the wrong shape for
-//      an interactive 40-name scanner. ThetaData remains the right
-//      surface for historical EOD backfill if/when /scan grows a
-//      time-series view, but a live read-through pulls from Massive.
+//   2. The live path stays on Massive. A historical time-series
+//      view would pull from public.daily_eod (also Massive-sourced)
+//      via the same EOD downsample pipeline /heatmap and /stocks
+//      use, not from a second vendor.
 //   3. Top-N = 40 by design. Forty parallel snapshot calls at
 //      concurrency 6 finish in ~3-5 s wall clock, well inside the
 //      Netlify 26 s synchronous cap. Top 250 would multiply both

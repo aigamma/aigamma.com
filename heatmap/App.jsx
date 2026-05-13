@@ -31,9 +31,10 @@ import SpxHeatmap from '../src/components/SpxHeatmap';
 //                       scripts/backfill/options-volume-roster.mjs.
 //   prices:             Massive grouped daily bars, two HTTP calls
 //                       to fetch the most-recent two trading-day
-//                       sessions, with ThetaData EOD via Supabase
-//                       as a graceful fallback to 11 sector ETFs
-//                       if Massive returns 401/403/timeout.
+//                       sessions, with public.daily_eod (also
+//                       Massive-sourced) as a graceful fallback to
+//                       the 11 sector ETFs if the live grouped
+//                       endpoint returns 401/403/timeout.
 //
 // See netlify/functions/heatmap.mjs for the join logic and
 // src/components/SpxHeatmap.jsx for the equal-size grid renderer.
