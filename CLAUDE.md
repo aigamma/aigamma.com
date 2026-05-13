@@ -86,7 +86,7 @@ The RAG corpus needs re-embedding after edits to indexed surfaces. The ingest wa
 
 **Run the ingest after editing any of these files:**
 
-- **Per-page system prompts** — `netlify/functions/prompts/{main,garch,regime,rough,smile,local,jump,risk,discrete,parity,tactical}.mjs`. These are the 11 chat-enabled pages' prompt bodies. Each chunk is surface-pinned so retrieval routing on the active page lands on the right page's content.
+- **Per-page system prompts** — `netlify/functions/prompts/{main,garch,regime,rough,local,jump,risk,discrete,tactical}.mjs`. These are the 9 chat-enabled pages' prompt bodies. Each chunk is surface-pinned so retrieval routing on the active page lands on the right page's content.
 - **Global prompt blocks** — `netlify/functions/prompts/{core_persona,behavior,site_nav}.mjs`. These are applied to every chat surface regardless of which page the reader is on. Edits propagate to every chat session after the next ingest.
 
 **Do NOT re-run the ingest after editing:**
