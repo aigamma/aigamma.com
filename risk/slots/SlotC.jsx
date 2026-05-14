@@ -42,14 +42,19 @@ import { daysToExpiration, pickDefaultExpiration, filterPickerExpirations } from
 // extrapolation that bends off the wing because the three-Greek match
 // cannot capture the fourth moment.
 //
-// The two derived quantities printed in the stat row are the same ones
-// FX desks use to quote the smile:
+// The two derived quantities printed in the stat row describe the smile:
 //
-//   Risk Reversal (RR)   = σ(25ΔC) − σ(25ΔP)     asymmetry of the smile
+//   Risk Reversal (RR)   = σ(25ΔP) − σ(25ΔC)     asymmetry of the smile
 //   Butterfly     (BF)   = (σ(25ΔC) + σ(25ΔP))/2 − σ(ATM)   wing convexity
 //
-// On SPX the RR is deeply negative (put skew) and the BF is positive
-// (fat tails on both wings). The VV reconstruction reproduces those two
+// The RR sign convention is put minus call so the sign tracks the
+// direction of skew risk: a positive RR means the put wing is richer
+// than the call wing, the typical equity-index skew state. The FX-desk
+// convention (call minus put) silently inverts that semantic, with the
+// SPX baseline state landing as a negative number that a narrator can
+// easily misread when prose talks about RR rising or falling. On SPX
+// the RR is deeply positive (put skew) and the BF is positive (fat
+// tails on both wings). The VV reconstruction reproduces those two
 // numbers exactly and lets the reader watch how the full smile curve
 // extends off the anchors.
 // -----------------------------------------------------------------------------
@@ -561,7 +566,7 @@ export default function SlotC() {
     ? filterPickerExpirations(data.expirations, data.capturedAt)
     : [];
 
-  const rr = anchors ? anchors.call.iv - anchors.put.iv : null;
+  const rr = anchors ? anchors.put.iv - anchors.call.iv : null;
   const bf = anchors ? 0.5 * (anchors.call.iv + anchors.put.iv) - anchors.atm.iv : null;
 
   return (
@@ -652,8 +657,8 @@ export default function SlotC() {
         <StatCell
           label="Risk Reversal"
           value={rr != null ? formatBp(rr, 0) : '-'}
-          sub="25ΔC minus 25ΔP"
-          accent={rr != null && rr < 0 ? PLOTLY_COLORS.secondary : PLOTLY_COLORS.positive}
+          sub="25ΔP minus 25ΔC"
+          accent={rr != null && rr > 0 ? PLOTLY_COLORS.secondary : PLOTLY_COLORS.positive}
         />
         <StatCell
           label="Butterfly"
@@ -706,8 +711,8 @@ export default function SlotC() {
         <p style={{ margin: '0 0 0.75rem' }}>
           Two derived numbers from the anchors describe the shape of the
           smile. The{' '}
-          <strong>Risk Reversal</strong> (call-wing IV minus put-wing IV)
-          measures asymmetry. On SPX it is deeply negative because puts are
+          <strong>Risk Reversal</strong> (put-wing IV minus call-wing IV)
+          measures asymmetry. On SPX it is deeply positive because puts are
           expensive relative to equally-OTM calls. The{' '}
           <strong>Butterfly</strong> (average wing IV minus ATM IV) measures
           convexity. Positive BF means the market prices fat tails on both
@@ -717,7 +722,7 @@ export default function SlotC() {
           <strong style={{ color: 'var(--text-primary)' }}>Practical use.</strong>{' '}
           RR and Butterfly are the two independent vol trades you can put on
           against the smile, so watch each against its own recent
-          distribution for a slice of similar DTE. When RR is more negative
+          distribution for a slice of similar DTE. When RR is more positive
           than its recent range, the put premium over equally-OTM calls is
           rich and a long-25ΔC / short-25ΔP risk reversal is relatively
           cheap to put on as a directional long-upside position. When RR is

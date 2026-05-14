@@ -500,12 +500,21 @@ function computeGex(pages, targets, startedAt, partial, partialReason = null) {
 
     const put25dIv = put25d ? put25d.implied_volatility : null;
     const call25dIv = call25d ? call25d.implied_volatility : null;
-    // 25-delta risk reversal (call - put). Negative = put-side richer than
-    // call-side (typical equity-index skew), positive = call-skew. Cheap to
-    // persist now that both legs are already computed, even though no live
-    // reader surfaces it yet — removes a null trap for any future consumer.
+    // 25-delta risk reversal (put - call). Positive = put-side richer than
+    // call-side (the typical equity-index skew state), negative = call-side
+    // richer than put-side. Sign convention is chosen so that the direction
+    // of the value tracks the direction of skew risk: a rising RR reads as
+    // rising put richness reads as rising tail-premium demand. The FX-desk
+    // convention (call - put) silently inverts that semantic and was the
+    // source of an analytical failure in the /scan narrator where a numeric
+    // RR increase was being treated as more put risk when it actually
+    // signaled the opposite. Cheap to persist now that both legs are
+    // already computed; removes a null trap for any future consumer.
+    // Historical rows captured under the prior call-minus-put convention
+    // carry the opposite sign and must be re-flipped at read time if any
+    // back-test or audit ever consumes the column directly.
     const skew25dRr =
-      put25dIv != null && call25dIv != null ? call25dIv - put25dIv : null;
+      put25dIv != null && call25dIv != null ? put25dIv - call25dIv : null;
 
     expirationMetrics.push({
       expiration_date: exp,

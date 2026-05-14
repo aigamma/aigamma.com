@@ -13,7 +13,10 @@
 //
 //   callSkew = call25dIv - atmIv     (positive = right wing richer)
 //   putSkew  = put25dIv  - atmIv     (positive = left wing richer)
-//   rrSkew   = call25dIv - put25dIv  (25Δ risk reversal)
+//   rrSkew   = put25dIv  - call25dIv (25-delta risk reversal, put minus
+//                                     call. Positive = put-side richer
+//                                     than call-side, the typical
+//                                     equity-index skew state.)
 //
 // expressed in IV percentage points (e.g., 0.012 = +1.2 vol points).
 // The frontend percentile-ranks each axis across the universe so the
@@ -447,7 +450,12 @@ function deriveSkew(contracts, todayIso, spotOverride) {
   // Skew measures (in IV decimal points; 0.01 = 1 vol point).
   const callSkew = call25dIv != null ? call25dIv - atmIv : null;
   const putSkew  = put25dIv  != null ? put25dIv  - atmIv : null;
-  const rrSkew   = (call25dIv != null && put25dIv != null) ? call25dIv - put25dIv : null;
+  // rrSkew is put minus call so the sign of the value tracks the
+  // direction of skew risk: rising rrSkew = rising put richness =
+  // rising tail premium. The opposite (call minus put) convention
+  // silently inverts that semantic and was the source of an
+  // analytical failure in the /scan narrator.
+  const rrSkew   = (call25dIv != null && put25dIv != null) ? put25dIv - call25dIv : null;
 
   return {
     spot,
@@ -674,7 +682,7 @@ function seedSkew(symbol) {
     put25dIv,
     callSkew,
     putSkew,
-    rrSkew: call25dIv - put25dIv,
+    rrSkew: put25dIv - call25dIv,
     callDelta: 0.25,
     putDelta: -0.25,
   };

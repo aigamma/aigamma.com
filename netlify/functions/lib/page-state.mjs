@@ -525,12 +525,23 @@ const ASSEMBLERS = {
   },
 
   '/scan/': async () => {
-    const spxRun = await getLatestSpxRun();
+    // Scan narrator pivots on Nations SDEX (SkewDex) and TDEX (TailDex)
+    // from vix_family_eod as the primary skew/tail signal. The
+    // expiration_metrics_summary stays in the payload as secondary
+    // context for the SPX surface itself but should not be the analytical
+    // input; a chain-derived 25-delta risk reversal is a makeshift signal
+    // versus Nations' purpose-built skew/tail indices and was misread by
+    // the prior version of this narrator.
+    const [spxRun, vixFamily] = await Promise.all([
+      getLatestSpxRun(),
+      getRecentVixFamily(252),
+    ]);
     return {
       kind: 'skew_scan',
       spx: spxRun,
       expiration_metrics_summary: spxRun ? expMetricsSummary(spxRun.expiration_metrics) : null,
-      note: 'cross-name skew scan results not yet wired; agent should describe SPX skew shape across DTEs.',
+      vix: vixSummary(vixFamily),
+      note: 'cross-name scan results not yet wired; the analysis pivots on Nations SDEX (SkewDex, cost of 25-delta put protection) and TDEX (TailDex, cost of deeper-wing tail protection) day-over-day change and percentile rank, with the SPX expiration_metrics as secondary context.',
     };
   },
 
