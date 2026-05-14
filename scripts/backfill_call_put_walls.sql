@@ -23,7 +23,7 @@
 -- Idempotent: the final UPDATE only touches rows whose (call_wall_strike,
 -- put_wall_strike) pair actually differs from the recomputed pair.
 --
--- Run against the aigamma-dev Supabase project (id: tbxhvpoyyyhbvoyefggu).
+-- Run against the production Supabase project (id: tbxhvpoyyyhbvoyefggu).
 
 WITH strike_gex AS (
   SELECT
