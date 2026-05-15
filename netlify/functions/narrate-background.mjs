@@ -18,7 +18,7 @@
 // Netlify's 15-minute execution ceiling instead of the 26s synchronous cap.
 //
 // Cost profile: 18 feeder pages × ~2KB system prompt × Haiku 4.5, plus 1
-// landing page × Sonnet 4.7 with the larger federation prompt. Cycle cost is
+// landing page × Sonnet 4.6 with the larger federation prompt. Cycle cost is
 // well under $0.01 at typical volumes; ~78 cycles/day × 252 trading days =
 // ~$20-50 / year for the whole narration layer.
 
@@ -76,11 +76,11 @@ const INGEST_SECRET = process.env.INGEST_SECRET;
 const PROMPT_VERSION = 'v5-2026-05-08';
 
 // Model selection. Haiku 4.5 for the 18 feeder narratives (fast, cheap,
-// well-suited for terse pattern-recognition + JSON output). Sonnet 4.7 for
+// well-suited for terse pattern-recognition + JSON output). Sonnet 4.6 for
 // the federation layer where the agent has to weigh peer narratives and
 // produce a slightly more editorial paragraph.
 const FEEDER_MODEL = 'claude-haiku-4-5-20251001';
-const LANDING_MODEL = 'claude-sonnet-4-7';
+const LANDING_MODEL = 'claude-sonnet-4-6';
 
 const ANTHROPIC_TIMEOUT_MS = 30000;
 const ANTHROPIC_MAX_TOKENS = 600;

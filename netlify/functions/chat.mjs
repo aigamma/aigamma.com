@@ -102,7 +102,7 @@ const SYSTEM_PROMPTS = {
 
 const MODEL_CONFIG = {
   'claude-opus-4-7': { displayName: 'Claude Opus 4.7', maxTokens: 128000 },
-  'claude-sonnet-4-7': { displayName: 'Claude Sonnet 4.7', maxTokens: 64000 }
+  'claude-sonnet-4-6': { displayName: 'Claude Sonnet 4.6', maxTokens: 64000 }
 };
 
 const CORS_HEADERS = {
@@ -423,7 +423,7 @@ export default async (req) => {
     );
   }
 
-  const resolvedModel = model || 'claude-sonnet-4-7';
+  const resolvedModel = model || 'claude-sonnet-4-6';
   const config = MODEL_CONFIG[resolvedModel];
   if (!config) {
     return new Response(
