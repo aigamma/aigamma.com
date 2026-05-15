@@ -91,7 +91,7 @@ export const PAGES = {
     vite: 'seasonality',
     html: 'seasonality/index.html',
     title: 'Seasonality',
-    topnav: { key: 'seasonality', label: 'Seasonality' },
+    topnav: { key: 'seasonality', label: 'Season' },
     mobile_desc: 'SPX intraday and daily seasonality grids',
   },
 

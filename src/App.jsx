@@ -443,9 +443,10 @@ export default function App() {
   return (
     <div className="app-shell">
       <header className="site-header">
-        {/* Header is now just the right-side nav cluster: the six
-            promoted TopNav buttons (Vol, Earnings, Scan,
-            Rotations, VIX, Seasonality) plus the Menu trigger.
+        {/* Header is now just the right-side nav cluster: the five
+            internal TopNav buttons (Vol, Earnings, Scan, Rotations,
+            Season) plus the external yellow Philosophy pill plus
+            the Menu trigger.
             The aigamma wordmark and the dealer-gamma regime status
             pill that used to sit in the upper-left both moved into
             the LevelsPanel card directly below — the wordmark
@@ -463,7 +464,7 @@ export default function App() {
             space-between with .top-nav using display: contents) is
             captured in src/styles/theme.css beside the .site-header
             and .top-nav rules. */}
-        <TopNav landing />
+        <TopNav />
         <Menu regimeIndicator={regimeIndicatorObj} />
       </header>
 

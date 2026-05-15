@@ -397,6 +397,17 @@ body {
   color: var(--accent-purple);
 }
 
+/* Yellow variant carries the off-site PHILOSOPHY pill (the only
+   top-nav item that exits aigamma.com). The accent-amber color
+   is reserved across the platform for "this is different from
+   the rest of the row" — the alternating blue/white striping
+   is internal navigation; the yellow pill flags an outbound
+   link to worldthought.com so a reader doesn't get pulled off
+   the site by accident. */
+.top-nav__item--yellow {
+  color: var(--accent-amber);
+}
+
 .top-nav__item--blue:hover,
 .top-nav__item--blue:focus-visible {
   background-color: rgba(74, 158, 255, 0.12);
@@ -412,6 +423,12 @@ body {
 .top-nav__item--purple:hover,
 .top-nav__item--purple:focus-visible {
   background-color: rgba(191, 127, 255, 0.08);
+  outline: none;
+}
+
+.top-nav__item--yellow:hover,
+.top-nav__item--yellow:focus-visible {
+  background-color: rgba(241, 196, 15, 0.12);
   outline: none;
 }
 
