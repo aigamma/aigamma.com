@@ -2,7 +2,7 @@ import { useCallback, useEffect, useLayoutEffect, useRef, useState } from 'react
 
 // Interactive chat bound to /api/chat (the Netlify Function proxy to
 // Anthropic's streaming messages endpoint). Two tabs — Quick Analysis
-// (Sonnet 4.6) and Deep Analysis (Opus 4.6) — mirror about.aigamma.com's
+// (Sonnet 4.7) and Deep Analysis (Opus 4.7) — mirror about.aigamma.com's
 // chat affordance so the shared design language carries across the
 // property. Quick is the default because for a public chat exposed on a
 // live dashboard, Sonnet is the faster and cheaper path under arbitrary
@@ -34,8 +34,8 @@ import { useCallback, useEffect, useLayoutEffect, useRef, useState } from 'react
 const CHAT_ENDPOINT = '/api/chat';
 
 const MODELS = {
-  quick: 'claude-sonnet-4-6',
-  deep: 'claude-opus-4-6',
+  quick: 'claude-sonnet-4-7',
+  deep: 'claude-opus-4-7',
 };
 
 // RGB triplets for the --glow-rgb CSS variable that drives the input
