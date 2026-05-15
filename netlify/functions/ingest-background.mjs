@@ -29,7 +29,23 @@ const DIVIDEND_YIELD = 0.0;
 const MAX_PAGES = 300;
 const PAGE_DELAY_MS = 200;
 const SNAPSHOT_BATCH_SIZE = 1000;
-const FETCH_TIMEOUT_MS = 15000;
+// Per-page timeout against Massive. Was 15s through April; raised to 30s on
+// 2026-05-15 after a two-week vendor-side slowdown drove the daily success
+// rate from ~82% (May 1) down to ~3% (May 15) — every page that exceeded the
+// 15s ceiling tripped AbortSignal.timeout, fetchChain bailed on the first
+// timeout, and downstream readers (data.mjs, snapshot.mjs, expiring-gamma.mjs,
+// fixed-strike-iv.mjs) all filter status='success' so the resulting torrent
+// of partial runs rendered the dashboard frozen at yesterday's close. 30s
+// gives slow pages room to land; the 15-minute background-function ceiling
+// is still nowhere near reached because the chain typically clears in
+// 30-90 cumulative seconds even with the longer per-page cap.
+const FETCH_TIMEOUT_MS = 30000;
+// Single retry on a TimeoutError or 5xx for the same page before bailing.
+// Massive's slowness is transient at the page level — a page that times out
+// at second 30 often returns in well under a second on the immediate retry.
+// Bailing on the first miss (the pre-2026-05-15 behavior) was an unforced
+// concession of an entire snapshot every time a single page stalled.
+const FETCH_RETRY_DELAY_MS = 500;
 
 // US market holidays sourced from lib/market-calendar.mjs (single source of
 // truth across every function that gates on trading days). Refresh that file
@@ -209,6 +225,52 @@ function adjustForHoliday(dateStr) {
 // Phase 2 — paginated fetch from Massive API
 // -----------------------------------------------------------------------------
 
+// Per-page fetch with a single retry on TimeoutError / 5xx. Returns either
+// { ok: true, body } with the parsed JSON, or { ok: false, reason } with a
+// short human-readable error string identical in shape to the partial-reason
+// the caller already records. The two attempts are independent — first
+// attempt uses AbortSignal.timeout(FETCH_TIMEOUT_MS), retry waits
+// FETCH_RETRY_DELAY_MS and applies the same per-attempt timeout. We do not
+// retry on 4xx (other than 429): an explicit Massive 401/403/404 is a real
+// error, not a transient slowness.
+async function fetchPageWithRetry(url, pageNum) {
+  for (let attempt = 1; attempt <= 2; attempt += 1) {
+    try {
+      const res = await fetch(url, {
+        method: 'GET',
+        headers: { Authorization: `Bearer ${MASSIVE_API_KEY}` },
+        signal: AbortSignal.timeout(FETCH_TIMEOUT_MS),
+      });
+      if (res.ok) {
+        const body = await res.json();
+        return { ok: true, body };
+      }
+      let bodySnippet = '';
+      try {
+        const text = await res.text();
+        bodySnippet = text ? ` body="${text.slice(0, 200).replace(/\s+/g, ' ')}"` : '';
+      } catch { /* body read is best-effort */ }
+      const retryable = res.status === 429 || (res.status >= 500 && res.status < 600);
+      const reason = `massive api ${res.status} on page ${pageNum} attempt ${attempt}${bodySnippet}`;
+      if (!retryable || attempt === 2) {
+        console.error(`[ingest] ${reason}`);
+        return { ok: false, reason: `massive api ${res.status} on page ${pageNum}${bodySnippet}` };
+      }
+      console.warn(`[ingest] ${reason}, retrying after ${FETCH_RETRY_DELAY_MS}ms`);
+      await new Promise((r) => setTimeout(r, FETCH_RETRY_DELAY_MS));
+    } catch (err) {
+      const reason = `fetch ${err.name || 'error'} on page ${pageNum} attempt ${attempt}: ${err.message}`;
+      if (attempt === 2) {
+        console.error(`[ingest] ${reason}`);
+        return { ok: false, reason: `fetch ${err.name || 'error'} on page ${pageNum}: ${err.message}` };
+      }
+      console.warn(`[ingest] ${reason}, retrying after ${FETCH_RETRY_DELAY_MS}ms`);
+      await new Promise((r) => setTimeout(r, FETCH_RETRY_DELAY_MS));
+    }
+  }
+  return { ok: false, reason: `unreachable retry-loop exit on page ${pageNum}` };
+}
+
 async function fetchChain(startUrl) {
   const pages = [];
   let url = startUrl;
@@ -217,43 +279,21 @@ async function fetchChain(startUrl) {
   let partialReason = null;
 
   while (url && pagesFetched < MAX_PAGES) {
-    try {
-      const res = await fetch(url, {
-        method: 'GET',
-        headers: { Authorization: `Bearer ${MASSIVE_API_KEY}` },
-        signal: AbortSignal.timeout(FETCH_TIMEOUT_MS),
-      });
-
-      if (!res.ok) {
-        let bodySnippet = '';
-        try {
-          const text = await res.text();
-          bodySnippet = text ? ` body="${text.slice(0, 200).replace(/\s+/g, ' ')}"` : '';
-        } catch { /* body read is best-effort */ }
-        const reason = `massive api ${res.status} on page ${pagesFetched + 1}${bodySnippet}`;
-        console.error(`[ingest] ${reason}`);
-        partial = true;
-        partialReason = reason;
-        break;
-      }
-
-      const body = await res.json();
-      pages.push(body);
-      pagesFetched += 1;
-
-      if (body && body.next_url) {
-        url = body.next_url;
-        if (PAGE_DELAY_MS > 0) {
-          await new Promise((r) => setTimeout(r, PAGE_DELAY_MS));
-        }
-      } else {
-        break;
-      }
-    } catch (err) {
-      const reason = `fetch ${err.name || 'error'} on page ${pagesFetched + 1}: ${err.message}`;
-      console.error(`[ingest] ${reason}`);
+    const result = await fetchPageWithRetry(url, pagesFetched + 1);
+    if (!result.ok) {
       partial = true;
-      partialReason = reason;
+      partialReason = result.reason;
+      break;
+    }
+    pages.push(result.body);
+    pagesFetched += 1;
+
+    if (result.body && result.body.next_url) {
+      url = result.body.next_url;
+      if (PAGE_DELAY_MS > 0) {
+        await new Promise((r) => setTimeout(r, PAGE_DELAY_MS));
+      }
+    } else {
       break;
     }
   }
