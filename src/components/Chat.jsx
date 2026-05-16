@@ -431,7 +431,7 @@ export default function Chat({ context, welcome, glowRgb } = {}) {
           <div className="chat-welcome">
             {mergedWelcome[activeTab]}
             <br /><br />
-            Disclaimer: All information on this page is provided as-is in mathematical description. This site does not provide financial advice and it is not responsible for any perceived advice in these chat sessions.
+            Disclaimer: Everything on this page is mathematics presented as-is. The site does not provide financial advice and is not responsible for any output you might read as advice from this chatbot. Full disclaimer at /disclaimer/.
           </div>
         )}
 
