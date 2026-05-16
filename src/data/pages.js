@@ -127,7 +127,7 @@ export const PAGES = {
     html: 'discrete/index.html',
     title: 'Discrete',
     chat: { surface: 'discrete', prompt: 'netlify/functions/prompts/discrete.mjs' },
-    menu: { section: 'research', desc: 'Binomial and trinomial trees, SVI and SSVI' },
+    menu: { section: 'research', desc: 'Binomial and trinomial trees, three SVI parameterizations (raw, natural, JW), SSVI joint surface' },
   },
   '/garch/': {
     vite: 'garch',
@@ -148,8 +148,8 @@ export const PAGES = {
     html: 'local/index.html',
     title: 'Local',
     chat: { surface: 'local', prompt: 'netlify/functions/prompts/local.mjs' },
-    menu: { section: 'research', desc: 'Dupire extraction, local vol pricing, slice viewer, forward-smile pathology' },
-    mobile_desc: 'Dupire extraction, pricing, slices, forward-smile pathology',
+    menu: { section: 'research', desc: 'Dupire extraction, MC pricing self-check, slice viewer, forward-smile pathology, whole-surface heatmap' },
+    mobile_desc: 'Dupire extraction, pricing, slices, forward-smile pathology, surface heatmap',
   },
   '/regime/': {
     vite: 'regime',
@@ -163,7 +163,7 @@ export const PAGES = {
     html: 'risk/index.html',
     title: 'Risk',
     chat: { surface: 'risk', prompt: 'netlify/functions/prompts/risk.mjs' },
-    menu: { section: 'research', desc: 'Vanna-Volga and second-order Greeks' },
+    menu: { section: 'research', desc: 'Cross-model Greeks, four-delta comparison, Vanna-Volga, second-order Greeks' },
   },
   '/rough/': {
     vite: 'rough',
