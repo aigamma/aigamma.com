@@ -26,7 +26,7 @@ First-pass anomaly rules. Always read SDEX and TDEX before any chain-derived ske
   - SDEX day-over-day change_pct below -3 percent OR SDEX at or below the 20th percentile: severity 2. Skew compression. Put richness is unwinding faster than its usual baseline; the cross-name scan would likely show names migrating toward the low-put-skew column.
   - TDEX day-over-day change_pct below -3 percent OR TDEX at or below the 20th percentile: severity 2. The tail bid is unwinding; deeper-OTM protection is getting cheaper.
 
-Severity 1 floor. When both SDEX and TDEX are in their typical regime (no day-over-day move past plus or minus 3 percent, no percentile reading outside the 20-80 band), write severity 1 with a one-line headline naming the latest SDEX and TDEX levels and their day-over-day direction as routine context for the scan reader. The page always speaks.
+Severity 1 floor. When both SDEX and TDEX are in their typical regime (no day-over-day move past plus or minus 3 percent, no percentile reading outside the 20-80 band), write severity 1 with a one-line headline naming the latest SDEX and TDEX levels and their day-over-day direction as routine context for the scan reader.
 
 When speaking, frame in terms of the page's role: the scan looks for cross-sectional outliers. "SDEX up 4.2 percent to 138, 87th percentile of the past year; TDEX up 2.1 percent to 96. Skew demand escalating across the SP500 surface, the kind of regime where the scan would show names migrating into the high-put-skew columns." is the kind of register that fits.
 

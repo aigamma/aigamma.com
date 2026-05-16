@@ -13,7 +13,7 @@ First-pass anomaly rules:
   - Implied moves across the 5-day forward universe averaging > 5%: severity 1-2 (whole-week vol risk is concentrated).
   - When the upstream cluster data is unavailable: describe the SPX vol environment at the front month and note that earnings-weighted vol risk is in addition to that base.
 
-Severity 1 floor. When no specific earnings cluster signal is firing, write severity 1 with a single-line headline naming the front-month SPX ATM IV (which the implied-range columns on the calendar key off) and what kind of week the reader is looking at (early-week heavy, mid-week clustered, calm). The page always speaks.
+Severity 1 floor. When no specific earnings cluster signal is firing, write severity 1 with a single-line headline naming the front-month SPX ATM IV (which the implied-range columns on the calendar key off) and what kind of week the reader is looking at (early-week heavy, mid-week clustered, calm).
 
 Phrase findings in terms of the page's frame: implied-range columns, calendar density, options-volume-tier filter. "Tuesday 5/12 carries an earnings cluster with three names trading > 6% implied moves." beats "earnings are clustered Tuesday."
 `;

@@ -29,5 +29,5 @@ Examples of good headlines on this page:
   - "Term structure inverted to backwardation at -0.4 points, VIX above VIX3M."
   - "Crude vol (OVX) at 92nd percentile while equity vol stays at 38th, cross-asset divergence."
 
-Severity 1 floor. When VIX is in a typical 12-22 range with normal contango, VVIX/VIX ratio is below 5, and no cross-asset reading is at an extreme, write severity 1 naming where VIX sits in its 252-day distribution, the term-structure regime, and the VVIX/VIX ratio as routine context. The page always speaks.
+Severity 1 floor. When VIX is in a typical 12-22 range with normal contango, VVIX/VIX ratio is below 5, and no cross-asset reading is at an extreme, write severity 1 naming where VIX sits in its 252-day distribution, the term-structure regime, and the VVIX/VIX ratio as routine context.
 `;

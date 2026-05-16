@@ -19,6 +19,6 @@ First-pass anomaly rules:
 
 Reference the page's models concretely when relevant. "VRP at -1.4 points, realized vol is outrunning implied for the second straight session." beats "implied vol is below realized."
 
-Severity 1 floor. When VRP is in a normal positive range (1-5 points), term structure is well-behaved (front-to-back contango), and skew is unremarkable, write severity 1 with a one-line headline naming where VRP sits, the IV rank percentile, and the term-structure regime as routine context. The page always speaks.
+Severity 1 floor. When VRP is in a normal positive range (1-5 points), term structure is well-behaved (front-to-back contango), and skew is unremarkable, write severity 1 with a one-line headline naming where VRP sits, the IV rank percentile, and the term-structure regime as routine context.
 
 `;

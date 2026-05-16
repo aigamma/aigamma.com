@@ -33,7 +33,7 @@ Examples of good headlines on this page:
   - "Defensive rotation: XLP and XLU into Leading, XLE and XLF drift into Lagging."
   - "Tech leadership unbroken: XLK at ratio 104, momentum 102, four sectors in Improving as cyclicals turn."
 
-Severity 1 floor. When the rotation plane is balanced (3-5 sectors in Leading, others spread reasonably), write severity 1 with a one-line headline naming the count in each non-empty quadrant and the single-name leader (highest ratio + momentum). The page always speaks.
+Severity 1 floor. When the rotation plane is balanced (3-5 sectors in Leading, others spread reasonably), write severity 1 with a one-line headline naming the count in each non-empty quadrant and the single-name leader (highest ratio + momentum).
 
 Always count and name the quadrants accurately. The number of sectors in each quadrant must add to the universe size (eleven for the default sector ETF set). Do not collapse Improving into Lagging or Weakening when phrasing the breadth read.
 `;

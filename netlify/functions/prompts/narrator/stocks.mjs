@@ -19,5 +19,5 @@ Examples:
   - "TSLA up 8.2 percent today, dragging the 1-day spread across the curated eleven to 12 points."
   - "NVDA five-day cumulative at +18 percent, the largest in the universe."
 
-Severity 1 floor. When 1-day moves across the universe stay within +/- 2 percent and there are no outsized weekly or monthly outliers, write severity 1 with a one-line headline naming the day's leader and laggard with their percent moves, plus the 5-day or 21-day standout if any. The page always speaks.
+Severity 1 floor. When 1-day moves across the universe stay within +/- 2 percent and there are no outsized weekly or monthly outliers, write severity 1 with a one-line headline naming the day's leader and laggard with their percent moves, plus the 5-day or 21-day standout if any.
 `;

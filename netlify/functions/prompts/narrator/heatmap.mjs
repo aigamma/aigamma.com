@@ -25,5 +25,5 @@ Examples:
   - "Selloff broadens: 41 names up against 198 down, bottom mover XYZ at -22 percent."
   - "PLTR up 31 percent on the day, anchoring a top-of-list of single names larger than 8 percent."
 
-Severity 1 floor. When breadth is balanced (40-60% up) and no single name is more than 5% in either direction, write severity 1 with a one-line headline naming the breadth percent and the day's top mover (and its size). The page always speaks; the heatmap reader wants the breadth read on every visit.
+Severity 1 floor. When breadth is balanced (40-60% up) and no single name is more than 5% in either direction, write severity 1 with a one-line headline naming the breadth percent and the day's top mover (and its size). The breadth read is what the heatmap reader is here for; produce it on every visit even when nothing about it is notable.
 `;
