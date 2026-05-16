@@ -656,6 +656,22 @@ body {
   border-left-color: var(--text-primary);
 }
 
+/* Yellow variant for the off-site PHILOSOPHY row at the bottom of the
+   RESEARCH dropdown. Matches the desktop TopNav .top-nav__item--yellow
+   pill: accent-amber color reserved across the platform for the
+   "this row exits aigamma.com" signal, so a reader scanning the blue
+   research list sees the yellow row and reads it as the lone external
+   destination in the cluster before the egress About row. */
+.mobile-nav__item--philosophy {
+  color: var(--accent-amber);
+}
+
+.mobile-nav__item--philosophy:hover,
+.mobile-nav__item--philosophy:focus-visible {
+  background-color: rgba(241, 196, 15, 0.10);
+  border-left-color: var(--accent-amber);
+}
+
 .mobile-nav__item--disclaimer {
   color: var(--accent-coral);
 }

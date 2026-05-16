@@ -119,6 +119,19 @@ const ABOUT_ITEM = {
   desc: 'Created by Eric Allione',
 };
 
+// Pinned at the bottom of the RESEARCH dropdown, immediately above the
+// divider + About row. Mirrors the yellow PHILOSOPHY pill in the desktop
+// TopNav (the only top-nav item that exits aigamma.com). The label is the
+// bare word "Philosophy" rather than the /convention/ used for internal
+// aigamma.com routes because worldthought.com is an external companion
+// site, not a directory on this site; wrapping it in slashes would
+// falsely imply a /philosophy/ page exists here.
+const PHILOSOPHY_ITEM = {
+  href: 'https://worldthought.com/',
+  label: 'Philosophy',
+  desc: "Eric's companion philosophy site",
+};
+
 // Pinned at the bottom of the TOOLS dropdown, immediately above the
 // divider + About row. Mirrors the Extensions section in the desktop
 // Menu dropdown (see src/components/Menu.jsx) so the two browser
@@ -368,6 +381,15 @@ export default function MobileNav({ regimeIndicator } = {}) {
               <span className="mobile-nav__item-desc">{item.desc}</span>
             </a>
           ))}
+          <a
+            href={PHILOSOPHY_ITEM.href}
+            className="mobile-nav__item mobile-nav__item--philosophy"
+            role="menuitem"
+            onClick={() => setOpenPanel(null)}
+          >
+            <span className="mobile-nav__item-path">{PHILOSOPHY_ITEM.label}</span>
+            <span className="mobile-nav__item-desc">{PHILOSOPHY_ITEM.desc}</span>
+          </a>
           <div className="mobile-nav__divider" role="presentation" />
           <a
             href={ABOUT_ITEM.href}
