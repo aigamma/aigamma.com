@@ -23,7 +23,7 @@
 // ~$20-50 / year for the whole narration layer.
 
 import { gatherPageState, NARRATOR_PAGES, resetSharedCache } from './lib/page-state.mjs';
-import { NARRATOR_PERSONA } from './prompts/narrator/_persona.mjs';
+import { NARRATOR_PERSONA, NARRATOR_METRIC_DEFINITIONS } from './prompts/narrator/_persona.mjs';
 
 import landingPrompt from './prompts/narrator/landing.mjs';
 import tacticalPrompt from './prompts/narrator/tactical.mjs';
@@ -221,7 +221,7 @@ async function narrateOne(page) {
       throw new Error(`no prompt registered for ${page}`);
     }
     const model = page === '/' ? LANDING_MODEL : FEEDER_MODEL;
-    const systemPrompt = NARRATOR_PERSONA + '\n\n' + promptBody;
+    const systemPrompt = NARRATOR_PERSONA + '\n\n' + NARRATOR_METRIC_DEFINITIONS + '\n\n' + promptBody;
     // Compact JSON (no indentation) for the user message: the model's
     // tokenizer sees the same structure either way, but pretty-printing
     // inflates input-token count ~3x for nested objects with no semantic

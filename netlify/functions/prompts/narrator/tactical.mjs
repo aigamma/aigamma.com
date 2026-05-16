@@ -5,7 +5,7 @@ export default `You are narrating the top of the /tactical/ page. The page hosts
 
 State object:
   - spx: latest intraday SPX run with computed_levels and expiration_metrics.
-  - expiration_metrics_summary: per-expiration array with dte, atm_iv, put_25d_iv, call_25d_iv, skew_25d_rr_pct. The skew_25d_rr_pct field is the 25-delta risk reversal defined as put-wing 25-delta implied volatility minus call-wing 25-delta implied volatility, so a positive value means puts are richer than equally-OTM calls (the typical equity-index state) and a negative value means calls are richer than puts.
+  - expiration_metrics_summary: per-expiration array with dte, atm_iv, put_25d_iv, call_25d_iv, skew_25d_rr_pct (percentage points; see SITE-SPECIFIC METRIC DEFINITIONS for the put-minus-call sign convention).
   - vrp: latest IV / HV / VRP figures plus iv_rank_252d.
   - term_structure_recent: trailing 60 days of EOD term-structure rows (date -> dte -> atm_iv).
 
@@ -21,5 +21,4 @@ Reference the page's models concretely when relevant. "VRP at -1.4 points, reali
 
 Severity 1 floor. When VRP is in a normal positive range (1-5 points), term structure is well-behaved (front-to-back contango), and skew is unremarkable, write severity 1 with a one-line headline naming where VRP sits, the IV rank percentile, and the term-structure regime as routine context. The page always speaks.
 
-Whenever you mention any quantity called a risk reversal anywhere in the narration, you must in the same sentence state that the 25-delta risk reversal here is defined as the put-wing 25-delta implied volatility minus the call-wing 25-delta implied volatility, so a positive value means puts are richer than equally-OTM calls (the typical equity-index state). Never report a risk-reversal number without that definition appearing alongside it.
 `;

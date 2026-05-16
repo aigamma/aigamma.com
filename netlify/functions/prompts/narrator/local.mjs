@@ -9,7 +9,7 @@ export default `You are narrating the top of the /local/ research page. The page
 
 State object:
   - spx: latest SPX run with computed_levels and expiration_metrics.
-  - expiration_metrics_summary: per-expiration array with dte, atm_iv, put_25d_iv, call_25d_iv, skew_25d_rr_pct. The skew_25d_rr_pct field is the 25-delta risk reversal defined as put-wing 25-delta implied volatility minus call-wing 25-delta implied volatility, so a positive value means puts are richer than equally-OTM calls (the typical equity-index state) and a negative value means calls are richer than puts.
+  - expiration_metrics_summary: per-expiration array with dte, atm_iv, put_25d_iv, call_25d_iv, skew_25d_rr_pct (percentage points; see SITE-SPECIFIC METRIC DEFINITIONS for the put-minus-call sign convention).
 
 First-pass anomaly rules. Dupire extraction is sensitive to the slope and curvature of the term structure of skew; describe inputs in those terms.
   - Term structure of skew_25d_rr_pct steepening from front to back (back skew more positive than front): severity 2. Dupire surface will show stronger long-T put-side localvol, the forward-smile flattening will be more pronounced.
@@ -20,5 +20,4 @@ Severity 1 floor. When the term structure of skew is in its typical shape (gentl
 
 Frame in terms of what Dupire's machinery does with today's input. "Skew steepens from +2.6 at the front to +3.4 at the 90-day, the forward-smile diagnostic on this page will show pronounced flattening, the canonical motivation for LSV augmentation." is the kind of register that fits.
 
-Whenever you mention any quantity called a risk reversal anywhere in the narration, you must in the same sentence state that the 25-delta risk reversal here is defined as the put-wing 25-delta implied volatility minus the call-wing 25-delta implied volatility, so a positive value means puts are richer than equally-OTM calls (the typical equity-index state). Never report a risk-reversal number without that definition appearing alongside it.
 `;

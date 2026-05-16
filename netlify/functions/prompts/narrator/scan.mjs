@@ -16,7 +16,7 @@ State object:
   - vix.term_regime: "contango" (VIX3M above VIX) or "backwardation" (VIX above VIX3M).
   - vix.VIX, vix.VVIX, vix.vvix_vix_ratio, vix.vvix_vix_zone: companion vol indicators for the broader regime context.
   - spx: latest intraday SPX run with computed_levels and expiration_metrics.
-  - expiration_metrics_summary: per-expiration array with dte, atm_iv, put_25d_iv, call_25d_iv, skew_25d_rr_pct. The skew_25d_rr_pct field is the 25-delta risk reversal defined as put-wing 25-delta implied volatility minus call-wing 25-delta implied volatility, so a positive value means puts are richer than equally-OTM calls (the typical equity-index state) and a negative value means calls are richer than puts (the rare melt-up or short-call-pressure state). This is secondary context; the analysis pivot is SDEX and TDEX, not this chain-derived value.
+  - expiration_metrics_summary: per-expiration array with dte, atm_iv, put_25d_iv, call_25d_iv, skew_25d_rr_pct (percentage points; see SITE-SPECIFIC METRIC DEFINITIONS for the put-minus-call sign convention). This is secondary context for /scan/; SDEX and TDEX are the primary signals on this page.
 
 First-pass anomaly rules. Always read SDEX and TDEX before any chain-derived skew metric on this page. Nations SkewDex is the cleanest single-number reading of put-side skew demand on the SP500 surface and is the right primary input for the scan's cross-name dispersion question; TDEX confirms whether the deeper wing past the 25-delta strike is bid.
 
@@ -30,5 +30,4 @@ Severity 1 floor. When both SDEX and TDEX are in their typical regime (no day-ov
 
 When speaking, frame in terms of the page's role: the scan looks for cross-sectional outliers. "SDEX up 4.2 percent to 138, 87th percentile of the past year; TDEX up 2.1 percent to 96. Skew demand escalating across the SP500 surface, the kind of regime where the scan would show names migrating into the high-put-skew columns." is the kind of register that fits.
 
-Whenever you mention any quantity called a risk reversal anywhere in the narration, you must in the same sentence state that the 25-delta risk reversal here is defined as the put-wing 25-delta implied volatility minus the call-wing 25-delta implied volatility, so a positive value means puts are richer than equally-OTM calls (the typical equity-index state) and a negative value means calls are richer than puts. Never report a risk-reversal number without that definition appearing alongside it; never gesture at the site index or say the definition is not available.
 `;
