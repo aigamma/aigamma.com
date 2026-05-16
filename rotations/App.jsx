@@ -61,7 +61,7 @@ export default function App() {
         <div className="page-brand">
           <span
             className="page-badge"
-            title="Rotations · ratio + momentum vs SPX"
+            title="Sector Rotations · SPDR sector ETFs ratio + momentum vs SPY, plus 1D / 1W / 1M performance bars"
           >
             <span className="page-badge__desktop-text">Rotations</span>
             <span className="page-badge__mobile-text">Rotations</span>
@@ -169,7 +169,7 @@ export default function App() {
 
       <footer className="page-footer">
         <span className="page-footer-line">
-          AI Gamma · Sector Rotations · daily tail vs SPX · v0.1.0
+          AI Gamma · Sector Rotations · SPDR sector ETFs ratio + momentum vs SPY · v0.1.1
         </span>
         <a href="/disclaimer/" className="page-footer-disclaimer">Disclaimer</a>
         <a href="/" className="page-footer-home">Return Home</a>

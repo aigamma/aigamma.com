@@ -122,7 +122,7 @@ export default function App() {
         <div className="page-brand">
           <span
             className="page-badge"
-            title="Rough Vol · fractional-Brownian / Volterra model zoo"
+            title="Rough Vol · rBergomi simulator, skew scaling-law fit on today's SVI surface, RFSV structure-function diagnostic, three-estimator Hurst triangulation"
           >
             <span className="page-badge__desktop-text">Rough Vol</span>
             <span className="page-badge__mobile-text">Rough Vol</span>

@@ -93,7 +93,7 @@ export default function App() {
         <div className="page-brand">
           <span
             className="page-badge"
-            title="VIX: full profile catalog of VIX models"
+            title="VIX · term structure, contango history, VVIX/VIX vol-of-vol, VRP-for-VIX, log-VIX OU, cross-asset vol, Nations SDEX/TDEX, regime classifier, Cboe strategy benchmarks"
           >
             <span className="page-badge__desktop-text">VIX</span>
             <span className="page-badge__mobile-text">VIX</span>

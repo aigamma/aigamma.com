@@ -73,7 +73,7 @@ export default function App() {
         <div className="page-brand">
           <span
             className="page-badge"
-            title="Regime · regime-identification model zoo"
+            title="Vol Regimes · Gaussian Mixture (EM), Hamilton Markov-Switching, Wasserstein K-Means on rolling 20-day windows"
           >
             <span className="page-badge__desktop-text">Regime</span>
             <span className="page-badge__mobile-text">Regime</span>
