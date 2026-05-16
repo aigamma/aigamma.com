@@ -184,7 +184,7 @@ export default function App() {
 
       <footer className="page-footer">
         <span className="page-footer-line">
-          AI Gamma · jump page · five-model lineage · v0.2.0
+          AI Gamma · smile-fitting models · five-model lineage (Variance Gamma, Heston, Bates SVJ, Kou, Merton) · v0.2.1
         </span>
         <a href="/disclaimer/" className="page-footer-disclaimer">Disclaimer</a>
         <a href="/" className="page-footer-home">Return Home</a>

@@ -121,7 +121,7 @@ export default function App() {
         <div className="page-brand">
           <span
             className="page-badge"
-            title="Local Vol: Dupire pricing, viewer, forward-smile"
+            title="Local Vol: Dupire pricing self-check, slice viewer, forward-smile pathology, whole-surface heatmap"
           >
             <span className="page-badge__desktop-text">Local Vol</span>
             <span className="page-badge__mobile-text">Local Vol</span>
@@ -179,7 +179,7 @@ export default function App() {
 
       <footer className="page-footer">
         <span className="page-footer-line">
-          AI Gamma · local vol page · dupire extraction + pricing · v0.1.0
+          AI Gamma · local vol page · Dupire extraction, MC self-check, slices, forward-smile pathology, whole-surface heatmap · v0.2.0
         </span>
         <a href="/disclaimer/" className="page-footer-disclaimer">Disclaimer</a>
         <a href="/" className="page-footer-home">Return Home</a>

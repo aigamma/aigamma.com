@@ -180,7 +180,7 @@ export default function App() {
 
       <footer className="page-footer">
         <span className="page-footer-line">
-          AI Gamma · rough vol page · three-method zoo · v0.1.0
+          AI Gamma · rough vol page · four-method zoo (rBergomi simulator, skew scaling-law fit, RFSV diagnostic, three-estimator Hurst triangulation) · v0.2.0
         </span>
         <a href="/disclaimer/" className="page-footer-disclaimer">Disclaimer</a>
         <a href="/" className="page-footer-home">Return Home</a>
