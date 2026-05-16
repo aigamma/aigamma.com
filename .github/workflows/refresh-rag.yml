@@ -1,0 +1,123 @@
+name: Refresh RAG corpus
+
+# Self-updating RAG layer for the aigamma.com chat domain.
+#
+# Re-ingests every chunked surface (per-page system prompts, global
+# prompts, the about.aigamma.com index.html prose) into the shared
+# Supabase rag_documents corpus that powers every chatbot on
+# aigamma.com AND about.aigamma.com. Idempotent on chunk content hash:
+# unchanged chunks skip the embed round-trip, only new or revised
+# content pays the gte-small Supabase Edge Function call.
+#
+# Triggers (three, redundant by design so no single fault breaks the
+# self-updating contract):
+#   1. schedule: '0 4 * * *' - 04:00 UTC daily, safety-net heartbeat.
+#      If push/dispatch never fire, the cron still keeps the corpus
+#      within 24 hours of repo state.
+#   2. push: branches: [main] - every merge to main re-ingests
+#      immediately, so a prompt edit lands in the chat corpus within
+#      one CI run (~3-5 minutes) instead of waiting up to a day.
+#   3. workflow_dispatch - manual trigger from the Actions tab for ad-
+#      hoc refreshes (e.g., after an out-of-band about.aigamma.com
+#      edit that did not land in aigamma.com's push trigger).
+#
+# Cross-repo about.aigamma.com handling: scripts/rag/ingest.mjs
+# includes one source whose canonical path is
+# C:\about.aigamma.com\index.html on the local machine. The walker
+# was refactored to honor RAG_ABOUT_PATH (env var) before falling back
+# to the local Windows path, so this workflow checks out the about
+# repo to a sibling directory and points RAG_ABOUT_PATH at the
+# index.html inside it. about.aigamma.com prose edits land in the
+# shared corpus on the next cron tick (~24h max staleness) without
+# any cross-repo dispatch wiring. For a faster turnaround, a
+# maintainer can manually trigger this workflow from aigamma.com's
+# Actions tab.
+#
+# Required GitHub repository secrets (Settings -> Secrets and
+# variables -> Actions):
+#   SUPABASE_URL          - https://<project-ref>.supabase.co
+#   SUPABASE_SERVICE_KEY  - service-role JWT (bypasses RLS, authenticates
+#                           the rag-ingest Edge Function via shared-secret).
+# (Optional)
+#   RAG_BATCH_SIZE        - chunks per Edge Function call. Defaults to 1
+#                           here (set explicitly below) because larger
+#                           batches trigger WORKER_RESOURCE_LIMIT 546 on
+#                           the gte-small Supabase Edge Function. The
+#                           single-chunk pace is slower (~2-5 min full
+#                           pass vs ~30s) but reliable; idempotent on
+#                           content_hash so re-runs of unchanged chunks
+#                           cost nothing.
+
+on:
+  schedule:
+    - cron: '0 4 * * *'
+  push:
+    branches: [main]
+  workflow_dispatch:
+
+# Avoid stacking concurrent runs when two pushes land in quick
+# succession. The latest pending run wins; the in-progress run is
+# allowed to finish so we never tear down a mid-pass ingest.
+concurrency:
+  group: refresh-rag
+  cancel-in-progress: false
+
+jobs:
+  refresh:
+    name: Re-ingest aigamma + about prose into Supabase
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+
+    env:
+      SUPABASE_URL: ${{ secrets.SUPABASE_URL }}
+      SUPABASE_SERVICE_KEY: ${{ secrets.SUPABASE_SERVICE_KEY }}
+      RAG_BATCH_SIZE: '1'
+      RAG_ABOUT_PATH: ${{ github.workspace }}/about.aigamma.com/index.html
+
+    steps:
+      - name: Checkout aigamma.com (primary)
+        uses: actions/checkout@v4
+
+      - name: Checkout about.aigamma.com (for cross-repo about page prose)
+        uses: actions/checkout@v4
+        with:
+          repository: aigamma/about.aigamma.com
+          path: about.aigamma.com
+
+      - name: Set up Node.js 20
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          cache: 'npm'
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Verify required secrets are present
+        run: |
+          if [ -z "$SUPABASE_URL" ]; then
+            echo "::error::SUPABASE_URL secret is not set. Add it under Settings -> Secrets -> Actions."
+            exit 1
+          fi
+          if [ -z "$SUPABASE_SERVICE_KEY" ]; then
+            echo "::error::SUPABASE_SERVICE_KEY secret is not set. Add it under Settings -> Secrets -> Actions."
+            exit 1
+          fi
+          if [ ! -f "$RAG_ABOUT_PATH" ]; then
+            echo "::error::about.aigamma.com index.html not found at $RAG_ABOUT_PATH. The cross-repo checkout step did not produce the expected file."
+            exit 1
+          fi
+
+      - name: Run RAG ingest (idempotent on chunk content hash)
+        run: node scripts/rag/ingest.mjs
+
+      - name: Summarize run
+        if: always()
+        run: |
+          echo "## Refresh summary" >> "$GITHUB_STEP_SUMMARY"
+          echo "" >> "$GITHUB_STEP_SUMMARY"
+          echo "Trigger: ${{ github.event_name }}" >> "$GITHUB_STEP_SUMMARY"
+          echo "RAG batch size: $RAG_BATCH_SIZE" >> "$GITHUB_STEP_SUMMARY"
+          echo "About-page path: $RAG_ABOUT_PATH" >> "$GITHUB_STEP_SUMMARY"
+          echo "" >> "$GITHUB_STEP_SUMMARY"
+          echo "Both aigamma.com and about.aigamma.com chat surfaces query the same Supabase rag_documents corpus, so this single ingest refreshes both sites." >> "$GITHUB_STEP_SUMMARY"

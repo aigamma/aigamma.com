@@ -78,7 +78,7 @@ The following MCP connections are available and can be used for exploration, deb
 
 The on-site chatbot (`src/components/Chat.jsx`, mounted on every page) calls `/api/chat` (Netlify Function `netlify/functions/chat.mjs`), which streams Sonnet/Opus responses from Anthropic. Three augmentations sit on top of that streaming proxy: (1) per-IP rate limiting at 5 req/min via the `check_rate_limit()` Postgres RPC, (2) RAG retrieval from Supabase via the `rag-search` Edge Function before each Anthropic call, and (3) per-turn `chat_logs` writes capturing query, retrieved chunks, response, timing, and tool uses for the iteration loop.
 
-The RAG retrieval layer lives entirely inside Supabase. Two Edge Functions: `rag-search` (public, embeds the query via the Edge Runtime's built-in `Supabase.ai.Session('gte-small')`, runs SQL similarity, returns top-K chunks) and `rag-ingest` (auth-gated, called only by the local `scripts/rag/ingest.mjs` walker, embeds + upserts batches). The corpus lives in `public.rag_documents` (pgvector 384-dim HNSW + tsvector keyword fallback). Per-page system prompts in `netlify/functions/prompts/*.mjs` are the source of truth — RAG augments those prompts with retrieved math/equation/navigation context, does not replace them.
+The RAG retrieval layer lives entirely inside Supabase. Two Edge Functions: `rag-search` (public, embeds the query via the Edge Runtime's built-in `Supabase.ai.Session('gte-small')`, runs SQL similarity, returns top-K chunks) and `rag-ingest` (auth-gated, called only by the local `scripts/rag/ingest.mjs` walker, embeds + upserts batches). The corpus lives in `public.rag_documents` (pgvector 384-dim HNSW + tsvector keyword fallback). Per-page system prompts in `netlify/functions/prompts/*.mjs` are the source of truth - RAG augments those prompts with retrieved math/equation/navigation context, does not replace them.
 
 ### When to re-ingest
 
@@ -86,27 +86,50 @@ The RAG corpus needs re-embedding after edits to indexed surfaces. The ingest wa
 
 **Run the ingest after editing any of these files:**
 
-- **Per-page system prompts** — `netlify/functions/prompts/{main,garch,regime,rough,local,jump,risk,discrete,tactical}.mjs`. These are the 9 chat-enabled pages' prompt bodies. Each chunk is surface-pinned so retrieval routing on the active page lands on the right page's content.
-- **Global prompt blocks** — `netlify/functions/prompts/{core_persona,behavior,site_nav}.mjs`. These are applied to every chat surface regardless of which page the reader is on. Edits propagate to every chat session after the next ingest.
+- **Per-page system prompts** - `netlify/functions/prompts/{main,garch,regime,rough,local,jump,risk,discrete,tactical}.mjs`. These are the 9 chat-enabled pages' prompt bodies. Each chunk is surface-pinned so retrieval routing on the active page lands on the right page's content.
+- **Global prompt blocks** - `netlify/functions/prompts/{core_persona,behavior,site_nav}.mjs`. These are applied to every chat surface regardless of which page the reader is on. Edits propagate to every chat session after the next ingest.
 
 **Do NOT re-run the ingest after editing:**
 
-- **`src/data/pages.js`** — the canonical page registry; structural data, not RAG-indexed. Consumed at module-load time by `vite.config.js`, `Menu.jsx`, `MobileNav.jsx`, `TopNav.jsx`, and `chat.mjs` directly.
-- **`src/data/site-index.txt`** — loaded at module init by `chat.mjs` (`readFileSync`) and injected as the `[SITE INDEX]` block into every system prompt. The runtime layer is always preferred over RAG retrieval for this file; updates are picked up automatically on the next function cold-start (or on the next deploy).
-- **`netlify/functions/prompts/scope_blocks.mjs`** — the `[STRICT SCOPE DISCIPLINE]`, `[SITE-LEVEL QUESTION HANDLING]`, and `[SITE INDEX FAILSAFE]` constants composed at request time. Always present in every system prompt, so there is nothing to retrieve.
-- **`netlify/functions/chat.mjs`** — the chat function logic itself; not RAG content. Picked up automatically on the next deploy.
-- **React components, `vite.config.js`, CSS files, hooks, slot components, page `App.jsx` files** — all UI / wiring code. The chatbot doesn't retrieve from these.
-- **Comments in any file** — comments are not part of the prompt template literals the ingest walker extracts, so even comment edits in indexed files don't change content hashes.
+- **`src/data/pages.js`** - the canonical page registry; structural data, not RAG-indexed. Consumed at module-load time by `vite.config.js`, `Menu.jsx`, `MobileNav.jsx`, `TopNav.jsx`, and `chat.mjs` directly.
+- **`src/data/site-index.txt`** - loaded at module init by `chat.mjs` (`readFileSync`) and injected as the `[SITE INDEX]` block into every system prompt. The runtime layer is always preferred over RAG retrieval for this file; updates are picked up automatically on the next function cold-start (or on the next deploy).
+- **`netlify/functions/prompts/scope_blocks.mjs`** - the `[STRICT SCOPE DISCIPLINE]`, `[SITE-LEVEL QUESTION HANDLING]`, and `[SITE INDEX FAILSAFE]` constants composed at request time. Always present in every system prompt, so there is nothing to retrieve.
+- **`netlify/functions/chat.mjs`** - the chat function logic itself; not RAG content. Picked up automatically on the next deploy.
+- **React components, `vite.config.js`, CSS files, hooks, slot components, page `App.jsx` files** - all UI / wiring code. The chatbot doesn't retrieve from these.
+- **Comments in any file** - comments are not part of the prompt template literals the ingest walker extracts, so even comment edits in indexed files don't change content hashes.
 
 **Run the ingest with `--prune` after retiring a prompt** (deleting a `.mjs` file from `netlify/functions/prompts/` because a page was retired). The `--prune` flag deletes `rag_documents` rows whose source files no longer exist; without it, retired prompts leave orphaned rows in Supabase that can surface as false similarity hits on queries about related topics. Either edit `C:\s\ingest.bat` to append `--prune` to the `node` line, or run `node scripts/rag/ingest.mjs --prune` directly.
 
-**Why the asymmetry?** The chat function delivers content to the model in two channels: (1) a fixed system prompt assembled at request time from CORE_PERSONA, SITE_NAVIGATION_CONTEXT, the runtime SITE INDEX (or the failsafe constant), the per-page prompt body, STRICT_SCOPE_DISCIPLINE, SITE_LEVEL_QUESTION_HANDLING, and BEHAVIORAL_CONSTRAINTS in that order, and (2) RAG-retrieved chunks pulled from Supabase by similarity match against the user's query. Channel 1 is hand-composed and doesn't need re-ingestion when its source files change — the next chat call just reads the new file. Channel 2 is what re-ingestion updates. The per-page prompts feed channel 2 because they have surface-specific content that should be retrievable by similarity (a question about Heston while the reader is on `/tactical/` might pull in a chunk from `smile.mjs` even though the reader's surface routes to `tactical.mjs` — that's the value of the corpus). Always-present blocks don't need retrieval because they're always present.
+**Why the asymmetry?** The chat function delivers content to the model in two channels: (1) a fixed system prompt assembled at request time from CORE_PERSONA, SITE_NAVIGATION_CONTEXT, the runtime SITE INDEX (or the failsafe constant), the per-page prompt body, STRICT_SCOPE_DISCIPLINE, SITE_LEVEL_QUESTION_HANDLING, and BEHAVIORAL_CONSTRAINTS in that order, and (2) RAG-retrieved chunks pulled from Supabase by similarity match against the user's query. Channel 1 is hand-composed and doesn't need re-ingestion when its source files change - the next chat call just reads the new file. Channel 2 is what re-ingestion updates. The per-page prompts feed channel 2 because they have surface-specific content that should be retrievable by similarity (a question about Heston while the reader is on `/tactical/` might pull in a chunk from `smile.mjs` even though the reader's surface routes to `tactical.mjs` - that's the value of the corpus). Always-present blocks don't need retrieval because they're always present.
 
 See `docs/rag-architecture.md` for the full topology, schema, and operational notes (storage layer, retrieval RPCs, the two Edge Functions, ingestion walker internals).
 
+### Self-updating RAG (daily cron + push trigger)
+
+The ingest no longer requires a human at a keyboard. `.github/workflows/refresh-rag.yml` runs `scripts/rag/ingest.mjs` on three triggers, redundant by design so no single fault breaks the loop:
+
+1. **schedule** `0 4 * * *` (04:00 UTC daily) - safety-net heartbeat. Bounds the corpus's staleness at 24 hours even if no push lands and no maintainer dispatches manually.
+2. **push** to `main` - every merge re-ingests immediately, so an edit to any indexed surface (per-page prompts, global prompts, the about.aigamma.com prose) lands in the chat corpus within one CI run (~3-5 minutes). This eliminates the "I edited a prompt but forgot to re-ingest" failure mode.
+3. **workflow_dispatch** - manual trigger from the Actions tab (or `gh workflow run refresh-rag.yml`) for ad-hoc refreshes.
+
+The walker is idempotent on chunk `content_hash`, so the push-trigger overhead on a code-only change (a React component edit, a vite.config bump) is a hash pass with zero embedding round-trips. Only chunks whose content actually changed pay the gte-small Supabase Edge Function call.
+
+**Cross-repo about.aigamma.com.** `scripts/rag/ingest.mjs` includes `about.aigamma.com/index.html` as a source. Locally the walker reads `C:\about.aigamma.com\index.html` directly; in CI it checks out the about repo to a sibling directory and points the walker at it via the `RAG_ABOUT_PATH` env var (the SOURCES entry's `absPath` field honors `process.env.RAG_ABOUT_PATH` before falling back to the local Windows path). Effect: an about-page prose edit pushed to `aigamma/about.aigamma.com` lands in the shared corpus on the next aigamma.com cron tick (~24h max staleness). For faster turnaround, manually dispatch the aigamma.com workflow from its Actions tab. Both chat surfaces (aigamma.com and about.aigamma.com) query the same Supabase `rag_documents` corpus, so one ingest refreshes both.
+
+**Required GitHub repository secrets** on `aigamma/aigamma.com` (Settings -> Secrets and variables -> Actions):
+
+- `SUPABASE_URL` - `https://<project-ref>.supabase.co`.
+- `SUPABASE_SERVICE_KEY` - service-role JWT (bypasses RLS, authenticates the `rag-ingest` Edge Function via the shared-secret bearer check).
+
+Mirror the values from `.env` / `.env.local`. Verify with `gh secret list`; check recent runs with `gh run list --workflow=refresh-rag.yml`. The workflow validates the secrets in a verify-step before running the ingest so a missing secret fails fast with a clear error instead of a cryptic Supabase 401.
+
+**RAG_BATCH_SIZE is hardcoded to 1 in the workflow** because larger batches trigger `WORKER_RESOURCE_LIMIT 546` on the gte-small Supabase Edge Function (the embedding model runs out of compute on bigger batches). Single-chunk pace is slower (~2-5 min full pass vs ~30s) but reliable. Mirrors the local `scripts/ingest.bat` setting.
+
+**The local `scripts/ingest.bat` is retained** for cases where the CI loop is broken or unavailable (no internet on a flight, GitHub Actions outage, an in-flight debug pass that needs a tight feedback loop). Treat it as the manual escape hatch, not the primary workflow.
+
 ### Runtime Site Index
 
-The chat function loads a runtime site index file at `src/data/site-index.txt` and injects its contents into every chat agent's system prompt as a top-level "SITE INDEX" block. The index is the authoritative reference for what pages exist on aigamma.com, organized by methodological category, and is used by the agents to answer site-level questions ("what is on the site", "where is X covered", "is Y implemented") without hallucinating non-existent pages or claiming inability to read the site. The file ships inside the deployed function bundle via the `[functions.chat] included_files = ["src/data/site-index.txt"]` entry in `netlify.toml` — the Netlify bundler cannot trace runtime `readFileSync` calls, so the explicit opt-in is required or the function will crash at cold start with ENOENT (same pattern as the options-volume-roster JSON consumed by `heatmap.mjs` and `scan.mjs`). When a page is added, removed, or substantially reorganized, edit `src/data/site-index.txt` and the per-page prompt's failsafe summary in `netlify/functions/prompts/*.mjs` together so the runtime index and the in-prompt failsafe stay aligned. Do not move the index out of `src/data/` without updating the path in `netlify/functions/chat.mjs`, the `included_files` entry in `netlify.toml`, and this paragraph.
+The chat function loads a runtime site index file at `src/data/site-index.txt` and injects its contents into every chat agent's system prompt as a top-level "SITE INDEX" block. The index is the authoritative reference for what pages exist on aigamma.com, organized by methodological category, and is used by the agents to answer site-level questions ("what is on the site", "where is X covered", "is Y implemented") without hallucinating non-existent pages or claiming inability to read the site. The file ships inside the deployed function bundle via the `[functions.chat] included_files = ["src/data/site-index.txt"]` entry in `netlify.toml` - the Netlify bundler cannot trace runtime `readFileSync` calls, so the explicit opt-in is required or the function will crash at cold start with ENOENT (same pattern as the options-volume-roster JSON consumed by `heatmap.mjs` and `scan.mjs`). When a page is added, removed, or substantially reorganized, edit `src/data/site-index.txt` and the per-page prompt's failsafe summary in `netlify/functions/prompts/*.mjs` together so the runtime index and the in-prompt failsafe stay aligned. Do not move the index out of `src/data/` without updating the path in `netlify/functions/chat.mjs`, the `included_files` entry in `netlify.toml`, and this paragraph.
 
 ## Architectural Reference Documents
 
@@ -124,15 +147,15 @@ When the user says "update all sources of truth," they mean walk this entire sec
 
 ### Canonical registry
 
-**`src/data/pages.js`** — the canonical page registry. Object literal mapping URL paths to per-page metadata: vite entry name, html path, title, chat surface and prompt-module path, menu section and description, mobile-menu description. Every consumer in the next sub-section reads this file at module-load time and computes its per-page literal from `PAGES` / `CHAT_PAGES` / `VITE_ENTRIES`, so adding, renaming, or removing a page is a one-file edit *here* that cascades automatically into those consumers. Anything that still needs a hand-edit despite `pages.js` is listed under "Parallel edits required" below.
+**`src/data/pages.js`** - the canonical page registry. Object literal mapping URL paths to per-page metadata: vite entry name, html path, title, chat surface and prompt-module path, menu section and description, mobile-menu description. Every consumer in the next sub-section reads this file at module-load time and computes its per-page literal from `PAGES` / `CHAT_PAGES` / `VITE_ENTRIES`, so adding, renaming, or removing a page is a one-file edit *here* that cascades automatically into those consumers. Anything that still needs a hand-edit despite `pages.js` is listed under "Parallel edits required" below.
 
 ### Auto-derived from `pages.js` (no edit needed)
 
-- **`vite.config.js`** — `rollupOptions.input` is built from `VITE_ENTRIES`.
-- **`src/components/Menu.jsx`** — desktop dropdown items rendered from `PAGES` filtered by `menu.section`.
-- **`src/components/MobileNav.jsx`** — mobile RESEARCH and TOOLS dropdowns rendered from the same registry.
-- **`src/components/TopNav.jsx`** — the six promoted top-nav buttons; consults `PAGES` to detect promotion / demotion. Most page changes don't touch this; only relevant when promoting or demoting.
-- **`scripts/rag/ingest.mjs`** — the `SOURCES` array of per-page prompt files is derived from `CHAT_PAGES`, so adding a chat-enabled page automatically extends the corpus the next time the ingest runs.
+- **`vite.config.js`** - `rollupOptions.input` is built from `VITE_ENTRIES`.
+- **`src/components/Menu.jsx`** - desktop dropdown items rendered from `PAGES` filtered by `menu.section`.
+- **`src/components/MobileNav.jsx`** - mobile RESEARCH and TOOLS dropdowns rendered from the same registry.
+- **`src/components/TopNav.jsx`** - the six promoted top-nav buttons; consults `PAGES` to detect promotion / demotion. Most page changes don't touch this; only relevant when promoting or demoting.
+- **`scripts/rag/ingest.mjs`** - the `SOURCES` array of per-page prompt files is derived from `CHAT_PAGES`, so adding a chat-enabled page automatically extends the corpus the next time the ingest runs.
 
 If the auto-derived consumers disagree with `pages.js` on something, `pages.js` is wrong (or out of date with the on-disk page directory).
 
@@ -140,29 +163,29 @@ If the auto-derived consumers disagree with `pages.js` on something, `pages.js` 
 
 These files need explicit per-page entries that can't be auto-derived (mostly because ESM `import` statements have to be statically declared at module top level). `check-page-consistency.mjs` validates (1)–(3); the rest require manual review.
 
-1. **`<page>/index.html`, `<page>/main.jsx`, `<page>/App.jsx`, `<page>/slots/*.jsx`** — the page code itself.
-2. **`netlify/functions/chat.mjs`** — the per-page prompt `import` statements at the top of the file and the `SYSTEM_PROMPTS` map keyed by surface name. New chat-enabled pages need both.
-3. **`netlify/functions/prompts/<page>.mjs`** — the per-page chat system prompt module. Only for chat-enabled pages; the dev sandboxes (`/alpha/`, `/beta/`, `/dev/`) intentionally lack chat.
-4. **`netlify/functions/narrate-background.mjs`** — same shape as `chat.mjs` but for the AI page-narrator scaffold (added 2026-05-08): the per-page narrator `import` statements at the top of the file and the `PROMPTS` map keyed by URL path. Page-narrator coverage usually mirrors chat coverage.
-5. **`netlify/functions/prompts/narrator/<page>.mjs`** — the per-page narrator prompt module that drives the top-of-page AI narration. One file per narrator-enabled page; companion to (3).
-6. **`netlify/functions/lib/page-state.mjs`** — the `ASSEMBLERS` map: per-page state-fetcher handlers used by the narrator pipeline. The exported `NARRATOR_PAGES` constant is derived from `Object.keys(ASSEMBLERS)`, so a page without an entry here is simply not narrated. New narrator pages need a new entry.
-7. **`netlify.toml`** — `[[redirects]]` blocks for retired pages (typically a 301 to a successor surface); `[functions.<name>] included_files` for any function that runtime-loads files via `readFileSync` (currently used by `chat.mjs` to ship `src/data/site-index.txt` into the deployed bundle).
-8. **`src/data/site-index.txt`** — the runtime authoritative page list. `chat.mjs` reads this file at module init via `readFileSync` and injects its contents into every chat response as a `[SITE INDEX]` block. Plain prose, organized by methodological category, one paragraph per category.
-9. **`netlify/functions/prompts/scope_blocks.mjs`** — exports `SITE_INDEX_FAILSAFE`, a condensed one-paragraph page list that `chat.mjs` injects in place of the runtime `[SITE INDEX]` block when `site-index.txt` fails to load (cold-start ENOENT, missing `[functions.chat] included_files`, etc.). The failsafe was previously duplicated across ~12 per-page prompt modules but consolidated here in the Phase D refactor on 2026-05-06; this is now the single source of truth for the failsafe paragraph.
-10. **`netlify/functions/prompts/site_nav.mjs`** — shared menu-structure prose context appended to every chat prompt; describes per-entry menu items and the desktop / mobile split, plus the cross-cutting page counts ("X research zoos," "Y total pages"). Update the menu items, the descriptions, and the totals when a page is added, renamed, or removed.
-11. **`netlify/functions/prompts/main.mjs`** body prose — redirection paragraphs that point dashboard readers from `/` to specific pages. Update when retiring or renaming a chat-enabled page that the homepage prompt currently references.
-12. **Cross-references in sibling per-page prompts** — references to other pages woven into the narrative bodies of `netlify/functions/prompts/*.mjs` and `netlify/functions/prompts/narrator/*.mjs`. When retiring a page, run `grep -r "/<page>/" netlify/functions/prompts/` to find them all and either remove them or redirect them to the successor.
-13. **Supabase `public.rag_documents`** — embeddings of each chat prompt module. Per-source updates land via the ingest run; retired sources need an explicit prune via `node scripts/rag/ingest.mjs --prune` to remove orphaned chunks whose source files no longer exist on disk.
+1. **`<page>/index.html`, `<page>/main.jsx`, `<page>/App.jsx`, `<page>/slots/*.jsx`** - the page code itself.
+2. **`netlify/functions/chat.mjs`** - the per-page prompt `import` statements at the top of the file and the `SYSTEM_PROMPTS` map keyed by surface name. New chat-enabled pages need both.
+3. **`netlify/functions/prompts/<page>.mjs`** - the per-page chat system prompt module. Only for chat-enabled pages; the dev sandboxes (`/alpha/`, `/beta/`, `/dev/`) intentionally lack chat.
+4. **`netlify/functions/narrate-background.mjs`** - same shape as `chat.mjs` but for the AI page-narrator scaffold (added 2026-05-08): the per-page narrator `import` statements at the top of the file and the `PROMPTS` map keyed by URL path. Page-narrator coverage usually mirrors chat coverage.
+5. **`netlify/functions/prompts/narrator/<page>.mjs`** - the per-page narrator prompt module that drives the top-of-page AI narration. One file per narrator-enabled page; companion to (3).
+6. **`netlify/functions/lib/page-state.mjs`** - the `ASSEMBLERS` map: per-page state-fetcher handlers used by the narrator pipeline. The exported `NARRATOR_PAGES` constant is derived from `Object.keys(ASSEMBLERS)`, so a page without an entry here is simply not narrated. New narrator pages need a new entry.
+7. **`netlify.toml`** - `[[redirects]]` blocks for retired pages (typically a 301 to a successor surface); `[functions.<name>] included_files` for any function that runtime-loads files via `readFileSync` (currently used by `chat.mjs` to ship `src/data/site-index.txt` into the deployed bundle).
+8. **`src/data/site-index.txt`** - the runtime authoritative page list. `chat.mjs` reads this file at module init via `readFileSync` and injects its contents into every chat response as a `[SITE INDEX]` block. Plain prose, organized by methodological category, one paragraph per category.
+9. **`netlify/functions/prompts/scope_blocks.mjs`** - exports `SITE_INDEX_FAILSAFE`, a condensed one-paragraph page list that `chat.mjs` injects in place of the runtime `[SITE INDEX]` block when `site-index.txt` fails to load (cold-start ENOENT, missing `[functions.chat] included_files`, etc.). The failsafe was previously duplicated across ~12 per-page prompt modules but consolidated here in the Phase D refactor on 2026-05-06; this is now the single source of truth for the failsafe paragraph.
+10. **`netlify/functions/prompts/site_nav.mjs`** - shared menu-structure prose context appended to every chat prompt; describes per-entry menu items and the desktop / mobile split, plus the cross-cutting page counts ("X research zoos," "Y total pages"). Update the menu items, the descriptions, and the totals when a page is added, renamed, or removed.
+11. **`netlify/functions/prompts/main.mjs`** body prose - redirection paragraphs that point dashboard readers from `/` to specific pages. Update when retiring or renaming a chat-enabled page that the homepage prompt currently references.
+12. **Cross-references in sibling per-page prompts** - references to other pages woven into the narrative bodies of `netlify/functions/prompts/*.mjs` and `netlify/functions/prompts/narrator/*.mjs`. When retiring a page, run `grep -r "/<page>/" netlify/functions/prompts/` to find them all and either remove them or redirect them to the successor.
+13. **Supabase `public.rag_documents`** - embeddings of each chat prompt module. Per-source updates land via the ingest run; retired sources need an explicit prune via `node scripts/rag/ingest.mjs --prune` to remove orphaned chunks whose source files no longer exist on disk.
 
 ### Validation
 
-- **`node scripts/check-page-consistency.mjs`** — verifies `pages.js` agrees with `chat.mjs`'s `SYSTEM_PROMPTS`, with on-disk chat-prompt files, with on-disk `index.html` files, and with `site-index.txt` page mentions. Run after every page-list change. The script does **not** catch drift in `narrate-background.mjs`, `lib/page-state.mjs`, `scope_blocks.mjs`, `site_nav.mjs`, or sibling-prompt prose cross-references — those need manual grep + review.
-- **`npm run build`** — the vite production build catches `import` errors and rollup-graph issues in the React app, but does **not** parse-check Netlify functions because they bundle separately at deploy time.
-- **`node --check netlify/functions/<file>.mjs`** — parse-checks a function module without running it. Run this on every modified `.mjs` under `netlify/functions/` before committing because vite's build doesn't surface function-level parse errors and they only fail at deploy time as a Netlify "building site" exit 2.
+- **`node scripts/check-page-consistency.mjs`** - verifies `pages.js` agrees with `chat.mjs`'s `SYSTEM_PROMPTS`, with on-disk chat-prompt files, with on-disk `index.html` files, and with `site-index.txt` page mentions. Run after every page-list change. The script does **not** catch drift in `narrate-background.mjs`, `lib/page-state.mjs`, `scope_blocks.mjs`, `site_nav.mjs`, or sibling-prompt prose cross-references - those need manual grep + review.
+- **`npm run build`** - the vite production build catches `import` errors and rollup-graph issues in the React app, but does **not** parse-check Netlify functions because they bundle separately at deploy time.
+- **`node --check netlify/functions/<file>.mjs`** - parse-checks a function module without running it. Run this on every modified `.mjs` under `netlify/functions/` before committing because vite's build doesn't surface function-level parse errors and they only fail at deploy time as a Netlify "building site" exit 2.
 
 ### Re-ingestion
 
-After any chat-prompt or narrator-prompt edit, run `C:\s\ingest.bat` to re-embed the modified prompts into the RAG corpus. The script is idempotent on `content_hash`; unchanged chunks skip the embed round-trip. The `--prune` flag (either set inside the .bat or passed at the command line) cleans up `rag_documents` rows whose source files no longer exist on disk — required when retiring a page so its old embeddings don't surface as false-similarity hits on future queries.
+After any chat-prompt or narrator-prompt edit, run `C:\s\ingest.bat` to re-embed the modified prompts into the RAG corpus. The script is idempotent on `content_hash`; unchanged chunks skip the embed round-trip. The `--prune` flag (either set inside the .bat or passed at the command line) cleans up `rag_documents` rows whose source files no longer exist on disk - required when retiring a page so its old embeddings don't surface as false-similarity hits on future queries.
 
 ## Idle Behavior
 

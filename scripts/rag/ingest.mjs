@@ -126,7 +126,7 @@ const SOURCES = [
   // source — unchanged chunks skip the embed round-trip).
   {
     rel: 'about.aigamma.com/index.html',
-    absPath: 'C:\\about.aigamma.com\\index.html',
+    absPath: process.env.RAG_ABOUT_PATH || 'C:\\about.aigamma.com\\index.html',
     surface: 'about',
     kind: 'reference',
     extract: extractHtmlProse,
