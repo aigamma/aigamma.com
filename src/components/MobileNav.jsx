@@ -129,7 +129,7 @@ const ABOUT_ITEM = {
 const PHILOSOPHY_ITEM = {
   href: 'https://worldthought.com/',
   label: 'Philosophy',
-  desc: "Eric's companion philosophy site",
+  desc: 'Learn from the great world historical thinkers',
 };
 
 // Pinned at the bottom of the TOOLS dropdown, immediately above the
@@ -291,12 +291,30 @@ export default function MobileNav({ regimeIndicator } = {}) {
               </svg>
             )}
             {regimeIndicator?.state === 'neutral' && (
-              <img
-                src="/favicons/neutral/icon128.png?v=2"
-                alt=""
-                aria-hidden="true"
+              // Neutral / NEAR FLIP state. The earlier implementation
+              // reached for /favicons/neutral/icon128.png here, but that
+              // file is the full AI Gamma branded square (intentionally
+              // used as the browser-tab favicon when no directional
+              // regime is resolved). Rendering it inline next to the
+              // .mobile-nav__logo wordmark produced two visually
+              // identical AI Gamma branding marks side by side -- a bug
+              // first surfaced on 2026-05-16 the first time the site
+              // was observed in a neutral gamma regime. The fix uses
+              // the same inline-SVG idiom as the positive ("+") and
+              // negative ("−") siblings above: a black 32x32 ground
+              // carrying a regime-tinted glyph. The glyph here is a
+              // stacked-bar "≡" / "=" mark in amber, visually neutral
+              // (no directional asymmetry) and reading as "balanced
+              // between regimes" -- the semantic match for NEAR FLIP.
+              <svg
+                viewBox="0 0 32 32"
                 className="mobile-nav__status-icon"
-              />
+                aria-hidden="true"
+              >
+                <rect width="32" height="32" fill="#000000" />
+                <rect x="6" y="10" width="20" height="4" fill="#f0a030" />
+                <rect x="6" y="18" width="20" height="4" fill="#f0a030" />
+              </svg>
             )}
             {/* Γ rendered as an inline SVG path rather than a text glyph
                 so its width and height match the sibling status icon

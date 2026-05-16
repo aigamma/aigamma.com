@@ -470,12 +470,29 @@ export default function LevelsPanel({ levels, spotPrice, prevClose, expirationMe
                 </svg>
               )}
               {regimeIndicator.state === 'neutral' && (
-                <img
-                  src="/favicons/neutral/icon128.png?v=2"
-                  alt=""
+                // Neutral / NEAR FLIP. Same fix as MobileNav.jsx --
+                // the prior path reached for /favicons/neutral/icon128.png
+                // here, but that asset is the full AI Gamma branded
+                // square (intentionally so as a browser-tab favicon
+                // when no directional regime is resolved) and rendered
+                // inline next to the .levels-strip__brand logo to its
+                // left it duplicated the wordmark. The fix matches the
+                // positive ("+") and negative ("−") siblings above:
+                // an inline-SVG black 32x32 ground carrying a
+                // regime-tinted glyph. The amber stacked-bar mark
+                // reads as "≡" / "=" -- balanced between regimes,
+                // the semantic match for NEAR FLIP.
+                <svg
+                  viewBox="0 0 32 32"
+                  width="2.4rem"
+                  height="2.4rem"
                   aria-hidden="true"
-                  style={{ height: '2.4rem', width: '2.4rem', display: 'block', flexShrink: 0 }}
-                />
+                  style={{ display: 'block', flexShrink: 0 }}
+                >
+                  <rect width="32" height="32" fill="#000000" />
+                  <rect x="6" y="10" width="20" height="4" fill="#f0a030" />
+                  <rect x="6" y="18" width="20" height="4" fill="#f0a030" />
+                </svg>
               )}
               <span>{regimeIndicator.text}</span>
             </span>
