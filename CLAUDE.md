@@ -104,19 +104,19 @@ The RAG corpus needs re-embedding after edits to indexed surfaces. The ingest wa
 
 See `docs/rag-architecture.md` for the full topology, schema, and operational notes (storage layer, retrieval RPCs, the two Edge Functions, ingestion walker internals).
 
-### Self-updating RAG (daily cron + push trigger)
+### Self-updating RAG (4h cron + push trigger)
 
 The ingest no longer requires a human at a keyboard. `.github/workflows/refresh-rag.yml` runs `scripts/rag/ingest.mjs` on three triggers, redundant by design so no single fault breaks the loop:
 
-1. **schedule** `0 4 * * *` (04:00 UTC daily) - safety-net heartbeat. Bounds the corpus's staleness at 24 hours even if no push lands and no maintainer dispatches manually.
+1. **schedule** `0 */4 * * *` (every 4 hours on the top of the hour, 00/04/08/12/16/20 UTC) - safety-net heartbeat. Bounds the corpus's staleness at 4 hours even if no push lands and no maintainer dispatches manually. Matches the cadence the sibling worldthought.com refresh-rag workflow runs at, on the principle that more frequent heartbeats are strictly better when each unchanged-pass costs nothing. Switched from daily to 4h on 2026-05-16; the cost is the same because the walker's content-hash skip means six daily heartbeats with no edits cost exactly what one heartbeat with no edits costs.
 2. **push** to `main` - every merge re-ingests immediately, so an edit to any indexed surface (per-page prompts, global prompts, the about.aigamma.com prose) lands in the chat corpus within one CI run (~3-5 minutes). This eliminates the "I edited a prompt but forgot to re-ingest" failure mode.
 3. **workflow_dispatch** - manual trigger from the Actions tab (or `gh workflow run refresh-rag.yml`) for ad-hoc refreshes.
 
-The walker is idempotent on chunk `content_hash`, so the push-trigger overhead on a code-only change (a React component edit, a vite.config bump) is a hash pass with zero embedding round-trips. Only chunks whose content actually changed pay the gte-small Supabase Edge Function call.
+The walker is idempotent on chunk `content_hash`, so the push-trigger overhead on a code-only change (a React component edit, a vite.config bump) is a hash pass with zero embedding round-trips. Only chunks whose content actually changed pay the gte-small Supabase Edge Function call. Verified empirically on the 2026-05-16 audit: a pass that touched only JSX files (no chat-prompt changes) showed 13 sources, 122 chunks, "all unchanged" across the board, ~1 second of actual ingest work after the checkout / npm-ci overhead. The Actions tab's per-run summary now surfaces the upsert and unchanged counts explicitly so any future run can be eyeballed at-a-glance for cost behavior; a run with "Chunks re-embedded: 0" means the gte-small Edge Function was not invoked at all.
 
 **Cross-repo about.aigamma.com.** `scripts/rag/ingest.mjs` includes `about.aigamma.com/index.html` as a source. Locally the walker reads `C:\about.aigamma.com\index.html` directly; in CI it checks out the about repo to a sibling directory and points the walker at it via the `RAG_ABOUT_PATH` env var (the SOURCES entry's `absPath` field honors `process.env.RAG_ABOUT_PATH` before falling back to the local Windows path). The aigamma.com workflow also exposes a `repository_dispatch` trigger of type `rag-refresh-requested`, and `aigamma/about.aigamma.com/.github/workflows/trigger-rag-refresh.yml` fires that dispatch on push to its main when `index.html` changes. Effect: an about-page prose edit pushed to `aigamma/about.aigamma.com/main` triggers this aigamma.com workflow within ~10 seconds and lands in the shared corpus within one CI run (~3-5 minutes), not the cron window. Both chat surfaces (aigamma.com and about.aigamma.com) query the same Supabase `rag_documents` corpus, so one ingest refreshes both.
 
-**One-time PAT setup** (required for the cross-repo dispatch to actually fire; the aigamma.com daily cron is the safety net if the PAT is missing or expired so the corpus is at worst 24h stale even in the broken-dispatch case):
+**One-time PAT setup** (required for the cross-repo dispatch to actually fire; the aigamma.com 4h cron is the safety net if the PAT is missing or expired so the corpus is at worst 4h stale even in the broken-dispatch case):
 
 1. Generate a fine-grained PAT at https://github.com/settings/personal-access-tokens/new with **Resource owner**: `aigamma`, **Repository access**: `aigamma.com` only, and **Repository permissions**: Contents = Read, Actions = Write. Pick an expiration window you are comfortable rotating.
 2. In `aigamma/about.aigamma.com` (Settings -> Secrets and variables -> Actions -> New repository secret), add a secret named `AIGAMMA_RAG_DISPATCH_TOKEN` with the PAT as the value.
