@@ -54,6 +54,15 @@ on:
   push:
     branches: [main]
   workflow_dispatch:
+  # Cross-repo trigger from aigamma/about.aigamma.com so an about-page
+  # push there fires this ingest within minutes instead of waiting up
+  # to 24 hours for the next cron tick. The about repo's
+  # trigger-rag-refresh.yml dispatches an event of this type with a
+  # fine-grained PAT held as the AIGAMMA_RAG_DISPATCH_TOKEN secret on
+  # the about repo. See aigamma.com/CLAUDE.md "Self-updating RAG"
+  # section for the one-time PAT setup steps.
+  repository_dispatch:
+    types: [rag-refresh-requested]
 
 # Avoid stacking concurrent runs when two pushes land in quick
 # succession. The latest pending run wins; the in-progress run is
